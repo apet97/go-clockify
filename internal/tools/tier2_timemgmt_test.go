@@ -45,8 +45,8 @@ func TestSchedulingHandlersCount(t *testing.T) {
 func TestTimeOffHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := timeOffHandlers(svc)
-	if len(descs) != 12 {
-		t.Fatalf("expected 12 time-off tools, got %d", len(descs))
+	if len(descs) != 13 {
+		t.Fatalf("expected 13 time-off tools, got %d", len(descs))
 	}
 
 	names := make(map[string]bool, len(descs))
@@ -67,6 +67,7 @@ func TestTimeOffHandlersCount(t *testing.T) {
 		"clockify_create_time_off_policy",
 		"clockify_update_time_off_policy",
 		"clockify_time_off_balance",
+		"clockify_time_off_balance_update",
 	}
 	for _, name := range want {
 		if !names[name] {
@@ -672,6 +673,130 @@ func TestTimeOffBalanceUsesUserBalanceEndpointAndFiltersPolicy(t *testing.T) {
 	policy, ok := data["policy"].(map[string]any)
 	if !ok || policy["id"] != policyID {
 		t.Fatalf("expected selected policy %s, got %#v", policyID, data["policy"])
+	}
+}
+
+func TestUpdateTimeOffBalancePatchesPolicyEndpoint(t *testing.T) {
+	const (
+		policyID = "abc123def456789012345679"
+		userA    = "abc123def456789012345670"
+		userB    = "abc123def456789012345671"
+	)
+	var (
+		gotPath   string
+		gotMethod string
+		gotBody   map[string]any
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.updateTimeOffBalance(context.Background(), map[string]any{
+		"policy_id": policyID,
+		"user_ids":  []any{userA, userB},
+		"value":     float64(22),
+		"note":      "Bonus days added.",
+	})
+	if err != nil {
+		t.Fatalf("updateTimeOffBalance: %v", err)
+	}
+
+	if gotMethod != http.MethodPatch {
+		t.Fatalf("method = %s, want PATCH", gotMethod)
+	}
+	wantPath := "/workspaces/ws1/time-off/balance/policy/" + policyID
+	if gotPath != wantPath {
+		t.Fatalf("path = %s, want %s", gotPath, wantPath)
+	}
+	if gotBody["note"] != "Bonus days added." {
+		t.Fatalf("body note = %v, want bonus", gotBody["note"])
+	}
+	if gotBody["value"] != float64(22) {
+		t.Fatalf("body value = %v, want 22", gotBody["value"])
+	}
+	users, ok := gotBody["userIds"].([]any)
+	if !ok || len(users) != 2 || users[0] != userA || users[1] != userB {
+		t.Fatalf("body userIds = %v, want [%s %s]", gotBody["userIds"], userA, userB)
+	}
+	if !result.OK {
+		t.Fatalf("envelope ok=%v, want true", result.OK)
+	}
+	if result.Action != "clockify_time_off_balance_update" {
+		t.Fatalf("envelope action = %s, want clockify_time_off_balance_update", result.Action)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["policyId"] != policyID || data["value"] != float64(22) {
+		t.Fatalf("envelope data = %#v", result.Data)
+	}
+}
+
+func TestUpdateTimeOffBalanceDryRunSkipsHTTP(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry_run should not hit Clockify; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.updateTimeOffBalance(context.Background(), map[string]any{
+		"policy_id": "abc123def456789012345679",
+		"user_ids":  []any{"abc123def456789012345670"},
+		"value":     float64(8),
+		"note":      "Manual adjustment",
+		"dry_run":   true,
+	})
+	if err != nil {
+		t.Fatalf("dry-run failed: %v", err)
+	}
+	if !result.OK || result.Action != "clockify_time_off_balance_update" {
+		t.Fatalf("envelope = %#v", result)
+	}
+}
+
+func TestUpdateTimeOffBalanceValidatesRequiredArgs(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("should not reach HTTP layer; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+
+	cases := []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{
+			name: "missing user_ids",
+			args: map[string]any{"policy_id": "abc123def456789012345679", "value": float64(1), "note": "x"},
+			want: "user_ids",
+		},
+		{
+			name: "missing note",
+			args: map[string]any{"policy_id": "abc123def456789012345679", "user_ids": []any{"abc123def456789012345670"}, "value": float64(1)},
+			want: "note",
+		},
+		{
+			name: "missing value",
+			args: map[string]any{"policy_id": "abc123def456789012345679", "user_ids": []any{"abc123def456789012345670"}, "note": "x"},
+			want: "value",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := svc.updateTimeOffBalance(context.Background(), tc.args)
+			if err == nil {
+				t.Fatalf("expected error mentioning %s", tc.want)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %q, want contains %q", err, tc.want)
+			}
+		})
 	}
 }
 

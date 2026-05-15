@@ -56,7 +56,7 @@ export MCP_LOG_LEVEL="info"
 ```
 
 `CLOCKIFY_BASE_URL` defaults to `https://api.clockify.me/api/v1`.
-`CLOCKIFY_TOOLSET` defaults to `all`, which preserves the 151-tool owner
+`CLOCKIFY_TOOLSET` defaults to `all`, which preserves the 152-tool owner
 workbench. Narrower startup surfaces are available with `core`, `business`, and
 `admin` without changing the one-user product model.
 
@@ -181,7 +181,7 @@ Toolsets:
 - `admin`: `business` plus custom fields, time off, scheduling, approvals,
   webhooks, groups, holidays, users, and workspace settings.
 - `all`: `admin` plus demo helpers and raw API fallback; this is the default
-  151-tool startup registry.
+  152-tool startup registry.
 
 The deterministic demo helpers create or reuse a prefixed client, project,
 task, tag, and time entry, then clean them up by prefix. Cleanup is repeatable,

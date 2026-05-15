@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -194,6 +195,22 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.timeOffBalance(ctx, args)
+			},
+		},
+		// 13. clockify_time_off_balance_update (RW; admin/billing impact)
+		{
+			Tool: toolRW("clockify_time_off_balance_update",
+				"Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview.",
+				map[string]any{"type": "object", "required": []string{"policy_id", "user_ids", "value", "note"}, "properties": map[string]any{
+					"policy_id": map[string]any{"type": "string"},
+					"user_ids":  map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string"}, "description": "User IDs (or names/emails) whose balance to adjust under this policy."},
+					"value":     map[string]any{"type": "number", "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours)."},
+					"note":      map[string]any{"type": "string", "description": "Required note explaining the adjustment; surfaced in Clockify audit history."},
+					"dry_run":   map[string]any{"type": "boolean", "description": "Preview the PATCH payload without calling Clockify."},
+				}}),
+			ReadOnlyHint: false,
+			Handler: func(ctx context.Context, args map[string]any) (any, error) {
+				return s.updateTimeOffBalance(ctx, args)
 			},
 		},
 	}
@@ -902,4 +919,78 @@ func timeOffBalancePolicyID(raw map[string]any) string {
 		return firstReportString(policy, "id", "_id", "policyId", "policy_id")
 	}
 	return ""
+}
+
+// updateTimeOffBalance issues PATCH /workspaces/{ws}/time-off/balance/policy/{policyId}
+// with {note, userIds, value}. The endpoint returns 204 No Content on success;
+// the envelope echoes resolved IDs and the requested value so callers have a
+// concrete record of the adjustment for audit logs and follow-up reads.
+func (s *Service) updateTimeOffBalance(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	policyID := stringArg(args, "policy_id")
+	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	userRefs := stringSliceArg(args, "user_ids")
+	if len(userRefs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("user_ids is required")
+	}
+
+	note := strings.TrimSpace(stringArg(args, "note"))
+	if note == "" {
+		return ResultEnvelope{}, fmt.Errorf("note is required")
+	}
+
+	value, hasValue := numberArg(args, "value")
+	if !hasValue {
+		return ResultEnvelope{}, fmt.Errorf("value is required")
+	}
+
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	resolvedUsers := make([]string, 0, len(userRefs))
+	for _, ref := range userRefs {
+		resolved, err := s.resolveUserID(ctx, wsID, ref)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		resolvedUsers = append(resolvedUsers, resolved)
+	}
+
+	payload := map[string]any{
+		"note":    note,
+		"userIds": resolvedUsers,
+		"value":   value,
+	}
+
+	path, err := paths.Workspace(wsID, "time-off", "balance", "policy", policyID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	if dryrun.Enabled(args) {
+		return ok("clockify_time_off_balance_update", dryrunPreviewPayload("clockify_time_off_balance_update", payload), map[string]any{
+			"workspaceId": wsID,
+			"policyId":    policyID,
+			"userIds":     resolvedUsers,
+		}), nil
+	}
+
+	if err := s.Client.Patch(ctx, path, payload, nil); err != nil {
+		return ResultEnvelope{}, err
+	}
+
+	return ok("clockify_time_off_balance_update", map[string]any{
+		"policyId": policyID,
+		"userIds":  resolvedUsers,
+		"value":    value,
+		"note":     note,
+	}, map[string]any{
+		"workspaceId": wsID,
+		"policyId":    policyID,
+		"userIds":     resolvedUsers,
+	}), nil
 }

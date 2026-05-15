@@ -67,7 +67,7 @@ What we promise for the `v1.x` series:
   `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID`; renaming either is a
   major-version change.
 - **Catalog stability.** The generated catalog remains the source of
-  truth for the 151 startup-loaded tools. Descriptor changes should
+  truth for the 152 startup-loaded tools. Descriptor changes should
   regenerate `docs/tool-catalog.md` and `docs/tool-catalog.json`.
 - **No surprise removals.** Deprecations are announced one minor
   version before removal. The `MCP_HTTP_MAX_BODY` alias is the

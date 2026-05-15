@@ -164,6 +164,10 @@ var riskOverrides = map[string]riskOverride{
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
 		auditKeys: []string{"policy_id", "archived"},
 	},
+	"clockify_time_off_balances_update": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskBilling,
+		auditKeys: []string{"policy_id", "user_ids", "value"},
+	},
 	"clockify_approvals_submit": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
 		auditKeys: []string{"user_id", "start", "end"},

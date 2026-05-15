@@ -35780,6 +35780,280 @@
       }
     },
     {
+      "name": "clockify_time_off_balances_update",
+      "description": "Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview.",
+      "category": "domain",
+      "handler_kind": "native handler",
+      "read_only": false,
+      "destructive": false,
+      "idempotent": false,
+      "dry_run": true,
+      "risk_class": [
+        "write",
+        "billing",
+        "admin"
+      ],
+      "audit_keys": [
+        "policy_id",
+        "user_ids",
+        "value"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
+          "note": {
+            "description": "Required note explaining the adjustment; surfaced in Clockify audit history.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "policy_id": {
+            "type": "string"
+          },
+          "user_ids": {
+            "description": "User IDs (or names/emails) whose balance to adjust under this policy.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "value": {
+            "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours).",
+            "type": "number"
+          }
+        },
+        "required": [
+          "policy_id",
+          "user_ids",
+          "value",
+          "note"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_time_off_balances_update",
+            "type": "string"
+          },
+          "changed": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "deleted": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reused": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "updated": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "data": {
+            "description": "Tool-specific payload for clockify_time_off_balances_update"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "next": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "args": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tool"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "recovery": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "hint": {
+                "type": "string"
+              },
+              "tool": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hint"
+            ],
+            "type": "object"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "category": "domain",
+        "destructiveHint": false,
+        "dryRun": true,
+        "handlerKind": "native handler",
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "priority": 512,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write",
+          "billing",
+          "admin"
+        ],
+        "title": "Time Off Balance Update"
+      }
+    },
+    {
       "name": "clockify_scheduling_assignments_list",
       "description": "List scheduling assignments within a date range",
       "category": "domain",

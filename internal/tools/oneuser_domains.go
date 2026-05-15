@@ -51,7 +51,7 @@ func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
 
 // RegistryForToolset returns the one-user startup registry for a narrower
 // owner-mode surface. The default "all" path is intentionally identical to
-// FullAccessRegistry so the canonical 151-tool product contract stays intact.
+// FullAccessRegistry so the canonical 152-tool product contract stays intact.
 func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
 	toolset = strings.ToLower(strings.TrimSpace(toolset))
 	if toolset == "" || toolset == "all" {
@@ -466,6 +466,7 @@ func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
 		{"clockify_time_off_policies_create", "clockify_create_time_off_policy", "time_off_policy", "created"},
 		{"clockify_time_off_policies_update", "clockify_update_time_off_policy", "time_off_policy", "updated"},
 		{"clockify_time_off_balances", "clockify_time_off_balance", "time_off_balance", ""},
+		{"clockify_time_off_balances_update", "clockify_time_off_balance_update", "time_off_balance", "updated"},
 
 		{"clockify_scheduling_assignments_list", "clockify_list_assignments", "assignment", ""},
 		{"clockify_scheduling_assignments_get", "clockify_get_assignment", "assignment", ""},
@@ -572,6 +573,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(509, "clockify_time_off_policies_create", "clockify_create_time_off_policy", "time_off_policy", "created", s.createTimeOffPolicy)
 	add(510, "clockify_time_off_policies_update", "clockify_update_time_off_policy", "time_off_policy", "updated", s.updateTimeOffPolicy)
 	add(511, "clockify_time_off_balances", "clockify_time_off_balance", "time_off_balance", "", s.timeOffBalance)
+	add(512, "clockify_time_off_balances_update", "clockify_time_off_balance_update", "time_off_balance", "updated", s.updateTimeOffBalance)
 	add(600, "clockify_scheduling_assignments_list", "clockify_list_assignments", "assignment", "", s.listAssignments)
 	add(601, "clockify_scheduling_assignments_get", "clockify_get_assignment", "assignment", "", s.getAssignment)
 	add(602, "clockify_scheduling_assignments_create", "clockify_create_assignment", "assignment", "created", s.createAssignment)
@@ -666,6 +668,7 @@ func nativeHighValueToolNames() map[string]bool {
 		"clockify_time_off_policies_create":      true,
 		"clockify_time_off_policies_update":      true,
 		"clockify_time_off_balances":             true,
+		"clockify_time_off_balances_update":      true,
 		"clockify_scheduling_assignments_list":   true,
 		"clockify_scheduling_assignments_get":    true,
 		"clockify_scheduling_assignments_create": true,
@@ -951,6 +954,7 @@ func oneUserAliasPriority(name string, fallback int) int {
 		"clockify_time_off_policies_create":      509,
 		"clockify_time_off_policies_update":      510,
 		"clockify_time_off_balances":             511,
+		"clockify_time_off_balances_update":      512,
 		"clockify_scheduling_assignments_list":   600,
 		"clockify_scheduling_assignments_get":    601,
 		"clockify_scheduling_assignments_create": 602,

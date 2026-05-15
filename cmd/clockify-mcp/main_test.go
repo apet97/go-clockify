@@ -293,8 +293,8 @@ func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
 
 	list := responses[2]
 	tools := arrayField(t, resultObject(t, list, ""), "tools")
-	if len(tools) != 151 {
-		t.Fatalf("tools/list count=%d want 151", len(tools))
+	if len(tools) != 152 {
+		t.Fatalf("tools/list count=%d want 152", len(tools))
 	}
 
 	call := responses[3]

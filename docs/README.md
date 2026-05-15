@@ -8,7 +8,7 @@ one API key, one workspace id, stdio transport, full tool access at startup.
 - [../README.md](../README.md) - setup, environment, and MCP client wiring.
 - [agent-cookbook.md](agent-cookbook.md) - workflow-first examples for agents.
 - [tool-catalog.md](tool-catalog.md) / [tool-catalog.json](tool-catalog.json) -
-  generated list of the 151 startup-loaded tools.
+  generated list of the 152 startup-loaded tools.
 - [goals/oneuser-tool-coverage.md](goals/oneuser-tool-coverage.md) -
   conservative coverage ledger for native handlers, fake smoke, and live probes.
 - [live-tests.md](live-tests.md) - sacrificial-workspace live test instructions.

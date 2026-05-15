@@ -199,8 +199,8 @@ func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 			t.Fatalf("tools/list golden contains old tool %s", forbidden)
 		}
 	}
-	if len(tools) != 151 {
-		t.Fatalf("tools/list returned %d tools, want 151", len(tools))
+	if len(tools) != 152 {
+		t.Fatalf("tools/list returned %d tools, want 152", len(tools))
 	}
 	if tools[0].Name != "clockify_status" {
 		t.Fatalf("first tool=%s, want clockify_status", tools[0].Name)
@@ -1295,6 +1295,7 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_time_off_policies_create",
 		"clockify_time_off_policies_update",
 		"clockify_time_off_balances",
+		"clockify_time_off_balances_update",
 		"clockify_scheduling_assignments_list",
 		"clockify_scheduling_assignments_get",
 		"clockify_scheduling_assignments_create",
@@ -1884,8 +1885,8 @@ func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.
 	initializeServer(t, server)
 
 	descriptors := svc.FullAccessRegistry()
-	if len(descriptors) != 151 {
-		t.Fatalf("FullAccessRegistry returned %d tools, want 151", len(descriptors))
+	if len(descriptors) != 152 {
+		t.Fatalf("FullAccessRegistry returned %d tools, want 152", len(descriptors))
 	}
 	for _, descriptor := range descriptors {
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
