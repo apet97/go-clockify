@@ -13347,7 +13347,7 @@
     },
     {
       "name": "clockify_clients_delete",
-      "description": "Delete a client by name or ID.",
+      "description": "Permanently delete a client by name or ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -16363,7 +16363,7 @@
     },
     {
       "name": "clockify_projects_delete",
-      "description": "Delete a project by name or ID.",
+      "description": "Permanently delete a project by name or ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -18000,6 +18000,7 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
+            "description": "Rate amount in minor currency units (cents): 1000 = $10.00/hr.",
             "minimum": 0,
             "type": "integer"
           },
@@ -19645,7 +19646,7 @@
     },
     {
       "name": "clockify_tasks_delete",
-      "description": "Delete a task by name or ID within a project.",
+      "description": "Permanently delete a task by name or ID within a project. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -19931,6 +19932,7 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
+            "description": "Rate amount in minor currency units (cents): 1000 = $10.00/hr.",
             "minimum": 0,
             "type": "integer"
           },
@@ -20737,7 +20739,7 @@
     },
     {
       "name": "clockify_tags_delete",
-      "description": "Delete a tag by name or ID.",
+      "description": "Permanently delete a tag by name or ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -22681,7 +22683,7 @@
     },
     {
       "name": "clockify_entries_delete",
-      "description": "Delete a time entry by ID.",
+      "description": "Permanently delete a time entry by ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -26977,7 +26979,7 @@
     },
     {
       "name": "clockify_invoices_items_delete",
-      "description": "Delete an invoice item by line index",
+      "description": "Permanently delete an invoice item by line index. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -29675,7 +29677,7 @@
     },
     {
       "name": "clockify_expenses_delete",
-      "description": "Delete an expense by ID",
+      "description": "Permanently delete an expense by ID. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -30741,7 +30743,7 @@
     },
     {
       "name": "clockify_expenses_categories_delete",
-      "description": "Delete an expense category",
+      "description": "Permanently delete an expense category. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -42887,7 +42889,7 @@
     },
     {
       "name": "clockify_groups_remove_user",
-      "description": "Remove a user from a user group",
+      "description": "Remove a user from a user group. Admin and permission-change impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -47425,7 +47427,7 @@
     },
     {
       "name": "clockify_invoices_payments_delete",
-      "description": "Delete an invoice payment.",
+      "description": "Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,

@@ -54,7 +54,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 4. Delete user group (destructive)
 		{
-			Tool: toolDestructive("clockify_delete_user_group", "Delete a user group", map[string]any{
+			Tool: toolDestructive("clockify_delete_user_group", "Permanently delete a user group. Admin scope; destructive; supports dry_run preview.", map[string]any{
 				"type":     "object",
 				"required": []string{"group_id"},
 				"properties": map[string]any{
@@ -102,7 +102,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 7. Remove user from group (destructive)
 		{
-			Tool: toolDestructive("clockify_remove_user_from_group", "Remove a user from a user group", map[string]any{
+			Tool: toolDestructive("clockify_remove_user_from_group", "Remove a user from a user group. Admin and permission-change impact; destructive; supports dry_run preview.", map[string]any{
 				"type":     "object",
 				"required": []string{"group_id", "user_id"},
 				"properties": map[string]any{

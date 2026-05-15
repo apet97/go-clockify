@@ -217,7 +217,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 14. Delete invoice item
-		{Tool: toolDestructive("clockify_delete_invoice_item", "Delete an invoice item by line index", map[string]any{
+		{Tool: toolDestructive("clockify_delete_invoice_item", "Permanently delete an invoice item by line index. Billing impact; destructive; supports dry_run preview.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{

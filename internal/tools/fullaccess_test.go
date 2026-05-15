@@ -482,6 +482,50 @@ func BenchmarkOneUserToolsListRealRegistry(b *testing.B) {
 	}
 }
 
+// BenchmarkClockifyStatusDispatch measures the full clockify_status path
+// through the MCP server against a fake Clockify upstream: the workflow
+// handler's multi-endpoint fan-out, response decode, and envelope build.
+// The fake server is local so HTTP cost is near-zero — what moves is the
+// status handler itself, which makes this a useful regression sentinel.
+func BenchmarkClockifyStatusDispatch(b *testing.B) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("bench", svc.FullAccessRegistry(), nil, nil)
+	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
+	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_status","arguments":{}}}`)
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := server.DispatchMessage(ctx, msg); err != nil {
+			b.Fatalf("clockify_status: %v", err)
+		}
+	}
+}
+
+// BenchmarkClockifyReviewDayDispatch covers a heavier workflow tool:
+// review-day aggregates entries, detects gaps/overlaps, and assembles a
+// structured report. It is the most allocation-sensitive workflow call.
+func BenchmarkClockifyReviewDayDispatch(b *testing.B) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("bench", svc.FullAccessRegistry(), nil, nil)
+	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
+	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_review_day","arguments":{"date":"2026-01-02"}}}`)
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := server.DispatchMessage(ctx, msg); err != nil {
+			b.Fatalf("clockify_review_day: %v", err)
+		}
+	}
+}
+
 func assertWorkflowAnnotations(t *testing.T, tool mcp.Tool) {
 	t.Helper()
 	ann := tool.Annotations

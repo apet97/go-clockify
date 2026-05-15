@@ -232,7 +232,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "client", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateClient(ctx, aliasArg(args, "client_id", "client"))
 		}),
-		nativeDomainTool(24, toolDestructive("clockify_clients_delete", "Delete a client by name or ID.", objectSchema(map[string]any{"required": []string{"client"}, "properties": map[string]any{
+		nativeDomainTool(24, toolDestructive("clockify_clients_delete", "Permanently delete a client by name or ID. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"client"}, "properties": map[string]any{
 			"client":    map[string]any{"type": "string", "description": "Client name or ID."},
 			"client_id": map[string]any{"type": "string", "description": "Client ID."},
 			"dry_run":   map[string]any{"type": "boolean"},
@@ -264,7 +264,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "project", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateProject(ctx, aliasArg(args, "project_id", "project"))
 		}),
-		nativeDomainTool(34, toolDestructive("clockify_projects_delete", "Delete a project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+		nativeDomainTool(34, toolDestructive("clockify_projects_delete", "Permanently delete a project by name or ID. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string", "description": "Project ID."},
 			"dry_run":    map[string]any{"type": "boolean"},
@@ -283,7 +283,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"project_id": map[string]any{"type": "string"},
 			"user_id":    map[string]any{"type": "string"},
 			"rate_kind":  map[string]any{"type": "string", "enum": []string{"hourly", "cost"}},
-			"amount":     map[string]any{"type": "integer", "minimum": 0},
+			"amount":     map[string]any{"type": "integer", "minimum": 0, "description": "Rate amount in minor currency units (cents): 1000 = $10.00/hr."},
 			"since":      map[string]any{"type": "string"},
 			"dry_run":    map[string]any{"type": "boolean"},
 		}})), "project_rate", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -316,7 +316,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "task", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),
-		nativeDomainTool(44, toolDestructive("clockify_tasks_delete", "Delete a task by name or ID within a project.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
+		nativeDomainTool(44, toolDestructive("clockify_tasks_delete", "Permanently delete a task by name or ID within a project. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string", "description": "Project ID."},
 			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
@@ -331,7 +331,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
 			"task_id":    map[string]any{"type": "string"},
 			"rate_kind":  map[string]any{"type": "string", "enum": []string{"hourly", "cost"}},
-			"amount":     map[string]any{"type": "integer", "minimum": 0},
+			"amount":     map[string]any{"type": "integer", "minimum": 0, "description": "Rate amount in minor currency units (cents): 1000 = $10.00/hr."},
 			"since":      map[string]any{"type": "string"},
 			"dry_run":    map[string]any{"type": "boolean"},
 		}})), "task_rate", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -356,7 +356,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "tag", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateTag(ctx, aliasArg(args, "tag_id", "tag"))
 		}),
-		nativeDomainTool(54, toolDestructive("clockify_tags_delete", "Delete a tag by name or ID.", objectSchema(map[string]any{"required": []string{"tag"}, "properties": map[string]any{
+		nativeDomainTool(54, toolDestructive("clockify_tags_delete", "Permanently delete a tag by name or ID. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"tag"}, "properties": map[string]any{
 			"tag":     map[string]any{"type": "string", "description": "Tag name or ID."},
 			"tag_id":  map[string]any{"type": "string", "description": "Tag ID."},
 			"dry_run": map[string]any{"type": "boolean"},
@@ -380,7 +380,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"tag_ids":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 			"billable":    map[string]any{"type": "boolean"},
 		}})), "entry", "updated", s.UpdateEntry),
-		nativeDomainTool(64, toolDestructive("clockify_entries_delete", "Delete a time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+		nativeDomainTool(64, toolDestructive("clockify_entries_delete", "Permanently delete a time entry by ID. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
 			"entry_id": map[string]any{"type": "string"},
 			"dry_run":  map[string]any{"type": "boolean"},
 		}})), "entry", "deleted", s.DeleteEntry),
@@ -555,7 +555,7 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 			"required":   []string{"invoice_id"},
 			"properties": withInvoicePaymentAmountUnit(fields("invoice_id", "amount", "date", "note", "body")),
 		})), "payment", "created", s.createInvoicePaymentOneUser),
-		nativeDomainTool(215, toolDestructive("clockify_invoices_payments_delete", "Delete an invoice payment.", objectSchema(map[string]any{
+		nativeDomainTool(215, toolDestructive("clockify_invoices_payments_delete", "Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id", "payment_id"},
 			"properties": map[string]any{"invoice_id": map[string]any{"type": "string"}, "payment_id": map[string]any{"type": "string"}},
 		})), "payment", "deleted", s.deleteInvoicePaymentOneUser),

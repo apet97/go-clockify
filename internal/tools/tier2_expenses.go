@@ -83,7 +83,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 5. Delete expense
-		{Tool: toolDestructive("clockify_delete_expense", "Delete an expense by ID", map[string]any{
+		{Tool: toolDestructive("clockify_delete_expense", "Permanently delete an expense by ID. Billing impact; destructive; supports dry_run preview.", map[string]any{
 			"type":     "object",
 			"required": []string{"expense_id"},
 			"properties": map[string]any{
@@ -147,7 +147,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 10. Delete expense category
-		{Tool: toolDestructive("clockify_delete_expense_category", "Delete an expense category", map[string]any{
+		{Tool: toolDestructive("clockify_delete_expense_category", "Permanently delete an expense category. Billing impact; destructive; supports dry_run preview.", map[string]any{
 			"type":     "object",
 			"required": []string{"category_id"},
 			"properties": map[string]any{

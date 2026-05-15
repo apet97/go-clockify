@@ -77,22 +77,22 @@ prefer the documented format on each tool descriptor.
 | `clockify_entries_create` | `domain` | no | no | no | no | `write` | Create a current-user time entry in the pinned workspace. |
 | `clockify_clients_get` | `domain` | yes | no | yes | no | `read` | Get one client by name or ID. |
 | `clockify_clients_update` | `domain` | no | no | yes | no | `write` | Update a client by name or ID. |
-| `clockify_clients_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a client by name or ID. |
+| `clockify_clients_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a client by name or ID. Destructive; supports dry_run preview. |
 | `clockify_projects_get` | `domain` | yes | no | yes | no | `read` | Get one project by name or ID. |
 | `clockify_projects_update` | `domain` | no | no | yes | no | `write` | Update a project by name or ID. |
-| `clockify_projects_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a project by name or ID. |
+| `clockify_projects_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a project by name or ID. Destructive; supports dry_run preview. |
 | `clockify_projects_archive` | `domain` | no | no | yes | no | `write` | Archive a project by name or ID. |
 | `clockify_projects_rates_update` | `domain` | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project. |
 | `clockify_tasks_get` | `domain` | yes | no | yes | no | `read` | Get one task by name or ID within a project. |
 | `clockify_tasks_update` | `domain` | no | no | yes | no | `write` | Update a task by name or ID within a project. |
-| `clockify_tasks_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a task by name or ID within a project. |
+| `clockify_tasks_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a task by name or ID within a project. Destructive; supports dry_run preview. |
 | `clockify_tasks_rates_update` | `domain` | no | no | yes | yes | `write`, `billing` | Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task. |
 | `clockify_tags_get` | `domain` | yes | no | yes | no | `read` | Get one tag by name or ID. |
 | `clockify_tags_update` | `domain` | no | no | yes | no | `write` | Update a tag by name or ID. |
-| `clockify_tags_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a tag by name or ID. |
+| `clockify_tags_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a tag by name or ID. Destructive; supports dry_run preview. |
 | `clockify_entries_get` | `domain` | yes | no | yes | no | `read` | Get one time entry by ID. |
 | `clockify_entries_update` | `domain` | no | no | yes | no | `write` | Update a time entry by ID. |
-| `clockify_entries_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a time entry by ID. |
+| `clockify_entries_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a time entry by ID. Destructive; supports dry_run preview. |
 | `clockify_users_list` | `domain` | yes | no | yes | no | `read` | List users in the pinned workspace. |
 | `clockify_users_profile` | `domain` | yes | no | yes | no | `read` | Get the current Clockify user. |
 | `clockify_workspace_settings` | `domain` | yes | no | yes | no | `read` | Read pinned workspace settings. |
@@ -106,7 +106,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_items_list` | `domain` | yes | no | yes | no | `read` | List items for an invoice |
 | `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:"major" to enter the value in major currency units and let the MCP multiply by 100 before the POST. |
 | `clockify_invoices_items_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:"major". |
-| `clockify_invoices_items_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an invoice item by line index |
+| `clockify_invoices_items_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice item by line index. Billing impact; destructive; supports dry_run preview. |
 | `clockify_projects_templates_list` | `domain` | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_projects_templates_create` | `domain` | no | no | no | no | `write` | Create a new project template |
 | `clockify_projects_estimates_update` | `domain` | no | no | no | no | `write` | Update a project's documented estimate fields |
@@ -115,11 +115,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_expenses_get` | `domain` | yes | no | yes | no | `read` | Get a single expense by ID |
 | `clockify_expenses_create` | `domain` | no | no | no | no | `write`, `billing` | Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:"minor" when supplying cents. Receipt upload is optional: live Clockify accepts no-file expenses even though the public docs require a file. Provide all three file_* fields together to attach a receipt. |
 | `clockify_expenses_update` | `domain` | no | no | no | no | `write`, `billing` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
-| `clockify_expenses_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an expense by ID |
+| `clockify_expenses_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an expense by ID. Billing impact; destructive; supports dry_run preview. |
 | `clockify_expenses_categories_list` | `domain` | yes | no | yes | no | `read` | List expense categories in the workspace |
 | `clockify_expenses_categories_create` | `domain` | no | no | no | yes | `write`, `billing` | Create a new expense category, optionally including upstream unit-price fields. |
 | `clockify_expenses_categories_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an expense category, including upstream unit-price fields. |
-| `clockify_expenses_categories_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an expense category |
+| `clockify_expenses_categories_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an expense category. Billing impact; destructive; supports dry_run preview. |
 | `clockify_custom_fields_list` | `domain` | yes | no | yes | no | `read` | List custom fields in the workspace with optional pagination |
 | `clockify_custom_fields_get` | `domain` | yes | no | yes | no | `read` | Get a custom field by ID |
 | `clockify_custom_fields_create` | `domain` | no | no | no | no | `write`, `admin` | Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE. |
@@ -164,7 +164,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_groups_update` | `domain` | no | no | no | no | `write`, `admin` | Update an existing user group by ID |
 | `clockify_groups_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Delete a user group by ID (supports dry_run preview) |
 | `clockify_groups_add_user` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Add a user to a user group |
-| `clockify_groups_remove_user` | `domain` | no | yes | no | yes | `admin`, `permission_change`, `destructive` | Remove a user from a user group |
+| `clockify_groups_remove_user` | `domain` | no | yes | no | yes | `admin`, `permission_change`, `destructive` | Remove a user from a user group. Admin and permission-change impact; destructive; supports dry_run preview. |
 | `clockify_holidays_list` | `domain` | yes | no | yes | no | `read` | List holidays configured in the workspace |
 | `clockify_holidays_list_for_user_period` | `domain` | yes | no | yes | no | `read` | List holidays assigned to a user in a date period |
 | `clockify_holidays_create` | `domain` | no | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
@@ -181,7 +181,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import expenses into an invoice. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List invoice payments. |
 | `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
-| `clockify_invoices_payments_delete` | `domain` | no | yes | no | no | `billing`, `destructive` | Delete an invoice payment. |
+| `clockify_invoices_payments_delete` | `domain` | no | yes | no | no | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
 | `clockify_time_off_archive` | `domain` | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | `domain` | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | `domain` | yes | no | yes | no | `read` | Get workspace capacity totals. |
