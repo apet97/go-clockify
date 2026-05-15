@@ -74,7 +74,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_tags_list` | `domain` | yes | no | yes | no | `read` | List tags in the pinned workspace. |
 | `clockify_tags_create` | `domain` | no | no | no | no | `write` | Create a tag in the pinned workspace. |
 | `clockify_entries_list` | `domain` | yes | no | yes | no | `read` | List current-user time entries in the pinned workspace. |
-| `clockify_entries_create` | `domain` | no | no | no | no | `write` | Create a current-user time entry in the pinned workspace. |
+| `clockify_entries_create` | `domain` | no | no | no | no | `write` | Create a current-user time entry in the pinned workspace. This is a direct create with no overlap guard; use clockify_log_work for overlap-protected logging. |
 | `clockify_clients_get` | `domain` | yes | no | yes | no | `read` | Get one client by name or ID. |
 | `clockify_clients_update` | `domain` | no | no | yes | no | `write` | Update a client by name or ID. |
 | `clockify_clients_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a client by name or ID. Destructive; supports dry_run preview. |

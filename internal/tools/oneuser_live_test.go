@@ -324,13 +324,12 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	requireLiveOK(t, server, "clockify_tags_update", map[string]any{"tag_id": tagID, "name": unique("tag-renamed")})
 
 	entryResp := requireLiveOK(t, server, "clockify_entries_create", map[string]any{
-		"start":         "2026-02-03T09:00:00Z",
-		"end":           "2026-02-03T10:00:00Z",
-		"description":   unique("entry"),
-		"project_id":    projectID,
-		"task_id":       taskID,
-		"tag_ids":       []any{tagID},
-		"allow_overlap": true,
+		"start":       "2026-02-03T09:00:00Z",
+		"end":         "2026-02-03T10:00:00Z",
+		"description": unique("entry"),
+		"project_id":  projectID,
+		"task_id":     taskID,
+		"tag_ids":     []any{tagID},
 	})
 	entryID := requireLiveID(t, entryResp, "entryId")
 	requireLiveOK(t, server, "clockify_entries_get", map[string]any{"entry_id": entryID})
@@ -613,8 +612,8 @@ type liveToolEnvelope struct {
 	OK       bool              `json:"ok"`
 	IDs      map[string]string `json:"ids,omitempty"`
 	Data     any               `json:"data,omitempty"`
-	Error    ErrorInfo         `json:"error,omitempty"`
-	Recovery RecoveryHint      `json:"recovery,omitempty"`
+	Error    ErrorInfo         `json:"error"`
+	Recovery RecoveryHint      `json:"recovery"`
 }
 
 func callLiveToolOKOrRecovery(t *testing.T, server *mcp.Server, name string, args map[string]any) liveToolEnvelope {

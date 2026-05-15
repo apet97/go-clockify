@@ -11671,7 +11671,7 @@
     },
     {
       "name": "clockify_entries_create",
-      "description": "Create a current-user time entry in the pinned workspace.",
+      "description": "Create a current-user time entry in the pinned workspace. This is a direct create with no overlap guard; use clockify_log_work for overlap-protected logging.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -11684,10 +11684,6 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "allow_overlap": {
-            "description": "When false (default) the entry is rejected if it overlaps an existing entry; set true to override after confirming the overlap is intentional.",
-            "type": "boolean"
-          },
           "billable": {
             "type": "boolean"
           },
