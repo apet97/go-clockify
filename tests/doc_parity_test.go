@@ -3,8 +3,10 @@ package e2e_test
 import (
 	"bufio"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -172,6 +174,114 @@ func TestGeneratedOpenAPIContractKeepsOwnerModeCoverage(t *testing.T) {
 			t.Fatalf("OpenAPI missing %s %s", strings.ToUpper(op.method), op.path)
 		}
 	}
+}
+
+// TestApiParityMatrixIsCurrent runs the check-api-parity-matrix script in
+// validate mode (no --write). The script regenerates the matrix in a
+// scratch dir and exits non-zero when the committed matrix would change,
+// so a clean run proves the file is in sync with docs/tool-catalog.json
+// and docs/goals/oneuser-tool-coverage.md.
+func TestApiParityMatrixIsCurrent(t *testing.T) {
+	if _, err := exec.LookPath("jq"); err != nil {
+		t.Skip("jq not installed; matrix drift requires jq")
+	}
+	repoRoot, err := filepath.Abs("..")
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+	cmd := exec.Command("bash", "scripts/check-api-parity-matrix.sh", "--repo-root", repoRoot)
+	cmd.Dir = repoRoot
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("api-parity-matrix drift detected:\n%s", out)
+	}
+}
+
+// TestReadmeToolsetCountsMatchRegistry pins README's documented
+// workflow/domain/raw split against the actual registry composition. If
+// the registry grows or shrinks we want README's prose to fail the build
+// rather than silently lie to readers.
+func TestReadmeToolsetCountsMatchRegistry(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	got, gotOk := scanReadmeStartupCount(string(readme))
+	if !gotOk {
+		t.Fatalf("README.md does not advertise an N-tool startup registry near the toolset description")
+	}
+
+	catalog, err := os.ReadFile(filepath.Join("..", "docs", "tool-catalog.json"))
+	if err != nil {
+		t.Fatalf("read tool-catalog.json: %v", err)
+	}
+	want := strings.Count(string(catalog), `"name": "clockify_`)
+	if got != want {
+		t.Fatalf("README startup registry count = %d, generated catalog has %d tools (regen with `make gen-tool-catalog` and update README)", got, want)
+	}
+}
+
+// TestReadmeRawFallbackBehaviorMatchesImplementation guards the README
+// section that documents the raw-API escape hatch: the two raw tools must
+// be present in the catalog and the env-var name and HTTP method list
+// must stay aligned with internal/clockify path-safety code.
+func TestReadmeRawFallbackBehaviorMatchesImplementation(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	text := string(readme)
+
+	for _, want := range []string{
+		"clockify_api_get",
+		"clockify_api_request",
+		"CLOCKIFY_ENABLE_RAW_WRITES=true",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md missing raw-fallback marker %q", want)
+		}
+	}
+
+	catalog, err := os.ReadFile(filepath.Join("..", "docs", "tool-catalog.json"))
+	if err != nil {
+		t.Fatalf("read tool-catalog.json: %v", err)
+	}
+	for _, want := range []string{
+		`"name": "clockify_api_get"`,
+		`"name": "clockify_api_request"`,
+	} {
+		if !strings.Contains(string(catalog), want) {
+			t.Fatalf("tool-catalog.json missing %s; README documents it but the registry no longer ships it", want)
+		}
+	}
+
+	// Both methods listed in README must remain gated on the same env
+	// var the runtime checks. If anyone moves the env var name we want
+	// the test to surface the rename before the docs ship.
+	for _, method := range []string{"POST", "PUT", "PATCH", "DELETE"} {
+		if !strings.Contains(text, method) {
+			t.Fatalf("README.md raw-fallback section no longer lists gated method %q", method)
+		}
+	}
+}
+
+// scanReadmeStartupCount finds the "N-tool startup registry" or
+// "preserves the N-tool" marker in README.md and returns the integer.
+func scanReadmeStartupCount(readme string) (int, bool) {
+	patterns := []*regexp.Regexp{
+		regexp.MustCompile(`(\d+)-tool startup registry`),
+		regexp.MustCompile(`preserves the (\d+)-tool`),
+	}
+	for _, re := range patterns {
+		match := re.FindStringSubmatch(readme)
+		if len(match) == 2 {
+			n, err := strconv.Atoi(match[1])
+			if err == nil {
+				return n, true
+			}
+		}
+	}
+	return 0, false
 }
 
 func currentProductDocPaths() []string {

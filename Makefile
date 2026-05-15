@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift live-contract-local
+.PHONY: build test fmt vet check clean gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift api-parity-matrix-drift live-contract-local
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
@@ -66,6 +66,14 @@ coverage-matrix-drift:
 	  && diff -q docs/openapi/coverage-matrix.md "$$tmpdir/coverage-matrix.md.before" >/dev/null \
 	  || { echo "[coverage-matrix-drift] docs/openapi/coverage-matrix.{json,md} are stale; run make gen-coverage-matrix"; \
 	       diff -u "$$tmpdir/coverage-matrix.md.before" docs/openapi/coverage-matrix.md | head -120; exit 1; }
+
+# api-parity-matrix-drift fails when docs/api-parity-matrix.md no longer
+# matches the regenerated output of check-api-parity-matrix.sh. The script
+# itself exits non-zero when the file would change, so a clean run proves
+# the committed matrix is in sync with docs/tool-catalog.json and the
+# coverage ledger.
+api-parity-matrix-drift:
+	bash scripts/check-api-parity-matrix.sh
 
 # live-contract-local intentionally performs real calls against the sacrificial
 # Clockify workspace. Do not point it at a production or personal workspace.
