@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 	"math"
 	"math/big"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -633,12 +635,14 @@ func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path stri
 		}
 		lastErr = err
 
-		apiErr, ok := err.(*APIError)
-		if !ok || !isRetryableStatus(apiErr.StatusCode) {
+		if !isRetryableError(err) {
 			c.recordCircuitBreakerResult(endpoint, method, err)
 			return err
 		}
-		explicitRetryAfter = apiErr.RetryAfter
+		explicitRetryAfter = 0
+		if apiErr, ok := err.(*APIError); ok {
+			explicitRetryAfter = apiErr.RetryAfter
+		}
 	}
 
 	if lastErr != nil {
@@ -654,8 +658,7 @@ func (c *Client) recordCircuitBreakerResult(endpoint, method string, err error) 
 	if c.breaker == nil {
 		return
 	}
-	apiErr, ok := err.(*APIError)
-	c.breaker.After(endpoint, method, ok && apiErr.StatusCode >= 500 && apiErr.StatusCode <= 599)
+	c.breaker.After(endpoint, method, isUpstreamFailure(err))
 }
 
 func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoint string, query url.Values, contentType string, payload []byte, out any) error {
@@ -819,6 +822,48 @@ func isRetryableStatus(code int) bool {
 		code == http.StatusBadGateway ||
 		code == http.StatusServiceUnavailable ||
 		code == http.StatusGatewayTimeout
+}
+
+// isRetryableError reports whether a failed request attempt should be
+// retried: an APIError carrying a retryable HTTP status, or a transport-level
+// failure (DNS, connection reset, TLS, dial/read timeout) that never produced
+// a response. A caller-cancelled or deadline-exceeded request is never retried
+// — that is the caller's decision, not an upstream fault.
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return isRetryableStatus(apiErr.StatusCode)
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr)
+}
+
+// isUpstreamFailure reports whether err should count against the circuit
+// breaker. A 5xx response and a transport-level failure both mean the
+// upstream is unhealthy, so a sustained run of them must open the breaker;
+// 4xx responses, decode failures, and caller cancellation must not.
+func isUpstreamFailure(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	if errors.Is(err, ErrCircuitBreakerOpen) {
+		return false
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode >= 500 && apiErr.StatusCode <= 599
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr)
 }
 
 func parseRetryAfter(raw string) (time.Duration, bool) {

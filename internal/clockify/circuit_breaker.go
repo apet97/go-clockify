@@ -120,7 +120,7 @@ func (b *CircuitBreaker) Before(endpoint, method string) error {
 	return nil
 }
 
-func (b *CircuitBreaker) After(endpoint, method string, upstream5xx bool) {
+func (b *CircuitBreaker) After(endpoint, method string, upstreamFailure bool) {
 	if b == nil || !b.enabled {
 		return
 	}
@@ -134,7 +134,7 @@ func (b *CircuitBreaker) After(endpoint, method string, upstream5xx bool) {
 	if st.state == breakerHalfOpen && st.halfOpenInFlight > 0 {
 		st.halfOpenInFlight--
 	}
-	if !upstream5xx {
+	if !upstreamFailure {
 		st.failures = 0
 		if st.state != breakerClosed {
 			b.transitionLocked(key, st, breakerClosed, now)
