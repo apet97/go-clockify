@@ -98,3 +98,19 @@ Use a workspace reserved only for these tests:
 
 When a live run fails, keep the prefixed objects in place until the failure has
 been inspected. Cleanup can remove useful evidence too early.
+
+## Recorded Runs
+
+Live evidence is captured per run so reviewers can see when each test family
+last passed, against which workspace shape, and under which gates. Workspace
+identifiers are intentionally omitted — we record only the visible plan from
+`doctor --live` and a non-identifying description.
+
+| Date (UTC) | Workspace plan | Gates | Tests | Result | Leftovers |
+|---|---|---|---|---|---|
+| 2026-05-15 | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1`, `CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `TestOneUserLiveWorkflow`, `TestOneUserLivePaidFeatureWorkflowRecovery`, `TestOneUserLiveOptionalDomainContracts`, `TestLiveOneUserWorkflowMCP` | PASS (42.7s `internal/tools`, 29.0s `tests`) | 0 (`clockify_demo_cleanup` returned ok) |
+
+When recording a new run, include the date, the visible workspace plan (from
+`doctor --live`), the env-var set that was active, the named test functions,
+the pass/fail result, and a leftover count from `clockify_demo_cleanup` plus
+any prefix-scoped audit.
