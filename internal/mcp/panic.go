@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 const maxLoggedPanicStackFrames = 8
@@ -29,7 +27,7 @@ type PanicResponseSink func(Response)
 
 // RecoverDispatch is the deferred function that wraps a tool
 // dispatch goroutine. It recovers a panic, emits a structured
-// metric + log event, and (when a panic was caught) hands a stable
+// log event, and (when a panic was caught) hands a stable
 // JSON-RPC tool-error envelope to sink. No-op when the dispatch
 // returns normally.
 //
@@ -49,7 +47,6 @@ func RecoverDispatch(reqID any, site, toolHint string, sink PanicResponseSink) {
 	if rec == nil {
 		return
 	}
-	metrics.PanicsRecoveredTotal.Inc(site)
 	stack := sanitizedDebugStack()
 	slog.Error("panic_recovered",
 		"site", site,

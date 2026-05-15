@@ -15,8 +15,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 func TestClientGetEmpty200LeavesOutZero(t *testing.T) {
@@ -342,9 +340,6 @@ func TestCircuitBreakerHalfOpenSuccessCloses(t *testing.T) {
 	if out["ok"] != true {
 		t.Fatalf("unexpected response: %#v", out)
 	}
-	if got := c.breaker.StateValue("/test", http.MethodGet); got != 0 {
-		t.Fatalf("breaker state = %v, want closed", got)
-	}
 }
 
 func TestEncodeMultipartWithFiles(t *testing.T) {
@@ -460,8 +455,7 @@ func TestParseRetryAfterAdditionalFormats(t *testing.T) {
 	}
 }
 
-func TestRetryAfterMalformedCountsMetric(t *testing.T) {
-	before := metrics.UpstreamRetryAfterUnparseableTotal.Get("/test")
+func TestRetryAfterMalformedLeavesRetryAfterUnset(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Retry-After", "not a retry-after")
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -481,9 +475,6 @@ func TestRetryAfterMalformedCountsMetric(t *testing.T) {
 	}
 	if apiErr.RetryAfter != 0 {
 		t.Fatalf("malformed Retry-After should not set retry duration, got %s", apiErr.RetryAfter)
-	}
-	if got := metrics.UpstreamRetryAfterUnparseableTotal.Get("/test"); got != before+1 {
-		t.Fatalf("retry-after metric = %d, want %d", got, before+1)
 	}
 }
 

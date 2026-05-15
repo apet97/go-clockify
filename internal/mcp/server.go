@@ -9,13 +9,10 @@ import (
 	"io"
 	"log/slog"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 // SupportedProtocolVersions lists MCP protocol versions this server can
@@ -501,9 +498,6 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 						}
 					})
 					resp := s.handle(ctx, r)
-					if resp.Error != nil {
-						metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
-					}
 					if r.ID != nil {
 						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
@@ -526,9 +520,6 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			}
 
 			resp := s.handle(ctx, req)
-			if resp.Error != nil {
-				metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
-			}
 			if req.ID == nil {
 				continue
 			}
@@ -552,20 +543,15 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error) {
 	var req Request
 	if err := json.Unmarshal(msg, &req); err != nil {
-		metrics.ProtocolErrorsTotal.Inc("-32700")
 		return json.Marshal(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}})
 	}
 	if rpcErr := validateRequest(req); rpcErr != nil {
-		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(rpcErr.Code))
 		return json.Marshal(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr})
 	}
 	if out, ok, err := s.tryMarshalCachedToolsListResponse(req); ok || err != nil {
 		return out, err
 	}
 	resp := s.handle(ctx, req)
-	if resp.Error != nil {
-		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
-	}
 	if req.ID == nil {
 		return nil, nil
 	}
@@ -587,7 +573,6 @@ func (s *Server) handleCancelled(raw any) {
 	if !s.cancelInflight(p.RequestID) {
 		return
 	}
-	metrics.Cancellations.Inc("client_requested")
 	slog.Info("cancellation",
 		"request_id", p.RequestID,
 		"reason", p.Reason,

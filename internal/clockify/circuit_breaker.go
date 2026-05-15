@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/apet97/go-clockify/internal/metrics"
 )
 
 var ErrCircuitBreakerOpen = errors.New("clockify upstream circuit breaker open")
@@ -64,7 +62,6 @@ type CircuitBreaker struct {
 
 	mu     sync.Mutex
 	states map[breakerKey]*breakerEndpointState
-	gauges sync.Map
 }
 
 func NewCircuitBreaker(cfg CircuitBreakerConfig) *CircuitBreaker {
@@ -95,7 +92,6 @@ func (b *CircuitBreaker) Before(endpoint, method string) error {
 		return nil
 	}
 	key := breakerKey{endpoint: endpoint, method: method}
-	b.registerGauge(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -105,14 +101,12 @@ func (b *CircuitBreaker) Before(endpoint, method string) error {
 		elapsed := now.Sub(st.openedAt)
 		if elapsed < b.openDuration {
 			retryAfter := b.openDuration - elapsed
-			metrics.UpstreamCircuitBreakerRejectionsTotal.Inc(endpoint, method)
 			return &CircuitBreakerOpenError{Endpoint: endpoint, Method: method, RetryAfter: retryAfter}
 		}
-		b.transitionLocked(key, st, breakerHalfOpen, now)
+		b.transitionLocked(st, breakerHalfOpen, now)
 	}
 	if st.state == breakerHalfOpen {
 		if st.halfOpenInFlight >= b.halfOpenProbes {
-			metrics.UpstreamCircuitBreakerRejectionsTotal.Inc(endpoint, method)
 			return &CircuitBreakerOpenError{Endpoint: endpoint, Method: method, RetryAfter: b.openDuration}
 		}
 		st.halfOpenInFlight++
@@ -125,7 +119,6 @@ func (b *CircuitBreaker) After(endpoint, method string, upstreamFailure bool) {
 		return
 	}
 	key := breakerKey{endpoint: endpoint, method: method}
-	b.registerGauge(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -137,19 +130,19 @@ func (b *CircuitBreaker) After(endpoint, method string, upstreamFailure bool) {
 	if !upstreamFailure {
 		st.failures = 0
 		if st.state != breakerClosed {
-			b.transitionLocked(key, st, breakerClosed, now)
+			b.transitionLocked(st, breakerClosed, now)
 		}
 		return
 	}
 	switch st.state {
 	case breakerHalfOpen:
-		b.transitionLocked(key, st, breakerOpen, now)
+		b.transitionLocked(st, breakerOpen, now)
 	case breakerOpen:
 		st.openedAt = now
 	default:
 		st.failures++
 		if st.failures >= b.failureThreshold {
-			b.transitionLocked(key, st, breakerOpen, now)
+			b.transitionLocked(st, breakerOpen, now)
 		}
 	}
 }
@@ -164,16 +157,7 @@ func (b *CircuitBreaker) ensureLocked(key breakerKey) *breakerEndpointState {
 	return st
 }
 
-func (b *CircuitBreaker) registerGauge(key breakerKey) {
-	if _, loaded := b.gauges.LoadOrStore(key, struct{}{}); loaded {
-		return
-	}
-	metrics.UpstreamCircuitBreakerState.SetFunc(func() float64 {
-		return b.StateValue(key.endpoint, key.method)
-	}, key.endpoint, key.method)
-}
-
-func (b *CircuitBreaker) transitionLocked(key breakerKey, st *breakerEndpointState, next breakerStateName, now time.Time) {
+func (b *CircuitBreaker) transitionLocked(st *breakerEndpointState, next breakerStateName, now time.Time) {
 	if st.state == next {
 		return
 	}
@@ -184,26 +168,5 @@ func (b *CircuitBreaker) transitionLocked(key breakerKey, st *breakerEndpointSta
 	}
 	if next != breakerHalfOpen {
 		st.halfOpenInFlight = 0
-	}
-	metrics.UpstreamCircuitBreakerTransitionsTotal.Inc(key.endpoint, key.method, string(next))
-}
-
-func (b *CircuitBreaker) StateValue(endpoint, method string) float64 {
-	if b == nil || !b.enabled {
-		return 0
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	st, ok := b.states[breakerKey{endpoint: endpoint, method: method}]
-	if !ok {
-		return 0
-	}
-	switch st.state {
-	case breakerOpen:
-		return 1
-	case breakerHalfOpen:
-		return 0.5
-	default:
-		return 0
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/jsonschema"
-	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
@@ -179,12 +178,9 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	defer span.End()
 
 	reqID := s.requestSeq.Add(1)
-	callStart := time.Now()
 	outcome := "success"
 	defer func() {
 		span.SetAttribute("outcome", outcome)
-		metrics.ToolCallsTotal.Inc(params.Name, outcome)
-		metrics.ToolCallDuration.Observe(time.Since(callStart).Seconds(), params.Name)
 	}()
 
 	s.mu.RLock()
@@ -223,10 +219,8 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		switch {
 		case errors.Is(err, context.DeadlineExceeded) || errors.Is(callCtx.Err(), context.DeadlineExceeded):
 			outcome = "timeout"
-			metrics.Cancellations.Inc("timeout")
 		case errors.Is(err, context.Canceled) || errors.Is(callCtx.Err(), context.Canceled):
 			outcome = "cancelled"
-			metrics.Cancellations.Inc("context_cancelled")
 		default:
 			outcome = "tool_error"
 		}

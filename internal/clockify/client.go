@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
@@ -537,15 +536,6 @@ func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path stri
 	var explicitRetryAfter time.Duration
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
-			// Record the retry attempt with the reason derived from the last
-			// error's status code. This lets operators see retry storms by
-			// endpoint and reason before they escalate into tool errors.
-			reason := "error"
-			if apiErr, ok := lastErr.(*APIError); ok {
-				reason = retryReason(apiErr.StatusCode)
-			}
-			metrics.UpstreamRetriesTotal.Inc(endpoint, reason)
-
 			waitDur := explicitRetryAfter
 			if waitDur <= 0 {
 				waitDur = backoff(attempt)
@@ -603,12 +593,9 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 	span.SetAttribute("http.method", method)
 	defer span.End()
 
-	start := time.Now()
 	statusCode := 0
 	defer func() {
 		span.SetAttribute("http.status_code", statusCode)
-		metrics.UpstreamRequestsTotal.Inc(endpoint, method, statusBucket(statusCode))
-		metrics.UpstreamRequestDuration.Observe(time.Since(start).Seconds(), endpoint, method)
 	}()
 
 	if path != "" && path[0] != '/' {
@@ -676,7 +663,6 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 			if d, ok := parseRetryAfter(ra); ok {
 				retryAfter = d
 			} else {
-				metrics.UpstreamRetryAfterUnparseableTotal.Inc(endpoint)
 				slog.Warn("retry_after_unparseable", "endpoint", endpoint, "raw", truncateRetryAfterForLog(ra))
 			}
 		}
@@ -710,7 +696,6 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 			return err
 		}
 		if n > maxResponseBody {
-			metrics.ClockifyResponsesOversizeTotal.Inc(method)
 			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
 			return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
 		}
@@ -740,7 +725,6 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 		return err
 	}
 	if n > maxResponseBody {
-		metrics.ClockifyResponsesOversizeTotal.Inc(method)
 		// Drain whatever is left so the connection can be reused
 		// (bounded). The 1 MiB ceiling on the drain mirrors the
 		// error-path drain — past that, we throw the connection
