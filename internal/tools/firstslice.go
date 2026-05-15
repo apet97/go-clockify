@@ -660,6 +660,10 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 	switch {
 	case strings.Contains(action, "tools_guide"):
 		return RecoveryHint{Hint: "Call clockify_status, then choose a workflow tool from tools/list.", Tool: "clockify_status"}
+	case action == "clockify_api_get":
+		return RecoveryHint{Hint: "Use workflow or domain tools first. Call clockify_tools_guide to find the nearest typed tool before retrying raw GET.", Tool: "clockify_tools_guide"}
+	case action == "clockify_api_request":
+		return RecoveryHint{Hint: "Use workflow or domain tools first. Call clockify_tools_guide to find the nearest typed tool before enabling raw writes or retrying raw fallback.", Tool: "clockify_tools_guide"}
 	case strings.Contains(action, "create_work_package"):
 		return RecoveryHint{Hint: "List clients, projects, tasks, or tags, then retry with returned IDs or exact names.", Tool: "clockify_tools_guide"}
 	case strings.Contains(action, "log_work"), strings.Contains(action, "start_work"), strings.Contains(action, "stop_work"), strings.Contains(action, "switch_work"), strings.Contains(action, "fix_entry"), strings.Contains(action, "review_day"), strings.Contains(action, "review_week"):

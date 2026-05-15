@@ -1810,7 +1810,7 @@ func (s *Service) RawAPIRequest(ctx context.Context, args map[string]any) (any, 
 
 func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any) (any, error) {
 	if method != "GET" && (s == nil || !s.EnableRawWrites) {
-		return nil, fmt.Errorf("raw API writes are disabled; set CLOCKIFY_ENABLE_RAW_WRITES=true to allow %s", method)
+		return nil, fmt.Errorf("raw API writes are disabled; use workflow or domain tools first, or set CLOCKIFY_ENABLE_RAW_WRITES=true to allow %s", method)
 	}
 	path, err := safeRawPath(s.WorkspaceID, stringArg(args, "path"))
 	if err != nil {

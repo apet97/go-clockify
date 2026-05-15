@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 func TestSafeRawPathRejectsEscapingAttempts(t *testing.T) {
@@ -122,5 +124,54 @@ func TestRawFallbackDocumentedAPIWritesFlagDoesNotEnableNonGET(t *testing.T) {
 		"body":   map[string]any{"name": "Workspace"},
 	}); err == nil || !strings.Contains(err.Error(), "CLOCKIFY_ENABLE_RAW_WRITES") {
 		t.Fatalf("DocumentedAPIWrites-only raw PATCH err = %v, want CLOCKIFY_ENABLE_RAW_WRITES gate", err)
+	}
+}
+
+func TestRawFallbackRecoveryHintsPreferTypedTools(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("raw fallback reached upstream before recovery: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	cases := []struct {
+		name     string
+		args     map[string]any
+		wantText []string
+	}{
+		{
+			name: "clockify_api_get",
+			args: map[string]any{
+				"path": "https://evil.example/workspaces/{workspaceId}/clients",
+			},
+			wantText: []string{"workflow", "domain", "typed", "raw get"},
+		},
+		{
+			name: "clockify_api_request",
+			args: map[string]any{
+				"method": "POST",
+				"path":   "/workspaces/{workspaceId}/clients",
+				"body":   map[string]any{"name": "Blocked"},
+			},
+			wantText: []string{"workflow", "domain", "typed", "raw writes"},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			result := callToolError(t, server, c.name, c.args)
+			if result.Recovery.Tool != "clockify_tools_guide" {
+				t.Fatalf("recovery tool = %q, want clockify_tools_guide; envelope=%+v", result.Recovery.Tool, result)
+			}
+			hint := strings.ToLower(result.Recovery.Hint)
+			for _, want := range c.wantText {
+				if !strings.Contains(hint, want) {
+					t.Fatalf("recovery hint %q missing %q", result.Recovery.Hint, want)
+				}
+			}
+		})
 	}
 }

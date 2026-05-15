@@ -867,7 +867,7 @@ func sanitizeResultValue(value any) any {
 func sensitiveResultKey(key string) bool {
 	normalized := strings.NewReplacer("_", "", "-", "", " ", "").Replace(strings.ToLower(key))
 	switch normalized {
-	case "apikey", "authtoken", "bearer", "cookie", "cookies", "credential", "credentials", "authorization":
+	case "accesstoken", "apikey", "authtoken", "bearer", "clientsecret", "cookie", "cookies", "credential", "credentials", "authorization", "idtoken", "password", "refreshtoken", "secret", "token", "xaddontoken", "xapikey":
 		return true
 	default:
 		return false
