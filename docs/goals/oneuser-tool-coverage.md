@@ -9,7 +9,7 @@ Summary:
 - Raw fallback tools: 2
 - Fake-smoke yes: 151
 - Live protocol/recovery tested yes: 149
-- Live happy-path tested yes: 106
+- Live happy-path tested yes: 127
 
 Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
@@ -17,6 +17,7 @@ Remaining honest gaps:
 - Live protocol/recovery coverage is intentionally broader than live happy-path coverage. Optional paid-feature domains may still return recovery when the workspace plan or permissions do not allow the operation.
 - Every `Live protocol/recovery tested: yes` row is backed by named live-test evidence and required gate metadata in `internal/tools/oneuser_quality_test.go`; happy-path rows are tracked separately and only mark real success paths.
 - Workflow schemas and the first CRUD/native-conversion slice now advertise typed data schemas; remaining generic envelopes are tracked per row.
+- Remaining live protocol/recovery yes + happy-path no rows are classified as intentionally recovery-only when they are destructive, externally noisy, or stateful beyond created test entities; needs-domain-gate when they require a real approval/user-admin lifecycle beyond this campaign; and unavailable-paid-feature when the live API or workspace plan has not exposed a safe success route.
 
 | Tool | Class | Handler | Endpoint / method | Fake smoke | Live protocol/recovery tested | Live happy-path tested | Output schema | Status | Next action |
 |------|-------|---------|-------------------|-------------|--------------------------------|------------------------|---------------|--------|-------------|
@@ -30,18 +31,18 @@ Remaining honest gaps:
 | `clockify_review_day` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_review_week` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_fix_entry` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_invoice_client_work` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_record_expense` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_request_time_off` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_schedule_work` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_setup_webhook` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_invoice_client_work` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_record_expense` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_request_time_off` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_schedule_work` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_setup_webhook` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_demo_seed` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_demo_cleanup` | workflow | native handler | native composite; may call multiple Clockify endpoints | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_clients_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_clients_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_clients_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_projects_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_projects_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_projects_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_tasks_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_tasks_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tasks_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tags_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tags_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
@@ -54,11 +55,11 @@ Remaining honest gaps:
 | `clockify_projects_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_projects_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_projects_archive` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_projects_rates_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_projects_rates_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tasks_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tasks_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tasks_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_tasks_rates_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_tasks_rates_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tags_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tags_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_tags_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
@@ -100,8 +101,8 @@ Remaining honest gaps:
 | `clockify_time_off_requests_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_requests_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_requests_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_time_off_approve` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_time_off_deny` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_time_off_approve` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_time_off_deny` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_policies_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_policies_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_policies_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
@@ -131,23 +132,23 @@ Remaining honest gaps:
 | `clockify_groups_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_groups_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_groups_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_groups_add_user` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_groups_remove_user` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_groups_add_user` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_groups_remove_user` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_holidays_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_holidays_list_for_user_period` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_holidays_list_for_user_period` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_holidays_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_holidays_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_holidays_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_users_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_users_profile` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_users_deactivate` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_users_role` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_workspace_settings` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_workspace_settings` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_projects_memberships_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_entries_mark_invoiced` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_reports_attendance` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_reports_money` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_entries_mark_invoiced` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_reports_attendance` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_reports_money` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_expense` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_reports_export` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_reports_export` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_invoices_export` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_invoices_import_time` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_invoices_import_expenses` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
