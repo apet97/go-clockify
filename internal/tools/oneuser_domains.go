@@ -629,10 +629,10 @@ func adjustOneUserNativeSchema(name string, schema map[string]any) {
 		props["user_ids"] = stringArraySchema("User IDs to set as members")
 		props["hourly_rate"] = map[string]any{"type": "number", "description": "Hourly rate for all members when using user_ids compatibility input"}
 		schema["required"] = []string{"project_id"}
-		schema["anyOf"] = []any{
-			map[string]any{"required": []string{"memberships"}},
-			map[string]any{"required": []string{"user_ids"}},
-		}
+		// The "memberships OR user_ids" rule is enforced by the routed
+		// handler (Update/SetProjectMemberships). It is intentionally not a
+		// top-level anyOf: Anthropic tool input schemas must be a plain
+		// object, and a sibling anyOf breaks subagent launches.
 	}
 }
 

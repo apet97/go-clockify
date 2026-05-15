@@ -28181,18 +28181,6 @@
       ],
       "input_schema": {
         "additionalProperties": false,
-        "anyOf": [
-          {
-            "required": [
-              "memberships"
-            ]
-          },
-          {
-            "required": [
-              "user_ids"
-            ]
-          }
-        ],
         "properties": {
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
@@ -43423,7 +43411,7 @@
         "additionalProperties": false,
         "properties": {
           "assigned_to": {
-            "description": "User ID the holidays are assigned to",
+            "description": "User ID the holidays are assigned to (or pass user_id)",
             "type": "string"
           },
           "end": {
@@ -43440,7 +43428,6 @@
           }
         },
         "required": [
-          "assigned_to",
           "start",
           "end"
         ],
@@ -43688,18 +43675,6 @@
       ],
       "input_schema": {
         "additionalProperties": false,
-        "anyOf": [
-          {
-            "required": [
-              "user_ids"
-            ]
-          },
-          {
-            "required": [
-              "user_group_ids"
-            ]
-          }
-        ],
         "properties": {
           "end_date": {
             "description": "Range end in yyyy-MM-dd format; defaults to start_date for single-day holidays",

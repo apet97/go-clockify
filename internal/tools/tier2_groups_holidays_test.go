@@ -191,31 +191,71 @@ func TestCreateHolidayInputSchemaRequiresAssignment(t *testing.T) {
 		t.Fatal("clockify_create_holiday descriptor not found")
 	}
 
-	if err := jsonschema.Validate(schema, map[string]any{
-		"name":       "Memorial Day",
-		"start_date": "2026-05-25",
-		"user_ids":   []any{"u1"},
-	}); err != nil {
-		t.Fatalf("user_ids assignment should pass schema: %v", err)
+	// The input schema must be a plain object: Anthropic tool input schemas
+	// reject a top-level anyOf/oneOf/allOf, which breaks subagent launches.
+	for _, k := range []string{"anyOf", "oneOf", "allOf"} {
+		if _, present := schema[k]; present {
+			t.Fatalf("schema must not carry a top-level %q", k)
+		}
 	}
-	if err := jsonschema.Validate(schema, map[string]any{
-		"name":           "Memorial Day",
-		"start_date":     "2026-05-25",
-		"user_group_ids": []any{"g1"},
-	}); err != nil {
-		t.Fatalf("user_group_ids assignment should pass schema: %v", err)
-	}
-	if err := jsonschema.Validate(schema, map[string]any{
+
+	// The "at least one of user_ids/user_group_ids" rule is enforced by the
+	// handler instead. Missing assignment is rejected before any API call.
+	if _, err := svc.CreateHoliday(context.Background(), map[string]any{
 		"name":       "Memorial Day",
 		"start_date": "2026-05-25",
 	}); err == nil {
-		t.Fatal("expected schema to reject holidays without user_ids or user_group_ids")
+		t.Fatal("expected CreateHoliday to reject holidays without user_ids or user_group_ids")
 	}
-	if err := jsonschema.Validate(schema, map[string]any{
+	if _, err := svc.CreateHoliday(context.Background(), map[string]any{
 		"name":       "Memorial Day",
 		"start_date": "2026-05-25",
 		"user_ids":   []any{},
 	}); err == nil {
-		t.Fatal("expected schema to reject empty user_ids")
+		t.Fatal("expected CreateHoliday to reject empty user_ids")
+	}
+}
+
+func TestListHolidaysInPeriodSchemaAllowsUserIDAlias(t *testing.T) {
+	svc := New(nil, "ws1")
+	descriptors, ok := tier2Handlers(svc, "groups_holidays")
+	if !ok {
+		t.Fatal("missing groups_holidays handlers")
+	}
+	var schema map[string]any
+	for _, d := range descriptors {
+		if d.Tool.Name == "clockify_list_holidays_in_period" {
+			schema = d.Tool.InputSchema
+			break
+		}
+	}
+	if schema == nil {
+		t.Fatal("clockify_list_holidays_in_period descriptor not found")
+	}
+
+	// user_id is a documented alias for assigned_to that the handler honors.
+	// The schema must accept a user_id-only call; listing assigned_to in
+	// required made schema validation reject the alias before the handler ran.
+	if err := jsonschema.Validate(schema, map[string]any{
+		"user_id": "u1",
+		"start":   "2026-05-01",
+		"end":     "2026-05-31",
+	}); err != nil {
+		t.Fatalf("user_id alias should satisfy the schema: %v", err)
+	}
+	if err := jsonschema.Validate(schema, map[string]any{
+		"assigned_to": "u1",
+		"start":       "2026-05-01",
+		"end":         "2026-05-31",
+	}); err != nil {
+		t.Fatalf("assigned_to should satisfy the schema: %v", err)
+	}
+
+	// The "assigned_to or user_id" rule is enforced by the handler instead.
+	if _, err := svc.ListHolidaysInPeriod(context.Background(), map[string]any{
+		"start": "2026-05-01",
+		"end":   "2026-05-31",
+	}); err == nil {
+		t.Fatal("expected ListHolidaysInPeriod to reject a missing assignee")
 	}
 }

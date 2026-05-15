@@ -102,10 +102,14 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 			Tool: toolRO("clockify_list_holidays_in_period",
 				"List holidays assigned to a user in a date period",
 				map[string]any{
-					"type":     "object",
-					"required": []string{"assigned_to", "start", "end"},
+					"type": "object",
+					// assigned_to is not in required: user_id is an accepted
+					// alias, and "assigned_to OR user_id" cannot be expressed
+					// in a plain-object schema. ListHolidaysInPeriod enforces
+					// that exactly one is present before any API call.
+					"required": []string{"start", "end"},
 					"properties": map[string]any{
-						"assigned_to": map[string]any{"type": "string", "description": "User ID the holidays are assigned to"},
+						"assigned_to": map[string]any{"type": "string", "description": "User ID the holidays are assigned to (or pass user_id)"},
 						"user_id":     map[string]any{"type": "string", "description": "Alias for assigned_to"},
 						"start":       map[string]any{"type": "string", "description": "Range start timestamp/date"},
 						"end":         map[string]any{"type": "string", "description": "Range end timestamp/date"},
@@ -131,10 +135,10 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 						"user_ids":        map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string"}, "description": "User IDs the holiday applies to (at least one user_ids or user_group_ids entry is required)"},
 						"user_group_ids":  map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string"}, "description": "User-group IDs the holiday applies to"},
 					},
-					"anyOf": []any{
-						map[string]any{"required": []string{"user_ids"}},
-						map[string]any{"required": []string{"user_group_ids"}},
-					},
+					// The "at least one of user_ids/user_group_ids" rule is
+					// enforced in CreateHoliday. It is intentionally not a
+					// top-level anyOf: Anthropic tool input schemas must be a
+					// plain object, and a sibling anyOf breaks subagent launches.
 				}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
