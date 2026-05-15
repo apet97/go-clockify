@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/jsonschema"
 )
 
 func TestSchedulingHandlersCount(t *testing.T) {
@@ -834,6 +835,56 @@ func TestUpdateTimeOffBalanceValidatesRequiredArgs(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error = %q, want contains %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// TestUpdateTimeOffBalanceSchemaBoundsValue pins the Clockify-documented
+// [-10000, 10000] range on the value input. The MCP dispatch layer
+// validates arguments against the tool's InputSchema before the handler
+// runs, so an out-of-range value must be rejected as a protocol error;
+// this test exercises that schema directly.
+func TestUpdateTimeOffBalanceSchemaBoundsValue(t *testing.T) {
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	var schema map[string]any
+	for _, d := range timeOffHandlers(svc) {
+		if d.Tool.Name == "clockify_time_off_balance_update" {
+			schema = d.Tool.InputSchema
+			break
+		}
+	}
+	if schema == nil {
+		t.Fatal("clockify_time_off_balance_update descriptor not found")
+	}
+
+	base := func(value float64) map[string]any {
+		return map[string]any{
+			"policy_id": "abc123def456789012345679",
+			"user_ids":  []any{"abc123def456789012345670"},
+			"value":     value,
+			"note":      "schema bounds probe",
+		}
+	}
+	cases := []struct {
+		name    string
+		value   float64
+		wantErr bool
+	}{
+		{name: "zero is valid", value: 0},
+		{name: "max boundary valid", value: 10000},
+		{name: "min boundary valid", value: -10000},
+		{name: "above max rejected", value: 10001, wantErr: true},
+		{name: "below min rejected", value: -10001, wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := jsonschema.Validate(schema, base(tc.value))
+			if tc.wantErr && err == nil {
+				t.Fatalf("value %v: expected schema rejection", tc.value)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("value %v: unexpected schema error: %v", tc.value, err)
 			}
 		})
 	}

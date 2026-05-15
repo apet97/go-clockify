@@ -111,6 +111,9 @@ func TestRiskOverridesCoverSideEffectToolFamilies(t *testing.T) {
 		{"clockify_time_off_policies_create", mcp.RiskWrite | mcp.RiskAdmin},
 		{"clockify_time_off_policies_update", mcp.RiskWrite | mcp.RiskAdmin},
 		{"clockify_time_off_archive", mcp.RiskWrite | mcp.RiskAdmin},
+		// Balance writes adjust accrued PTO; admin scope plus billing
+		// because the balance drives future paid-time-off liability.
+		{"clockify_time_off_balances_update", mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskBilling},
 
 		// Custom fields are workspace configuration; delete is destructive.
 		{"clockify_custom_fields_create", mcp.RiskWrite | mcp.RiskAdmin},

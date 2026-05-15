@@ -204,7 +204,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "required": []string{"policy_id", "user_ids", "value", "note"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
 					"user_ids":  map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string"}, "description": "User IDs (or names/emails) whose balance to adjust under this policy."},
-					"value":     map[string]any{"type": "number", "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours)."},
+					"value":     map[string]any{"type": "number", "minimum": -10000, "maximum": 10000, "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours). Clockify constrains this to the range [-10000, 10000]."},
 					"note":      map[string]any{"type": "string", "description": "Required note explaining the adjustment; surfaced in Clockify audit history."},
 					"dry_run":   map[string]any{"type": "boolean", "description": "Preview the PATCH payload without calling Clockify."},
 				}}),

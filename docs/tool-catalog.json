@@ -35862,7 +35862,9 @@
             "type": "array"
           },
           "value": {
-            "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours).",
+            "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours). Clockify constrains this to the range [-10000, 10000].",
+            "maximum": 10000,
+            "minimum": -10000,
             "type": "number"
           }
         },
