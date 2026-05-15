@@ -44,7 +44,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. clockify_create_time_off_request (RW)
 		{
 			Tool: toolRW("clockify_create_time_off_request",
-				"Create a time off request under a policy",
+				"Create a time off request under a policy. Changes leave balances/approval workflow.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "start", "end", "note"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
 					"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
@@ -62,7 +62,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 4. clockify_update_time_off_request (RW)
 		{
 			Tool: toolRW("clockify_update_time_off_request",
-				"Update an existing time off request",
+				"Update an existing time off request, including approval status when supplied.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
@@ -81,7 +81,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 5. clockify_delete_time_off_request (destructive)
 		{
 			Tool: toolDestructive("clockify_delete_time_off_request",
-				"Delete a time off request (supports dry_run preview)",
+				"Delete a time off request. Destructive; supports dry_run preview.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
@@ -96,7 +96,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 6. clockify_approve_time_off (RW)
 		{
 			Tool: toolRW("clockify_approve_time_off",
-				"Approve a pending time off request",
+				"Approve a pending time off request and update its approval state.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
@@ -110,7 +110,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 7. clockify_deny_time_off (RW)
 		{
 			Tool: toolRW("clockify_deny_time_off",
-				"Deny a pending time off request",
+				"Deny a pending time off request and update its approval state.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},

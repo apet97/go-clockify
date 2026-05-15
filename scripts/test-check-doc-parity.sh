@@ -130,7 +130,7 @@ EOF
 
     # Phase 1 known_vars source: stringy literals so the regex
     # '"(MCP|CLOCKIFY)_[A-Z0-9_]+"' matches inside a Go file.
-    cat > "$dir/internal/config/config.go" <<'EOF'
+    cat > "$dir/internal/config/oneuser.go" <<'EOF'
 package config
 
 const (

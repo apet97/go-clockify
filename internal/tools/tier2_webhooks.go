@@ -119,7 +119,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 5. Delete webhook (destructive)
 		{
-			Tool: toolDestructive("clockify_delete_webhook", "Delete a webhook", map[string]any{
+			Tool: toolDestructive("clockify_delete_webhook", "Delete a webhook subscription. Destructive; supports dry_run preview.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{

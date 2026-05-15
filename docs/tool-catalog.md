@@ -100,8 +100,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_get` | — | yes | no | yes | no | `read` | Get a single invoice by ID |
 | `clockify_invoices_create` | — | no | no | no | yes | `write`, `billing` | Create a new invoice for a client. Supports dry_run:true. |
 | `clockify_invoices_update` | — | no | no | no | yes | `write`, `billing` | Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true. |
-| `clockify_invoices_delete` | — | no | yes | no | yes | `billing`, `destructive` | Delete an invoice by ID |
-| `clockify_invoices_send` | — | no | no | no | yes | `write`, `billing`, `external_side_effect` | Send an invoice to the client |
+| `clockify_invoices_delete` | — | no | yes | no | yes | `billing`, `destructive` | Delete an invoice permanently by ID. Supports dry_run preview. |
+| `clockify_invoices_send` | — | no | no | no | yes | `write`, `billing`, `external_side_effect` | Send the invoice email to the client. External side effect; dry_run previews without sending. |
 | `clockify_invoices_mark_paid` | — | no | no | no | yes | `write`, `billing` | Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated. |
 | `clockify_invoices_items_list` | — | yes | no | yes | no | `read` | List items for an invoice |
 | `clockify_invoices_items_add` | — | no | no | no | yes | `write`, `billing` | Add an item to an invoice |
@@ -128,11 +128,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_custom_fields_set_value` | — | no | no | no | no | `write`, `admin` | Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value. |
 | `clockify_time_off_requests_list` | — | yes | no | yes | no | `read` | List time off requests with optional status filter |
 | `clockify_time_off_requests_get` | — | yes | no | yes | no | `read` | Get a time off request by policy ID and request ID |
-| `clockify_time_off_requests_create` | — | no | no | no | yes | `write`, `admin` | Create a time off request under a policy |
-| `clockify_time_off_requests_update` | — | no | no | no | no | `write`, `admin` | Update an existing time off request |
-| `clockify_time_off_requests_delete` | — | no | yes | no | yes | `admin`, `destructive` | Delete a time off request (supports dry_run preview) |
-| `clockify_time_off_approve` | — | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request |
-| `clockify_time_off_deny` | — | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request |
+| `clockify_time_off_requests_create` | — | no | no | no | yes | `write`, `admin` | Create a time off request under a policy. Changes leave balances/approval workflow. |
+| `clockify_time_off_requests_update` | — | no | no | no | no | `write`, `admin` | Update an existing time off request, including approval status when supplied. |
+| `clockify_time_off_requests_delete` | — | no | yes | no | yes | `admin`, `destructive` | Delete a time off request. Destructive; supports dry_run preview. |
+| `clockify_time_off_approve` | — | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request and update its approval state. |
+| `clockify_time_off_deny` | — | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request and update its approval state. |
 | `clockify_time_off_policies_list` | — | yes | no | yes | no | `read` | List time off policies for the workspace |
 | `clockify_time_off_policies_get` | — | yes | no | yes | no | `read` | Get a time off policy by ID |
 | `clockify_time_off_policies_create` | — | no | no | no | no | `write`, `admin` | Create a new time off policy |
@@ -146,15 +146,15 @@ prefer the documented format on each tool descriptor.
 | `clockify_scheduling_project_totals` | — | yes | no | yes | no | `read` | Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available |
 | `clockify_approvals_list` | — | yes | no | yes | no | `read` | List approval requests with optional status filter and pagination |
 | `clockify_approvals_get` | — | yes | no | yes | no | `read` | Get a single approval request by ID by scanning the documented approval-requests list endpoint |
-| `clockify_approvals_submit` | — | no | no | no | yes | `write`, `admin` | Submit the caller's timesheet for approval for a configured approval period |
-| `clockify_approvals_approve` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Approve a pending timesheet approval request |
-| `clockify_approvals_reject` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Reject a pending timesheet approval request |
-| `clockify_approvals_withdraw` | — | no | no | no | yes | `write`, `admin` | Withdraw a submitted or already-approved approval request |
+| `clockify_approvals_submit` | — | no | no | no | yes | `write`, `admin` | Submit the caller's timesheet for approval and create/update an approval request. |
+| `clockify_approvals_approve` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Approve a pending timesheet approval request and update its state. |
+| `clockify_approvals_reject` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Reject a pending timesheet approval request and update its state. |
+| `clockify_approvals_withdraw` | — | no | no | no | yes | `write`, `admin` | Withdraw a submitted or already-approved approval request and update its state. |
 | `clockify_webhooks_list` | — | yes | no | yes | no | `read` | List webhooks in the workspace |
 | `clockify_webhooks_get` | — | yes | no | yes | no | `read` | Get a webhook by ID |
 | `clockify_webhooks_create` | — | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
 | `clockify_webhooks_update` | — | no | no | no | yes | `write`, `external_side_effect` | Update an existing webhook. Supports dry_run:true. |
-| `clockify_webhooks_delete` | — | no | yes | no | yes | `external_side_effect`, `destructive` | Delete a webhook |
+| `clockify_webhooks_delete` | — | no | yes | no | yes | `external_side_effect`, `destructive` | Delete a webhook subscription. Destructive; supports dry_run preview. |
 | `clockify_webhooks_test` | — | no | no | no | yes | `write`, `external_side_effect` | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
 | `clockify_webhooks_events` | — | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | — | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
@@ -168,7 +168,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_holidays_list_for_user_period` | — | yes | no | yes | no | `read` | List holidays assigned to a user in a date period |
 | `clockify_holidays_create` | — | no | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
 | `clockify_holidays_delete` | — | no | yes | no | yes | `destructive` | Delete a holiday by ID (supports dry_run preview) |
-| `clockify_users_deactivate` | — | no | no | no | yes | `write`, `admin` | Deactivate a user in the workspace |
+| `clockify_users_deactivate` | — | no | no | no | yes | `write`, `admin` | Deactivate a workspace user and remove access. Supports dry_run preview. |
 | `clockify_users_role` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Update a user's workspace role. Supports dry_run:true. |
 | `clockify_projects_memberships_list` | — | yes | no | yes | no | `read` | List project memberships. |
 | `clockify_reports_attendance` | — | yes | no | yes | no | `read` | Run the attendance report. |
@@ -184,11 +184,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_archive` | — | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | — | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | — | yes | no | yes | no | `read` | Get workspace capacity totals. |
-| `clockify_approvals_resubmit` | — | no | no | no | no | `write`, `admin` | Resubmit rejected or withdrawn entries and expenses for approval. |
+| `clockify_approvals_resubmit` | — | no | no | no | no | `write`, `admin` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
 | `clockify_holidays_get` | — | yes | no | yes | no | `read` | Get one holiday. |
 | `clockify_holidays_update` | — | no | no | yes | no | `write` | Update a holiday. |
 | `clockify_entries_mark_invoiced` | — | no | no | yes | no | `write`, `billing` | Mark time entries as invoiced or not invoiced. |
-| `clockify_users_invite` | — | no | no | no | no | `write`, `admin`, `permission_change`, `external_side_effect` | Invite or add users to the pinned workspace by email. |
+| `clockify_users_invite` | — | no | no | no | no | `write`, `admin`, `permission_change`, `external_side_effect` | Invite users by email. External side effect when send_email is true; supports dry_run. |
 | `clockify_entries_running` | — | yes | no | yes | no | `read` | Return the current running timer, if any. |
 | `clockify_entries_timer_start` | — | no | no | no | no | `write` | Start a timer. |
 | `clockify_entries_timer_stop` | — | no | no | yes | no | `write` | Stop the current timer. |

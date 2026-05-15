@@ -592,7 +592,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 			"invoiced":       map[string]any{"type": "boolean"},
 			"body":           map[string]any{"type": "object", "additionalProperties": true},
 		}})), "entry", "updated", s.EntriesMarkInvoiced),
-		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite or add users to the pinned workspace by email.", objectSchema(map[string]any{"properties": map[string]any{
+		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite users by email. External side effect when send_email is true; supports dry_run.", objectSchema(map[string]any{"properties": map[string]any{
 			"email":      map[string]any{"type": "string", "format": "email"},
 			"emails":     map[string]any{"type": "array", "items": map[string]any{"type": "string", "format": "email"}},
 			"send_email": map[string]any{"type": "boolean", "description": "Whether Clockify should send invitation email. Defaults to true."},
@@ -757,7 +757,7 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 			"required":   nil,
 			"properties": fields("start", "end", "user_ids"),
 		})), "scheduling", "", s.schedulingCapacityOneUser),
-		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses for approval.", objectSchema(map[string]any{
+		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{
 			"required":   []string{"approval_id"},
 			"properties": fields("approval_id", "entry_ids", "expense_ids", "note", "body"),
 		})), "approval", "updated", s.resubmitApprovalOneUser),
@@ -1807,7 +1807,7 @@ func (s *Service) RawAPIRequest(ctx context.Context, args map[string]any) (any, 
 }
 
 func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any) (any, error) {
-	if method != "GET" && !s.rawWritesEnabled() {
+	if method != "GET" && (s == nil || !s.EnableRawWrites) {
 		return nil, fmt.Errorf("raw API writes are disabled; set CLOCKIFY_ENABLE_RAW_WRITES=true to allow %s", method)
 	}
 	path, err := safeRawPath(s.WorkspaceID, stringArg(args, "path"))
@@ -1854,7 +1854,7 @@ func safeRawPath(workspaceID, raw string) (string, error) {
 	raw = strings.ReplaceAll(raw, "{workspaceId}", workspaceID)
 	raw = strings.TrimPrefix(raw, "/api/v1")
 	raw = strings.TrimPrefix(raw, "/v1")
-	if strings.Contains(raw, "://") || strings.Contains(raw, "\\") || strings.Contains(raw, "..") {
+	if strings.Contains(raw, "://") || strings.Contains(raw, "\\") || strings.Contains(raw, "..") || strings.ContainsAny(raw, "?#") {
 		return "", fmt.Errorf("raw API path must be a relative Clockify API path")
 	}
 	u, err := url.Parse(raw)
@@ -1864,9 +1864,23 @@ func safeRawPath(workspaceID, raw string) (string, error) {
 	if u.IsAbs() || u.Host != "" {
 		return "", fmt.Errorf("raw API path must not include a host")
 	}
-	path := u.Path
+	path, err := url.PathUnescape(u.EscapedPath())
+	if err != nil {
+		return "", fmt.Errorf("raw API path must be a valid escaped path: %w", err)
+	}
+	if strings.Contains(path, "\\") {
+		return "", fmt.Errorf("raw API path must be a relative Clockify API path")
+	}
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
+	}
+	for i, segment := range strings.Split(path, "/") {
+		if i > 0 && segment == "" {
+			return "", fmt.Errorf("raw API path must not contain duplicated slashes")
+		}
+		if segment == "." || segment == ".." {
+			return "", fmt.Errorf("raw API path must not contain dot segments")
+		}
 	}
 	if !strings.HasPrefix(path, "/workspaces/"+workspaceID+"/") && path != "/workspaces/"+workspaceID && path != "/user" {
 		return "", fmt.Errorf("raw API path must stay within /user or the pinned workspace API")

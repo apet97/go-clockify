@@ -13,7 +13,7 @@
 # ones below fail the gate):
 #
 #   1. Every env var referenced in docs/ or README.md appears in
-#      config.go OR is
+#      oneuser.go OR is
 #      explicitly listed as deprecated in
 #      deploy/.config-parity-opt-out.txt. A doc referencing a
 #      removed env var misleads operators.
@@ -58,7 +58,7 @@
 
 set -euo pipefail
 
-CONFIG_FILE="internal/config/config.go"
+CONFIG_FILE="internal/config/oneuser.go"
 CATALOG_FILE="docs/tool-catalog.json"
 OPT_OUT="deploy/.config-parity-opt-out.txt"
 DOC_DIRS=(docs/runbooks docs/deploy docs/adr docs)

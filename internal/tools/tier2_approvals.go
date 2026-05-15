@@ -49,27 +49,27 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Submit for approval (RW)
-		{Tool: withOutputSchema(toolRW("clockify_submit_for_approval", "Submit the caller's timesheet for approval for a configured approval period", approvalPeriodInputSchema(false)), approvalViewEnvelope("clockify_submit_for_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: withOutputSchema(toolRW("clockify_submit_for_approval", "Submit the caller's timesheet for approval and create/update an approval request.", approvalPeriodInputSchema(false)), approvalViewEnvelope("clockify_submit_for_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.submitForApproval(ctx, args)
 		}},
 
 		// 4. Resubmit caller entries for approval (RW)
-		{Tool: withOutputSchema(toolRW("clockify_resubmit_for_approval", "Resubmit the caller's rejected or withdrawn entries for approval", approvalPeriodInputSchema(false)), approvalViewEnvelope("clockify_resubmit_for_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: withOutputSchema(toolRW("clockify_resubmit_for_approval", "Resubmit rejected or withdrawn caller entries and update approval state.", approvalPeriodInputSchema(false)), approvalViewEnvelope("clockify_resubmit_for_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.resubmitForApproval(ctx, args)
 		}},
 
 		// 5. Submit another user's timesheet for approval (RW)
-		{Tool: withOutputSchema(toolRW("clockify_submit_for_user_approval", "Submit another user's timesheet for approval using the documented user approval endpoint", approvalPeriodInputSchema(true)), approvalViewEnvelope("clockify_submit_for_user_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: withOutputSchema(toolRW("clockify_submit_for_user_approval", "Submit another user's timesheet for approval and create/update an approval request.", approvalPeriodInputSchema(true)), approvalViewEnvelope("clockify_submit_for_user_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.submitForUserApproval(ctx, args)
 		}},
 
 		// 6. Resubmit another user's entries for approval (RW)
-		{Tool: withOutputSchema(toolRW("clockify_resubmit_for_user_approval", "Resubmit another user's rejected or withdrawn entries for approval using the documented user resubmit endpoint", approvalPeriodInputSchema(true)), approvalViewEnvelope("clockify_resubmit_for_user_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: withOutputSchema(toolRW("clockify_resubmit_for_user_approval", "Resubmit another user's rejected or withdrawn entries and update approval state.", approvalPeriodInputSchema(true)), approvalViewEnvelope("clockify_resubmit_for_user_approval", false)), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.resubmitForUserApproval(ctx, args)
 		}},
 
 		// 7. Approve timesheet (RW, confirm-pattern dry-run)
-		{Tool: withOutputSchema(toolRW("clockify_approve_timesheet", "Approve a pending timesheet approval request", map[string]any{
+		{Tool: withOutputSchema(toolRW("clockify_approve_timesheet", "Approve a pending timesheet approval request and update its state.", map[string]any{
 			"type":     "object",
 			"required": []string{"approval_id"},
 			"properties": map[string]any{
@@ -82,7 +82,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 8. Reject timesheet (RW, confirm-pattern dry-run)
-		{Tool: withOutputSchema(toolRW("clockify_reject_timesheet", "Reject a pending timesheet approval request", map[string]any{
+		{Tool: withOutputSchema(toolRW("clockify_reject_timesheet", "Reject a pending timesheet approval request and update its state.", map[string]any{
 			"type":     "object",
 			"required": []string{"approval_id"},
 			"properties": map[string]any{
@@ -96,7 +96,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 9. Withdraw approval (RW)
-		{Tool: withOutputSchema(toolRW("clockify_withdraw_approval", "Withdraw a submitted or already-approved approval request", map[string]any{
+		{Tool: withOutputSchema(toolRW("clockify_withdraw_approval", "Withdraw a submitted or already-approved approval request and update its state.", map[string]any{
 			"type":     "object",
 			"required": []string{"approval_id"},
 			"properties": map[string]any{

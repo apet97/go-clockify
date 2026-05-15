@@ -107,7 +107,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 6. Delete invoice
-		{Tool: toolDestructive("clockify_delete_invoice", "Delete an invoice by ID", map[string]any{
+		{Tool: toolDestructive("clockify_delete_invoice", "Delete an invoice permanently by ID. Supports dry_run preview.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
@@ -119,7 +119,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 7. Send invoice
-		{Tool: toolRW("clockify_send_invoice", "Send an invoice to the client", map[string]any{
+		{Tool: toolRW("clockify_send_invoice", "Send the invoice email to the client. External side effect; dry_run previews without sending.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{

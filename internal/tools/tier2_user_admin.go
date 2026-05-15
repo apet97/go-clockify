@@ -145,7 +145,7 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 8. Deactivate user (RW, confirm pattern dry-run)
 		{
-			Tool: toolRW("clockify_deactivate_user", "Deactivate a user in the workspace", map[string]any{
+			Tool: toolRW("clockify_deactivate_user", "Deactivate a workspace user and remove access. Supports dry_run preview.", map[string]any{
 				"type":     "object",
 				"required": []string{"user_id"},
 				"properties": map[string]any{

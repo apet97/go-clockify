@@ -1,0 +1,126 @@
+package tools
+
+import (
+	"context"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestSafeRawPathRejectsEscapingAttempts(t *testing.T) {
+	cases := []struct {
+		name string
+		path string
+	}{
+		{"absolute_url", "https://evil.example/workspaces/{workspaceId}/clients"},
+		{"encoded_host", "/%2f%2fevil.example/workspaces/{workspaceId}/clients"},
+		{"dotdot", "/workspaces/{workspaceId}/../users"},
+		{"backslash", `\workspaces\{workspaceId}\clients`},
+		{"encoded_dotdot", "/workspaces/{workspaceId}/%2e%2e/users"},
+		{"duplicated_slash", "/workspaces/{workspaceId}//clients"},
+		{"query_path_confusion", "/workspaces/{workspaceId}?path=/workspaces/ws2/clients"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got, err := safeRawPath("ws1", c.path); err == nil {
+				t.Fatalf("safeRawPath(%q) = %q, want rejection", c.path, got)
+			}
+		})
+	}
+}
+
+func TestSafeRawPathAllowsPinnedWorkspaceAndUserPaths(t *testing.T) {
+	cases := map[string]string{
+		"/user":                                  "/user",
+		"/workspaces/{workspaceId}":              "/workspaces/ws1",
+		"/workspaces/{workspaceId}/clients":      "/workspaces/ws1/clients",
+		"/api/v1/workspaces/{workspaceId}/users": "/workspaces/ws1/users",
+		"/v1/workspaces/{workspaceId}/projects":  "/workspaces/ws1/projects",
+	}
+
+	for input, want := range cases {
+		got, err := safeRawPath("ws1", input)
+		if err != nil {
+			t.Fatalf("safeRawPath(%q): %v", input, err)
+		}
+		if got != want {
+			t.Fatalf("safeRawPath(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestRawFallbackCannotHitFileImage(t *testing.T) {
+	called := false
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		t.Fatalf("raw fallback reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.RawAPIGet(context.Background(), map[string]any{"path": "/file/image"}); err == nil {
+		t.Fatal("RawAPIGet(/file/image) succeeded, want rejection")
+	}
+	svc.EnableRawWrites = true
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{"method": "POST", "path": "/file/image", "body": map[string]any{}}); err == nil {
+		t.Fatal("RawAPIRequest(POST /file/image) succeeded, want rejection")
+	}
+	if called {
+		t.Fatal("raw fallback must reject /file/image before any upstream request")
+	}
+}
+
+func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/clients" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"id": "client-1"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/clients",
+		"body":   map[string]any{"name": "Blocked"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_ENABLE_RAW_WRITES") {
+		t.Fatalf("disabled raw POST err = %v, want CLOCKIFY_ENABLE_RAW_WRITES gate", err)
+	}
+
+	svc.EnableRawWrites = true
+	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/clients",
+		"body":   map[string]any{"name": "Allowed"},
+	})
+	if err != nil {
+		t.Fatalf("enabled raw POST failed: %v", err)
+	}
+	envelope, ok := result.(ToolResult)
+	if !ok {
+		t.Fatalf("raw POST result type = %T, want ToolResult", result)
+	}
+	if envelope.Action != "clockify_api_request" {
+		t.Fatalf("action = %s, want clockify_api_request", envelope.Action)
+	}
+}
+
+func TestRawFallbackDocumentedAPIWritesFlagDoesNotEnableNonGET(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("raw fallback reached upstream with DocumentedAPIWrites only: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.DocumentedAPIWrites = true
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "PATCH",
+		"path":   "/workspaces/{workspaceId}",
+		"body":   map[string]any{"name": "Workspace"},
+	}); err == nil || !strings.Contains(err.Error(), "CLOCKIFY_ENABLE_RAW_WRITES") {
+		t.Fatalf("DocumentedAPIWrites-only raw PATCH err = %v, want CLOCKIFY_ENABLE_RAW_WRITES gate", err)
+	}
+}

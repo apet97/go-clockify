@@ -24992,7 +24992,7 @@
     },
     {
       "name": "clockify_invoices_delete",
-      "description": "Delete an invoice by ID",
+      "description": "Delete an invoice permanently by ID. Supports dry_run preview.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -25245,7 +25245,7 @@
     },
     {
       "name": "clockify_invoices_send",
-      "description": "Send an invoice to the client",
+      "description": "Send the invoice email to the client. External side effect; dry_run previews without sending.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -32693,7 +32693,7 @@
     },
     {
       "name": "clockify_time_off_requests_create",
-      "description": "Create a time off request under a policy",
+      "description": "Create a time off request under a policy. Changes leave balances/approval workflow.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -32975,7 +32975,7 @@
     },
     {
       "name": "clockify_time_off_requests_update",
-      "description": "Update an existing time off request",
+      "description": "Update an existing time off request, including approval status when supplied.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -33246,7 +33246,7 @@
     },
     {
       "name": "clockify_time_off_requests_delete",
-      "description": "Delete a time off request (supports dry_run preview)",
+      "description": "Delete a time off request. Destructive; supports dry_run preview.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -33504,7 +33504,7 @@
     },
     {
       "name": "clockify_time_off_approve",
-      "description": "Approve a pending time off request",
+      "description": "Approve a pending time off request and update its approval state.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -33766,7 +33766,7 @@
     },
     {
       "name": "clockify_time_off_deny",
-      "description": "Deny a pending time off request",
+      "description": "Deny a pending time off request and update its approval state.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -37574,7 +37574,7 @@
     },
     {
       "name": "clockify_approvals_submit",
-      "description": "Submit the caller's timesheet for approval for a configured approval period",
+      "description": "Submit the caller's timesheet for approval and create/update an approval request.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -37849,7 +37849,7 @@
     },
     {
       "name": "clockify_approvals_approve",
-      "description": "Approve a pending timesheet approval request",
+      "description": "Approve a pending timesheet approval request and update its state.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -38113,7 +38113,7 @@
     },
     {
       "name": "clockify_approvals_reject",
-      "description": "Reject a pending timesheet approval request",
+      "description": "Reject a pending timesheet approval request and update its state.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -38381,7 +38381,7 @@
     },
     {
       "name": "clockify_approvals_withdraw",
-      "description": "Withdraw a submitted or already-approved approval request",
+      "description": "Withdraw a submitted or already-approved approval request and update its state.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -39756,7 +39756,7 @@
     },
     {
       "name": "clockify_webhooks_delete",
-      "description": "Delete a webhook",
+      "description": "Delete a webhook subscription. Destructive; supports dry_run preview.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -43356,7 +43356,7 @@
     },
     {
       "name": "clockify_users_deactivate",
-      "description": "Deactivate a user in the workspace",
+      "description": "Deactivate a workspace user and remove access. Supports dry_run preview.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -47574,7 +47574,7 @@
     },
     {
       "name": "clockify_approvals_resubmit",
-      "description": "Resubmit rejected or withdrawn entries and expenses for approval.",
+      "description": "Resubmit rejected or withdrawn entries and expenses and update approval state.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -48637,7 +48637,7 @@
     },
     {
       "name": "clockify_users_invite",
-      "description": "Invite or add users to the pinned workspace by email.",
+      "description": "Invite users by email. External side effect when send_email is true; supports dry_run.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,

@@ -94,6 +94,103 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	}
 }
 
+func TestLoadOneUserOptionalRuntimeConfigOnlyRequiresKeyAndWorkspace(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", "")
+	t.Setenv("CLOCKIFY_TOOL_TIMEOUT", "")
+	t.Setenv("CLOCKIFY_MAX_MESSAGE_SIZE", "")
+	t.Setenv("CLOCKIFY_TOOLSET", "")
+	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "")
+	t.Setenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", "")
+
+	cfg, err := LoadOneUser()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxInFlightToolCalls != DefaultMaxInFlightToolCalls {
+		t.Fatalf("MaxInFlightToolCalls = %d", cfg.MaxInFlightToolCalls)
+	}
+	if cfg.ToolTimeout != DefaultToolTimeout {
+		t.Fatalf("ToolTimeout = %s", cfg.ToolTimeout)
+	}
+	if cfg.MaxMessageSize != DefaultMaxMessageSize {
+		t.Fatalf("MaxMessageSize = %d", cfg.MaxMessageSize)
+	}
+	if cfg.Toolset != DefaultToolset {
+		t.Fatalf("Toolset = %q, want %q", cfg.Toolset, DefaultToolset)
+	}
+	if cfg.EnableRawWrites {
+		t.Fatal("EnableRawWrites defaulted true")
+	}
+	if len(cfg.WebhookAllowedDomains) != 0 {
+		t.Fatalf("WebhookAllowedDomains = %#v", cfg.WebhookAllowedDomains)
+	}
+}
+
+func TestLoadOneUserAcceptsRuntimeConfigBoundsAndNormalization(t *testing.T) {
+	tests := map[string]struct {
+		envName string
+		value   string
+		assert  func(*testing.T, OneUserConfig)
+	}{
+		"minimum timeout": {
+			envName: "CLOCKIFY_TOOL_TIMEOUT",
+			value:   MinToolTimeout.String(),
+			assert: func(t *testing.T, cfg OneUserConfig) {
+				t.Helper()
+				if cfg.ToolTimeout != MinToolTimeout {
+					t.Fatalf("ToolTimeout = %s, want %s", cfg.ToolTimeout, MinToolTimeout)
+				}
+			},
+		},
+		"maximum timeout": {
+			envName: "CLOCKIFY_TOOL_TIMEOUT",
+			value:   MaxToolTimeout.String(),
+			assert: func(t *testing.T, cfg OneUserConfig) {
+				t.Helper()
+				if cfg.ToolTimeout != MaxToolTimeout {
+					t.Fatalf("ToolTimeout = %s, want %s", cfg.ToolTimeout, MaxToolTimeout)
+				}
+			},
+		},
+		"trimmed mixed case toolset": {
+			envName: "CLOCKIFY_TOOLSET",
+			value:   " Admin ",
+			assert: func(t *testing.T, cfg OneUserConfig) {
+				t.Helper()
+				if cfg.Toolset != "admin" {
+					t.Fatalf("Toolset = %q, want admin", cfg.Toolset)
+				}
+			},
+		},
+		"explicit raw writes false": {
+			envName: "CLOCKIFY_ENABLE_RAW_WRITES",
+			value:   "false",
+			assert: func(t *testing.T, cfg OneUserConfig) {
+				t.Helper()
+				if cfg.EnableRawWrites {
+					t.Fatal("EnableRawWrites = true")
+				}
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("CLOCKIFY_API_KEY", "test-key")
+			t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+			t.Setenv(tt.envName, tt.value)
+
+			cfg, err := LoadOneUser()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tt.assert(t, cfg)
+		})
+	}
+}
+
 func TestLoadOneUserAllowsLoopbackBaseURL(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
 	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
@@ -140,6 +237,14 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 			envName: "CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS",
 			value:   "0",
 		},
+		"negative concurrency": {
+			envName: "CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS",
+			value:   "-1",
+		},
+		"bad concurrency": {
+			envName: "CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS",
+			value:   "many",
+		},
 		"too short timeout": {
 			envName: "CLOCKIFY_TOOL_TIMEOUT",
 			value:   "4s",
@@ -155,6 +260,14 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 		"zero message size": {
 			envName: "CLOCKIFY_MAX_MESSAGE_SIZE",
 			value:   "0",
+		},
+		"negative message size": {
+			envName: "CLOCKIFY_MAX_MESSAGE_SIZE",
+			value:   "-1",
+		},
+		"bad message size": {
+			envName: "CLOCKIFY_MAX_MESSAGE_SIZE",
+			value:   "large",
 		},
 		"bad raw writes": {
 			envName: "CLOCKIFY_ENABLE_RAW_WRITES",
