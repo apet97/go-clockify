@@ -725,6 +725,34 @@ func TestCreateExpenseRejectsInvalidBase64(t *testing.T) {
 	}
 }
 
+// TestCreateExpenseRejectsEmptyReceiptBody pins that an empty
+// file_content_base64 — a zero-byte receipt — never reaches HTTP. An
+// empty body counts as a missing field, so name+type with an empty body
+// fails the trio guard locally rather than POSTing a 0-byte file part.
+func TestCreateExpenseRejectsEmptyReceiptBody(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/user" {
+			respondJSON(t, w, map[string]any{"id": "u-current"})
+			return
+		}
+		t.Fatalf("empty receipt body must fail before the expenses POST: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":              1.0,
+		"date":                "2026-04-11T00:00:00Z",
+		"category_id":         "cat1",
+		"file_name":           "empty.pdf",
+		"file_content_base64": "",
+		"file_content_type":   "application/pdf",
+	})
+	if err == nil || !strings.Contains(err.Error(), "must be provided together") {
+		t.Fatalf("empty receipt body should fail the trio guard before HTTP, got %v", err)
+	}
+}
+
 // TestUpdateExpenseSchemaOmitsFileToken pins that the change_fields
 // enum no longer advertises FILE — receipt replacement on update is
 // deliberately unsupported.

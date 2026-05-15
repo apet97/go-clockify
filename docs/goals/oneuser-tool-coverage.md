@@ -8,7 +8,7 @@ Summary:
 - Domain tools: 133
 - Raw fallback tools: 2
 - Fake-smoke yes: 152
-- Live protocol/recovery tested yes: 149
+- Live protocol/recovery tested yes: 150
 - Live happy-path tested yes: 127
 
 Remaining honest gaps:
@@ -108,7 +108,7 @@ Remaining honest gaps:
 | `clockify_time_off_policies_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_policies_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_time_off_balances` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_time_off_balances_update` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | needs_live_protocol_probe |
+| `clockify_time_off_balances_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_scheduling_assignments_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_scheduling_assignments_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_scheduling_assignments_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |

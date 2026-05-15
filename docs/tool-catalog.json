@@ -1202,6 +1202,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "allow_overlap": {
+            "description": "When false (default) the entry is rejected if it overlaps an existing entry; set true to override after confirming the overlap is intentional.",
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },
@@ -1594,6 +1598,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "allow_overlap": {
+            "description": "When false (default) the entry is rejected if it overlaps an existing entry; set true to override after confirming the overlap is intentional.",
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },
@@ -2806,6 +2814,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "allow_overlap": {
+            "description": "When false (default) the entry is rejected if it overlaps an existing entry; set true to override after confirming the overlap is intentional.",
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },
@@ -11672,6 +11684,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "allow_overlap": {
+            "description": "When false (default) the entry is rejected if it overlaps an existing entry; set true to override after confirming the overlap is intentional.",
+            "type": "boolean"
+          },
           "billable": {
             "type": "boolean"
           },

@@ -2574,6 +2574,7 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_time_off_policies_create",
 		"clockify_time_off_policies_update",
 		"clockify_time_off_balances",
+		"clockify_time_off_balances_update",
 		"clockify_scheduling_assignments_update",
 		"clockify_scheduling_assignments_get",
 		"clockify_scheduling_assignments_delete",

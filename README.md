@@ -156,8 +156,7 @@ Migrated Clockify domains:
   expenses, send, mark paid, export, payments
 - expenses: list, get, create, update, delete, categories
 - custom fields: list, get, create, update, delete, set value
-- time off: policies, requests, balances, balance update, approve, deny,
-  archive
+- time off: policies, requests, balance read/update, approve, deny, archive
 - scheduling: assignments, project totals, user totals, capacity
 - approvals: list, get, submit, resubmit, approve, reject, withdraw
 - webhooks: list, get, create, update, delete, test, events

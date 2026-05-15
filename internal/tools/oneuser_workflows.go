@@ -651,16 +651,17 @@ func workPackageSchema() map[string]any {
 
 func logWorkSchema() map[string]any {
 	return objectSchema(map[string]any{"required": []string{"start", "end"}, "properties": map[string]any{
-		"start":       map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"end":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"description": map[string]any{"type": "string"},
-		"project":     map[string]any{"type": "string"},
-		"project_id":  map[string]any{"type": "string"},
-		"task":        map[string]any{"type": "string"},
-		"task_id":     map[string]any{"type": "string"},
-		"tag":         map[string]any{"type": "string"},
-		"tag_ids":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
-		"billable":    map[string]any{"type": "boolean"},
+		"start":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		"end":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		"description":   map[string]any{"type": "string"},
+		"project":       map[string]any{"type": "string"},
+		"project_id":    map[string]any{"type": "string"},
+		"task":          map[string]any{"type": "string"},
+		"task_id":       map[string]any{"type": "string"},
+		"tag":           map[string]any{"type": "string"},
+		"tag_ids":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+		"billable":      map[string]any{"type": "boolean"},
+		"allow_overlap": map[string]any{"type": "boolean", "description": "When false (default) the entry is rejected if it overlaps an existing entry; set true to override after confirming the overlap is intentional."},
 	}})
 }
 

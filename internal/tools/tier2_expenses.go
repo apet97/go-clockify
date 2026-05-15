@@ -319,15 +319,17 @@ func expenseReceiptFiles(args map[string]any) ([]clockify.MultipartFile, error) 
 	if name == "" && body == "" && contentType == "" {
 		return nil, nil
 	}
+	// An empty file_content_base64 is treated as a missing field, so an
+	// empty receipt body fails the trio check here — before any HTTP
+	// call. A non-empty, syntactically valid base64 string always
+	// decodes to at least one byte, so there is no separate zero-byte
+	// case to guard once this check has passed.
 	if name == "" || body == "" || contentType == "" {
 		return nil, fmt.Errorf("file_name, file_content_base64, and file_content_type must be provided together")
 	}
 	data, err := base64.StdEncoding.DecodeString(body)
 	if err != nil {
 		return nil, fmt.Errorf("file_content_base64 is not valid base64: %w", err)
-	}
-	if len(data) == 0 {
-		return nil, fmt.Errorf("file_content_base64 decoded to zero bytes")
 	}
 	return []clockify.MultipartFile{{
 		FieldName:   "file",

@@ -368,6 +368,17 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	if invoice.OK && invoice.IDs["invoiceId"] != "" {
 		invoiceID = invoice.IDs["invoiceId"]
 	}
+	// The three invoice-item tools take distinct argument shapes: add
+	// appends a line (no item_index), update edits a line by item_index,
+	// and delete only needs invoice_id + item_index. Each probe uses the
+	// shape its schema actually accepts.
+	invoiceAddItemArgs := map[string]any{
+		"invoice_id":  invoiceID,
+		"item_type":   "SERVICE",
+		"description": "Live coverage item",
+		"quantity":    1,
+		"unit_price":  1,
+	}
 	invoiceItemArgs := map[string]any{
 		"invoice_id":  invoiceID,
 		"item_index":  "0",
@@ -375,6 +386,10 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		"description": "Live coverage item",
 		"quantity":    1,
 		"unit_price":  1,
+	}
+	invoiceDeleteItemArgs := map[string]any{
+		"invoice_id": invoiceID,
+		"item_index": "0",
 	}
 	for _, probe := range []struct {
 		name string
@@ -384,9 +399,9 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		{"clockify_invoices_items_list", map[string]any{"invoice_id": invoiceID}},
 		{"clockify_invoices_update", map[string]any{"invoice_id": invoiceID, "note": "live coverage probe"}},
 		{"clockify_invoices_mark_paid", map[string]any{"invoice_id": invoiceID}},
-		{"clockify_invoices_items_add", invoiceItemArgs},
+		{"clockify_invoices_items_add", invoiceAddItemArgs},
 		{"clockify_invoices_items_update", invoiceItemArgs},
-		{"clockify_invoices_items_delete", invoiceItemArgs},
+		{"clockify_invoices_items_delete", invoiceDeleteItemArgs},
 		{"clockify_invoices_export", map[string]any{"invoice_id": invoiceID, "format": "PDF"}},
 		{"clockify_invoices_import_time", map[string]any{"invoice_id": invoiceID, "time_entry_ids": []any{entryID}}},
 		{"clockify_invoices_import_expenses", map[string]any{"invoice_id": invoiceID, "expense_ids": []any{bogusID}, "include_expenses": true}},
@@ -421,10 +436,9 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 			"policy_id": policyID,
 			"user_ids":  []any{userID},
 			"value":     0,
-			"note":      "live coverage probe (no-op: ledger keeps recovery-only because balance writes have permanent audit trails)",
-			"dry_run":   true,
+			"note":      "live coverage probe: sets the owner balance to 0 on the prefixed throwaway policy created by this run",
 		}},
-		{"clockify_time_off_requests_get", map[string]any{"request_id": bogusID}},
+		{"clockify_time_off_requests_get", map[string]any{"policy_id": policyID, "request_id": bogusID}},
 		{"clockify_time_off_requests_update", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
 		{"clockify_time_off_requests_delete", map[string]any{"policy_id": policyID, "request_id": bogusID}},
 		{"clockify_time_off_approve", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
@@ -455,8 +469,11 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	callLiveToolDataOrRecovery(t, server, "clockify_scheduling_assignments_delete", map[string]any{"assignment_id": assignmentID})
 
 	webhookID := bogusID
+	// Webhook names are capped at 30 chars by the Clockify schema, so
+	// this probe uses the 30-bounded name helper rather than unique(),
+	// whose 80-char budget overflows the limit.
 	webhook := callLiveToolOKOrRecovery(t, server, "clockify_webhooks_create", map[string]any{
-		"name":          unique("webhook"),
+		"name":          liveOptionalName("mcp", runID, "webhook", 30),
 		"url":           "https://example.com/clockify",
 		"webhook_event": "NEW_TIME_ENTRY",
 	})
@@ -468,7 +485,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		args map[string]any
 	}{
 		{"clockify_webhooks_get", map[string]any{"webhook_id": webhookID}},
-		{"clockify_webhooks_update", map[string]any{"webhook_id": webhookID, "name": unique("webhook-updated")}},
+		{"clockify_webhooks_update", map[string]any{"webhook_id": webhookID, "name": liveOptionalName("mcp", runID, "wh-upd", 30)}},
 		{"clockify_webhooks_test", map[string]any{"webhook_id": webhookID}},
 		{"clockify_webhooks_delete", map[string]any{"webhook_id": webhookID}},
 	} {
@@ -506,9 +523,9 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		"user_group_ids":  []any{},
 	})
 	callLiveToolDataOrRecovery(t, server, "clockify_holidays_list_for_user_period", map[string]any{
-		"user_id": userID,
-		"start":   holidayDate,
-		"end":     holidayDate,
+		"assigned_to": userID,
+		"start":       holidayDate,
+		"end":         holidayDate,
 	})
 	callLiveToolDataOrRecovery(t, server, "clockify_holidays_delete", map[string]any{"holiday_id": holidayID})
 
@@ -577,12 +594,18 @@ func requireLiveOK(t *testing.T, server *mcp.Server, name string, args map[strin
 	return envelope
 }
 
+// reportProbeArgs are the minimal args for the report route tools. Those
+// tools carry a deliberately small typed schema (start/end/date-range/
+// export_type); pagination is a report-body field, so it travels through
+// the `body` raw escape hatch rather than as flat top-level args.
 func reportProbeArgs() map[string]any {
 	return map[string]any{
-		"start":     "2026-02-03T00:00:00.000",
-		"end":       "2026-02-04T00:00:00.000",
-		"page":      1,
-		"page_size": 10,
+		"start": "2026-02-03T00:00:00.000",
+		"end":   "2026-02-04T00:00:00.000",
+		"body": map[string]any{
+			"page":     1,
+			"pageSize": 10,
+		},
 	}
 }
 
