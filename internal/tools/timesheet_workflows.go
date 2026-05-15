@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
-	"github.com/apet97/go-clockify/internal/dryrun"
-	"github.com/apet97/go-clockify/internal/paths"
 )
 
 type TimesheetReviewData struct {
@@ -39,15 +37,6 @@ type ToolSuggestion struct {
 	MissingArgs []string       `json:"missingArgs,omitempty"`
 }
 
-type TimeEntryDraft struct {
-	Start       string `json:"start"`
-	End         string `json:"end"`
-	ProjectID   string `json:"projectId,omitempty"`
-	Project     string `json:"project,omitempty"`
-	Description string `json:"description"`
-	Billable    *bool  `json:"billable,omitempty"`
-}
-
 type TimeEntryRef struct {
 	ID          string `json:"id"`
 	Description string `json:"description,omitempty"`
@@ -55,15 +44,6 @@ type TimeEntryRef struct {
 	ProjectName string `json:"projectName,omitempty"`
 	Start       string `json:"start,omitempty"`
 	End         string `json:"end,omitempty"`
-}
-
-type TimesheetFillGapData struct {
-	DryRun     bool            `json:"dryRun"`
-	Proposed   TimeEntryDraft  `json:"proposed"`
-	Entry      EntryView       `json:"entry,omitempty"`
-	Overlaps   []TimeEntryRef  `json:"overlaps,omitempty"`
-	Validated  bool            `json:"validated"`
-	Validation *ValidationView `json:"validation,omitempty"`
 }
 
 func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -147,111 +127,6 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		"workdayEnd":   workdayEnd,
 	}, paginationMeta(agg, reportPageSize, limits))
 	return ok(oneUserToolReviewDay, data, meta), nil
-}
-
-func (s *Service) TimesheetFillGap(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	loc, err := s.locationFromArgs(args)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	start, end, err := parseRangeInLocation(args, loc)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	description := strings.TrimSpace(stringArg(args, "description"))
-	if description == "" {
-		return ResultEnvelope{}, fmt.Errorf("description is required")
-	}
-	projectID := stringArg(args, "project_id")
-	projectRef := stringArg(args, "project")
-	if projectID == "" && strings.TrimSpace(projectRef) == "" {
-		return ResultEnvelope{}, fmt.Errorf("project or project_id is required")
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if projectID == "" {
-		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
-		if err != nil {
-			return ResultEnvelope{}, err
-		}
-	}
-
-	overlaps, userID, err := s.findEntryOverlaps(ctx, start, end)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	var billablePtr *bool
-	if billable, ok := args["billable"].(bool); ok {
-		billablePtr = &billable
-	}
-	draft := TimeEntryDraft{
-		Start:       start.Format(time.RFC3339),
-		End:         end.Format(time.RFC3339),
-		ProjectID:   projectID,
-		Project:     projectRef,
-		Description: description,
-		Billable:    billablePtr,
-	}
-	if dryrun.Enabled(args) {
-		if len(overlaps) > 0 && !boolArg(args, "allow_overlap") {
-			validation := validationFailed("overlap_check", ValidationProblem{
-				Code:        "overlap",
-				Field:       "start,end",
-				Message:     fmt.Sprintf("requested gap overlaps %d existing entr%s", len(overlaps), pluralY(len(overlaps))),
-				Remediation: "Pass allow_overlap=true only after manually confirming the overlap is intentional.",
-			})
-			return ok(oneUserToolEntriesCreateFromGap, TimesheetFillGapData{
-				DryRun:     true,
-				Proposed:   draft,
-				Overlaps:   overlaps,
-				Validated:  true,
-				Validation: &validation,
-			}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
-		}
-		validation := validationOK("overlap_check")
-		return ok(oneUserToolEntriesCreateFromGap, TimesheetFillGapData{
-			DryRun:     true,
-			Proposed:   draft,
-			Overlaps:   overlaps,
-			Validated:  true,
-			Validation: &validation,
-		}, map[string]any{"workspaceId": wsID, "userId": userID}), nil
-	}
-	if len(overlaps) > 0 && !boolArg(args, "allow_overlap") {
-		return ResultEnvelope{}, fmt.Errorf("requested gap overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
-	}
-
-	payload := map[string]any{
-		"start":       draft.Start,
-		"end":         draft.End,
-		"projectId":   projectID,
-		"description": description,
-	}
-	if billablePtr != nil {
-		payload["billable"] = *billablePtr
-	}
-	if entryType := stringArg(args, "type"); entryType != "" {
-		payload["type"] = entryType
-	}
-	path, err := paths.Workspace(wsID, "time-entries")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var entry clockify.TimeEntry
-	if err := s.Client.Post(ctx, path, payload, &entry); err != nil {
-		return ResultEnvelope{}, err
-	}
-	s.emitEntryAndWeeklyWithState(ctx, wsID, entry)
-	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-	return ok(oneUserToolEntriesCreateFromGap, TimesheetFillGapData{
-		Proposed:  draft,
-		Entry:     view,
-		Overlaps:  overlaps,
-		Validated: true,
-	}, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": userID}, financialMeta)), nil
 }
 
 func (s *Service) rejectEntryOverlap(ctx context.Context, start, end time.Time, args map[string]any) error {
