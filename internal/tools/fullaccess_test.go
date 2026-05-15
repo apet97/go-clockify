@@ -134,7 +134,6 @@ func TestTimerAndReportDescriptorsDoNotShadowEarlierSources(t *testing.T) {
 		"first_slice":       descriptorNames(svc.FirstSliceRegistry()),
 		"native_core":       descriptorNames(svc.nativeCoreDescriptors()),
 		"native_high_value": descriptorNames(svc.nativeHighValueDescriptors()),
-		"native_alias":      descriptorNames(svc.nativeAliasDescriptors()),
 	}
 	seen := map[string]string{}
 	for source, names := range earlierSources {

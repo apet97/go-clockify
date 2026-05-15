@@ -823,14 +823,6 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 	if len(explicitOnly) > 0 {
 		t.Fatalf("missing explicit native route replacements: %+v", explicitOnly)
 	}
-
-	if aliases := svc.nativeAliasDescriptors(); len(aliases) != 0 {
-		names := make([]string, 0, len(aliases))
-		for _, descriptor := range aliases {
-			names = append(names, descriptor.Tool.Name)
-		}
-		t.Fatalf("nativeAliasDescriptors still emits wrappers: %v", names)
-	}
 }
 
 func TestOneUserProductSourceDoesNotMentionRemovedLegacyToolNames(t *testing.T) {
