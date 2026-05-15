@@ -2668,101 +2668,129 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
+        "mcp-catalog",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
       "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveOneUserPaidFeatureHappyPaths"
+      ],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 2,
       "operationId": "generateAttendanceReport",
       "path": "/workspaces/{workspaceId}/reports/attendance",
       "raw_allowlisted": true,
       "risk": [
-        "write"
+        "read"
       ],
       "summary": "Generate an attendance report",
       "tag": "Reports",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_reports_attendance"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_reports_attendance"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
+        "mcp-catalog",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
       "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveOneUserPaidFeatureHappyPaths"
+      ],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 2,
       "operationId": "generateDetailedReport",
       "path": "/workspaces/{workspaceId}/reports/detailed",
       "raw_allowlisted": true,
       "risk": [
-        "write"
+        "read"
       ],
       "summary": "Generate a detailed report",
       "tag": "Reports",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_reports_export"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_reports_export"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
-        "aiii-openapi"
+        "aiii-openapi",
+        "mcp-catalog"
       ],
       "host": "https://reports.api.clockify.me/v1",
       "live_status": "documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveOneUserOptionalDomainReadOnlySweep"
+      ],
       "method": "POST",
-      "notes_count": 2,
+      "notes_count": 3,
       "operationId": "generateDetailedReportV1",
       "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
       "raw_allowlisted": true,
       "risk": [
-        "write"
+        "read"
       ],
       "summary": "Generate an expense report",
       "tag": "Expense Report",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_reports_expense"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_reports_expense"
+      ],
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "typed-tool-live-success",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
+        "mcp-catalog",
         "probe-openapi",
         "real-openapi"
       ],
       "host": "https://reports.api.clockify.me/v1",
       "live_status": "probe-documented",
-      "live_test_names": [],
+      "live_test_names": [
+        "TestLiveOneUserPaidFeatureHappyPaths"
+      ],
       "method": "POST",
-      "notes_count": 1,
+      "notes_count": 2,
       "operationId": "generateSummaryReport",
       "path": "/workspaces/{workspaceId}/reports/summary",
       "raw_allowlisted": true,
       "risk": [
-        "write"
+        "read"
       ],
       "summary": "Generate a summary report",
       "tag": "Reports",
-      "typed_tools": [],
-      "typed_tools_in_catalog": [],
+      "typed_tools": [
+        "clockify_reports_money"
+      ],
+      "typed_tools_in_catalog": [
+        "clockify_reports_money"
+      ],
       "typed_tools_orphan": []
     },
     {
@@ -4996,8 +5024,8 @@
   "summary": {
     "by_class": {
       "raw-tool-live-success": 18,
-      "raw-tool-only": 174,
-      "typed-tool-live-success": 0,
+      "raw-tool-only": 170,
+      "typed-tool-live-success": 4,
       "typed-tool-mapped": 0,
       "uncovered": 0,
       "unsupported": 1
@@ -5013,7 +5041,8 @@
       },
       "https://reports.api.clockify.me/v1": {
         "raw-tool-live-success": 2,
-        "raw-tool-only": 8
+        "raw-tool-only": 4,
+        "typed-tool-live-success": 4
       }
     },
     "by_tag": {
@@ -5038,7 +5067,7 @@
         "raw-tool-only": 3
       },
       "Expense Report": {
-        "raw-tool-only": 1
+        "typed-tool-live-success": 1
       },
       "Expense categories": {
         "raw-tool-live-success": 3,
@@ -5081,7 +5110,8 @@
         "raw-tool-only": 11
       },
       "Reports": {
-        "raw-tool-only": 4
+        "raw-tool-only": 1,
+        "typed-tool-live-success": 3
       },
       "Roles": {
         "raw-tool-only": 2

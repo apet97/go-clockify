@@ -1346,6 +1346,8 @@ func nativeBodyFromArgs(args map[string]any, keys ...string) map[string]any {
 func standardizeDomainResult(action, entity, change string, out any, args map[string]any) ToolResult {
 	if current, ok := out.(ToolResult); ok {
 		current.Action = action
+		current.Data = sanitizeResultValue(current.Data)
+		current.Meta = sanitizeResultMeta(current.Meta)
 		return current
 	}
 	ids := map[string]string{}

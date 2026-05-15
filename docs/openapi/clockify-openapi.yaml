@@ -7865,15 +7865,18 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-mcp-tools:
+      - clockify_reports_attendance
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - Tool catalog maps clockify_reports_attendance to POST /workspaces/{workspaceId}/reports/attendance
       x-clockify-risk:
-      - write
+      - read
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8004,15 +8007,18 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-mcp-tools:
+      - clockify_reports_export
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - Tool catalog maps clockify_reports_export to POST /workspaces/{workspaceId}/reports/detailed
       x-clockify-risk:
-      - write
+      - read
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8063,18 +8069,21 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - mcp-catalog
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: documented
-      x-clockify-mcp-tools: []
+      x-clockify-mcp-tools:
+      - clockify_reports_expense
       x-clockify-notes:
       - Expense create/update uses multipart form-data in live Clockify.
       - Reports and shared-reports use the reports API host, not the main API host.
+      - Tool catalog maps clockify_reports_expense to POST /workspaces/{workspaceId}/reports/expenses/detailed
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
         probes.
       x-clockify-risk:
-      - write
+      - read
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8189,15 +8198,18 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
+      x-clockify-mcp-tools:
+      - clockify_reports_money
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - Tool catalog maps clockify_reports_money to POST /workspaces/{workspaceId}/reports/summary
       x-clockify-risk:
-      - write
+      - read
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:

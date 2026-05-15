@@ -61,6 +61,48 @@ if [ ! -f "$coverage" ]; then
   exit 1
 fi
 
+catalog_contract_errors="$(
+  jq -r '
+    def err($msg): $msg;
+    if (.tools | type) != "array" then
+      err("catalog must use top-level tools array")
+    else empty end,
+    if has("tier1") or has("tier2") then
+      err("catalog must not use legacy tier1/tier2 top-level shape")
+    else empty end,
+    if ((.tools // []) | length) == 0 then
+      err("catalog tools array must not be empty")
+    else empty end,
+    ((.tools // []) | group_by(.name)[] | select(length > 1) | err("duplicate tool name: " + .[0].name)),
+    ((.tools // [])[] | . as $tool |
+      [
+        (if (($tool.name // "") | test("^clockify_")) then empty else err(($tool.name // "<missing>") + ": name must start with clockify_") end),
+        (if (($tool.description // "") | length) > 0 then empty else err(($tool.name // "<missing>") + ": description is required") end),
+        (if ($tool.handler_kind // "") != "" then empty else err($tool.name + ": handler_kind is required") end),
+        (if ($tool.read_only | type) == "boolean" then empty else err($tool.name + ": read_only boolean is required") end),
+        (if ($tool.destructive | type) == "boolean" then empty else err($tool.name + ": destructive boolean is required") end),
+        (if ($tool.idempotent | type) == "boolean" then empty else err($tool.name + ": idempotent boolean is required") end),
+        (if ($tool.dry_run | type) == "boolean" then empty else err($tool.name + ": dry_run boolean is required") end),
+        (if ($tool.risk_class | type) == "array" then empty else err($tool.name + ": risk_class array is required") end),
+        (if ($tool.input_schema | type) == "object" then empty else err($tool.name + ": input_schema object is required") end),
+        (if ($tool.output_schema | type) == "object" then empty else err($tool.name + ": output_schema object is required") end),
+        (if (($tool.output_schema.required // []) | index("ok")) and (($tool.output_schema.required // []) | index("action")) then empty else err($tool.name + ": output_schema must require ok and action") end),
+        (if ($tool.annotations | type) == "object" then empty else err($tool.name + ": annotations object is required") end),
+        (if ($tool.annotations.readOnlyHint == $tool.read_only) then empty else err($tool.name + ": annotations.readOnlyHint must mirror read_only") end),
+        (if ($tool.annotations.destructiveHint == $tool.destructive) then empty else err($tool.name + ": annotations.destructiveHint must mirror destructive") end),
+        (if ($tool.annotations.idempotentHint == $tool.idempotent) then empty else err($tool.name + ": annotations.idempotentHint must mirror idempotent") end),
+        (if ($tool.annotations.dryRun == $tool.dry_run) then empty else err($tool.name + ": annotations.dryRun must mirror dry_run") end),
+        (if ($tool.annotations.handlerKind == $tool.handler_kind) then empty else err($tool.name + ": annotations.handlerKind must mirror handler_kind") end),
+        (if (($tool.risk_class - ($tool.annotations.riskClass // [])) | length) == 0 then empty else err($tool.name + ": annotations.riskClass must include risk_class") end)
+      ][])
+  ' "$catalog"
+)"
+if [ -n "$catalog_contract_errors" ]; then
+  echo "[fail] tool catalog contract drift:" >&2
+  sed 's/^/  - /' <<<"$catalog_contract_errors" >&2
+  exit 1
+fi
+
 tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/api-parity-matrix.XXXXXX")"
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -68,6 +110,34 @@ tool_count="$(jq '.tools | length' "$catalog")"
 workflow_count="$(jq '[.tools[] | select(.category == "workflow")] | length' "$catalog")"
 raw_count="$(jq '[.tools[] | select(.name == "clockify_api_get" or .name == "clockify_api_request")] | length' "$catalog")"
 domain_count=$((tool_count - workflow_count - raw_count))
+
+raw_fallback_errors="$(
+  jq -r --argjson tool_count "$tool_count" '
+    def err($msg): $msg;
+    def idx($name):
+      first(range(0; .tools | length) as $i | select(.tools[$i].name == $name) | $i);
+    [
+      (idx("clockify_api_get") // -1),
+      (idx("clockify_api_request") // -1)
+    ] as $raw_indexes
+    | if ($raw_indexes | sort) != [($tool_count - 2), ($tool_count - 1)] then
+        err("raw fallback tools must be the final two catalog entries")
+      else empty end,
+      (.tools[] | select(.name == "clockify_api_get") | . as $tool |
+        if $tool.read_only != true or $tool.idempotent != true or $tool.annotations.openWorldHint != true or (($tool.input_schema.required // []) | index("path") | not) then
+          err("clockify_api_get raw fallback safety metadata drift")
+        else empty end),
+      (.tools[] | select(.name == "clockify_api_request") | . as $tool |
+        if $tool.read_only != false or $tool.idempotent != false or $tool.annotations.openWorldHint != true or (($tool.input_schema.required // []) | sort) != ["method", "path"] then
+          err("clockify_api_request raw fallback safety metadata drift")
+        else empty end)
+  ' "$catalog"
+)"
+if [ -n "$raw_fallback_errors" ]; then
+  echo "[fail] raw fallback catalog drift:" >&2
+  sed 's/^/  - /' <<<"$raw_fallback_errors" >&2
+  exit 1
+fi
 
 awk '
   /^\| `clockify_/ {

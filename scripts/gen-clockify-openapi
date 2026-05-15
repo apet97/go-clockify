@@ -504,7 +504,6 @@ end
 
 def discover_mcp_mapping(options)
   path = File.join(options[:repo_root], "docs/api-coverage.md")
-  return [{}, {}, {}] unless File.exist?(path)
 
   mapping = Hash.new { |h, key| h[key] = Set.new }
   tool_meta = Hash.new do |h, key|
@@ -514,23 +513,25 @@ def discover_mcp_mapping(options)
       "notes" => Set.new
     }
   end
-  File.readlines(path, chomp: true).each do |line|
-    tools = line.scan(/`(clockify_[^`]+)`/).flatten
-    next if tools.empty?
+  if File.exist?(path)
+    File.readlines(path, chomp: true).each do |line|
+      tools = line.scan(/`(clockify_[^`]+)`/).flatten
+      next if tools.empty?
 
-    bucket = coverage_bucket_for_text(line)
-    tools.each do |tool|
-      tool_meta[tool]["evidence"] << "mcp-catalog"
-      tool_meta[tool]["evidence"] << bucket if bucket
-      tool_meta[tool]["statuses"] << bucket if bucket
-      tool_meta[tool]["notes"] << line.gsub(/\s+/, " ")[0, 240]
-    end
+      bucket = coverage_bucket_for_text(line)
+      tools.each do |tool|
+        tool_meta[tool]["evidence"] << "mcp-catalog"
+        tool_meta[tool]["evidence"] << bucket if bucket
+        tool_meta[tool]["statuses"] << bucket if bucket
+        tool_meta[tool]["notes"] << line.gsub(/\s+/, " ")[0, 240]
+      end
 
-    line.scan(/\b(GET|POST|PUT|PATCH|DELETE)\s+(https:\/\/(?:api|reports)\.clockify\.me(?:\/api)?\/v1)?(\/[^`\s|,)]+)/i) do |method, host, op_path|
-      tools.each { |tool| mapping[[method.downcase, normalize_path("#{host}#{op_path}")]] << tool }
-    end
-    line.scan(/\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[^`\s|,)]+)/i) do |method, op_path|
-      tools.each { |tool| mapping[[method.downcase, normalize_path(op_path)]] << tool }
+      line.scan(/\b(GET|POST|PUT|PATCH|DELETE)\s+(https:\/\/(?:api|reports)\.clockify\.me(?:\/api)?\/v1)?(\/[^`\s|,)]+)/i) do |method, host, op_path|
+        tools.each { |tool| mapping[[method.downcase, normalize_path("#{host}#{op_path}")]] << tool }
+      end
+      line.scan(/\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[^`\s|,)]+)/i) do |method, op_path|
+        tools.each { |tool| mapping[[method.downcase, normalize_path(op_path)]] << tool }
+      end
     end
   end
 
@@ -538,8 +539,16 @@ def discover_mcp_mapping(options)
   catalog_path = File.join(options[:repo_root], "docs/tool-catalog.json")
   if File.exist?(catalog_path)
     catalog = JSON.parse(File.read(catalog_path))
-    Array(catalog["tier1"]).concat(Array(catalog["tier2"])).each do |tool|
+    catalog_tools(catalog).each do |tool|
       risks[tool["name"]] = Array(tool["risk_class"])
+      method = tool["method"].to_s.downcase
+      tool_path = tool["path"].to_s
+      next unless METHODS.include?(method) && !tool_path.empty?
+
+      normalized_path = normalize_path(tool_path)
+      mapping[[method, normalized_path]] << tool["name"]
+      tool_meta[tool["name"]]["evidence"] << "mcp-catalog"
+      tool_meta[tool["name"]]["notes"] << "Tool catalog maps #{tool["name"]} to #{method.upcase} #{normalized_path}"
     end
   end
   normalized_meta = {}
@@ -551,6 +560,12 @@ def discover_mcp_mapping(options)
     }
   end
   [mapping.transform_values { |set| set.to_a.sort }, risks, normalized_meta]
+end
+
+def catalog_tools(catalog)
+  return Array(catalog["tools"]) if catalog["tools"].is_a?(Array)
+
+  Array(catalog["tier1"]).concat(Array(catalog["tier2"]))
 end
 
 def coverage_bucket_for_text(text)

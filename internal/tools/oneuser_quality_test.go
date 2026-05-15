@@ -872,6 +872,7 @@ func TestOneUserProductSourceDoesNotMentionRemovedLegacyToolNames(t *testing.T) 
 	}
 	docs := []string{
 		"README.md",
+		"SECURITY.md",
 		"docs/agent-cookbook.md",
 		"docs/tool-catalog.md",
 	}
@@ -909,6 +910,33 @@ func TestOneUserProductSourceDoesNotMentionRemovedLegacyToolNames(t *testing.T) 
 			if containsExactToolToken(text, name) {
 				rel, _ := filepath.Rel(repoRoot, file)
 				t.Fatalf("%s still mentions removed legacy tool name %s", rel, name)
+			}
+		}
+	}
+}
+
+func TestOneUserActionableGuidanceUsesRenamedPublicToolNames(t *testing.T) {
+	repoRoot := filepath.Clean("../..")
+	removed := []string{
+		"clockify_send_invoice",
+		"clockify_mark_invoice_paid",
+		"clockify_test_webhook",
+		"clockify_deactivate_user",
+	}
+	files := []string{
+		"SECURITY.md",
+		"internal/tools/invoice_view.go",
+	}
+
+	for _, file := range files {
+		raw, err := os.ReadFile(filepath.Join(repoRoot, file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(raw)
+		for _, name := range removed {
+			if containsExactToolToken(text, name) {
+				t.Fatalf("%s still recommends removed public tool name %s", file, name)
 			}
 		}
 	}

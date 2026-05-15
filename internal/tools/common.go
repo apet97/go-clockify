@@ -805,7 +805,58 @@ func intArg(args map[string]any, key string, fallback int) int {
 }
 
 func ok(action string, data any, meta map[string]any) ResultEnvelope {
-	return ResultEnvelope{OK: true, Action: action, Data: data, Meta: meta}
+	return ResultEnvelope{OK: true, Action: action, Data: sanitizeResultValue(data), Meta: sanitizeResultMeta(meta)}
+}
+
+func sanitizeResultMeta(meta map[string]any) map[string]any {
+	if len(meta) == 0 {
+		return meta
+	}
+	sanitized, _ := sanitizeResultValue(meta).(map[string]any)
+	return sanitized
+}
+
+func sanitizeResultValue(value any) any {
+	switch v := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(v))
+		for key, item := range v {
+			if sensitiveResultKey(key) {
+				continue
+			}
+			out[key] = sanitizeResultValue(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(v))
+		for i, item := range v {
+			out[i] = sanitizeResultValue(item)
+		}
+		return out
+	case []map[string]any:
+		out := make([]map[string]any, len(v))
+		for i, item := range v {
+			out[i], _ = sanitizeResultValue(item).(map[string]any)
+		}
+		return out
+	case string:
+		if strings.Contains(strings.ToLower(v), "bearer ") {
+			return "[redacted]"
+		}
+		return v
+	default:
+		return value
+	}
+}
+
+func sensitiveResultKey(key string) bool {
+	normalized := strings.NewReplacer("_", "", "-", "", " ", "").Replace(strings.ToLower(key))
+	switch normalized {
+	case "apikey", "authtoken", "bearer", "cookie", "cookies", "credential", "credentials", "authorization":
+		return true
+	default:
+		return false
+	}
 }
 
 func hours(seconds int64) float64 {

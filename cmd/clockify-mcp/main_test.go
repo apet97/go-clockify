@@ -175,6 +175,21 @@ func TestRunDoctorLiveExitCodes(t *testing.T) {
 			},
 			wantCode: 5,
 		},
+		"owner check forbidden": {
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user":
+					respondDoctorJSON(t, w, map[string]any{"id": "user1"})
+				case r.URL.Path == "/workspaces/65b382b606de527a7ee2b60e":
+					respondDoctorJSON(t, w, map[string]any{"id": "65b382b606de527a7ee2b60e", "name": "Pinned"})
+				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
+					http.Error(w, "forbidden", http.StatusForbidden)
+				default:
+					http.NotFound(w, r)
+				}
+			},
+			wantCode: 3,
+		},
 	}
 
 	for name, tt := range tests {

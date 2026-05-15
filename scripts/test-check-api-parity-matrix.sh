@@ -26,6 +26,7 @@ assert_case() {
   "tools": [
     {
       "name": "clockify_status",
+      "description": "Show current user and pinned workspace status.",
       "category": "workflow",
       "handler_kind": "native handler",
       "read_only": true,
@@ -40,13 +41,63 @@ assert_case() {
       },
       "output_schema": {
         "type": "object",
+        "required": ["ok", "action"],
         "properties": {
-          "data": {"type": "object"}
+          "action": {"type": "string"},
+          "data": {"type": "object"},
+          "ok": {"type": "boolean"}
         }
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "handlerKind": "native handler",
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "riskClass": ["read"]
+      }
+    },
+    {
+      "name": "clockify_api_get",
+      "description": "Raw GET fallback within the pinned workspace or Clockify API path.",
+      "handler_kind": "native handler",
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": ["read"],
+      "input_schema": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {"type": "string"},
+          "query": {"type": "object"}
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "required": ["ok", "action"],
+        "properties": {
+          "action": {"type": "string"},
+          "data": {"description": "Tool-specific payload for clockify_api_get"},
+          "ok": {"type": "boolean"}
+        }
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "handlerKind": "native handler",
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true,
+        "riskClass": ["read"]
       }
     },
     {
       "name": "clockify_api_request",
+      "description": "Raw method fallback within the pinned workspace or Clockify API path.",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -66,9 +117,21 @@ assert_case() {
       },
       "output_schema": {
         "type": "object",
+        "required": ["ok", "action"],
         "properties": {
-          "data": {"description": "Tool-specific payload for clockify_api_request"}
+          "action": {"type": "string"},
+          "data": {"description": "Tool-specific payload for clockify_api_request"},
+          "ok": {"type": "boolean"}
         }
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "dryRun": false,
+        "handlerKind": "native handler",
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false,
+        "riskClass": ["write"]
       }
     }
   ]
@@ -78,17 +141,18 @@ JSON
 # One-user tool coverage
 
 Summary:
-- Total tools: 2
+- Total tools: 3
 - Workflow tools: 1
 - Domain tools: 0
-- Raw fallback tools: 1
-- Fake-smoke yes: 2
+- Raw fallback tools: 2
+- Fake-smoke yes: 3
 - Live protocol/recovery tested yes: 1
 - Live happy-path tested yes: 1
 
 | Tool | Class | Handler | Endpoint / method | Fake smoke | Live protocol/recovery tested | Live happy-path tested | Output schema | Status | Next action |
 |------|-------|---------|-------------------|-------------|--------------------------------|------------------------|---------------|--------|-------------|
 | `clockify_status` | workflow | native handler | native composite | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_api_get` | raw | raw fallback | caller-supplied GET/path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |
 | `clockify_api_request` | raw | raw fallback | caller-supplied method/path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |
 MD
 
@@ -124,6 +188,46 @@ mut_stale_required_args() {
 }
 MUTATOR=mut_stale_required_args
 assert_case "stale required args fail closed" 1 "api-parity-matrix drift"
+
+mut_legacy_catalog_shape() {
+  python3 - "$1/docs/tool-catalog.json" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+obj = json.load(open(path))
+tools = obj.pop("tools")
+obj["tier1"] = tools
+json.dump(obj, open(path, "w"), indent=2)
+PY
+}
+MUTATOR=mut_legacy_catalog_shape
+assert_case "legacy catalog shape fails closed" 1 "legacy tier1/tier2 top-level shape"
+
+mut_drop_annotations() {
+  python3 - "$1/docs/tool-catalog.json" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+obj = json.load(open(path))
+obj["tools"][0].pop("annotations", None)
+json.dump(obj, open(path, "w"), indent=2)
+PY
+}
+MUTATOR=mut_drop_annotations
+assert_case "dropped metadata fails closed" 1 "annotations object is required"
+
+mut_move_raw_fallback() {
+  python3 - "$1/docs/tool-catalog.json" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+obj = json.load(open(path))
+obj["tools"][0], obj["tools"][1] = obj["tools"][1], obj["tools"][0]
+json.dump(obj, open(path, "w"), indent=2)
+PY
+}
+MUTATOR=mut_move_raw_fallback
+assert_case "raw fallback ordering fails closed" 1 "raw fallback tools must be the final two"
 
 if [ "$tests_failed" -ne 0 ]; then
   printf 'check-api-parity-matrix tests: %d/%d FAILED\n' "$tests_failed" "$tests_run" >&2
