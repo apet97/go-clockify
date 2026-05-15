@@ -439,3 +439,36 @@ func TestTier2_Expenses_BuilderShape(t *testing.T) {
 		t.Fatalf("expected at least 9 expense tools, got %d", len(descs))
 	}
 }
+
+func TestCreateExpenseSchemaKeepsLiveProbeNarrowing(t *testing.T) {
+	// Uploaded EXPENSESOPEAPI marks file/projectId/userId required, but
+	// clockify-api-probe-lab/findings/expenses.md records live 201 responses
+	// without file/projectId and a live 400 only when userId is omitted. The
+	// handler resolves user_id via /user, so the public schema intentionally
+	// requires only the locally non-resolvable fields.
+	svc := New(nil, "ws1")
+	var schema map[string]any
+	for _, desc := range expenseHandlers(svc) {
+		if desc.Tool.Name == "clockify_create_expense" {
+			schema = desc.Tool.InputSchema
+			break
+		}
+	}
+	if schema == nil {
+		t.Fatal("missing create expense schema")
+	}
+	required, ok := schema["required"].([]string)
+	if !ok {
+		t.Fatalf("create expense required schema = %T", schema["required"])
+	}
+	for _, want := range []string{"amount", "date", "category_id"} {
+		if !containsString(required, want) {
+			t.Fatalf("create_expense required missing %s: %#v", want, required)
+		}
+	}
+	for _, narrowed := range []string{"file", "project_id", "user_id"} {
+		if containsString(required, narrowed) {
+			t.Fatalf("create_expense should not require live-optional/resolved field %s: %#v", narrowed, required)
+		}
+	}
+}

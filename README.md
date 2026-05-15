@@ -46,15 +46,31 @@ export CLOCKIFY_WORKSPACE_ID="..."
 ```bash
 export CLOCKIFY_TIMEZONE="Europe/Belgrade"
 export CLOCKIFY_BASE_URL="https://api.clockify.me/api/v1"
+export CLOCKIFY_TOOLSET="all"
+export CLOCKIFY_TOOL_TIMEOUT="45s"
+export CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS="4"
+export CLOCKIFY_MAX_MESSAGE_SIZE="4194304"
+export CLOCKIFY_ENABLE_RAW_WRITES="false"
+export CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=""
 export MCP_LOG_LEVEL="info"
 ```
 
 `CLOCKIFY_BASE_URL` defaults to `https://api.clockify.me/api/v1`.
+`CLOCKIFY_TOOLSET` defaults to `all`, which preserves the 151-tool owner
+workbench. Narrower startup surfaces are available with `core`, `business`, and
+`admin` without changing the one-user product model.
 
 3. Validate configuration before starting the MCP loop:
 
 ```bash
 go run ./cmd/clockify-mcp doctor
+```
+
+Use `doctor --live` when you want the binary to prove the API key, pinned
+workspace, owner role, feature plan, and feature flags against Clockify:
+
+```bash
+go run ./cmd/clockify-mcp doctor --live
 ```
 
 4. Run the stdio MCP server:
@@ -153,10 +169,29 @@ Raw API fallback:
 - `clockify_api_get`
 - `clockify_api_request`
 
+Raw fallback is pinned-workspace scoped. Raw `GET` is available for owner
+inspection; raw `POST`, `PUT`, `PATCH`, and `DELETE` require
+`CLOCKIFY_ENABLE_RAW_WRITES=true`. Use domain tools first because raw writes are
+an explicit escape hatch and are annotated as broad high-risk behavior.
+
+Toolsets:
+
+- `core`: daily time tracking, clients/projects/tasks/tags/entries, and reports.
+- `business`: `core` plus invoices, expenses, and invoiced-entry helpers.
+- `admin`: `business` plus custom fields, time off, scheduling, approvals,
+  webhooks, groups, holidays, users, and workspace settings.
+- `all`: `admin` plus demo helpers and raw API fallback; this is the default
+  151-tool startup registry.
+
 The deterministic demo helpers create or reuse a prefixed client, project,
 task, tag, and time entry, then clean them up by prefix. Cleanup is repeatable,
 so running it after the objects are gone is a harmless no-op with a normal
 envelope.
+
+Webhook tools require HTTPS, reject embedded credentials, and validate DNS by
+default so hostnames resolving to localhost, private, reserved, link-local, or
+loopback IPs are blocked. `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` is an explicit
+comma-separated escape hatch for trusted test domains.
 
 ## Example Flow
 
@@ -176,6 +211,7 @@ envelope.
 - `demo-full-workspace-story`
 - `setup-client-project-task`
 - `log-week`
+- `safe-daily-time-tracking`
 - `invoice-client`
 - `cleanup-demo`
 - `review-week`
@@ -219,8 +255,9 @@ Successful tools return:
     "workspaceId": "workspace_id",
     "projectId": "project_id"
   },
-  "data": {},
-  "changed": {
+	  "data": {},
+	  "meta": {},
+	  "changed": {
     "created": [],
     "updated": [],
     "deleted": [],

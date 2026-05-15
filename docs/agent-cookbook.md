@@ -6,8 +6,23 @@ and `clockify_api_get` / `clockify_api_request` only when no workflow or domain
 tool fits.
 
 Each successful write returns `ok=true`, useful `ids`, a `changed` summary,
-and `next` actions. On recoverable failure, read `error.code` and
+metadata when relevant, and `next` actions. On recoverable failure, read `error.code` and
 `recovery.hint`; use `recovery.tool` when it is present.
+
+Every MCP `tools/call` is schema-validated before handlers run. Missing required
+arguments or unknown properties return JSON-RPC `-32602` with
+`error.data.pointer`; fix the arguments instead of retrying the same payload.
+
+## Safe Daily Time Tracking
+
+1. Use the `safe-daily-time-tracking` prompt or start directly with
+   `clockify_status {}`.
+2. Keep the tool surface to `CLOCKIFY_TOOLSET=core` when the task is only daily
+   tracking and review.
+3. Use `clockify_create_work_package`, `clockify_log_work`,
+   `clockify_start_work`, `clockify_stop_work`, `clockify_switch_work`,
+   `clockify_review_day`, `clockify_review_week`, and `clockify_fix_entry`.
+4. Avoid invoice, expense, admin, webhook, and raw fallback tools in this mode.
 
 ## First Call Orientation
 
@@ -78,21 +93,26 @@ and `next` actions. On recoverable failure, read `error.code` and
 
 1. Call
    `clockify_invoice_client_work { "client_id": "client123", "number": "INV-2026-05", "issued_date": "2026-05-14", "due_date": "2026-05-28", "currency": "USD" }`.
-2. Expect `ids.workspaceId`, `ids.clientId`, and `ids.invoiceId` when invoicing
+2. Include `currency`; invoice creation rejects missing currency before the API
+   call.
+3. Expect `ids.workspaceId`, `ids.clientId`, and `ids.invoiceId` when invoicing
    is available.
-3. Expect `changed.created` for the invoice draft; imported time entry IDs may
+4. Expect `changed.created` for the invoice draft; imported time entry IDs may
    appear when import arguments are supplied.
-4. Next action behavior: use returned invoice IDs with `clockify_invoices_*`
+5. Next action behavior: use returned invoice IDs with `clockify_invoices_*`
    domain tools for detailed edits, send, export, or payment state.
 
 ## Record Expense
 
 1. Call
    `clockify_record_expense { "category_id": "category123", "amount": 42.5, "date": "2026-05-14", "project_id": "project123", "notes": "Taxi" }`.
-2. Expect `ids.workspaceId`, `ids.expenseId`, and any project/task/user IDs
+2. Ask for a receipt file only when the workspace/API returns recovery that says
+   a file is required. The narrowed owner workflow supports no-file expenses
+   where Clockify accepts them.
+3. Expect `ids.workspaceId`, `ids.expenseId`, and any project/task/user IDs
    used.
-3. Expect `changed.created`.
-4. Next action behavior: use `clockify_expenses_*` domain tools for detailed
+4. Expect `changed.created`.
+5. Next action behavior: use `clockify_expenses_*` domain tools for detailed
    edits, listing, or deletion.
 
 ## Time Off
@@ -117,12 +137,29 @@ and `next` actions. On recoverable failure, read `error.code` and
 
 ## Webhook
 
-1. Call
+1. Prefer a dry run first with the domain tool:
+   `clockify_webhooks_create { "name": "New time entry sink", "url": "https://example.com/clockify/webhook", "webhook_event": "NEW_TIME_ENTRY", "dry_run": true }`.
+2. Then call
    `clockify_setup_webhook { "name": "New time entry sink", "url": "https://example.com/clockify/webhook", "webhook_event": "NEW_TIME_ENTRY" }`.
-2. Expect `ids.workspaceId` and `ids.webhookId`.
-3. Expect `changed.created`.
-4. Next action behavior: use `clockify_webhooks_*` domain tools to inspect
+3. Expect `ids.workspaceId` and `ids.webhookId`.
+4. Expect `changed.created`.
+5. DNS validation is on by default: HTTPS is required, embedded credentials are
+   rejected, and hostnames resolving to localhost/private/reserved/link-local
+   addresses fail unless explicitly allowlisted through
+   `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS`.
+6. Next action behavior: use `clockify_webhooks_*` domain tools to inspect
    events, logs, updates, and deletion.
+
+## Raw API Fallback
+
+1. Prefer typed workflow and domain tools.
+2. Use `clockify_api_get` only for pinned-workspace or `/user` inspection that
+   has no typed equivalent.
+3. Raw non-GET calls require `CLOCKIFY_ENABLE_RAW_WRITES=true`; leave it false
+   for normal daily use.
+4. Raw paths must stay inside `/user`, `/workspaces/{workspaceId}`, or pinned
+   workspace descendants. Absolute URLs, hosts, path traversal, backslashes, and
+   encoded traversal are rejected before the API call.
 
 ## Demo Smoke
 

@@ -171,6 +171,10 @@ func (s *Service) CallDocumentedDeleteAPI(ctx context.Context, args map[string]a
 	return s.callDocumentedAPI(ctx, args, "clockify_call_documented_delete_api", map[string]bool{http.MethodDelete: true})
 }
 
+func (s *Service) rawWritesEnabled() bool {
+	return s != nil && (s.EnableRawWrites || s.DocumentedAPIWrites)
+}
+
 func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, toolName string, allowed map[string]bool) (ResultEnvelope, error) {
 	requested, err := documentedOperationFromArgs(args)
 	if err != nil {
@@ -179,8 +183,8 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 	if !allowed[requested.Method] {
 		return ResultEnvelope{}, fmt.Errorf("%s does not allow %s operations", toolName, requested.Method)
 	}
-	if requested.Method != http.MethodGet && !s.DocumentedAPIWrites && !dryrun.Enabled(args) {
-		return ResultEnvelope{}, fmt.Errorf("documented API write/delete calls are disabled; set CLOCKIFY_DOCUMENTED_API_WRITES=1 to enable this raw escape hatch")
+	if err := validateDocumentedAPIPathShape(requested.Path); err != nil {
+		return ResultEnvelope{}, err
 	}
 	op, found := documentedOperationByKey(requested.key())
 	if !found {
@@ -195,6 +199,12 @@ func (s *Service) callDocumentedAPI(ctx context.Context, args map[string]any, to
 	resolvedPath, wsID, err := s.resolveDocumentedAPIPath(ctx, op.Path, wsID, pathParams)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	if err := s.validateDocumentedAPIResolvedPath(resolvedPath, wsID); err != nil {
+		return ResultEnvelope{}, err
+	}
+	if requested.Method != http.MethodGet && !s.rawWritesEnabled() && !dryrun.Enabled(args) {
+		return ResultEnvelope{}, fmt.Errorf("documented API write/delete calls are disabled; use typed domain tools first (for example clockify_clients_create, clockify_projects_update, or the nearest workflow tool), or set CLOCKIFY_ENABLE_RAW_WRITES=1 to enable this raw escape hatch")
 	}
 	query, err := documentedValuesArg(args, "query")
 	if err != nil {
@@ -449,6 +459,66 @@ func (op documentedAPIOperation) key() string {
 
 func (op documentedAPIOperation) reportsHost() bool {
 	return strings.Contains(op.Path, "/reports/") || strings.Contains(op.Path, "/shared-reports")
+}
+
+func validateDocumentedAPIPathShape(path string) error {
+	if path == "" {
+		return fmt.Errorf("raw documented API path is required")
+	}
+	if strings.Contains(path, "\\") {
+		return fmt.Errorf("raw documented API path %q is rejected: backslashes are not allowed", path)
+	}
+	if strings.ContainsAny(path, "?#") {
+		return fmt.Errorf("raw documented API path %q is rejected: query and fragment must use structured arguments", path)
+	}
+	parsed, err := url.Parse(path)
+	if err != nil {
+		return fmt.Errorf("raw documented API path %q is rejected: %w", path, err)
+	}
+	if parsed.IsAbs() || parsed.Host != "" || !strings.HasPrefix(path, "/") {
+		return fmt.Errorf("raw documented API path %q is rejected: absolute URLs and host-qualified paths are not allowed", path)
+	}
+	if strings.HasPrefix(path, "//") {
+		return fmt.Errorf("raw documented API path %q is rejected: host-qualified path confusion is not allowed", path)
+	}
+	decoded, err := url.PathUnescape(path)
+	if err != nil {
+		return fmt.Errorf("raw documented API path %q is rejected: invalid path escape: %w", path, err)
+	}
+	if strings.Contains(decoded, "\\") {
+		return fmt.Errorf("raw documented API path %q is rejected: encoded backslashes are not allowed", path)
+	}
+	if decoded == "/file/image" || strings.HasPrefix(decoded, "/file/image/") {
+		return fmt.Errorf("raw documented API path %q is rejected: /file/image is outside the owner-mode raw fallback allowlist", path)
+	}
+	segments := strings.Split(decoded, "/")
+	for i, segment := range segments {
+		if i > 0 && segment == "" {
+			return fmt.Errorf("raw documented API path %q is rejected: duplicate slash path confusion is not allowed", path)
+		}
+		if segment == "." || segment == ".." {
+			return fmt.Errorf("raw documented API path %q is rejected: dot segments are not allowed", path)
+		}
+	}
+	return nil
+}
+
+func (s *Service) validateDocumentedAPIResolvedPath(path, workspaceID string) error {
+	if err := validateDocumentedAPIPathShape(path); err != nil {
+		return err
+	}
+	if path == "/user" || strings.HasPrefix(path, "/user/") {
+		return nil
+	}
+	pinned := strings.TrimSpace(s.WorkspaceID)
+	if pinned == "" {
+		pinned = strings.TrimSpace(workspaceID)
+	}
+	workspaceRoot := "/workspaces/" + url.PathEscape(pinned)
+	if pinned != "" && (path == workspaceRoot || strings.HasPrefix(path, workspaceRoot+"/")) {
+		return nil
+	}
+	return fmt.Errorf("raw documented API path %q is rejected: only /user and the pinned workspace %s descendants are allowed", path, workspaceRoot)
 }
 
 func (s *Service) resolveDocumentedAPIPath(ctx context.Context, template, workspaceID string, pathParams map[string]string) (string, string, error) {

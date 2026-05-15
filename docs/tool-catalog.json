@@ -487,6 +487,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -760,6 +764,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -1077,6 +1085,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -1465,6 +1477,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -1843,6 +1859,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -2674,6 +2694,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -2962,6 +2986,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -4004,6 +4032,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -5051,6 +5083,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -6073,6 +6109,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -6365,6 +6405,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -6662,6 +6706,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -6942,6 +6990,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -7245,6 +7297,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -7527,6 +7583,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -7816,6 +7876,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -8089,6 +8153,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -8751,6 +8819,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -9373,6 +9445,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -10747,6 +10823,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -12115,6 +12195,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -12800,6 +12884,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -13466,6 +13554,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -13744,6 +13836,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -13998,6 +14094,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -14857,6 +14957,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -15229,6 +15333,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -15863,6 +15971,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -16524,6 +16636,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -16771,6 +16887,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -18125,6 +18245,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -19508,6 +19632,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -19755,6 +19883,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -21111,6 +21243,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -21203,7 +21339,15 @@
       "idempotent": true,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing",
+        "admin"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_id",
+        "rate_kind",
+        "amount"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -21379,6 +21523,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -21457,7 +21605,9 @@
         "priority": 41,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing",
+          "admin"
         ],
         "title": "Projects Rates Update"
       }
@@ -22046,6 +22196,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -22737,6 +22891,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -22996,6 +23154,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -23088,7 +23250,14 @@
       "idempotent": true,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "project_id",
+        "task_id",
+        "rate_kind",
+        "amount"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -23270,6 +23439,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -23348,7 +23521,8 @@
         "priority": 45,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Tasks Rates Update"
       }
@@ -23528,6 +23702,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -23797,6 +23975,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -24044,6 +24226,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -24863,6 +25049,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -25723,6 +25913,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -25965,6 +26159,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -26354,6 +26552,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -26727,6 +26929,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -26821,6 +27027,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -27136,6 +27345,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -27214,7 +27427,8 @@
         "priority": 1105,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Workspace Settings"
       }
@@ -27229,6 +27443,10 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "client_id",
+        "status"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -27398,6 +27616,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -27476,7 +27698,8 @@
         "priority": 200,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Invoices"
       }
@@ -27491,6 +27714,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -27640,6 +27866,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -27718,7 +27948,8 @@
         "priority": 201,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Invoice"
       }
@@ -27732,7 +27963,15 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "client_id",
+        "number",
+        "issued_date",
+        "currency",
+        "due_date"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -27750,7 +27989,7 @@
             "type": "string"
           },
           "currency": {
-            "description": "Currency code (e.g. USD, EUR)",
+            "description": "Currency code (required; e.g. USD, EUR)",
             "type": "string"
           },
           "discount_percent": {
@@ -27804,6 +28043,7 @@
           "client_id",
           "number",
           "issued_date",
+          "currency",
           "due_date"
         ],
         "type": "object"
@@ -27944,6 +28184,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -28022,7 +28266,8 @@
         "priority": 202,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Create Invoice"
       }
@@ -28036,7 +28281,13 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "status",
+        "client_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -28256,6 +28507,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -28334,7 +28589,8 @@
         "priority": 203,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Update Invoice"
       }
@@ -28348,7 +28604,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "billing",
         "destructive"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -28500,6 +28760,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -28578,6 +28842,7 @@
         "priority": 204,
         "readOnlyHint": false,
         "riskClass": [
+          "billing",
           "destructive"
         ],
         "title": "Delete Invoice"
@@ -28592,7 +28857,12 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -28746,6 +29016,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -28824,7 +29098,9 @@
         "priority": 205,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing",
+          "external_side_effect"
         ],
         "title": "Send Invoice"
       }
@@ -28838,7 +29114,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -28992,6 +29272,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -29070,7 +29354,8 @@
         "priority": 206,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Mark Invoice Paid"
       }
@@ -29085,6 +29370,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -29238,6 +29526,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -29316,7 +29608,8 @@
         "priority": 207,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Invoice Items"
       }
@@ -29330,7 +29623,15 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "item_type",
+        "description",
+        "quantity",
+        "unit_price"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -29511,6 +29812,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -29589,7 +29894,8 @@
         "priority": 208,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Add Invoice Item"
       }
@@ -29603,7 +29909,17 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "item_index",
+        "item_id",
+        "item_type",
+        "description",
+        "quantity",
+        "unit_price"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -29792,6 +30108,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -29870,7 +30190,8 @@
         "priority": 209,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Update Invoice Item"
       }
@@ -29884,7 +30205,13 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "billing",
         "destructive"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "item_index",
+        "item_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -30046,6 +30373,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -30124,6 +30455,7 @@
         "priority": 216,
         "readOnlyHint": false,
         "riskClass": [
+          "billing",
           "destructive"
         ],
         "title": "Delete Invoice Item"
@@ -30294,6 +30626,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -30553,6 +30889,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -30931,6 +31271,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -31023,14 +31367,38 @@
       "idempotent": true,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_ids",
+        "memberships",
+        "remove"
       ],
       "input_schema": {
         "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "memberships"
+            ]
+          },
+          {
+            "required": [
+              "user_ids"
+            ]
+          }
+        ],
         "properties": {
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
+          },
+          "hourly_rate": {
+            "description": "Hourly rate for all members when using user_ids compatibility input",
+            "type": "number"
           },
           "memberships": {
             "items": {
@@ -31130,11 +31498,17 @@
               }
             },
             "type": "object"
+          },
+          "user_ids": {
+            "description": "User IDs to set as members",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
-          "project_id",
-          "memberships"
+          "project_id"
         ],
         "type": "object"
       },
@@ -31274,6 +31648,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -31352,7 +31730,9 @@
         "priority": 40,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Update Project Memberships"
       }
@@ -31367,6 +31747,11 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "user_id",
+        "project_id",
+        "category_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -31534,6 +31919,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -31612,7 +32001,8 @@
         "priority": 300,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Expenses"
       }
@@ -31627,6 +32017,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "expense_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -31778,6 +32171,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -31856,7 +32253,8 @@
         "priority": 301,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Expense"
       }
@@ -31870,7 +32268,14 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "category_id",
+        "project_id",
+        "amount",
+        "date"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -32061,6 +32466,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -32139,7 +32548,8 @@
         "priority": 302,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Create Expense"
       }
@@ -32153,7 +32563,15 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "expense_id",
+        "category_id",
+        "project_id",
+        "amount",
+        "date"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -32359,6 +32777,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -32437,7 +32859,8 @@
         "priority": 303,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Update Expense"
       }
@@ -32451,7 +32874,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "billing",
         "destructive"
+      ],
+      "audit_keys": [
+        "expense_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -32603,6 +33030,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -32681,6 +33112,7 @@
         "priority": 304,
         "readOnlyHint": false,
         "riskClass": [
+          "billing",
           "destructive"
         ],
         "title": "Delete Expense"
@@ -32696,6 +33128,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -32842,6 +33277,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -32920,7 +33359,8 @@
         "priority": 305,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Expense Categories"
       }
@@ -32934,7 +33374,14 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "name",
+        "has_unit_price",
+        "price_in_cents",
+        "unit"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -33105,6 +33552,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -33183,7 +33634,8 @@
         "priority": 306,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Create Expense Category"
       }
@@ -33197,7 +33649,16 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "category_id",
+        "name",
+        "has_unit_price",
+        "price_in_cents",
+        "unit",
+        "archived"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -33374,6 +33835,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -33452,7 +33917,8 @@
         "priority": 307,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Update Expense Category"
       }
@@ -33466,7 +33932,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "billing",
         "destructive"
+      ],
+      "audit_keys": [
+        "category_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -33618,6 +34088,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -33696,6 +34170,7 @@
         "priority": 308,
         "readOnlyHint": false,
         "riskClass": [
+          "billing",
           "destructive"
         ],
         "title": "Delete Expense Category"
@@ -33867,6 +34342,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -34112,6 +34591,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -34204,7 +34687,12 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "name",
+        "type"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -34390,6 +34878,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -34468,7 +34960,8 @@
         "priority": 402,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Create Custom Field"
       }
@@ -34482,7 +34975,13 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "custom_field_id",
+        "name",
+        "archived"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -34667,6 +35166,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -34745,7 +35248,8 @@
         "priority": 403,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Update Custom Field"
       }
@@ -34759,7 +35263,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "admin",
         "destructive"
+      ],
+      "audit_keys": [
+        "custom_field_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -34911,6 +35419,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -34989,6 +35501,7 @@
         "priority": 404,
         "readOnlyHint": false,
         "riskClass": [
+          "admin",
           "destructive"
         ],
         "title": "Delete Custom Field"
@@ -35003,7 +35516,12 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "custom_field_id",
+        "entity_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -35168,6 +35686,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -35246,7 +35768,8 @@
         "priority": 405,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Set Custom Field Value"
       }
@@ -35261,6 +35784,11 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "user_id",
+        "policy_id",
+        "status"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -35426,6 +35954,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -35504,7 +36036,8 @@
         "priority": 500,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Time Off Requests"
       }
@@ -35519,6 +36052,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "request_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -35672,6 +36208,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -35750,7 +36290,8 @@
         "priority": 501,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Time Off Request"
       }
@@ -35764,7 +36305,14 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "user_id",
+        "policy_id",
+        "start",
+        "end"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -35942,6 +36490,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -36020,7 +36572,8 @@
         "priority": 502,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Create Time Off Request"
       }
@@ -36034,7 +36587,15 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "request_id",
+        "user_id",
+        "policy_id",
+        "start",
+        "end"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -36200,6 +36761,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -36278,7 +36843,8 @@
         "priority": 503,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Update Time Off Request"
       }
@@ -36292,7 +36858,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "admin",
         "destructive"
+      ],
+      "audit_keys": [
+        "request_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -36449,6 +37019,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -36527,6 +37101,7 @@
         "priority": 504,
         "readOnlyHint": false,
         "riskClass": [
+          "admin",
           "destructive"
         ],
         "title": "Delete Time Off Request"
@@ -36541,7 +37116,12 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "request_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -36700,6 +37280,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -36778,7 +37362,9 @@
         "priority": 505,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Approve Time Off"
       }
@@ -36792,7 +37378,12 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "request_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -36951,6 +37542,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -37029,7 +37624,9 @@
         "priority": 506,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Deny Time Off"
       }
@@ -37044,6 +37641,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -37202,6 +37802,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -37280,7 +37884,8 @@
         "priority": 507,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Time Off Policies"
       }
@@ -37295,6 +37900,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "policy_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -37445,6 +38053,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -37523,7 +38135,8 @@
         "priority": 508,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Time Off Policy"
       }
@@ -37537,7 +38150,13 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "name",
+        "assignee_ids",
+        "user_group_ids"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -37711,6 +38330,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -37789,7 +38412,8 @@
         "priority": 509,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Create Time Off Policy"
       }
@@ -37803,7 +38427,14 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "policy_id",
+        "name",
+        "assignee_ids",
+        "user_group_ids"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -37976,6 +38607,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -38054,7 +38689,8 @@
         "priority": 510,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Update Time Off Policy"
       }
@@ -38069,6 +38705,10 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "user_id",
+        "policy_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -38224,6 +38864,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -38302,7 +38946,8 @@
         "priority": 511,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Time Off Balance"
       }
@@ -38317,6 +38962,10 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "project_id",
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -38500,6 +39149,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -38578,7 +39231,8 @@
         "priority": 600,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Assignments"
       }
@@ -38593,6 +39247,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "assignment_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -38762,6 +39419,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -38840,7 +39501,8 @@
         "priority": 601,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Assignment"
       }
@@ -39054,6 +39716,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -39343,6 +40009,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -39596,6 +40266,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -39689,6 +40363,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "project_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -39858,6 +40535,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -39936,7 +40617,8 @@
         "priority": 605,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Project Schedule Totals"
       }
@@ -39951,6 +40633,10 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "status",
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -40132,6 +40818,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -40210,7 +40900,8 @@
         "priority": 700,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Approval Requests"
       }
@@ -40225,6 +40916,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "approval_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -40386,6 +41080,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -40464,7 +41162,8 @@
         "priority": 701,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Approval Request"
       }
@@ -40478,7 +41177,13 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "user_id",
+        "start",
+        "end"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -40650,6 +41355,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -40728,7 +41437,8 @@
         "priority": 702,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Submit For Approval"
       }
@@ -40742,7 +41452,12 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "approval_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -40903,6 +41618,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -40981,7 +41700,9 @@
         "priority": 703,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Approve Timesheet"
       }
@@ -40995,7 +41716,12 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "approval_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -41160,6 +41886,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -41238,7 +41968,9 @@
         "priority": 704,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Reject Timesheet"
       }
@@ -41252,7 +41984,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "approval_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -41420,6 +42156,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -41498,7 +42238,8 @@
         "priority": 705,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Withdraw Approval"
       }
@@ -41513,6 +42254,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -41670,6 +42414,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -41748,7 +42496,8 @@
         "priority": 800,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Webhooks"
       }
@@ -41763,6 +42512,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "webhook_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -41913,6 +42665,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -41991,7 +42747,8 @@
         "priority": 801,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get Webhook"
       }
@@ -42005,7 +42762,15 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "name",
+        "url",
+        "webhook_event",
+        "trigger_source_type",
+        "trigger_source"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -42197,6 +42962,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -42275,7 +43044,8 @@
         "priority": 802,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "external_side_effect"
         ],
         "title": "Create Webhook"
       }
@@ -42289,7 +43059,16 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "webhook_id",
+        "name",
+        "url",
+        "webhook_event",
+        "trigger_source_type",
+        "trigger_source"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -42483,6 +43262,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -42561,7 +43344,8 @@
         "priority": 803,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "external_side_effect"
         ],
         "title": "Update Webhook"
       }
@@ -42575,7 +43359,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "external_side_effect",
         "destructive"
+      ],
+      "audit_keys": [
+        "webhook_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -42728,6 +43516,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -42806,6 +43598,7 @@
         "priority": 804,
         "readOnlyHint": false,
         "riskClass": [
+          "external_side_effect",
           "destructive"
         ],
         "title": "Delete Webhook"
@@ -42820,7 +43613,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "webhook_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -42974,6 +43771,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -43052,7 +43853,8 @@
         "priority": 805,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "external_side_effect"
         ],
         "title": "Test Webhook"
       }
@@ -43067,6 +43869,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "webhook_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -43211,6 +44016,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -43289,7 +44098,8 @@
         "priority": 806,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List Webhook Events"
       }
@@ -43304,6 +44114,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "workspace_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -43461,6 +44274,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -43539,7 +44356,8 @@
         "priority": 900,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "List User Groups Admin"
       }
@@ -43554,6 +44372,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "group_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -43703,6 +44524,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -43781,7 +44606,8 @@
         "priority": 901,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Get User Group"
       }
@@ -43795,7 +44621,11 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "name"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -43954,6 +44784,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -44032,7 +44866,8 @@
         "priority": 902,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Create User Group Admin"
       }
@@ -44046,7 +44881,12 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "group_id",
+        "name"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -44207,6 +45047,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -44285,7 +45129,8 @@
         "priority": 903,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Update User Group Admin"
       }
@@ -44299,7 +45144,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "admin",
         "destructive"
+      ],
+      "audit_keys": [
+        "group_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -44451,6 +45300,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -44529,6 +45382,7 @@
         "priority": 904,
         "readOnlyHint": false,
         "riskClass": [
+          "admin",
           "destructive"
         ],
         "title": "Delete User Group Admin"
@@ -44543,7 +45397,13 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "group_id",
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -44701,6 +45561,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -44779,7 +45643,9 @@
         "priority": 905,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Add User To Group"
       }
@@ -44793,7 +45659,13 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
+        "admin",
+        "permission_change",
         "destructive"
+      ],
+      "audit_keys": [
+        "group_id",
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -44951,6 +45823,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -45029,6 +45905,8 @@
         "priority": 906,
         "readOnlyHint": false,
         "riskClass": [
+          "admin",
+          "permission_change",
           "destructive"
         ],
         "title": "Remove User From Group"
@@ -45187,6 +46065,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -45448,6 +46330,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -45735,6 +46621,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -45979,6 +46869,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -46071,7 +46965,11 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -46226,6 +47124,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -46304,7 +47206,8 @@
         "priority": 1103,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Deactivate User"
       }
@@ -46318,7 +47221,13 @@
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change"
+      ],
+      "audit_keys": [
+        "user_id",
+        "role"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -46484,6 +47393,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -46562,7 +47475,9 @@
         "priority": 1104,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change"
         ],
         "title": "Update User Role"
       }
@@ -46579,6 +47494,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "project_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -46732,6 +47650,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -46812,7 +47734,8 @@
         "priority": 39,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Projects Memberships List"
       }
@@ -46993,6 +47916,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -47258,6 +48185,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -47519,6 +48450,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -47784,6 +48719,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -47879,6 +48818,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -48038,6 +48980,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -48116,7 +49062,8 @@
         "priority": 210,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Invoices Export"
       }
@@ -48130,7 +49077,13 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "time_entry_ids",
+        "time_entry_group_type"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -48292,6 +49245,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -48370,7 +49327,8 @@
         "priority": 211,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Invoices Import Time"
       }
@@ -48384,7 +49342,13 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "expense_ids",
+        "include_expenses"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -48546,6 +49510,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -48624,7 +49592,8 @@
         "priority": 212,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Invoices Import Expenses"
       }
@@ -48639,6 +49608,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "invoice_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -48808,6 +49780,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -48886,7 +49862,8 @@
         "priority": 213,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Invoices Payments List"
       }
@@ -48900,7 +49877,13 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "amount",
+        "date"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -49066,6 +50049,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -49144,7 +50131,8 @@
         "priority": 214,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Invoices Payments Create"
       }
@@ -49158,7 +50146,12 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
+        "billing",
         "destructive"
+      ],
+      "audit_keys": [
+        "invoice_id",
+        "payment_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -49311,6 +50304,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -49389,6 +50386,7 @@
         "priority": 215,
         "readOnlyHint": false,
         "riskClass": [
+          "billing",
           "destructive"
         ],
         "title": "Invoices Payments Delete"
@@ -49403,7 +50401,12 @@
       "idempotent": true,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "policy_id",
+        "archived"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -49560,6 +50563,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -49638,7 +50645,8 @@
         "priority": 506,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Time Off Archive"
       }
@@ -49653,6 +50661,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "user_id"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -49814,6 +50825,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -49892,7 +50907,8 @@
         "priority": 606,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Scheduling User Totals"
       }
@@ -49907,6 +50923,9 @@
       "dry_run": false,
       "risk_class": [
         "read"
+      ],
+      "audit_keys": [
+        "user_ids"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -50067,6 +51086,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -50145,7 +51168,8 @@
         "priority": 607,
         "readOnlyHint": true,
         "riskClass": [
-          "read"
+          "read",
+          "sensitive_read"
         ],
         "title": "Scheduling Capacity"
       }
@@ -50159,7 +51183,13 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin"
+      ],
+      "audit_keys": [
+        "approval_id",
+        "entry_ids",
+        "expense_ids"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -50325,6 +51355,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -50403,7 +51437,8 @@
         "priority": 704,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin"
         ],
         "title": "Approvals Resubmit"
       }
@@ -50565,6 +51600,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -50835,6 +51874,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -50927,7 +51970,12 @@
       "idempotent": true,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "billing"
+      ],
+      "audit_keys": [
+        "time_entry_ids",
+        "invoiced"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -51101,6 +52149,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -51179,7 +52231,8 @@
         "priority": 65,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "billing"
         ],
         "title": "Entries Mark Invoiced"
       }
@@ -51193,7 +52246,15 @@
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "write",
+        "admin",
+        "permission_change",
+        "external_side_effect"
+      ],
+      "audit_keys": [
+        "email",
+        "emails",
+        "send_email"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -51352,6 +52413,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -51430,7 +52495,10 @@
         "priority": 1102,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "write",
+          "admin",
+          "permission_change",
+          "external_side_effect"
         ],
         "title": "Users Invite"
       }
@@ -51593,6 +52661,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -52418,6 +53490,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -53233,6 +54309,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -54062,6 +55142,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -54317,6 +55401,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -54796,6 +55884,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -55271,6 +56363,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -55781,6 +56877,10 @@
             },
             "type": "object"
           },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
           "next": {
             "items": {
               "additionalProperties": false,
@@ -56018,6 +57118,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {
@@ -56272,6 +57376,10 @@
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
             "type": "object"
           },
           "next": {

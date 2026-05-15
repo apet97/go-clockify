@@ -23,6 +23,7 @@ type ToolResult struct {
 	Entity   string            `json:"entity,omitempty"`
 	IDs      map[string]string `json:"ids,omitempty"`
 	Data     any               `json:"data,omitempty"`
+	Meta     map[string]any    `json:"meta,omitempty"`
 	Changed  ChangeSet         `json:"changed"`
 	Warnings []Warning         `json:"warnings,omitempty"`
 	Next     []NextAction      `json:"next,omitempty"`
@@ -224,6 +225,7 @@ func firstSliceOutputSchema(action string, dataSchema map[string]any) map[string
 			"entity":   map[string]any{"type": "string"},
 			"ids":      map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
 			"data":     dataSchema,
+			"meta":     map[string]any{"type": "object", "additionalProperties": true},
 			"changed":  schemaFor[ChangeSet](),
 			"warnings": schemaFor[[]Warning](),
 			"next":     schemaFor[[]NextAction](),
@@ -532,13 +534,18 @@ func arraySchema(description string) map[string]any {
 	}
 }
 
-func result(action, entity string, ids map[string]string, data any, changed ChangeSet, warnings []Warning, next []NextAction) ToolResult {
+func result(action, entity string, ids map[string]string, data any, changed ChangeSet, warnings []Warning, next []NextAction, meta ...map[string]any) ToolResult {
+	var resultMeta map[string]any
+	if len(meta) > 0 && len(meta[0]) > 0 {
+		resultMeta = meta[0]
+	}
 	return ToolResult{
 		OK:       true,
 		Action:   action,
 		Entity:   entity,
 		IDs:      cleanIDs(ids),
 		Data:     data,
+		Meta:     resultMeta,
 		Changed:  changed,
 		Warnings: warnings,
 		Next:     next,

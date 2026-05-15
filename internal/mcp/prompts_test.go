@@ -20,13 +20,14 @@ func TestPromptsListReturnsBuiltins(t *testing.T) {
 	}
 	result := resp.Result.(map[string]any)
 	prompts, _ := result["prompts"].([]Prompt)
-	if len(prompts) != 10 {
-		t.Fatalf("expected 10 builtin prompts, got %d", len(prompts))
+	if len(prompts) != 11 {
+		t.Fatalf("expected 11 builtin prompts, got %d", len(prompts))
 	}
 	wantOrder := []string{
 		"demo-full-workspace-story",
 		"setup-client-project-task",
 		"log-week",
+		"safe-daily-time-tracking",
 		"invoice-client",
 		"cleanup-demo",
 		"review-week",
@@ -48,6 +49,7 @@ func TestPromptsGetWorksForEachBuiltin(t *testing.T) {
 		"demo-full-workspace-story",
 		"setup-client-project-task",
 		"log-week",
+		"safe-daily-time-tracking",
 		"invoice-client",
 		"cleanup-demo",
 		"review-week",
@@ -82,7 +84,8 @@ func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
 		"demo-full-workspace-story": "clockify_demo_seed",
 		"setup-client-project-task": "clockify_create_work_package",
 		"log-week":                  "clockify_log_work",
-		"invoice-client":            "clockify_invoice_client_work",
+		"safe-daily-time-tracking":  "clockify_status",
+		"invoice-client":            "clockify_status",
 		"cleanup-demo":              "clockify_demo_cleanup",
 		"review-week":               "clockify_review_week",
 		"create-expense":            "clockify_record_expense",

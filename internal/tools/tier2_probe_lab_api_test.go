@@ -138,6 +138,7 @@ func TestProbeLabAPIWriteCallSendsReportsJSONBody(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.DocumentedAPIWrites = true
 	result, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
 		"operation": "POST /workspaces/{workspaceId}/reports/summary",
 		"json_body": map[string]any{
@@ -174,6 +175,7 @@ func TestProbeLabAPIDeleteCallCanSendJSONBody(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.DocumentedAPIWrites = true
 	if _, err := svc.CallDocumentedDeleteAPI(context.Background(), map[string]any{
 		"operation":   "DELETE /workspaces/{workspaceId}/users/{userId}/roles",
 		"path_params": map[string]any{"userId": "u1"},
@@ -231,13 +233,68 @@ func TestProbeLabAPIWriteDryRunDoesNotMutate(t *testing.T) {
 
 func TestCallDocumentedWriteAPIBlockedWhenRawWritesDisabled(t *testing.T) {
 	svc := New(nil, "ws1")
-	svc.DocumentedAPIWrites = false
 	_, err := svc.CallDocumentedWriteAPI(context.Background(), map[string]any{
 		"operation": "POST /workspaces/{workspaceId}/clients",
 		"json_body": map[string]any{"name": "Blocked"},
 	})
-	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_DOCUMENTED_API_WRITES") {
+	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_ENABLE_RAW_WRITES") || !strings.Contains(err.Error(), "clockify_clients_create") {
 		t.Fatalf("err = %v, want documented API writes disabled error", err)
+	}
+}
+
+func TestCallDocumentedReadAPIRejectsUnsafeRawPathEscapes(t *testing.T) {
+	svc := New(nil, "ws1")
+	cases := []struct {
+		name string
+		path string
+	}{
+		{"absolute_url", "https://evil.example/workspaces/{workspaceId}/clients"},
+		{"encoded_host", "/%2f%2fevil.example/workspaces/{workspaceId}/clients"},
+		{"dotdot", "/workspaces/{workspaceId}/../users"},
+		{"backslash", `\workspaces\{workspaceId}\clients`},
+		{"encoded_dotdot", "/workspaces/{workspaceId}/%2e%2e/users"},
+		{"duplicate_slash", "//workspaces/{workspaceId}/clients"},
+		{"query_confusion", "/workspaces/{workspaceId}?path=/workspaces/ws2/clients"},
+		{"file_image", "/file/image"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := svc.CallDocumentedReadAPI(context.Background(), map[string]any{
+				"method": http.MethodGet,
+				"path":   c.path,
+			})
+			if err == nil || !strings.Contains(err.Error(), "raw documented API path") {
+				t.Fatalf("err = %v, want raw path rejection", err)
+			}
+		})
+	}
+}
+
+func TestCallDocumentedReadAPIRejectsWorkspaceEnumerationAndOverride(t *testing.T) {
+	svc := New(nil, "ws1")
+	if _, err := svc.CallDocumentedReadAPI(context.Background(), map[string]any{
+		"operation": "GET /workspaces",
+	}); err == nil || !strings.Contains(err.Error(), "pinned workspace") {
+		t.Fatalf("GET /workspaces err = %v, want pinned workspace rejection", err)
+	}
+	if _, err := svc.CallDocumentedReadAPI(context.Background(), map[string]any{
+		"operation":    "GET /workspaces/{workspaceId}",
+		"workspace_id": "ws2",
+	}); err == nil || !strings.Contains(err.Error(), "pinned workspace") {
+		t.Fatalf("workspace override err = %v, want pinned workspace rejection", err)
+	}
+}
+
+func TestCallDocumentedReadAPIAllowsPinnedWorkspaceAndUserPaths(t *testing.T) {
+	svc := New(nil, "ws1")
+	for _, path := range []string{
+		"/user",
+		"/workspaces/ws1",
+		"/workspaces/ws1/webhooks",
+	} {
+		if err := svc.validateDocumentedAPIResolvedPath(path, "ws1"); err != nil {
+			t.Fatalf("validate %s: %v", path, err)
+		}
 	}
 }
 

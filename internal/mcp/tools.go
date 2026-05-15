@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/jsonschema"
 	"github.com/apet97/go-clockify/internal/metrics"
 	"github.com/apet97/go-clockify/internal/ratelimit"
 	"github.com/apet97/go-clockify/internal/tracing"
@@ -227,6 +228,15 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	if params.Arguments == nil {
 		params.Arguments = map[string]any{}
 	}
+	if err := jsonschema.Validate(d.Tool.InputSchema, schemaValidationArguments(d.Tool.InputSchema, params.Arguments)); err != nil {
+		var ve *jsonschema.ValidationError
+		if errors.As(err, &ve) {
+			err = &InvalidParamsError{Pointer: ve.Pointer, Message: ve.Message}
+		}
+		outcome = "invalid_params"
+		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
+		return nil, err
+	}
 
 	hints := ToolHints{
 		ReadOnly:    d.ReadOnlyHint,
@@ -305,6 +315,62 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		result = processed
 	}
 	return result, nil
+}
+
+func schemaValidationArguments(schema map[string]any, args map[string]any) map[string]any {
+	if len(schema) == 0 || len(args) == 0 {
+		return args
+	}
+	props, _ := schema["properties"].(map[string]any)
+	if len(props) == 0 {
+		return args
+	}
+	required := schemaRequiredNames(schema)
+	if len(required) == 0 {
+		return args
+	}
+	var out map[string]any
+	for _, name := range required {
+		if _, ok := args[name]; ok {
+			continue
+		}
+		alias := name + "_id"
+		if _, hasAliasProp := props[alias]; !hasAliasProp {
+			continue
+		}
+		value, hasAliasValue := args[alias]
+		if !hasAliasValue {
+			continue
+		}
+		if out == nil {
+			out = make(map[string]any, len(args)+1)
+			for key, value := range args {
+				out[key] = value
+			}
+		}
+		out[name] = value
+	}
+	if out == nil {
+		return args
+	}
+	return out
+}
+
+func schemaRequiredNames(schema map[string]any) []string {
+	switch required := schema["required"].(type) {
+	case []string:
+		return required
+	case []any:
+		out := make([]string, 0, len(required))
+		for _, value := range required {
+			if str, ok := value.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }
 
 // InFlightToolCalls reports the current depth of the stdio dispatch

@@ -228,7 +228,7 @@ func (s *Service) toolsResourceData() map[string]any {
 }
 
 func (s *Service) buildToolsResourceData() map[string]any {
-	descriptors := s.FullAccessRegistry()
+	descriptors := s.RegistryForToolset(s.Toolset)
 	sortDescriptorsForToolsList(descriptors)
 	tools := make([]mcp.Tool, 0, len(descriptors))
 	workflowTools := make([]string, 0, 20)

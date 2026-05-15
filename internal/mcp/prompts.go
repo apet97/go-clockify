@@ -149,6 +149,17 @@ func builtinPrompts() []Prompt {
 			},
 		},
 		{
+			Name:        "safe-daily-time-tracking",
+			Description: "Review and adjust daily time tracking using only core time-entry tools.",
+			Arguments: []PromptArgument{
+				{Name: "date", Description: "Day to review, if known.", Required: false},
+				{Name: "project", Description: "Project name or ID.", Required: false},
+			},
+			Messages: []PromptMessage{
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_status`, then use only core time-tracking tools such as `clockify_review_day`, `clockify_log_work`, `clockify_start_work`, `clockify_stop_work`, and `clockify_fix_entry`. Do not use invoice, expense, admin, webhook, or raw fallback tools for this workflow. Use returned IDs from status, review, or prior entry calls whenever possible. If a paid feature is unavailable, report it and continue with daily time tracking only. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused when any write follows."}},
+			},
+		},
+		{
 			Name:        "invoice-client",
 			Description: "Create an invoice workflow for client work and degrade cleanly when invoicing is unavailable.",
 			Arguments: []PromptArgument{
@@ -157,7 +168,7 @@ func builtinPrompts() []Prompt {
 				{Name: "end", Description: "End date or datetime.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_invoice_client_work` with the client name or ID and date range you have. Use returned IDs in later calls, including clientId, invoiceId, and imported entry IDs when present. If a paid feature is unavailable, report it and continue by summarizing invoice-ready work instead of failing the workflow. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_status` to check workspace feature availability, then call `clockify_invoice_client_work` with the client name or ID, currency, and date range you have. Use returned IDs in later calls, including clientId, invoiceId, and imported entry IDs when present. If a paid feature is unavailable, report it and continue by summarizing invoice-ready work instead of failing the workflow. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
@@ -191,7 +202,7 @@ func builtinPrompts() []Prompt {
 				{Name: "amount", Description: "Expense amount.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_record_expense` with the category, project, amount, date, and notes you have. Use returned IDs in later calls, including expenseId, categoryId, projectId, taskId, and userId. If a paid feature is unavailable, report it and continue with a clear summary of the expense that could not be recorded. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_record_expense` with the category, project, amount, date, notes, and receipt/file details only when the expense tool schema requires them. Use returned IDs in later calls, including expenseId, categoryId, projectId, taskId, and userId. If a paid feature is unavailable, report it and continue with a clear summary of the expense that could not be recorded. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 		{
@@ -227,7 +238,7 @@ func builtinPrompts() []Prompt {
 				{Name: "event", Description: "Clockify webhook event.", Required: false},
 			},
 			Messages: []PromptMessage{
-				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_setup_webhook` with the webhook name, HTTPS callback URL, and event you have. Use returned IDs in later calls, including webhookId. If a paid feature is unavailable, report it and continue with the event and callback details for manual setup. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
+				{Role: "user", Content: PromptMessagePart{Type: "text", Text: "First call `clockify_setup_webhook` with dry_run=true, the webhook name, HTTPS callback URL, and event you have. Review the preview and DNS/URL validation result before making a non-dry-run create call. Use returned IDs in later calls, including webhookId. If a paid feature is unavailable, report it and continue with the event and callback details for manual setup. Summarize what changed, including IDs and changed.created, changed.updated, changed.deleted, or changed.reused."}},
 			},
 		},
 	}

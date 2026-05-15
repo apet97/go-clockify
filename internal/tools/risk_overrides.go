@@ -4,227 +4,215 @@ import "github.com/apet97/go-clockify/internal/mcp"
 
 // riskOverride carries a per-tool RiskClass and AuditKeys override applied by
 // applyRiskMetadata after the boolean-hint default. Only entries that need
-// finer granularity than the default (read / write / destructive) appear
-// here. The taxonomy mirrors docs/policy/production-tool-scope.md.
+// finer granularity than the default (read / write / destructive) appear here.
 type riskOverride struct {
 	class     mcp.RiskClass
 	auditKeys []string
 }
 
-// riskOverrides maps Tier-1 / Tier-2 tool names to their structured risk
-// metadata. Adding a new billing, admin, permission-change, or
-// external-side-effect tool means adding it here so that the audit recorder
-// captures the action-defining fields and policy/enforcement consumers see
-// the right risk bits.
+// riskOverrides maps exposed one-user tool names to their structured risk
+// metadata. Keep keys aligned with Service.FullAccessRegistry; stale legacy
+// handler names are guarded by risk_overrides_test.go.
 var riskOverrides = map[string]riskOverride{
-	// Probe-lab generic callers can reach documented billing, admin,
-	// permission-change, and external-side-effect routes, so their static
-	// classification must be conservatively broad.
-	"clockify_call_documented_write_api": {
-		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"operation", "method", "path"},
-	},
-	"clockify_call_documented_delete_api": {
-		class:     mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"operation", "method", "path"},
-	},
-	"clockify_upload_image": {
-		class:     mcp.RiskWrite,
-		auditKeys: []string{"filename", "content_type"},
-	},
+	// Sensitive reads.
+	"clockify_users_profile":               sensitiveRead("user_id"),
+	"clockify_users_list":                  sensitiveRead("workspace_id"),
+	"clockify_groups_list":                 sensitiveRead("workspace_id"),
+	"clockify_groups_get":                  sensitiveRead("group_id"),
+	"clockify_invoices_list":               sensitiveRead("client_id", "status"),
+	"clockify_invoices_get":                sensitiveRead("invoice_id"),
+	"clockify_invoices_export":             sensitiveRead("invoice_id"),
+	"clockify_invoices_items_list":         sensitiveRead("invoice_id"),
+	"clockify_invoices_payments_list":      sensitiveRead("invoice_id"),
+	"clockify_expenses_list":               sensitiveRead("user_id", "project_id", "category_id"),
+	"clockify_expenses_get":                sensitiveRead("expense_id"),
+	"clockify_expenses_categories_list":    sensitiveRead("workspace_id"),
+	"clockify_webhooks_list":               sensitiveRead("workspace_id"),
+	"clockify_webhooks_get":                sensitiveRead("webhook_id"),
+	"clockify_webhooks_events":             sensitiveRead("webhook_id"),
+	"clockify_time_off_requests_list":      sensitiveRead("user_id", "policy_id", "status"),
+	"clockify_time_off_requests_get":       sensitiveRead("request_id"),
+	"clockify_time_off_policies_list":      sensitiveRead("workspace_id"),
+	"clockify_time_off_policies_get":       sensitiveRead("policy_id"),
+	"clockify_time_off_balances":           sensitiveRead("user_id", "policy_id"),
+	"clockify_projects_memberships_list":   sensitiveRead("project_id"),
+	"clockify_scheduling_assignments_list": sensitiveRead("project_id", "user_id"),
+	"clockify_scheduling_assignments_get":  sensitiveRead("assignment_id"),
+	"clockify_scheduling_project_totals":   sensitiveRead("project_id"),
+	"clockify_scheduling_user_totals":      sensitiveRead("user_id"),
+	"clockify_scheduling_capacity":         sensitiveRead("user_ids"),
+	"clockify_approvals_list":              sensitiveRead("status", "user_id"),
+	"clockify_approvals_get":               sensitiveRead("approval_id"),
+	"clockify_workspace_settings":          sensitiveRead("workspace_id"),
 
-	// Sensitive reads — user, billing, balance, and webhook surfaces
-	// stay visible to audit/agents while tagged as sensitive.
-	"clockify_users_profile": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"user_id"},
+	// Billing.
+	"clockify_invoices_create":            billingWrite("client_id", "number", "issued_date", "currency", "due_date"),
+	"clockify_invoices_update":            billingWrite("invoice_id", "status", "client_id"),
+	"clockify_invoices_delete":            billingDelete("invoice_id"),
+	"clockify_invoices_import_time":       billingWrite("invoice_id", "time_entry_ids", "time_entry_group_type"),
+	"clockify_invoices_import_expenses":   billingWrite("invoice_id", "expense_ids", "include_expenses"),
+	"clockify_invoices_items_add":         billingWrite("invoice_id", "item_type", "description", "quantity", "unit_price"),
+	"clockify_invoices_items_update":      billingWrite("invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"),
+	"clockify_invoices_items_delete":      billingDelete("invoice_id", "item_index", "item_id"),
+	"clockify_invoices_mark_paid":         billingWrite("invoice_id"),
+	"clockify_invoices_payments_create":   billingWrite("invoice_id", "amount", "date"),
+	"clockify_invoices_payments_delete":   billingDelete("invoice_id", "payment_id"),
+	"clockify_expenses_create":            billingWrite("category_id", "project_id", "amount", "date"),
+	"clockify_expenses_update":            billingWrite("expense_id", "category_id", "project_id", "amount", "date"),
+	"clockify_expenses_delete":            billingDelete("expense_id"),
+	"clockify_expenses_categories_create": billingWrite("name", "has_unit_price", "price_in_cents", "unit"),
+	"clockify_expenses_categories_update": billingWrite("category_id", "name", "has_unit_price", "price_in_cents", "unit", "archived"),
+	"clockify_expenses_categories_delete": billingDelete("category_id"),
+	"clockify_projects_rates_update": {
+		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
+		auditKeys: []string{"project_id", "user_id", "rate_kind", "amount"},
 	},
-	"clockify_users_list": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"workspace_id"},
+	"clockify_tasks_rates_update": {
+		class:     mcp.RiskWrite | mcp.RiskBilling,
+		auditKeys: []string{"project_id", "task_id", "rate_kind", "amount"},
 	},
-	"clockify_get_user_group": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"group_id"},
-	},
-	"clockify_list_user_groups_admin": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"workspace_id"},
-	},
-	"clockify_export_invoice": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"invoice_id"},
-	},
-	"clockify_get_invoice": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"invoice_id"},
-	},
-	"clockify_invoice_report": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"date_range", "client_id"},
-	},
-	"clockify_list_invoice_items": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"invoice_id"},
-	},
-	"clockify_list_invoices": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"client_id", "status"},
-	},
-	"clockify_get_time_off_policy": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"policy_id"},
-	},
-	"clockify_time_off_balance": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"user_id", "policy_id"},
-	},
-	"clockify_get_member_profile": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"user_id"},
-	},
-	"clockify_list_user_groups": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"workspace_id"},
-	},
-	"clockify_get_webhook": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"webhook_id"},
-	},
-	"clockify_list_webhook_events": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"webhook_id"},
-	},
-	"clockify_list_webhooks": {
-		class:     mcp.RiskRead | mcp.RiskSensitiveRead,
-		auditKeys: []string{"workspace_id"},
-	},
+	"clockify_entries_mark_invoiced": billingWrite("time_entry_ids", "invoiced"),
 
-	// Billing — invoices.
-	"clockify_send_invoice": {
+	// Billing plus external delivery.
+	"clockify_invoices_send": {
 		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"invoice_id"},
 	},
-	"clockify_mark_invoice_paid": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id"},
-	},
-	"clockify_create_invoice": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"client_id", "number", "issued_date", "currency", "due_date"},
-	},
-	"clockify_update_invoice": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "status", "client_id"},
-	},
-	"clockify_delete_invoice": {
-		class:     mcp.RiskDestructive | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id"},
-	},
-	"clockify_add_invoice_item": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "item_type", "description", "quantity", "unit_price"},
-	},
-	"clockify_update_invoice_item": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"},
-	},
-	"clockify_delete_invoice_item": {
-		class:     mcp.RiskDestructive | mcp.RiskBilling,
-		auditKeys: []string{"invoice_id", "item_index", "item_id"},
-	},
-	"clockify_create_expense_category": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"name", "has_unit_price", "price_in_cents", "unit"},
-	},
-	"clockify_update_expense_category": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"category_id", "name", "has_unit_price", "price_in_cents", "unit", "archived"},
-	},
-	"clockify_archive_expense_category": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"category_id", "archived"},
-	},
 
-	// Admin / permission changes — user_admin.
-	"clockify_update_user_role": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
-		auditKeys: []string{"user_id", "role"},
+	// Admin and permission changes.
+	"clockify_users_invite": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		auditKeys: []string{"email", "emails", "send_email"},
 	},
-	"clockify_deactivate_user": {
+	"clockify_users_deactivate": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
 		auditKeys: []string{"user_id"},
 	},
-
-	// Admin — user groups.
-	"clockify_create_user_group": {
+	"clockify_users_role": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"user_id", "role"},
+	},
+	"clockify_groups_create": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
 		auditKeys: []string{"name"},
 	},
-	"clockify_update_user_group": {
+	"clockify_groups_update": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
 		auditKeys: []string{"group_id", "name"},
 	},
-	"clockify_delete_user_group": {
+	"clockify_groups_delete": {
 		class:     mcp.RiskDestructive | mcp.RiskAdmin,
 		auditKeys: []string{"group_id"},
 	},
-	"clockify_invite_user": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"email", "send_email"},
+	"clockify_groups_add_user": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"group_id", "user_id"},
 	},
-	"clockify_add_user_to_group": {
+	"clockify_groups_remove_user": {
+		class:     mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"group_id", "user_id"},
+	},
+	"clockify_projects_memberships_update": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"project_id", "user_ids", "memberships", "remove"},
+	},
+	"clockify_custom_fields_create": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin,
-		auditKeys: []string{"group_id", "user_id"},
+		auditKeys: []string{"name", "type"},
 	},
-	"clockify_remove_user_from_group": {
+	"clockify_custom_fields_update": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"custom_field_id", "name", "archived"},
+	},
+	"clockify_custom_fields_delete": {
 		class:     mcp.RiskDestructive | mcp.RiskAdmin,
-		auditKeys: []string{"group_id", "user_id"},
+		auditKeys: []string{"custom_field_id"},
 	},
-	"clockify_update_project_memberships": {
+	"clockify_custom_fields_set_value": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"custom_field_id", "entity_id"},
+	},
+	"clockify_time_off_requests_create": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"user_id", "policy_id", "start", "end"},
+	},
+	"clockify_time_off_requests_update": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"request_id", "user_id", "policy_id", "start", "end"},
+	},
+	"clockify_time_off_requests_delete": {
+		class:     mcp.RiskDestructive | mcp.RiskAdmin,
+		auditKeys: []string{"request_id"},
+	},
+	"clockify_time_off_approve": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
-		auditKeys: []string{"project_id"},
+		auditKeys: []string{"request_id"},
 	},
-	"clockify_set_project_memberships": {
+	"clockify_time_off_deny": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
-		auditKeys: []string{"project_id", "user_ids"},
+		auditKeys: []string{"request_id"},
 	},
-	"clockify_assign_project_memberships": {
+	"clockify_time_off_policies_create": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"name", "assignee_ids", "user_group_ids"},
+	},
+	"clockify_time_off_policies_update": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"policy_id", "name", "assignee_ids", "user_group_ids"},
+	},
+	"clockify_time_off_archive": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"policy_id", "archived"},
+	},
+	"clockify_approvals_submit": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"user_id", "start", "end"},
+	},
+	"clockify_approvals_approve": {
 		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
-		auditKeys: []string{"project_id", "user_ids", "remove"},
+		auditKeys: []string{"approval_id"},
 	},
-	"clockify_update_project_user_cost_rate": {
-		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
-		auditKeys: []string{"project_id", "user_id", "amount"},
+	"clockify_approvals_reject": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
+		auditKeys: []string{"approval_id"},
 	},
-	"clockify_update_project_user_hourly_rate": {
-		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
-		auditKeys: []string{"project_id", "user_id", "amount"},
+	"clockify_approvals_withdraw": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"approval_id"},
 	},
-	"clockify_update_task_cost_rate": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"project_id", "task_id", "amount"},
-	},
-	"clockify_update_task_hourly_rate": {
-		class:     mcp.RiskWrite | mcp.RiskBilling,
-		auditKeys: []string{"project_id", "task_id", "amount"},
+	"clockify_approvals_resubmit": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"approval_id", "entry_ids", "expense_ids"},
 	},
 
-	// Webhooks — external side effects.
-	"clockify_create_webhook": {
+	// Webhooks have external side effects because they create/update/delete or
+	// trigger outbound delivery.
+	"clockify_webhooks_create": {
 		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
 	},
-	"clockify_update_webhook": {
+	"clockify_webhooks_update": {
 		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"webhook_id", "name", "url", "webhook_event", "trigger_source_type", "trigger_source"},
 	},
-	"clockify_delete_webhook": {
+	"clockify_webhooks_delete": {
 		class:     mcp.RiskDestructive | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"webhook_id"},
 	},
-	"clockify_test_webhook": {
+	"clockify_webhooks_test": {
 		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"webhook_id"},
 	},
+}
+
+func sensitiveRead(auditKeys ...string) riskOverride {
+	return riskOverride{class: mcp.RiskRead | mcp.RiskSensitiveRead, auditKeys: auditKeys}
+}
+
+func billingWrite(auditKeys ...string) riskOverride {
+	return riskOverride{class: mcp.RiskWrite | mcp.RiskBilling, auditKeys: auditKeys}
+}
+
+func billingDelete(auditKeys ...string) riskOverride {
+	return riskOverride{class: mcp.RiskDestructive | mcp.RiskBilling, auditKeys: auditKeys}
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -577,6 +578,53 @@ func TestUpdateInvoiceDoesNotTreatTotalAmountsAsPercentFields(t *testing.T) {
 	}
 }
 
+func TestCreateInvoiceSchemaRequiresCurrencyAndLiveStatuses(t *testing.T) {
+	svc := New(nil, "ws1")
+	var createSchema, updateSchema, listSchema map[string]any
+	for _, desc := range invoiceHandlers(svc) {
+		switch desc.Tool.Name {
+		case "clockify_create_invoice":
+			createSchema = desc.Tool.InputSchema
+		case "clockify_update_invoice":
+			updateSchema = desc.Tool.InputSchema
+		case "clockify_list_invoices":
+			listSchema = desc.Tool.InputSchema
+		}
+	}
+	if createSchema == nil || updateSchema == nil || listSchema == nil {
+		t.Fatalf("missing invoice descriptor schemas: create=%v update=%v list=%v", createSchema != nil, updateSchema != nil, listSchema != nil)
+	}
+	required, ok := createSchema["required"].([]string)
+	if !ok {
+		t.Fatalf("create required schema = %T", createSchema["required"])
+	}
+	if !containsString(required, "currency") {
+		t.Fatalf("create_invoice required missing currency: %#v", required)
+	}
+
+	wantStatuses := []string{"UNSENT", "SENT", "PAID", "PARTIALLY_PAID", "VOID", "OVERDUE"}
+	requireStatusEnum := func(tool string, schema map[string]any) {
+		t.Helper()
+		props, ok := schema["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s properties = %T", tool, schema["properties"])
+		}
+		status, ok := props["status"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s missing status schema: %#v", tool, props)
+		}
+		enum, ok := status["enum"].([]string)
+		if !ok {
+			t.Fatalf("%s status enum = %T", tool, status["enum"])
+		}
+		if !reflect.DeepEqual(enum, wantStatuses) {
+			t.Fatalf("%s status enum = %#v, want %#v", tool, enum, wantStatuses)
+		}
+	}
+	requireStatusEnum("clockify_list_invoices", listSchema)
+	requireStatusEnum("clockify_update_invoice", updateSchema)
+}
+
 func TestInvoiceCreateAndUpdateDryRunAvoidsMutation(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("dry-run must not hit upstream; got %s %s", r.Method, r.URL.Path)
@@ -588,6 +636,7 @@ func TestInvoiceCreateAndUpdateDryRunAvoidsMutation(t *testing.T) {
 		"client_id":   "client1",
 		"number":      "INV-DRY",
 		"issued_date": "2026-04-01T00:00:00Z",
+		"currency":    "USD",
 		"due_date":    "2026-05-01T00:00:00Z",
 		"dry_run":     true,
 	})

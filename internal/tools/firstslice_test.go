@@ -203,7 +203,7 @@ func TestFirstSliceRecoverableErrorEnvelope(t *testing.T) {
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_clients_create","arguments":{}}}`))
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_clients_create","arguments":{"name":""}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}

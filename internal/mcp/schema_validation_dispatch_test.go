@@ -22,6 +22,101 @@ func (e *schemaValidationEnforcement) BeforeCall(ctx context.Context, name strin
 }
 func (e *schemaValidationEnforcement) AfterCall(r any) (any, error) { return r, nil }
 
+func TestToolsCallRuntimeSchemaValidationRejectsRequiredFieldWithNilEnforcement(t *testing.T) {
+	handlerRan := false
+	srv := NewServer("test", []ToolDescriptor{
+		{
+			Tool: Tool{
+				Name:        "probe",
+				Description: "probe",
+				InputSchema: map[string]any{
+					"type":       "object",
+					"required":   []string{"start"},
+					"properties": map[string]any{"start": map[string]any{"type": "string"}},
+				},
+			},
+			Handler: func(context.Context, map[string]any) (any, error) {
+				handlerRan = true
+				return map[string]any{"ok": true}, nil
+			},
+			ReadOnlyHint: true,
+		},
+	}, nil, nil)
+	srv.initialized.Store(true)
+
+	resp := srv.handle(context.Background(), Request{
+		JSONRPC: "2.0",
+		ID:      float64(42),
+		Method:  "tools/call",
+		Params: map[string]any{
+			"name":      "probe",
+			"arguments": map[string]any{},
+		},
+	})
+
+	if handlerRan {
+		t.Fatal("handler should not be invoked when runtime schema validation rejects arguments")
+	}
+	assertInvalidParamsPointer(t, resp, "/start")
+}
+
+func TestToolsCallRuntimeSchemaValidationRejectsUnknownPropertyWithNilEnforcement(t *testing.T) {
+	handlerRan := false
+	srv := NewServer("test", []ToolDescriptor{
+		{
+			Tool: Tool{
+				Name:        "probe",
+				Description: "probe",
+				InputSchema: map[string]any{
+					"type":                 "object",
+					"additionalProperties": false,
+					"properties":           map[string]any{"start": map[string]any{"type": "string"}},
+				},
+			},
+			Handler: func(context.Context, map[string]any) (any, error) {
+				handlerRan = true
+				return map[string]any{"ok": true}, nil
+			},
+			ReadOnlyHint: true,
+		},
+	}, nil, nil)
+	srv.initialized.Store(true)
+
+	resp := srv.handle(context.Background(), Request{
+		JSONRPC: "2.0",
+		ID:      float64(43),
+		Method:  "tools/call",
+		Params: map[string]any{
+			"name":      "probe",
+			"arguments": map[string]any{"start": "2026-05-15", "extra": true},
+		},
+	})
+
+	if handlerRan {
+		t.Fatal("handler should not be invoked when runtime schema validation rejects arguments")
+	}
+	assertInvalidParamsPointer(t, resp, "/extra")
+}
+
+func assertInvalidParamsPointer(t *testing.T, resp Response, want string) {
+	t.Helper()
+	if resp.Error == nil {
+		t.Fatalf("expected JSON-RPC error, got result: %#v", resp.Result)
+	}
+	if resp.Error.Code != -32602 {
+		t.Errorf("code = %d, want -32602", resp.Error.Code)
+	}
+	if resp.Error.Data == nil {
+		t.Fatalf("error.data is nil; want map with pointer")
+	}
+	if got, _ := resp.Error.Data["pointer"].(string); got != want {
+		t.Errorf("error.data.pointer = %q, want %s", got, want)
+	}
+	if resp.Result != nil {
+		t.Errorf("resp.Result should be nil on -32602 path, got %#v", resp.Result)
+	}
+}
+
 // TestToolsCallInvalidParamsErrorMapsTo32602 asserts that when
 // Enforcement.BeforeCall returns *InvalidParamsError, the tools/call
 // dispatch renders a JSON-RPC -32602 response with the JSON Pointer
@@ -57,7 +152,7 @@ func TestToolsCallInvalidParamsErrorMapsTo32602(t *testing.T) {
 		Method:  "tools/call",
 		Params: map[string]any{
 			"name":      "probe",
-			"arguments": map[string]any{},
+			"arguments": map[string]any{"start": "2026-05-15"},
 		},
 	}
 	resp := srv.handle(context.Background(), req)

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -261,5 +263,63 @@ func TestAssignmentDurationDisplay(t *testing.T) {
 	view := durationView(int64((2*time.Hour + 5*time.Minute) / time.Second))
 	if view.Display != "2:05" || view.Hours != 2+float64(5)/60 {
 		t.Fatalf("duration view = %+v", view)
+	}
+}
+
+func TestSchedulingListAssignmentsRequiresRangeAndUsesDocBackedPageSize(t *testing.T) {
+	svc := New(nil, "ws1")
+	var schema map[string]any
+	for _, desc := range schedulingHandlers(svc) {
+		if desc.Tool.Name == "clockify_list_assignments" {
+			schema = desc.Tool.InputSchema
+			break
+		}
+	}
+	if schema == nil {
+		t.Fatal("missing list assignments schema")
+	}
+	required, ok := schema["required"].([]string)
+	if !ok {
+		t.Fatalf("list assignments required schema = %T", schema["required"])
+	}
+	for _, want := range []string{"start", "end"} {
+		if !containsString(required, want) {
+			t.Fatalf("clockify_list_assignments required missing %s: %#v", want, required)
+		}
+	}
+
+	var gotQuery string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/scheduling/assignments/all" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotQuery = r.URL.RawQuery
+		respondJSON(t, w, []map[string]any{})
+	})
+	defer cleanup()
+
+	svc = New(client, "ws1")
+	_, err := svc.listAssignments(context.Background(), map[string]any{
+		"start":     "2026-05-01T00:00:00Z",
+		"end":       "2026-05-02T00:00:00Z",
+		"page_size": 7,
+	})
+	if err != nil {
+		t.Fatalf("list assignments failed: %v", err)
+	}
+	values, err := url.ParseQuery(gotQuery)
+	if err != nil {
+		t.Fatalf("parse query %q: %v", gotQuery, err)
+	}
+	if got := values.Get("page-size"); got != "7" {
+		t.Fatalf("expected doc-backed page-size=7, got %q in %q", got, gotQuery)
+	}
+	if got := values.Get("pageSize"); got != "" {
+		t.Fatalf("must not send ignored pageSize spelling for assignments/all, got %q in %q", got, gotQuery)
+	}
+
+	_, err = svc.listAssignments(context.Background(), map[string]any{"start": "2026-05-01T00:00:00Z"})
+	if err == nil || !strings.Contains(err.Error(), "start and end are required") {
+		t.Fatalf("expected missing range error, got %v", err)
 	}
 }

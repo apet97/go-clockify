@@ -83,6 +83,12 @@ type Service struct {
 	// `attacker.example.com.evil.com`). Empty list = no bypass; the
 	// DNS check applies to every host.
 	WebhookAllowedDomains []string
+	// EnableRawWrites allows the raw API fallback to use mutating HTTP
+	// methods. Raw GET remains available either way.
+	EnableRawWrites bool
+	// Toolset selects the startup registry surface. Empty/all exposes the
+	// full owner workbench; smaller values are filtered by RegistryForToolset.
+	Toolset string
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier
@@ -340,11 +346,11 @@ func stringSlicesEqual(a, b []string) bool {
 
 func New(client *clockify.Client, workspaceID string) *Service {
 	return &Service{
-		Client:              client,
-		WorkspaceID:         workspaceID,
-		DocumentedAPIWrites: true,
-		resourceCache:       newResourceStateCache(1024),
-		demoResources:       map[string]demoResourceState{},
+		Client:             client,
+		WorkspaceID:        workspaceID,
+		WebhookValidateDNS: true,
+		resourceCache:      newResourceStateCache(1024),
+		demoResources:      map[string]demoResourceState{},
 	}
 }
 

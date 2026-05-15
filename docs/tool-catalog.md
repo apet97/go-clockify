@@ -82,11 +82,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_update` | — | no | no | yes | no | `write` | Update a project by name or ID. |
 | `clockify_projects_delete` | — | no | yes | no | yes | `destructive` | Delete a project by name or ID. |
 | `clockify_projects_archive` | — | no | no | yes | no | `write` | Archive a project by name or ID. |
-| `clockify_projects_rates_update` | — | no | no | yes | yes | `write` | Set a project member hourly or cost rate. |
+| `clockify_projects_rates_update` | — | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. |
 | `clockify_tasks_get` | — | yes | no | yes | no | `read` | Get one task by name or ID within a project. |
 | `clockify_tasks_update` | — | no | no | yes | no | `write` | Update a task by name or ID within a project. |
 | `clockify_tasks_delete` | — | no | yes | no | yes | `destructive` | Delete a task by name or ID within a project. |
-| `clockify_tasks_rates_update` | — | no | no | yes | yes | `write` | Set a task hourly or cost rate. |
+| `clockify_tasks_rates_update` | — | no | no | yes | yes | `write`, `billing` | Set a task hourly or cost rate. |
 | `clockify_tags_get` | — | yes | no | yes | no | `read` | Get one tag by name or ID. |
 | `clockify_tags_update` | — | no | no | yes | no | `write` | Update a tag by name or ID. |
 | `clockify_tags_delete` | — | no | yes | no | yes | `destructive` | Delete a tag by name or ID. |
@@ -98,45 +98,45 @@ prefer the documented format on each tool descriptor.
 | `clockify_workspace_settings` | — | yes | no | yes | no | `read` | Read pinned workspace settings. |
 | `clockify_invoices_list` | — | yes | no | yes | no | `read` | List invoices in the workspace with pagination |
 | `clockify_invoices_get` | — | yes | no | yes | no | `read` | Get a single invoice by ID |
-| `clockify_invoices_create` | — | no | no | no | yes | `write` | Create a new invoice for a client. Supports dry_run:true. |
-| `clockify_invoices_update` | — | no | no | no | yes | `write` | Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true. |
-| `clockify_invoices_delete` | — | no | yes | no | yes | `destructive` | Delete an invoice by ID |
-| `clockify_invoices_send` | — | no | no | no | yes | `write` | Send an invoice to the client |
-| `clockify_invoices_mark_paid` | — | no | no | no | yes | `write` | Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated. |
+| `clockify_invoices_create` | — | no | no | no | yes | `write`, `billing` | Create a new invoice for a client. Supports dry_run:true. |
+| `clockify_invoices_update` | — | no | no | no | yes | `write`, `billing` | Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true. |
+| `clockify_invoices_delete` | — | no | yes | no | yes | `billing`, `destructive` | Delete an invoice by ID |
+| `clockify_invoices_send` | — | no | no | no | yes | `write`, `billing`, `external_side_effect` | Send an invoice to the client |
+| `clockify_invoices_mark_paid` | — | no | no | no | yes | `write`, `billing` | Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated. |
 | `clockify_invoices_items_list` | — | yes | no | yes | no | `read` | List items for an invoice |
-| `clockify_invoices_items_add` | — | no | no | no | yes | `write` | Add an item to an invoice |
-| `clockify_invoices_items_update` | — | no | no | no | yes | `write` | Update an invoice item by line index |
-| `clockify_invoices_items_delete` | — | no | yes | no | yes | `destructive` | Delete an invoice item by line index |
+| `clockify_invoices_items_add` | — | no | no | no | yes | `write`, `billing` | Add an item to an invoice |
+| `clockify_invoices_items_update` | — | no | no | no | yes | `write`, `billing` | Update an invoice item by line index |
+| `clockify_invoices_items_delete` | — | no | yes | no | yes | `billing`, `destructive` | Delete an invoice item by line index |
 | `clockify_projects_templates_list` | — | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_projects_templates_create` | — | no | no | no | no | `write` | Create a new project template |
 | `clockify_projects_estimates_update` | — | no | no | no | no | `write` | Update a project's documented estimate fields |
-| `clockify_projects_memberships_update` | — | no | no | yes | yes | `write` | Replace project memberships and optional user-group filter/rate metadata |
+| `clockify_projects_memberships_update` | — | no | no | yes | yes | `write`, `admin`, `permission_change` | Replace project memberships and optional user-group filter/rate metadata |
 | `clockify_expenses_list` | — | yes | no | yes | no | `read` | List expenses in the workspace with pagination and optional date range |
 | `clockify_expenses_get` | — | yes | no | yes | no | `read` | Get a single expense by ID |
-| `clockify_expenses_create` | — | no | no | no | no | `write` | Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:"minor" when supplying cents. |
-| `clockify_expenses_update` | — | no | no | no | no | `write` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
-| `clockify_expenses_delete` | — | no | yes | no | yes | `destructive` | Delete an expense by ID |
+| `clockify_expenses_create` | — | no | no | no | no | `write`, `billing` | Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:"minor" when supplying cents. |
+| `clockify_expenses_update` | — | no | no | no | no | `write`, `billing` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
+| `clockify_expenses_delete` | — | no | yes | no | yes | `billing`, `destructive` | Delete an expense by ID |
 | `clockify_expenses_categories_list` | — | yes | no | yes | no | `read` | List expense categories in the workspace |
-| `clockify_expenses_categories_create` | — | no | no | no | yes | `write` | Create a new expense category, optionally including upstream unit-price fields. |
-| `clockify_expenses_categories_update` | — | no | no | no | yes | `write` | Update an expense category, including upstream unit-price fields. |
-| `clockify_expenses_categories_delete` | — | no | yes | no | yes | `destructive` | Delete an expense category |
+| `clockify_expenses_categories_create` | — | no | no | no | yes | `write`, `billing` | Create a new expense category, optionally including upstream unit-price fields. |
+| `clockify_expenses_categories_update` | — | no | no | no | yes | `write`, `billing` | Update an expense category, including upstream unit-price fields. |
+| `clockify_expenses_categories_delete` | — | no | yes | no | yes | `billing`, `destructive` | Delete an expense category |
 | `clockify_custom_fields_list` | — | yes | no | yes | no | `read` | List custom fields in the workspace with optional pagination |
 | `clockify_custom_fields_get` | — | yes | no | yes | no | `read` | Get a custom field by ID |
-| `clockify_custom_fields_create` | — | no | no | no | no | `write` | Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE. |
-| `clockify_custom_fields_update` | — | no | no | no | no | `write` | Update an existing custom field by ID |
-| `clockify_custom_fields_delete` | — | no | yes | no | yes | `destructive` | Delete a custom field by ID (supports dry_run preview) |
-| `clockify_custom_fields_set_value` | — | no | no | no | no | `write` | Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value. |
+| `clockify_custom_fields_create` | — | no | no | no | no | `write`, `admin` | Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE. |
+| `clockify_custom_fields_update` | — | no | no | no | no | `write`, `admin` | Update an existing custom field by ID |
+| `clockify_custom_fields_delete` | — | no | yes | no | yes | `admin`, `destructive` | Delete a custom field by ID (supports dry_run preview) |
+| `clockify_custom_fields_set_value` | — | no | no | no | no | `write`, `admin` | Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value. |
 | `clockify_time_off_requests_list` | — | yes | no | yes | no | `read` | List time off requests with optional status filter |
 | `clockify_time_off_requests_get` | — | yes | no | yes | no | `read` | Get a time off request by policy ID and request ID |
-| `clockify_time_off_requests_create` | — | no | no | no | yes | `write` | Create a time off request under a policy |
-| `clockify_time_off_requests_update` | — | no | no | no | no | `write` | Update an existing time off request |
-| `clockify_time_off_requests_delete` | — | no | yes | no | yes | `destructive` | Delete a time off request (supports dry_run preview) |
-| `clockify_time_off_approve` | — | no | no | no | no | `write` | Approve a pending time off request |
-| `clockify_time_off_deny` | — | no | no | no | no | `write` | Deny a pending time off request |
+| `clockify_time_off_requests_create` | — | no | no | no | yes | `write`, `admin` | Create a time off request under a policy |
+| `clockify_time_off_requests_update` | — | no | no | no | no | `write`, `admin` | Update an existing time off request |
+| `clockify_time_off_requests_delete` | — | no | yes | no | yes | `admin`, `destructive` | Delete a time off request (supports dry_run preview) |
+| `clockify_time_off_approve` | — | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request |
+| `clockify_time_off_deny` | — | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request |
 | `clockify_time_off_policies_list` | — | yes | no | yes | no | `read` | List time off policies for the workspace |
 | `clockify_time_off_policies_get` | — | yes | no | yes | no | `read` | Get a time off policy by ID |
-| `clockify_time_off_policies_create` | — | no | no | no | no | `write` | Create a new time off policy |
-| `clockify_time_off_policies_update` | — | no | no | no | no | `write` | Update an existing time off policy |
+| `clockify_time_off_policies_create` | — | no | no | no | no | `write`, `admin` | Create a new time off policy |
+| `clockify_time_off_policies_update` | — | no | no | no | no | `write`, `admin` | Update an existing time off policy |
 | `clockify_time_off_balances` | — | yes | no | yes | no | `read` | Get time off balance for a user under a specific policy |
 | `clockify_scheduling_assignments_list` | — | yes | no | yes | no | `read` | List scheduling assignments within a date range |
 | `clockify_scheduling_assignments_get` | — | yes | no | yes | no | `read` | Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward. |
@@ -146,49 +146,49 @@ prefer the documented format on each tool descriptor.
 | `clockify_scheduling_project_totals` | — | yes | no | yes | no | `read` | Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available |
 | `clockify_approvals_list` | — | yes | no | yes | no | `read` | List approval requests with optional status filter and pagination |
 | `clockify_approvals_get` | — | yes | no | yes | no | `read` | Get a single approval request by ID by scanning the documented approval-requests list endpoint |
-| `clockify_approvals_submit` | — | no | no | no | yes | `write` | Submit the caller's timesheet for approval for a configured approval period |
-| `clockify_approvals_approve` | — | no | no | no | yes | `write` | Approve a pending timesheet approval request |
-| `clockify_approvals_reject` | — | no | no | no | yes | `write` | Reject a pending timesheet approval request |
-| `clockify_approvals_withdraw` | — | no | no | no | yes | `write` | Withdraw a submitted or already-approved approval request |
+| `clockify_approvals_submit` | — | no | no | no | yes | `write`, `admin` | Submit the caller's timesheet for approval for a configured approval period |
+| `clockify_approvals_approve` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Approve a pending timesheet approval request |
+| `clockify_approvals_reject` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Reject a pending timesheet approval request |
+| `clockify_approvals_withdraw` | — | no | no | no | yes | `write`, `admin` | Withdraw a submitted or already-approved approval request |
 | `clockify_webhooks_list` | — | yes | no | yes | no | `read` | List webhooks in the workspace |
 | `clockify_webhooks_get` | — | yes | no | yes | no | `read` | Get a webhook by ID |
-| `clockify_webhooks_create` | — | no | no | no | yes | `write` | Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
-| `clockify_webhooks_update` | — | no | no | no | yes | `write` | Update an existing webhook. Supports dry_run:true. |
-| `clockify_webhooks_delete` | — | no | yes | no | yes | `destructive` | Delete a webhook |
-| `clockify_webhooks_test` | — | no | no | no | yes | `write` | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
+| `clockify_webhooks_create` | — | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
+| `clockify_webhooks_update` | — | no | no | no | yes | `write`, `external_side_effect` | Update an existing webhook. Supports dry_run:true. |
+| `clockify_webhooks_delete` | — | no | yes | no | yes | `external_side_effect`, `destructive` | Delete a webhook |
+| `clockify_webhooks_test` | — | no | no | no | yes | `write`, `external_side_effect` | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
 | `clockify_webhooks_events` | — | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | — | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
 | `clockify_groups_get` | — | yes | no | yes | no | `read` | Get a user group by ID |
-| `clockify_groups_create` | — | no | no | no | no | `write` | Create a new user group with optional member user IDs |
-| `clockify_groups_update` | — | no | no | no | no | `write` | Update an existing user group by ID |
-| `clockify_groups_delete` | — | no | yes | no | yes | `destructive` | Delete a user group by ID (supports dry_run preview) |
-| `clockify_groups_add_user` | — | no | no | no | yes | `write` | Add a user to a user group |
-| `clockify_groups_remove_user` | — | no | yes | no | yes | `destructive` | Remove a user from a user group |
+| `clockify_groups_create` | — | no | no | no | no | `write`, `admin` | Create a new user group with optional member user IDs |
+| `clockify_groups_update` | — | no | no | no | no | `write`, `admin` | Update an existing user group by ID |
+| `clockify_groups_delete` | — | no | yes | no | yes | `admin`, `destructive` | Delete a user group by ID (supports dry_run preview) |
+| `clockify_groups_add_user` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Add a user to a user group |
+| `clockify_groups_remove_user` | — | no | yes | no | yes | `admin`, `permission_change`, `destructive` | Remove a user from a user group |
 | `clockify_holidays_list` | — | yes | no | yes | no | `read` | List holidays configured in the workspace |
 | `clockify_holidays_list_for_user_period` | — | yes | no | yes | no | `read` | List holidays assigned to a user in a date period |
 | `clockify_holidays_create` | — | no | no | no | no | `write` | Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment. |
 | `clockify_holidays_delete` | — | no | yes | no | yes | `destructive` | Delete a holiday by ID (supports dry_run preview) |
-| `clockify_users_deactivate` | — | no | no | no | yes | `write` | Deactivate a user in the workspace |
-| `clockify_users_role` | — | no | no | no | yes | `write` | Update a user's workspace role. Supports dry_run:true. |
+| `clockify_users_deactivate` | — | no | no | no | yes | `write`, `admin` | Deactivate a user in the workspace |
+| `clockify_users_role` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Update a user's workspace role. Supports dry_run:true. |
 | `clockify_projects_memberships_list` | — | yes | no | yes | no | `read` | List project memberships. |
 | `clockify_reports_attendance` | — | yes | no | yes | no | `read` | Run the attendance report. |
 | `clockify_reports_money` | — | yes | no | yes | no | `read` | Run the money summary report. |
 | `clockify_reports_expense` | — | yes | no | yes | no | `read` | Run the detailed expense report. |
 | `clockify_reports_export` | — | yes | no | yes | no | `read` | Run a report export request. |
 | `clockify_invoices_export` | — | yes | no | yes | no | `read` | Export an invoice. |
-| `clockify_invoices_import_time` | — | no | no | no | no | `write` | Import time entries into an invoice. |
-| `clockify_invoices_import_expenses` | — | no | no | no | no | `write` | Import expenses into an invoice. |
+| `clockify_invoices_import_time` | — | no | no | no | no | `write`, `billing` | Import time entries into an invoice. |
+| `clockify_invoices_import_expenses` | — | no | no | no | no | `write`, `billing` | Import expenses into an invoice. |
 | `clockify_invoices_payments_list` | — | yes | no | yes | no | `read` | List invoice payments. |
-| `clockify_invoices_payments_create` | — | no | no | no | no | `write` | Create an invoice payment. |
-| `clockify_invoices_payments_delete` | — | no | yes | no | no | `destructive` | Delete an invoice payment. |
-| `clockify_time_off_archive` | — | no | no | yes | no | `write` | Archive or reactivate a time off policy. |
+| `clockify_invoices_payments_create` | — | no | no | no | no | `write`, `billing` | Create an invoice payment. |
+| `clockify_invoices_payments_delete` | — | no | yes | no | no | `billing`, `destructive` | Delete an invoice payment. |
+| `clockify_time_off_archive` | — | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | — | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | — | yes | no | yes | no | `read` | Get workspace capacity totals. |
-| `clockify_approvals_resubmit` | — | no | no | no | no | `write` | Resubmit rejected or withdrawn entries and expenses for approval. |
+| `clockify_approvals_resubmit` | — | no | no | no | no | `write`, `admin` | Resubmit rejected or withdrawn entries and expenses for approval. |
 | `clockify_holidays_get` | — | yes | no | yes | no | `read` | Get one holiday. |
 | `clockify_holidays_update` | — | no | no | yes | no | `write` | Update a holiday. |
-| `clockify_entries_mark_invoiced` | — | no | no | yes | no | `write` | Mark time entries as invoiced or not invoiced. |
-| `clockify_users_invite` | — | no | no | no | no | `write` | Invite or add users to the pinned workspace by email. |
+| `clockify_entries_mark_invoiced` | — | no | no | yes | no | `write`, `billing` | Mark time entries as invoiced or not invoiced. |
+| `clockify_users_invite` | — | no | no | no | no | `write`, `admin`, `permission_change`, `external_side_effect` | Invite or add users to the pinned workspace by email. |
 | `clockify_entries_running` | — | yes | no | yes | no | `read` | Return the current running timer, if any. |
 | `clockify_entries_timer_start` | — | no | no | no | no | `write` | Start a timer. |
 | `clockify_entries_timer_stop` | — | no | no | yes | no | `write` | Stop the current timer. |
@@ -208,5 +208,83 @@ list also surfaces in `docs/tool-catalog.json`.
 
 | Tool | Audit Keys |
 |------|------------|
+| `clockify_approvals_approve` | `approval_id` |
+| `clockify_approvals_get` | `approval_id` |
+| `clockify_approvals_list` | `status`, `user_id` |
+| `clockify_approvals_reject` | `approval_id` |
+| `clockify_approvals_resubmit` | `approval_id`, `entry_ids`, `expense_ids` |
+| `clockify_approvals_submit` | `user_id`, `start`, `end` |
+| `clockify_approvals_withdraw` | `approval_id` |
+| `clockify_custom_fields_create` | `name`, `type` |
+| `clockify_custom_fields_delete` | `custom_field_id` |
+| `clockify_custom_fields_set_value` | `custom_field_id`, `entity_id` |
+| `clockify_custom_fields_update` | `custom_field_id`, `name`, `archived` |
+| `clockify_entries_mark_invoiced` | `time_entry_ids`, `invoiced` |
+| `clockify_expenses_categories_create` | `name`, `has_unit_price`, `price_in_cents`, `unit` |
+| `clockify_expenses_categories_delete` | `category_id` |
+| `clockify_expenses_categories_list` | `workspace_id` |
+| `clockify_expenses_categories_update` | `category_id`, `name`, `has_unit_price`, `price_in_cents`, `unit`, `archived` |
+| `clockify_expenses_create` | `category_id`, `project_id`, `amount`, `date` |
+| `clockify_expenses_delete` | `expense_id` |
+| `clockify_expenses_get` | `expense_id` |
+| `clockify_expenses_list` | `user_id`, `project_id`, `category_id` |
+| `clockify_expenses_update` | `expense_id`, `category_id`, `project_id`, `amount`, `date` |
+| `clockify_groups_add_user` | `group_id`, `user_id` |
+| `clockify_groups_create` | `name` |
+| `clockify_groups_delete` | `group_id` |
+| `clockify_groups_get` | `group_id` |
+| `clockify_groups_list` | `workspace_id` |
+| `clockify_groups_remove_user` | `group_id`, `user_id` |
+| `clockify_groups_update` | `group_id`, `name` |
+| `clockify_invoices_create` | `client_id`, `number`, `issued_date`, `currency`, `due_date` |
+| `clockify_invoices_delete` | `invoice_id` |
+| `clockify_invoices_export` | `invoice_id` |
+| `clockify_invoices_get` | `invoice_id` |
+| `clockify_invoices_import_expenses` | `invoice_id`, `expense_ids`, `include_expenses` |
+| `clockify_invoices_import_time` | `invoice_id`, `time_entry_ids`, `time_entry_group_type` |
+| `clockify_invoices_items_add` | `invoice_id`, `item_type`, `description`, `quantity`, `unit_price` |
+| `clockify_invoices_items_delete` | `invoice_id`, `item_index`, `item_id` |
+| `clockify_invoices_items_list` | `invoice_id` |
+| `clockify_invoices_items_update` | `invoice_id`, `item_index`, `item_id`, `item_type`, `description`, `quantity`, `unit_price` |
+| `clockify_invoices_list` | `client_id`, `status` |
+| `clockify_invoices_mark_paid` | `invoice_id` |
+| `clockify_invoices_payments_create` | `invoice_id`, `amount`, `date` |
+| `clockify_invoices_payments_delete` | `invoice_id`, `payment_id` |
+| `clockify_invoices_payments_list` | `invoice_id` |
+| `clockify_invoices_send` | `invoice_id` |
+| `clockify_invoices_update` | `invoice_id`, `status`, `client_id` |
+| `clockify_projects_memberships_list` | `project_id` |
+| `clockify_projects_memberships_update` | `project_id`, `user_ids`, `memberships`, `remove` |
+| `clockify_projects_rates_update` | `project_id`, `user_id`, `rate_kind`, `amount` |
+| `clockify_scheduling_assignments_get` | `assignment_id` |
+| `clockify_scheduling_assignments_list` | `project_id`, `user_id` |
+| `clockify_scheduling_capacity` | `user_ids` |
+| `clockify_scheduling_project_totals` | `project_id` |
+| `clockify_scheduling_user_totals` | `user_id` |
+| `clockify_tasks_rates_update` | `project_id`, `task_id`, `rate_kind`, `amount` |
+| `clockify_time_off_approve` | `request_id` |
+| `clockify_time_off_archive` | `policy_id`, `archived` |
+| `clockify_time_off_balances` | `user_id`, `policy_id` |
+| `clockify_time_off_deny` | `request_id` |
+| `clockify_time_off_policies_create` | `name`, `assignee_ids`, `user_group_ids` |
+| `clockify_time_off_policies_get` | `policy_id` |
+| `clockify_time_off_policies_list` | `workspace_id` |
+| `clockify_time_off_policies_update` | `policy_id`, `name`, `assignee_ids`, `user_group_ids` |
+| `clockify_time_off_requests_create` | `user_id`, `policy_id`, `start`, `end` |
+| `clockify_time_off_requests_delete` | `request_id` |
+| `clockify_time_off_requests_get` | `request_id` |
+| `clockify_time_off_requests_list` | `user_id`, `policy_id`, `status` |
+| `clockify_time_off_requests_update` | `request_id`, `user_id`, `policy_id`, `start`, `end` |
+| `clockify_users_deactivate` | `user_id` |
+| `clockify_users_invite` | `email`, `emails`, `send_email` |
 | `clockify_users_list` | `workspace_id` |
 | `clockify_users_profile` | `user_id` |
+| `clockify_users_role` | `user_id`, `role` |
+| `clockify_webhooks_create` | `name`, `url`, `webhook_event`, `trigger_source_type`, `trigger_source` |
+| `clockify_webhooks_delete` | `webhook_id` |
+| `clockify_webhooks_events` | `webhook_id` |
+| `clockify_webhooks_get` | `webhook_id` |
+| `clockify_webhooks_list` | `workspace_id` |
+| `clockify_webhooks_test` | `webhook_id` |
+| `clockify_webhooks_update` | `webhook_id`, `name`, `url`, `webhook_event`, `trigger_source_type`, `trigger_source` |
+| `clockify_workspace_settings` | `workspace_id` |

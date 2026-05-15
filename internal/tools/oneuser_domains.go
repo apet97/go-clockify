@@ -49,6 +49,24 @@ func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
 	return cloneToolDescriptors(s.registry)
 }
 
+// RegistryForToolset returns the one-user startup registry for a narrower
+// owner-mode surface. The default "all" path is intentionally identical to
+// FullAccessRegistry so the canonical 151-tool product contract stays intact.
+func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
+	toolset = strings.ToLower(strings.TrimSpace(toolset))
+	if toolset == "" || toolset == "all" {
+		return s.FullAccessRegistry()
+	}
+	full := s.FullAccessRegistry()
+	out := make([]mcp.ToolDescriptor, 0, len(full))
+	for _, descriptor := range full {
+		if toolAllowedForToolset(toolset, descriptor.Tool.Name) {
+			out = append(out, descriptor)
+		}
+	}
+	return out
+}
+
 func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, 0, 160)
 	out = append(out, s.workflowDescriptors()...)
@@ -65,6 +83,98 @@ func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, len(in))
 	copy(out, in)
 	return out
+}
+
+func toolAllowedForToolset(toolset, name string) bool {
+	switch toolset {
+	case "core":
+		return coreToolsetTool(name)
+	case "business":
+		return coreToolsetTool(name) || businessToolsetTool(name)
+	case "admin":
+		return coreToolsetTool(name) || businessToolsetTool(name) || adminToolsetTool(name)
+	default:
+		return true
+	}
+}
+
+func coreToolsetTool(name string) bool {
+	if coreWorkflowTools[name] {
+		return true
+	}
+	for _, prefix := range []string{
+		"clockify_clients_",
+		"clockify_projects_",
+		"clockify_tasks_",
+		"clockify_tags_",
+		"clockify_entries_",
+		"clockify_reports_",
+	} {
+		if strings.HasPrefix(name, prefix) {
+			return name != "clockify_entries_mark_invoiced"
+		}
+	}
+	return false
+}
+
+func businessToolsetTool(name string) bool {
+	if businessWorkflowTools[name] {
+		return true
+	}
+	if name == "clockify_entries_mark_invoiced" {
+		return true
+	}
+	for _, prefix := range []string{"clockify_invoices_", "clockify_expenses_"} {
+		if strings.HasPrefix(name, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func adminToolsetTool(name string) bool {
+	if adminWorkflowTools[name] {
+		return true
+	}
+	for _, prefix := range []string{
+		"clockify_custom_fields_",
+		"clockify_time_off_",
+		"clockify_scheduling_",
+		"clockify_approvals_",
+		"clockify_webhooks_",
+		"clockify_groups_",
+		"clockify_holidays_",
+		"clockify_users_",
+	} {
+		if strings.HasPrefix(name, prefix) {
+			return true
+		}
+	}
+	return name == "clockify_workspace_settings"
+}
+
+var coreWorkflowTools = map[string]bool{
+	"clockify_status":              true,
+	"clockify_tools_guide":         true,
+	"clockify_create_work_package": true,
+	"clockify_log_work":            true,
+	"clockify_start_work":          true,
+	"clockify_stop_work":           true,
+	"clockify_switch_work":         true,
+	"clockify_review_day":          true,
+	"clockify_review_week":         true,
+	"clockify_fix_entry":           true,
+}
+
+var businessWorkflowTools = map[string]bool{
+	"clockify_invoice_client_work": true,
+	"clockify_record_expense":      true,
+}
+
+var adminWorkflowTools = map[string]bool{
+	"clockify_request_time_off": true,
+	"clockify_schedule_work":    true,
+	"clockify_setup_webhook":    true,
 }
 
 func dedupeToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
@@ -681,12 +791,34 @@ func (s *Service) updateProjectMembershipsOneUser(ctx context.Context, args map[
 func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
 	tool := old.Tool
 	tool.Name = name
+	adjustOneUserNativeSchema(name, tool.InputSchema)
 	if tool.Annotations == nil {
 		tool.Annotations = map[string]any{}
 	}
 	delete(tool.Annotations, "wraps")
 	tool.Annotations["handlerKind"] = "native handler"
 	return firstSliceDescriptor(priority, tool, aliasHandler(name, entity, change, handler))
+}
+
+func adjustOneUserNativeSchema(name string, schema map[string]any) {
+	if schema == nil {
+		return
+	}
+	switch name {
+	case "clockify_projects_memberships_update":
+		props, _ := schema["properties"].(map[string]any)
+		if props == nil {
+			props = map[string]any{}
+			schema["properties"] = props
+		}
+		props["user_ids"] = stringArraySchema("User IDs to set as members")
+		props["hourly_rate"] = map[string]any{"type": "number", "description": "Hourly rate for all members when using user_ids compatibility input"}
+		schema["required"] = []string{"project_id"}
+		schema["anyOf"] = []any{
+			map[string]any{"required": []string{"memberships"}},
+			map[string]any{"required": []string{"user_ids"}},
+		}
+	}
 }
 
 func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
@@ -1218,9 +1350,13 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 	}
 	ids := map[string]string{}
 	data := out
+	var meta map[string]any
 	var warnings []Warning
 	if env, ok := out.(ResultEnvelope); ok {
 		data = env.Data
+		if len(env.Meta) > 0 {
+			meta = env.Meta
+		}
 		for key, value := range env.Meta {
 			if str, ok := value.(string); ok && str != "" {
 				ids[key] = str
@@ -1237,7 +1373,7 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 	for key, value := range idsFromData(data, entity) {
 		ids[key] = value
 	}
-	return result(action, entity, ids, data, changedFor(change, entity, data, ids), warnings, nil)
+	return result(action, entity, ids, data, changedFor(change, entity, data, ids), warnings, nil, meta)
 }
 
 func changedFor(change, entity string, data any, ids map[string]string) ChangeSet {
@@ -1671,6 +1807,9 @@ func (s *Service) RawAPIRequest(ctx context.Context, args map[string]any) (any, 
 }
 
 func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any) (any, error) {
+	if method != "GET" && !s.rawWritesEnabled() {
+		return nil, fmt.Errorf("raw API writes are disabled; set CLOCKIFY_ENABLE_RAW_WRITES=true to allow %s", method)
+	}
 	path, err := safeRawPath(s.WorkspaceID, stringArg(args, "path"))
 	if err != nil {
 		return nil, err
@@ -1729,8 +1868,8 @@ func safeRawPath(workspaceID, raw string) (string, error) {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
-	if !strings.HasPrefix(path, "/workspaces/"+workspaceID+"/") && path != "/workspaces/"+workspaceID && path != "/user" && path != "/workspaces" {
-		return "", fmt.Errorf("raw API path must stay within the pinned workspace or current-user API")
+	if !strings.HasPrefix(path, "/workspaces/"+workspaceID+"/") && path != "/workspaces/"+workspaceID && path != "/user" {
+		return "", fmt.Errorf("raw API path must stay within /user or the pinned workspace API")
 	}
 	return path, nil
 }

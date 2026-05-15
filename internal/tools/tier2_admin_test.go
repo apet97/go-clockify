@@ -468,6 +468,13 @@ func TestValidateWebhookURL_DNS_StrictProfile_RejectsPrivateA(t *testing.T) {
 	}
 }
 
+func TestNewServiceDefaultsWebhookDNSValidationOn(t *testing.T) {
+	svc := New(nil, "ws1")
+	if !svc.WebhookValidateDNS {
+		t.Fatal("New must enable webhook DNS validation by default")
+	}
+}
+
 func TestValidateWebhookURLRejectsPrivateIPv6Literals(t *testing.T) {
 	cases := []string{
 		"https://[::1]/hook",

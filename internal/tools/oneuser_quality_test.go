@@ -236,7 +236,7 @@ func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 	}
 	promptNames := namesFromPromptResult(t, promptsResult)
 	assertGoldenJSON(t, "oneuser_prompts_list.golden.json", promptNames)
-	wantPrompts := []string{"demo-full-workspace-story", "setup-client-project-task", "log-week", "invoice-client", "cleanup-demo", "review-week", "create-expense", "request-time-off", "schedule-week", "setup-webhook"}
+	wantPrompts := []string{"demo-full-workspace-story", "setup-client-project-task", "log-week", "safe-daily-time-tracking", "invoice-client", "cleanup-demo", "review-week", "create-expense", "request-time-off", "schedule-week", "setup-webhook"}
 	if !slices.Equal(promptNames, wantPrompts) {
 		t.Fatalf("prompts/list names=%v, want %v", promptNames, wantPrompts)
 	}
@@ -258,6 +258,7 @@ func TestQualityGateFakeClockifyDomainWritesAndErrorEdges(t *testing.T) {
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
+	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
 	initializeServer(t, server)
@@ -1374,6 +1375,7 @@ func TestOneUserStatusIsUsefulFirstCall(t *testing.T) {
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
+	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
 
 	statusOut, err := svc.ClockifyStatus(context.Background(), nil)
@@ -1487,6 +1489,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
+	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
 	initializeServer(t, server)
@@ -2643,7 +2646,15 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 	case "emails":
 		return []any{"coverage@example.com"}
 	case "memberships":
-		return []any{map[string]any{"userId": oneUserCoverageID("user_id"), "role": "MANAGER"}}
+		return []any{map[string]any{"user_id": oneUserCoverageID("user_id")}}
+	case "budget_estimate":
+		return map[string]any{"active": true, "estimate": 1, "type": "MANUAL"}
+	case "estimate_reset":
+		return map[string]any{"active": true, "interval": "WEEKLY"}
+	case "time_estimate":
+		return map[string]any{"active": true, "estimate": "PT1H", "include_non_billable": false, "type": "MANUAL"}
+	case "user_groups":
+		return map[string]any{"contains": "CONTAINS", "ids": []any{oneUserCoverageID("group_id")}, "status": "ACTIVE"}
 	case "client", "project", "task", "tag", "user", "entry", "invoice", "expense", "policy", "request", "assignment", "webhook", "group", "holiday":
 		return oneUserCoverageID(name + "_id")
 	case "date":
@@ -2658,6 +2669,8 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return "2026-01-31T00:00:00Z"
 	case "week_start":
 		return "2026-01-05"
+	case "period_start":
+		return "2026-01-05T00:00:00Z"
 	case "timezone":
 		return "UTC"
 	case "dry_run":

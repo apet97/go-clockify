@@ -224,6 +224,112 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	}
 }
 
+func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	tests := []struct {
+		toolset   string
+		wantCount int
+		want      []string
+		absent    []string
+	}{
+		{
+			toolset:   "core",
+			wantCount: 55,
+			want: []string{
+				"clockify_status",
+				"clockify_tools_guide",
+				"clockify_create_work_package",
+				"clockify_log_work",
+				"clockify_clients_list",
+				"clockify_projects_create",
+				"clockify_entries_timer_start",
+				"clockify_reports_summary",
+			},
+			absent: []string{
+				"clockify_demo_seed",
+				"clockify_invoice_client_work",
+				"clockify_invoices_create",
+				"clockify_entries_mark_invoiced",
+				"clockify_webhooks_create",
+				"clockify_api_request",
+			},
+		},
+		{
+			toolset:   "business",
+			wantCount: 84,
+			want: []string{
+				"clockify_invoice_client_work",
+				"clockify_record_expense",
+				"clockify_invoices_create",
+				"clockify_expenses_create",
+				"clockify_entries_mark_invoiced",
+			},
+			absent: []string{
+				"clockify_demo_seed",
+				"clockify_request_time_off",
+				"clockify_webhooks_create",
+				"clockify_users_invite",
+				"clockify_api_request",
+			},
+		},
+		{
+			toolset:   "admin",
+			wantCount: 147,
+			want: []string{
+				"clockify_request_time_off",
+				"clockify_schedule_work",
+				"clockify_setup_webhook",
+				"clockify_custom_fields_create",
+				"clockify_time_off_requests_create",
+				"clockify_scheduling_assignments_create",
+				"clockify_approvals_approve",
+				"clockify_webhooks_create",
+				"clockify_groups_delete",
+				"clockify_holidays_create",
+				"clockify_users_invite",
+				"clockify_workspace_settings",
+			},
+			absent: []string{
+				"clockify_demo_seed",
+				"clockify_api_get",
+				"clockify_api_request",
+			},
+		},
+		{
+			toolset:   "all",
+			wantCount: 151,
+			want: []string{
+				"clockify_demo_seed",
+				"clockify_api_get",
+				"clockify_api_request",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.toolset, func(t *testing.T) {
+			reg := svc.RegistryForToolset(tt.toolset)
+			if len(reg) != tt.wantCount {
+				t.Fatalf("%s registry size=%d, want %d", tt.toolset, len(reg), tt.wantCount)
+			}
+			assertNoDuplicateTools(t, reg)
+			assertWorkflowPrefixForRegistry(t, reg)
+			names := toolNameSet(reg)
+			for _, want := range tt.want {
+				if !names[want] {
+					t.Fatalf("%s registry missing %s", tt.toolset, want)
+				}
+			}
+			for _, absent := range tt.absent {
+				if names[absent] {
+					t.Fatalf("%s registry unexpectedly includes %s", tt.toolset, absent)
+				}
+			}
+			assertToolsetToolsListMatchesRegistry(t, reg)
+		})
+	}
+}
+
 func BenchmarkFullAccessRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	b.ReportAllocs()
@@ -240,6 +346,83 @@ func descriptorNames(descriptors []mcp.ToolDescriptor) []string {
 		names = append(names, descriptor.Tool.Name)
 	}
 	return names
+}
+
+func assertNoDuplicateTools(t *testing.T, descriptors []mcp.ToolDescriptor) {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, descriptor := range descriptors {
+		if seen[descriptor.Tool.Name] {
+			t.Fatalf("duplicate tool %s", descriptor.Tool.Name)
+		}
+		seen[descriptor.Tool.Name] = true
+	}
+}
+
+func assertWorkflowPrefixForRegistry(t *testing.T, descriptors []mcp.ToolDescriptor) {
+	t.Helper()
+	seenDomain := false
+	for _, descriptor := range descriptors {
+		category, _ := descriptor.Tool.Annotations["category"].(string)
+		if category == "workflow" {
+			if seenDomain {
+				t.Fatalf("workflow tool %s appears after a non-workflow tool", descriptor.Tool.Name)
+			}
+			assertWorkflowAnnotations(t, descriptor.Tool)
+			continue
+		}
+		seenDomain = true
+	}
+}
+
+func toolNameSet(descriptors []mcp.ToolDescriptor) map[string]bool {
+	out := make(map[string]bool, len(descriptors))
+	for _, descriptor := range descriptors {
+		out[descriptor.Tool.Name] = true
+	}
+	return out
+}
+
+func assertToolsetToolsListMatchesRegistry(t *testing.T, descriptors []mcp.ToolDescriptor) {
+	t.Helper()
+	server := mcp.NewServer("test", descriptors, nil, nil)
+	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp struct {
+		Result struct {
+			Tools []mcp.Tool `json:"tools"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	got := make([]string, 0, len(resp.Result.Tools))
+	for _, tool := range resp.Result.Tools {
+		got = append(got, tool.Name)
+	}
+	wantDescriptors := cloneToolDescriptors(descriptors)
+	sortDescriptorsForToolsList(wantDescriptors)
+	want := descriptorNames(wantDescriptors)
+	if !slicesEqual(got, want) {
+		t.Fatalf("tools/list names diverged\n got=%v\nwant=%v", got, want)
+	}
+}
+
+func slicesEqual(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func BenchmarkOneUserToolsResourceData(b *testing.B) {

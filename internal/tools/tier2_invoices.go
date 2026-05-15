@@ -50,12 +50,12 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		// 4. Create invoice
 		{Tool: toolRW("clockify_create_invoice", "Create a new invoice for a client. Supports dry_run:true.", map[string]any{
 			"type":     "object",
-			"required": []string{"client_id", "number", "issued_date", "due_date"},
+			"required": []string{"client_id", "number", "issued_date", "currency", "due_date"},
 			"properties": map[string]any{
 				"client_id":   map[string]any{"type": "string", "description": "Client ID (required)"},
 				"number":      map[string]any{"type": "string", "description": "Invoice number (required by live API)"},
 				"issued_date": map[string]any{"type": "string", "description": "Issued date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
-				"currency":    map[string]any{"type": "string", "description": "Currency code (e.g. USD, EUR)"},
+				"currency":    map[string]any{"type": "string", "description": "Currency code (required; e.g. USD, EUR)"},
 				"due_date":    map[string]any{"type": "string", "description": "Due date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
 				"note":        map[string]any{"type": "string", "description": "Invoice note"},
 				"subject":     map[string]any{"type": "string", "description": "Invoice subject"},
