@@ -7,20 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-15
+
+v1.3.0 reshapes go-clockify into a focused **one-user, full-access,
+stdio Clockify MCP**: a single `CLOCKIFY_API_KEY` and a single pinned
+`CLOCKIFY_WORKSPACE_ID`, all 152 tools loaded at startup, workflow
+tools first and raw fallback last. The platform-era posture — hosted
+multi-tenant service, OIDC/auth stack, control plane, tool
+activation, confirmation-token gates, and the policy-mode ladder — is
+gone. What remains is a small, fast, owner-facing workbench.
+
 ### Added
 
-- **Per-endpoint upstream 5xx circuit breaker.** ADR 0025 is now
-  accepted and implemented as an outer wrapper around the existing
-  retry loop. `CLOCKIFY_CIRCUIT_BREAKER=auto` enables the breaker for
-  hosted profiles, emits breaker state/rejection/transition metrics,
-  and lets `/ready` degrade when the core upstream probe is locally
-  fast-failed.
-- **Per-tenant upstream request budgets.** ADR 0024 is now accepted
-  and implemented as an aggregate per-tenant layer above the existing
-  per tenant+subject rate limiter. Hosted/shared-service profiles
-  default `CLOCKIFY_PER_TENANT_CONCURRENCY=10` and
-  `CLOCKIFY_PER_TENANT_RATE_LIMIT=120`; local profiles leave the layer
-  disabled unless explicitly configured.
+- **`clockify_time_off_balances_update`** — first-class tool for the
+  documented `PATCH /workspaces/{ws}/time-off/balance/policy/{policyId}`
+  endpoint. Adjusts time-off balances for one or more users under a
+  policy; carries `RiskWrite|RiskAdmin|RiskBilling` metadata and
+  supports `dry_run`. Registry grows 151 → 152 tools.
+- **Custom-field `workspace_default_value`** on
+  `clockify_create_custom_field` / `clockify_update_custom_field`,
+  with strict per-type validation that mirrors the canonical OpenAPI
+  `CustomFieldValue` schema: string for TXT/LINK/DROPDOWN_SINGLE,
+  number for NUMBER, boolean for CHECKBOX, list for DROPDOWN_MULTIPLE,
+  with dropdown defaults checked against `allowed_values`.
+- **Amount-unit toggles on the invoice money surface.**
+  `clockify_add_invoice_item`, `clockify_update_invoice_item`, and
+  `clockify_invoices_payments_create` accept an optional `*_unit`
+  input: `minor` (default, cents) or `major` (currency units,
+  multiplied by 100 with explicit rounding). Fractional minor values
+  fail before the upstream call with an actionable message.
+- **OpenAPI list-filter parity** across entries, clients, projects,
+  and tasks — documented Clockify query parameters (description, task,
+  tags, hydrated, strict-name-search, archived filters, and more) are
+  now forwarded on the relevant list/get/update surfaces.
+- **Financial enrichment** across time entries, projects, tasks,
+  scheduling assignments, client reports, and approval views, plus a
+  typed image-upload tool.
+- **Drift gates**: `make api-parity-matrix-drift`, the generated
+  `docs/api-parity-matrix.md`, README toolset-count and raw-fallback
+  contract tests, and a side-effect-keyword test that pins every
+  billing/admin/permission/destructive/external tool description.
+- **Recorded live evidence** in `docs/live-tests.md`: a dated table of
+  sacrificial-workspace runs with env gates, test names, and leftover
+  counts.
+
+### Changed
+
+- **Product reshaped to one-user full-access stdio.** One API key, one
+  pinned workspace, stdio transport, all tools at startup. Optional
+  `core`/`business`/`admin`/`all` toolsets are simple filters, not a
+  policy framework. Runtime input validation runs against each tool's
+  input schema before the handler, independent of any enforcement
+  hook.
+- **Time-off request status normalized to `REJECTED`** — the canonical
+  Clockify enum value. `DENIED` is accepted as a back-compat alias and
+  translated before the upstream POST.
+- **High-risk tool descriptions state their side effects.** Every
+  billing, admin, permission-change, external-side-effect, and
+  destructive tool now names its impact in the description, pinned by
+  a registry-wide keyword test.
+- Time-off policy create/update are documented as a deliberately
+  simplified owner-friendly surface, pointing callers at the raw API
+  fallback for the full Clockify policy body.
+
+### Removed
+
+- **Platform-era posture.** No hosted-service mode, no tenant model,
+  no OIDC/auth stack, no control plane, no tool activation/deactivation
+  flow, no confirmation-token gate, no policy-mode ladder. The
+  one-user stdio path is the only product path.
+- **~5,600 lines of unreachable code**, verified with
+  `golang.org/x/tools/cmd/deadcode`: the never-registered probe-lab
+  API surface and its generated allowlist, the unused `internal/helpers`
+  and `internal/truncate` packages, the alias-wrapper machinery (which
+  filtered to an empty descriptor list), the unwired shared-reports and
+  change-tracking handler suites, nine unreachable functions, and 18
+  metrics tied to HTTP/gRPC/SSE/streamable/audit subsystems this binary
+  no longer ships. `deadcode` reports zero unreachable functions.
+
+### Fixed
+
+- List-filter parity gaps across tags, users, and time entries.
+- Raw API fallback recovery hints steer callers back to typed tools.
+- Paid-feature live probes send schema-valid payloads so the
+  sacrificial-workspace campaign exercises the real upstream instead of
+  failing local schema validation.
+
+### Performance
+
+- `tools/list` response envelope is pre-sized so the JSON-RPC frame
+  around the cached 152-tool payload allocates once instead of growing
+  through repeated slice doublings.
 
 ## [1.2.5] - 2026-05-13
 
@@ -3252,7 +3329,8 @@ Initial stable release.
 - **Signed releases** — cosign keyless signatures, SPDX SBOMs, and SLSA build provenance on every binary and container image.
 - **Reference Kubernetes manifests** — Deployment (non-root distroless, read-only root FS), NetworkPolicy (default-deny), PodDisruptionBudget, ServiceMonitor, and PrometheusRule with multi-window burn-rate alerts for a 99.9% SLO. Helm chart and Kustomize overlays included.
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/apet97/go-clockify/compare/v1.2.5...v1.3.0
 [1.2.2]: https://github.com/apet97/go-clockify/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/apet97/go-clockify/releases/tag/v1.2.1
 [1.0.0]: https://github.com/apet97/go-clockify/releases/tag/v1.0.0
