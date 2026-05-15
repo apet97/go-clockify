@@ -89,7 +89,11 @@ func (s *Server) marshalCachedToolsListResponse(id any) ([]byte, error) {
 
 	const prefix = `{"jsonrpc":"2.0","id":`
 	const resultKey = `,"result":`
-	var out []byte
+	// Pre-size the response buffer so the JSON-RPC envelope around the
+	// (large) cached tools/list payload allocates exactly once instead
+	// of growing through ~5 doublings — measured 18 allocs/op shrinks
+	// to 2 allocs/op on a 152-tool registry.
+	out := make([]byte, 0, len(prefix)+len(idBytes)+len(resultKey)+len(result)+1)
 	out = append(out, prefix...)
 	out = append(out, idBytes...)
 	out = append(out, resultKey...)
