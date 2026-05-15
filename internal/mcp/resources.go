@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 )
 
@@ -338,10 +339,14 @@ func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 	// thread ctx so broadcast is always false; the branch exists for
 	// pre-fix test backwards-compat.
 	if broadcast {
-		_ = s.Notify("notifications/resources/updated", params)
+		if err := s.Notify("notifications/resources/updated", params); err != nil {
+			slog.Warn("resource_update_notify_failed", "uri", uri, "err", err)
+		}
 		return
 	}
 	for _, n := range targets {
-		_ = n.Notify("notifications/resources/updated", params)
+		if err := n.Notify("notifications/resources/updated", params); err != nil {
+			slog.Warn("resource_update_notify_failed", "uri", uri, "err", err)
+		}
 	}
 }

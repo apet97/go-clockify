@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"math"
 	"net/netip"
@@ -148,7 +149,9 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 	if message != "" {
 		params["message"] = message
 	}
-	_ = s.Notifier.Notify("notifications/progress", params)
+	if err := s.Notifier.Notify("notifications/progress", params); err != nil {
+		slog.Warn("progress_notify_failed", "err", err)
+	}
 }
 
 // ResultEnvelope is the canonical shape every tool handler returns.

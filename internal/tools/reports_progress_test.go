@@ -2,6 +2,9 @@ package tools
 
 import (
 	"context"
+	"errors"
+	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -133,4 +136,57 @@ func mustDate(s string) time.Time {
 		panic(err)
 	}
 	return t
+}
+
+// failNotifier is an mcp.Notifier whose Notify always fails, used to prove
+// the tools layer logs (rather than silently drops) delivery errors.
+type failNotifier struct{}
+
+func (failNotifier) Notify(string, any) error { return errors.New("transport closed") }
+
+// recordHandler is a slog.Handler that records every emitted record so a
+// test can assert a particular warning was logged.
+type recordHandler struct {
+	mu      sync.Mutex
+	records []slog.Record
+}
+
+func (h *recordHandler) Enabled(context.Context, slog.Level) bool { return true }
+
+func (h *recordHandler) Handle(_ context.Context, r slog.Record) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.records = append(h.records, r.Clone())
+	return nil
+}
+
+func (h *recordHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+func (h *recordHandler) WithGroup(string) slog.Handler      { return h }
+
+func (h *recordHandler) has(msg string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, r := range h.records {
+		if r.Message == msg {
+			return true
+		}
+	}
+	return false
+}
+
+// TestEmitProgressLogsNotifyFailure proves a failed progress notification is
+// logged rather than silently discarded.
+func TestEmitProgressLogsNotifyFailure(t *testing.T) {
+	h := &recordHandler{}
+	prev := slog.Default()
+	slog.SetDefault(slog.New(h))
+	defer slog.SetDefault(prev)
+
+	svc := &Service{Notifier: failNotifier{}}
+	ctx := mcp.WithProgressToken(context.Background(), "tok-fail")
+	svc.EmitProgress(ctx, 1, -1, "")
+
+	if !h.has("progress_notify_failed") {
+		t.Fatal("expected a progress_notify_failed warning to be logged")
+	}
 }
