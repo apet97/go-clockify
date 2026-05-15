@@ -543,24 +543,9 @@ var (
 	ToolCallsTotal *Counter
 	// ToolCallDuration records dispatch duration in seconds.
 	ToolCallDuration *Histogram
-	// RateLimitRejections counts rate limiter rejections by kind.
-	RateLimitRejections *Counter
 	// Cancellations counts tools/call cancellations by reason
 	// (client_requested, timeout, context_cancelled).
 	Cancellations *Counter
-	// HTTPRequestsTotal counts HTTP requests by path, method, and status.
-	// Path is normalized at the call site to a bounded set (/mcp, /health,
-	// /ready, /metrics, /other) to prevent cardinality blowup from probes.
-	HTTPRequestsTotal *Counter
-	// HTTPAdmissionRejectionsTotal counts app-layer HTTP admission limiter
-	// rejections before a request reaches JSON-RPC dispatch.
-	HTTPAdmissionRejectionsTotal *Counter
-	// HTTPRequestDuration records HTTP request wall-clock duration.
-	HTTPRequestDuration *Histogram
-	// ReadyState is 1 when the server is ready, 0 otherwise.
-	ReadyState *Gauge
-	// BuildInfo exposes build metadata; value is always 1.
-	BuildInfo *Gauge
 	// InFlightToolCalls reports the dispatch-layer in-flight goroutine count.
 	InFlightToolCalls *Gauge
 	// UpstreamRequestsTotal counts outbound Clockify API requests by
@@ -587,63 +572,14 @@ var (
 	UpstreamCircuitBreakerTransitionsTotal *Counter
 	// ProtocolErrorsTotal counts JSON-RPC protocol-level errors by code.
 	ProtocolErrorsTotal *Counter
-	// ProtocolVersionHeaderMissingTotal counts post-initialize streamable HTTP
-	// requests that omitted Mcp-Protocol-Version. Default-compatible mode
-	// accepts them; strict deployments can reject them.
-	ProtocolVersionHeaderMissingTotal *Counter
-	// PanicsRecoveredTotal counts panics recovered from tool handlers and HTTP.
+	// PanicsRecoveredTotal counts panics recovered from tool handlers.
 	PanicsRecoveredTotal *Counter
-	// GRPCSendPumpPanicsTotal counts panics recovered from the gRPC
-	// Exchange send-pump goroutine.
-	GRPCSendPumpPanicsTotal *Counter
-	// GRPCNotificationDropsTotal counts gRPC server-initiated
-	// notifications dropped before they reached a client stream.
-	GRPCNotificationDropsTotal *Counter
 	// ClockifyResponsesOversizeTotal counts upstream Clockify responses
 	// rejected because the body exceeded the client's hard cap. Lets
 	// operators detect adversarial / misconfigured upstreams that
 	// emit responses large enough to threaten OOM. Labelled by the
 	// HTTP method so a single offending endpoint stands out.
 	ClockifyResponsesOversizeTotal *Counter
-	// GRPCAuthRejectionsTotal counts gRPC auth interceptor rejections by reason.
-	GRPCAuthRejectionsTotal *Counter
-	// AuditEventsTotal counts audit-record attempts (all non-read-only calls).
-	AuditEventsTotal *Counter
-	// AuditFailuresTotal counts audit persistence failures by coarse reason
-	// class and audit phase. Label "reason" uses a small fixed vocabulary:
-	// "persist_error". Label "phase" uses "intent", "outcome", or "single".
-	AuditFailuresTotal *Counter
-	// SSESubscriberDropsTotal counts SSE subscribers dropped because the
-	// hub's non-blocking publish saw their channel full. Reason vocabulary:
-	// "slow_subscriber" (the only emit site today; added so future
-	// eviction paths like close-on-auth-change can label themselves).
-	SSESubscriberDropsTotal *Counter
-	// SSEReplayMissesTotal counts Last-Event-ID resumes that asked for a
-	// position older than the live backlog ring. The client will miss
-	// events between lastEventID and the oldest retained event — this
-	// signals operator-facing lost-event risk even though SSE semantics
-	// accept it.
-	SSEReplayMissesTotal *Counter
-	// StreamableEventsAliasRequestsTotal counts GET /mcp/events legacy
-	// alias use. Canonical streamable HTTP clients should use GET /mcp;
-	// any non-zero value identifies old clients to migrate.
-	StreamableEventsAliasRequestsTotal *Counter
-	// StreamableSessionsReapedTotal counts sessions evicted by the
-	// streamable HTTP session reaper. Reason vocabulary: "ttl" (TTL
-	// expired) and "orphan" (no subscribers past the idle grace).
-	StreamableSessionsReapedTotal *Counter
-	// StreamableSessionStoreErrorsTotal counts control-plane persistence
-	// failures for streamable HTTP session records by operation.
-	StreamableSessionStoreErrorsTotal *Counter
-	// AuditEventsRetainedTotal counts audit events removed
-	// (outcome="deleted", value = rows per tick) or errored
-	// (outcome="error", incremented once per failed tick) by the
-	// control-plane audit retention reaper. Driven by the B2 reaper
-	// that honours MCP_CONTROL_PLANE_AUDIT_RETENTION.
-	AuditEventsRetainedTotal *Counter
-	// TruncationSkippedTotal counts fail-open truncation paths by reason.
-	// Reason vocabulary: "marshal_failed" and "unmarshal_failed".
-	TruncationSkippedTotal *Counter
 )
 
 func init() {
@@ -658,40 +594,10 @@ func init() {
 		ToolCallBuckets,
 		"tool",
 	)
-	RateLimitRejections = Default.NewCounter(
-		"clockify_mcp_rate_limit_rejections_total",
-		"Rate limiter rejections by kind (concurrency, window) and scope (global, per_token).",
-		"kind", "scope",
-	)
 	Cancellations = Default.NewCounter(
 		"clockify_mcp_cancellations_total",
 		"tools/call cancellations by reason (client_requested, timeout, context_cancelled).",
 		"reason",
-	)
-	HTTPRequestsTotal = Default.NewCounter(
-		"clockify_mcp_http_requests_total",
-		"HTTP requests by path (normalized), method, and status.",
-		"path", "method", "status",
-	)
-	HTTPAdmissionRejectionsTotal = Default.NewCounter(
-		"clockify_mcp_http_admission_rejections_total",
-		"HTTP requests rejected by the app-layer admission limiter, by path and reason.",
-		"path", "reason",
-	)
-	HTTPRequestDuration = Default.NewHistogram(
-		"clockify_mcp_http_request_duration_seconds",
-		"HTTP request duration in seconds by path (normalized), method, and status.",
-		HTTPDurationBuckets,
-		"path", "method", "status",
-	)
-	ReadyState = Default.NewGauge(
-		"clockify_mcp_ready_state",
-		"1 when the server reports ready, 0 otherwise.",
-	)
-	BuildInfo = Default.NewGauge(
-		"clockify_mcp_build_info",
-		"Build metadata. Value is always 1.",
-		"version", "commit", "build_date", "go_version",
 	)
 	InFlightToolCalls = Default.NewGauge(
 		"clockify_mcp_inflight_tool_calls",
@@ -738,75 +644,15 @@ func init() {
 		"JSON-RPC protocol-level error responses by error code.",
 		"code",
 	)
-	ProtocolVersionHeaderMissingTotal = Default.NewCounter(
-		"clockify_mcp_protocol_version_header_missing_total",
-		"Post-initialize streamable HTTP requests missing Mcp-Protocol-Version.",
-	)
 	PanicsRecoveredTotal = Default.NewCounter(
 		"clockify_mcp_panics_recovered_total",
-		"Panics recovered from tool handlers or HTTP handlers by site.",
+		"Panics recovered from tool handlers by site.",
 		"site",
-	)
-	GRPCSendPumpPanicsTotal = Default.NewCounter(
-		"clockify_grpc_send_pump_panics_total",
-		"Panics recovered from the gRPC Exchange send-pump goroutine.",
-	)
-	GRPCNotificationDropsTotal = Default.NewCounter(
-		"clockify_mcp_grpc_notification_drops_total",
-		"gRPC server-initiated notifications dropped before reaching a client stream, by reason.",
-		"reason",
 	)
 	ClockifyResponsesOversizeTotal = Default.NewCounter(
 		"clockify_mcp_responses_oversize_total",
 		"Upstream Clockify responses rejected because the body exceeded the client cap.",
 		"method",
-	)
-	GRPCAuthRejectionsTotal = Default.NewCounter(
-		"clockify_mcp_grpc_auth_rejections_total",
-		"gRPC auth interceptor rejections by reason.",
-		"reason",
-	)
-	AuditEventsTotal = Default.NewCounter(
-		"clockify_mcp_audit_events_total",
-		"Audit record attempts for non-read-only tool calls.",
-	)
-	AuditFailuresTotal = Default.NewCounter(
-		"clockify_mcp_audit_failures_total",
-		"Audit persistence failures by coarse reason class and audit phase.",
-		"reason", "phase",
-	)
-	SSESubscriberDropsTotal = Default.NewCounter(
-		"clockify_mcp_sse_subscriber_drops_total",
-		"SSE subscribers evicted by the hub because the publish channel was full, by reason.",
-		"reason",
-	)
-	SSEReplayMissesTotal = Default.NewCounter(
-		"clockify_mcp_sse_replay_misses_total",
-		"Last-Event-ID resumes that requested a position older than the live backlog ring; client loses events between lastEventID and the oldest retained id.",
-	)
-	StreamableEventsAliasRequestsTotal = Default.NewCounter(
-		"clockify_mcp_streamable_events_alias_requests_total",
-		"GET /mcp/events legacy streamable HTTP SSE alias requests. Non-zero values identify older clients that should migrate to GET /mcp.",
-	)
-	StreamableSessionsReapedTotal = Default.NewCounter(
-		"clockify_mcp_sessions_reaped_total",
-		"Streamable HTTP sessions reclaimed by the reaper, by reason (ttl, orphan).",
-		"reason",
-	)
-	StreamableSessionStoreErrorsTotal = Default.NewCounter(
-		"clockify_mcp_streamable_session_store_errors_total",
-		"Streamable HTTP session control-plane persistence failures by operation.",
-		"operation",
-	)
-	AuditEventsRetainedTotal = Default.NewCounter(
-		"clockify_mcp_audit_events_retained_total",
-		"Audit events removed (outcome=deleted) or errored (outcome=error) by the retention reaper.",
-		"outcome",
-	)
-	TruncationSkippedTotal = Default.NewCounter(
-		"clockify_mcp_truncation_skipped_total",
-		"Fail-open response truncation skips by reason.",
-		"reason",
 	)
 	registerRuntimeMetrics(Default)
 }

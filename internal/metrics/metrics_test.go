@@ -217,18 +217,17 @@ func TestDuplicateName_Panics(t *testing.T) {
 }
 
 func TestDefaultRegistryPreRegistered(t *testing.T) {
-	// Exercise the pre-registered metrics.
+	// Exercise the pre-registered metrics that the stdio runtime actually
+	// emits. The full set is small by design — anything HTTP, gRPC, audit,
+	// or streamable-session related belonged to a transport family that
+	// this product no longer ships.
 	ToolCallsTotal.Inc("some_tool", "success")
 	ToolCallDuration.Observe(0.2, "some_tool")
-	RateLimitRejections.Inc("window", "global")
-	HTTPRequestsTotal.Inc("/mcp", "POST", "200")
-	HTTPAdmissionRejectionsTotal.Inc("/mcp", "ip")
-	GRPCNotificationDropsTotal.Inc("slow_consumer")
-	AuditFailuresTotal.Inc("persist_error", "outcome")
-	ProtocolVersionHeaderMissingTotal.Inc()
-	BuildInfo.SetFunc(func() float64 { return 1 }, "test-version")
-	ReadyState.SetFunc(func() float64 { return 1 })
+	Cancellations.Inc("client_requested")
 	InFlightToolCalls.SetFunc(func() float64 { return 3 })
+	ProtocolErrorsTotal.Inc("-32602")
+	PanicsRecoveredTotal.Inc("tool_call")
+	ClockifyResponsesOversizeTotal.Inc("GET")
 
 	var buf bytes.Buffer
 	if _, err := Default.WriteTo(&buf); err != nil {
@@ -238,15 +237,11 @@ func TestDefaultRegistryPreRegistered(t *testing.T) {
 	for _, want := range []string{
 		"clockify_mcp_tool_calls_total",
 		"clockify_mcp_tool_call_duration_seconds",
-		"clockify_mcp_rate_limit_rejections_total",
-		"clockify_mcp_http_requests_total",
-		"clockify_mcp_http_admission_rejections_total",
-		"clockify_mcp_grpc_notification_drops_total",
-		`clockify_mcp_audit_failures_total{reason="persist_error",phase="outcome"}`,
-		"clockify_mcp_protocol_version_header_missing_total",
-		"clockify_mcp_build_info",
-		"clockify_mcp_ready_state",
+		"clockify_mcp_cancellations_total",
 		"clockify_mcp_inflight_tool_calls",
+		"clockify_mcp_protocol_errors_total",
+		"clockify_mcp_panics_recovered_total",
+		"clockify_mcp_responses_oversize_total",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("default registry missing %s", want)
