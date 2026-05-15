@@ -158,3 +158,176 @@ func TestSetCustomFieldValueRejectsInactiveField(t *testing.T) {
 		t.Fatalf("expected inactive custom-field error, got %v", err)
 	}
 }
+
+// TestValidateCustomFieldDefaultValueRejectsTypeMismatch is the
+// table-driven contract for validateCustomFieldDefaultValue: every
+// upstream-accepted custom-field type must accept its documented value
+// shape and reject everything else with a clear message that mentions
+// both the field type and the bad input.
+func TestValidateCustomFieldDefaultValueRejectsTypeMismatch(t *testing.T) {
+	cases := []struct {
+		name      string
+		fieldType string
+		raw       any
+		allowed   []string
+		want      any
+		wantErr   string
+	}{
+		{name: "TXT accepts string", fieldType: "TXT", raw: "hello", want: "hello"},
+		{name: "TXT rejects number", fieldType: "TXT", raw: 1.0, wantErr: "string for TXT"},
+		{name: "LINK accepts string", fieldType: "LINK", raw: "https://example.com", want: "https://example.com"},
+		{name: "LINK rejects boolean", fieldType: "LINK", raw: true, wantErr: "string for LINK"},
+		{name: "NUMBER accepts float", fieldType: "NUMBER", raw: 3.5, want: 3.5},
+		{name: "NUMBER accepts int", fieldType: "NUMBER", raw: 5, want: 5.0},
+		{name: "NUMBER rejects string", fieldType: "NUMBER", raw: "5", wantErr: "number for NUMBER"},
+		{name: "CHECKBOX accepts true", fieldType: "CHECKBOX", raw: true, want: true},
+		{name: "CHECKBOX accepts false", fieldType: "CHECKBOX", raw: false, want: false},
+		{name: "CHECKBOX rejects string", fieldType: "CHECKBOX", raw: "true", wantErr: "boolean for CHECKBOX"},
+		{name: "DROPDOWN_SINGLE accepts allowed string", fieldType: "DROPDOWN_SINGLE", raw: "North", allowed: []string{"North", "South"}, want: "North"},
+		{name: "DROPDOWN_SINGLE rejects out-of-allowed", fieldType: "DROPDOWN_SINGLE", raw: "East", allowed: []string{"North", "South"}, wantErr: "must be one of allowed_values"},
+		{name: "DROPDOWN_SINGLE rejects list", fieldType: "DROPDOWN_SINGLE", raw: []any{"North"}, wantErr: "string for DROPDOWN_SINGLE"},
+		{name: "DROPDOWN_MULTIPLE accepts subset", fieldType: "DROPDOWN_MULTIPLE", raw: []any{"North", "South"}, allowed: []string{"North", "South", "East"}, want: []string{"North", "South"}},
+		{name: "DROPDOWN_MULTIPLE rejects scalar", fieldType: "DROPDOWN_MULTIPLE", raw: "North", wantErr: "array of strings for DROPDOWN_MULTIPLE"},
+		{name: "DROPDOWN_MULTIPLE rejects out-of-allowed item", fieldType: "DROPDOWN_MULTIPLE", raw: []any{"East"}, allowed: []string{"North", "South"}, wantErr: "must be one of allowed_values"},
+		{name: "nil value passes through", fieldType: "TXT", raw: nil, want: nil},
+		{name: "unsupported type errors", fieldType: "BOGUS", raw: "x", wantErr: "unsupported field_type"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := validateCustomFieldDefaultValue(tc.fieldType, tc.raw, tc.allowed)
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("err = %v, want substring %q", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if !equalAny(got, tc.want) {
+				t.Fatalf("got %#v, want %#v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestCreateCustomFieldForwardsWorkspaceDefaultValue exercises every
+// supported field type end-to-end through CreateCustomField so the
+// upstream POST body matches the per-type contract: scalar for
+// TXT/LINK/DROPDOWN_SINGLE, number for NUMBER, boolean for CHECKBOX,
+// list for DROPDOWN_MULTIPLE.
+func TestCreateCustomFieldForwardsWorkspaceDefaultValue(t *testing.T) {
+	cases := []struct {
+		name       string
+		fieldType  string
+		allowed    []any
+		defaultVal any
+		wantInBody any
+	}{
+		{name: "TXT", fieldType: "TXT", defaultVal: "alpha", wantInBody: "alpha"},
+		{name: "LINK", fieldType: "LINK", defaultVal: "https://example.com", wantInBody: "https://example.com"},
+		{name: "NUMBER", fieldType: "NUMBER", defaultVal: 3.5, wantInBody: 3.5},
+		{name: "CHECKBOX", fieldType: "CHECKBOX", defaultVal: true, wantInBody: true},
+		{name: "DROPDOWN_SINGLE", fieldType: "DROPDOWN_SINGLE", allowed: []any{"red", "blue"}, defaultVal: "red", wantInBody: "red"},
+		{name: "DROPDOWN_MULTIPLE", fieldType: "DROPDOWN_MULTIPLE", allowed: []any{"a", "b", "c"}, defaultVal: []any{"a", "c"}, wantInBody: []any{"a", "c"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotBody map[string]any
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/custom-fields" {
+					t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+				}
+				if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+					t.Fatalf("decode: %v", err)
+				}
+				respondJSON(t, w, map[string]any{"id": "f1", "name": gotBody["name"], "type": gotBody["type"]})
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			args := map[string]any{
+				"name":                    "Test Field",
+				"field_type":              tc.fieldType,
+				"workspace_default_value": tc.defaultVal,
+			}
+			if tc.allowed != nil {
+				args["allowed_values"] = tc.allowed
+			}
+			if _, err := svc.CreateCustomField(context.Background(), args); err != nil {
+				t.Fatalf("CreateCustomField: %v", err)
+			}
+			got := gotBody["workspaceDefaultValue"]
+			if !equalAny(got, tc.wantInBody) {
+				t.Fatalf("body workspaceDefaultValue = %#v, want %#v (full body=%#v)", got, tc.wantInBody, gotBody)
+			}
+		})
+	}
+}
+
+// TestCreateCustomFieldRejectsTypeMismatchedDefault checks that
+// validation runs *before* any upstream call so a Clockify 400 turns
+// into a clean MCP error envelope.
+func TestCreateCustomFieldRejectsTypeMismatchedDefault(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("validation must fail before upstream POST: got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+
+	_, err := svc.CreateCustomField(context.Background(), map[string]any{
+		"name":                    "Bad",
+		"field_type":              "NUMBER",
+		"workspace_default_value": "not-a-number",
+	})
+	if err == nil || !strings.Contains(err.Error(), "number for NUMBER") {
+		t.Fatalf("expected NUMBER type-mismatch error, got %v", err)
+	}
+}
+
+// equalAny compares values that may include []any vs []string slice
+// shapes; reflect.DeepEqual gets cranky about that pair.
+func equalAny(a, b any) bool {
+	switch wa := a.(type) {
+	case []string:
+		switch wb := b.(type) {
+		case []string:
+			if len(wa) != len(wb) {
+				return false
+			}
+			for i := range wa {
+				if wa[i] != wb[i] {
+					return false
+				}
+			}
+			return true
+		case []any:
+			if len(wa) != len(wb) {
+				return false
+			}
+			for i := range wa {
+				s, ok := wb[i].(string)
+				if !ok || s != wa[i] {
+					return false
+				}
+			}
+			return true
+		}
+	case []any:
+		switch wb := b.(type) {
+		case []any:
+			if len(wa) != len(wb) {
+				return false
+			}
+			for i := range wa {
+				if !equalAny(wa[i], wb[i]) {
+					return false
+				}
+			}
+			return true
+		case []string:
+			return equalAny(b, a)
+		}
+	}
+	return a == b
+}

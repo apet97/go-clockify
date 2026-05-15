@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -56,9 +57,10 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 							"description": "Upstream-accepted custom-field type",
 							"enum":        []string{"TXT", "NUMBER", "DROPDOWN_SINGLE", "DROPDOWN_MULTIPLE", "CHECKBOX", "LINK"},
 						},
-						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE"},
-						"required":       map[string]any{"type": "boolean", "description": "Whether the field is required"},
-						"status":         customFieldStatusSchema("Custom-field visibility; defaults to VISIBLE so values can be set immediately"),
+						"allowed_values":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE"},
+						"required":                map[string]any{"type": "boolean", "description": "Whether the field is required"},
+						"status":                  customFieldStatusSchema("Custom-field visibility; defaults to VISIBLE so values can be set immediately"),
+						"workspace_default_value": map[string]any{"description": "Workspace-wide default value. Type follows field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."},
 					},
 				}),
 			ReadOnlyHint: false,
@@ -81,9 +83,10 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 							"description": "Upstream-accepted custom-field type; defaults to the current field type because Clockify requires type on update",
 							"enum":        []string{"TXT", "NUMBER", "DROPDOWN_SINGLE", "DROPDOWN_MULTIPLE", "CHECKBOX", "LINK"},
 						},
-						"allowed_values": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
-						"required":       map[string]any{"type": "boolean"},
-						"status":         customFieldStatusSchema("Custom-field visibility"),
+						"allowed_values":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+						"required":                map[string]any{"type": "boolean"},
+						"status":                  customFieldStatusSchema("Custom-field visibility"),
+						"workspace_default_value": map[string]any{"description": "Workspace-wide default value. Type follows the (resolved) field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."},
 					},
 				}),
 			ReadOnlyHint: false,
@@ -216,6 +219,92 @@ var validCustomFieldTypes = map[string]bool{
 	"LINK":              true,
 }
 
+// validateCustomFieldDefaultValue enforces the per-type rules described
+// in the canonical openapi CustomFieldValue schema: NUMBER requires a
+// number, CHECKBOX requires a boolean, DROPDOWN_MULTIPLE requires a list
+// of strings, and TXT/LINK/DROPDOWN_SINGLE require a string. For dropdown
+// types the default must also be a subset of allowed_values.
+//
+// allowedValues may be nil for non-dropdown types; a nil/empty allowed
+// list for dropdown types is permitted (the upstream itself enforces the
+// allowed-list invariant after our schema check).
+func validateCustomFieldDefaultValue(fieldType string, raw any, allowedValues []string) (any, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	switch fieldType {
+	case "TXT", "LINK":
+		s, ok := raw.(string)
+		if !ok {
+			return nil, fmt.Errorf("workspace_default_value must be a string for %s, got %T", fieldType, raw)
+		}
+		return s, nil
+	case "NUMBER":
+		switch v := raw.(type) {
+		case float64:
+			return v, nil
+		case int:
+			return float64(v), nil
+		case int64:
+			return float64(v), nil
+		case int32:
+			return float64(v), nil
+		default:
+			return nil, fmt.Errorf("workspace_default_value must be a number for NUMBER, got %T", raw)
+		}
+	case "CHECKBOX":
+		b, ok := raw.(bool)
+		if !ok {
+			return nil, fmt.Errorf("workspace_default_value must be a boolean for CHECKBOX, got %T", raw)
+		}
+		return b, nil
+	case "DROPDOWN_SINGLE":
+		s, ok := raw.(string)
+		if !ok {
+			return nil, fmt.Errorf("workspace_default_value must be a string for DROPDOWN_SINGLE, got %T", raw)
+		}
+		if len(allowedValues) > 0 && !slices.Contains(allowedValues, s) {
+			return nil, fmt.Errorf("workspace_default_value %q must be one of allowed_values %v", s, allowedValues)
+		}
+		return s, nil
+	case "DROPDOWN_MULTIPLE":
+		var items []string
+		switch v := raw.(type) {
+		case []string:
+			items = append(items, v...)
+		case []any:
+			for _, x := range v {
+				s, ok := x.(string)
+				if !ok {
+					return nil, fmt.Errorf("workspace_default_value items must be strings for DROPDOWN_MULTIPLE, got %T in list", x)
+				}
+				items = append(items, s)
+			}
+		default:
+			return nil, fmt.Errorf("workspace_default_value must be an array of strings for DROPDOWN_MULTIPLE, got %T", raw)
+		}
+		if len(allowedValues) > 0 {
+			for _, item := range items {
+				if !slices.Contains(allowedValues, item) {
+					return nil, fmt.Errorf("workspace_default_value %q must be one of allowed_values %v", item, allowedValues)
+				}
+			}
+		}
+		return items, nil
+	}
+	return nil, fmt.Errorf("workspace_default_value cannot be validated for unsupported field_type %q", fieldType)
+}
+
+func allowedValuesAsStrings(raw []any) []string {
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 var validCustomFieldStatuses = map[string]bool{
 	"VISIBLE":   true,
 	"INVISIBLE": true,
@@ -279,6 +368,13 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 	if req, ok := args["required"].(bool); ok {
 		body["required"] = req
 	}
+	if rawDefault, present := args["workspace_default_value"]; present {
+		validated, err := validateCustomFieldDefaultValue(fieldType, rawDefault, allowedValuesAsStrings(allowedVals))
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		body["workspaceDefaultValue"] = validated
+	}
 
 	path, err := paths.Workspace(wsID, "custom-fields")
 	if err != nil {
@@ -341,6 +437,14 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 	}
 	if req, ok := args["required"].(bool); ok {
 		body["required"] = req
+	}
+	if rawDefault, present := args["workspace_default_value"]; present {
+		allowedVals, _ := body["allowedValues"].([]any)
+		validated, err := validateCustomFieldDefaultValue(fieldType, rawDefault, allowedValuesAsStrings(allowedVals))
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		body["workspaceDefaultValue"] = validated
 	}
 
 	path, err := paths.Workspace(wsID, "custom-fields", fieldID)

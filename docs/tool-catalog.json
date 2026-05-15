@@ -31529,6 +31529,9 @@
               "INACTIVE"
             ],
             "type": "string"
+          },
+          "workspace_default_value": {
+            "description": "Workspace-wide default value. Type follows field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."
           }
         },
         "required": [
@@ -31820,6 +31823,9 @@
               "INACTIVE"
             ],
             "type": "string"
+          },
+          "workspace_default_value": {
+            "description": "Workspace-wide default value. Type follows the (resolved) field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."
           }
         },
         "required": [
