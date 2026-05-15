@@ -541,20 +541,12 @@ func addSchedulingOptionalFields(payload map[string]any, args map[string]any) {
 }
 
 func addRecurringAssignment(payload map[string]any, args map[string]any) {
-	_, hasRepeat := args["repeat"]
 	weeks := intArg(args, "weeks", 0)
-	if !hasRepeat && weeks == 0 {
-		payload["recurringAssignment"] = map[string]any{"repeat": false, "weeks": 1}
+	if weeks > 0 {
+		payload["recurringAssignment"] = map[string]any{"weeks": weeks}
 		return
 	}
-	recurring := map[string]any{}
-	if repeat, ok := args["repeat"].(bool); ok {
-		recurring["repeat"] = repeat
-	}
-	if weeks > 0 {
-		recurring["weeks"] = weeks
-	}
-	payload["recurringAssignment"] = recurring
+	payload["recurringAssignment"] = map[string]any{"weeks": 1}
 }
 
 func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

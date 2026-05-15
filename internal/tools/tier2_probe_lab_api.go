@@ -328,11 +328,15 @@ func documentedRawResponse(header http.Header, body []byte) map[string]any {
 	if filename == "" && contentType == "application/pdf" {
 		filename = "document.pdf"
 	}
+	encoded := base64.StdEncoding.EncodeToString(body)
 	return map[string]any{
-		"contentType": contentType,
-		"filename":    filename,
-		"bytes":       len(body),
-		"body":        base64.StdEncoding.EncodeToString(body),
+		"contentType":  contentType,
+		"filename":     filename,
+		"bytes":        len(body),
+		"bodyEncoding": "base64",
+		"base64Bytes":  len(encoded),
+		"truncated":    false,
+		"body":         encoded,
 	}
 }
 

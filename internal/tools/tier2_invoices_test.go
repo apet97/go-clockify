@@ -316,6 +316,13 @@ func TestExportInvoiceOneUserDefaultsUserLocale(t *testing.T) {
 	if res.Meta["userLocale"] != "en-US" {
 		t.Fatalf("expected userLocale meta, got %#v", res.Meta)
 	}
+	data, ok := res.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("export data type = %T, want map[string]any", res.Data)
+	}
+	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != 16 || data["truncated"] != false {
+		t.Fatalf("binary invoice export metadata missing safe content sizing: %#v", data)
+	}
 }
 
 // TestTier2_Invoices_ListSendsStatusesNotStatus pins SUMMARY #10:

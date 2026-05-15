@@ -206,6 +206,14 @@ jq -r '
   | @tsv
 ' "$catalog" > "$tmpdir/catalog.tsv"
 
+cut -f1 "$tmpdir/coverage.tsv" | sort > "$tmpdir/coverage-tools.txt"
+cut -f1 "$tmpdir/catalog.tsv" | sort > "$tmpdir/catalog-tools.txt"
+if ! diff -u "$tmpdir/catalog-tools.txt" "$tmpdir/coverage-tools.txt" > "$tmpdir/coverage-tool-diff"; then
+  echo "[fail] coverage ledger tool set drift against docs/tool-catalog.json" >&2
+  sed -n '1,120p' "$tmpdir/coverage-tool-diff" >&2
+  exit 1
+fi
+
 awk -F '\t' '
   BEGIN {
     while ((getline < ARGV[1]) > 0) {

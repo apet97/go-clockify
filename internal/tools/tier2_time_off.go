@@ -386,15 +386,15 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 
 	body := map[string]any{}
 	changed := make([]string, 0, 2)
-	if v := stringArg(args, "note"); v != "" {
-		body["note"] = v
+	note := stringArg(args, "note")
+	if note != "" {
 		changed = append(changed, "note")
 	}
 	if status := stringArg(args, "status"); status != "" {
 		if status != "APPROVED" && status != "REJECTED" {
 			return ResultEnvelope{}, fmt.Errorf("status must be APPROVED or REJECTED; got %q", status)
 		}
-		body["status"] = status
+		body = timeOffRequestStatusBody(status, note)
 		changed = append(changed, "status")
 	}
 	if _, ok := body["status"]; !ok {
@@ -510,12 +510,7 @@ func (s *Service) approveTimeOff(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	payload := map[string]any{
-		"status": "APPROVED",
-	}
-	if note := stringArg(args, "note"); note != "" {
-		payload["note"] = note
-	}
+	payload := timeOffRequestStatusBody("APPROVED", stringArg(args, "note"))
 
 	var result map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
@@ -548,12 +543,7 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	payload := map[string]any{
-		"status": "REJECTED",
-	}
-	if note := stringArg(args, "note"); note != "" {
-		payload["note"] = note
-	}
+	payload := timeOffRequestStatusBody("REJECTED", stringArg(args, "note"))
 
 	var result map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
@@ -569,6 +559,13 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 		"policyId":    policyID,
 		"requestId":   requestID,
 	}), nil
+}
+
+func timeOffRequestStatusBody(status, note string) map[string]any {
+	return map[string]any{
+		"status": status,
+		"note":   note,
+	}
 }
 
 func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

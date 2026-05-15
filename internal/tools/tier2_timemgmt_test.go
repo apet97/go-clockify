@@ -201,8 +201,8 @@ func TestCreateAssignmentNormalizesFlexibleRange(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected recurringAssignment defaults, got %#v", body["recurringAssignment"])
 			}
-			if recurring["repeat"] != false {
-				t.Fatalf("expected one-off repeat=false, got %#v", recurring)
+			if _, ok := recurring["repeat"]; ok {
+				t.Fatalf("recurringAssignment must omit repeat per canonical OpenAPI, got %#v", recurring)
 			}
 			if weeks, ok := reportNumber(recurring["weeks"]); !ok || weeks != 1 {
 				t.Fatalf("expected one-off weeks=1, got %#v", recurring)
@@ -225,6 +225,43 @@ func TestCreateAssignmentNormalizesFlexibleRange(t *testing.T) {
 		"hours_per_day": 8.0,
 	}); err != nil {
 		t.Fatalf("create assignment failed: %v", err)
+	}
+}
+
+func TestCreateAssignmentOmitsRecurringRepeatWhenRequested(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/workspaces/ws1/scheduling/assignments/recurring" || r.Method != http.MethodPost {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, []map[string]any{{"id": "a1"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.createAssignment(context.Background(), map[string]any{
+		"user_id":       "aaaaaaaaaaaaaaaaaaaaaaaa",
+		"project_id":    "bbbbbbbbbbbbbbbbbbbbbbbb",
+		"start":         "2026-04-01T09:00:00Z",
+		"end":           "2026-04-02T17:30:00Z",
+		"hours_per_day": 8.0,
+		"repeat":        true,
+		"weeks":         2,
+	}); err != nil {
+		t.Fatalf("create assignment failed: %v", err)
+	}
+	recurring, ok := gotBody["recurringAssignment"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected recurringAssignment body, got %#v", gotBody)
+	}
+	if _, ok := recurring["repeat"]; ok {
+		t.Fatalf("recurringAssignment must omit repeat per canonical OpenAPI, got %#v", recurring)
+	}
+	if weeks, ok := reportNumber(recurring["weeks"]); !ok || weeks != 2 {
+		t.Fatalf("expected weeks=2, got %#v", recurring)
 	}
 }
 
@@ -834,6 +871,38 @@ func TestUpdateTimeOffRequestPatchesBareRequestPath(t *testing.T) {
 	}
 }
 
+func TestUpdateTimeOffRequestIncludesEmptyNoteForStatusPatch(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+		wantPath  = "/workspaces/ws1/time-off/policies/" + policyID + "/requests/" + requestID
+	)
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": requestID, "status": gotBody["status"], "note": gotBody["note"]})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateTimeOffRequest(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+		"status":     "APPROVED",
+	})
+	if err != nil {
+		t.Fatalf("update time off request failed: %v", err)
+	}
+	if gotBody["note"] != "" {
+		t.Fatalf("status patch body must include canonical required note field, got %#v", gotBody)
+	}
+}
+
 func TestUpdateTimeOffRequestRejectsBadStatus(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("bad time-off status must not reach upstream; got %s %s", r.Method, r.URL.Path)
@@ -926,6 +995,37 @@ func TestApproveTimeOffPatchesBareRequestPathWithStatusApproved(t *testing.T) {
 	}
 	if gotBody["note"] != "Approved" {
 		t.Fatalf("expected note in body, got %#v", gotBody)
+	}
+}
+
+func TestApproveTimeOffIncludesEmptyNoteForCanonicalStatusBody(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+		wantPath  = "/workspaces/ws1/time-off/policies/" + policyID + "/requests/" + requestID
+	)
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": requestID, "status": gotBody["status"], "note": gotBody["note"]})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.approveTimeOff(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+	})
+	if err != nil {
+		t.Fatalf("approve time off failed: %v", err)
+	}
+	if gotBody["note"] != "" {
+		t.Fatalf("status patch body must include canonical required note field, got %#v", gotBody)
 	}
 }
 

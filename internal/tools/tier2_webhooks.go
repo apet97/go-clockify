@@ -519,6 +519,7 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 	return ok("clockify_list_webhooks", envelope.Webhooks, map[string]any{
 		"workspaceId":           wsID,
 		"count":                 len(envelope.Webhooks),
+		"total":                 envelope.WorkspaceWebhookCount,
 		"workspaceWebhookCount": envelope.WorkspaceWebhookCount,
 		"page":                  page,
 		"pageSize":              pageSize,

@@ -247,6 +247,12 @@ PY
 MUTATOR=mut_move_raw_fallback
 assert_case "raw fallback ordering fails closed" 1 "raw fallback tools must be the final two"
 
+mut_missing_coverage_tool() {
+  perl -0pi -e 's/\n\| `clockify_api_request` \|[^\n]+//' "$1/docs/goals/oneuser-tool-coverage.md"
+}
+MUTATOR=mut_missing_coverage_tool
+assert_case "missing coverage ledger tool fails closed" 1 "coverage ledger tool set drift"
+
 if [ "$tests_failed" -ne 0 ]; then
   printf 'check-api-parity-matrix tests: %d/%d FAILED\n' "$tests_failed" "$tests_run" >&2
   exit 1

@@ -110,6 +110,9 @@ func TestListWebhooks(t *testing.T) {
 	if result.Meta["workspaceWebhookCount"] != 2 {
 		t.Fatalf("expected meta workspaceWebhookCount=2, got %v", result.Meta["workspaceWebhookCount"])
 	}
+	if result.Meta["total"] != 2 {
+		t.Fatalf("expected normalized meta total=2, got %v", result.Meta["total"])
+	}
 }
 
 func TestGetWebhookMasksAuthToken(t *testing.T) {

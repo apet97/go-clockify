@@ -687,6 +687,9 @@ func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 	if data["filename"] != "summary.pdf" || data["bytes"] != float64(len("pdf-bytes")) && data["bytes"] != len("pdf-bytes") {
 		t.Fatalf("unexpected binary envelope: %#v", data)
 	}
+	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != 12 || data["truncated"] != false {
+		t.Fatalf("binary export metadata missing safe content sizing: %#v", data)
+	}
 	if result.Meta["binary"] != true || result.Meta["source"] != "reports-api" {
 		t.Fatalf("unexpected binary meta: %#v", result.Meta)
 	}
@@ -723,6 +726,9 @@ func TestDetailedReportBinaryExportDoesNotNormalizePayload(t *testing.T) {
 	data := result.Data.(map[string]any)
 	if data["filename"] != "detailed.csv" || data["body"] == "" {
 		t.Fatalf("unexpected binary envelope: %#v", data)
+	}
+	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != 12 || data["truncated"] != false {
+		t.Fatalf("binary export metadata missing safe content sizing: %#v", data)
 	}
 	if _, has := data["entries"]; has {
 		t.Fatalf("binary detailed export must not append normalized entries: %#v", data)

@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -95,12 +94,7 @@ func (s *Service) postReportsAPI(ctx context.Context, path string, body map[stri
 		if err != nil {
 			return nil, false, err
 		}
-		return map[string]any{
-			"contentType": raw.Header.Get("Content-Type"),
-			"filename":    parseExportFilename(raw.Header.Get("Content-Disposition")),
-			"bytes":       len(raw.Body),
-			"body":        base64.StdEncoding.EncodeToString(raw.Body),
-		}, true, nil
+		return documentedRawResponse(raw.Header, raw.Body), true, nil
 	}
 }
 
