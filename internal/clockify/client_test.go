@@ -147,6 +147,42 @@ func TestClientAPIError(t *testing.T) {
 	}
 }
 
+// TestClientErrorBodyReadHonoursContextCancellation proves that when the
+// error-body read is cut short by a context deadline, the client returns the
+// context error rather than an APIError built from a truncated body.
+func TestClientErrorBodyReadHonoursContextCancellation(t *testing.T) {
+	// The server sends a 400 with a Content-Length far larger than the bytes
+	// it actually writes, then blocks — so the client's error-body read
+	// stalls until its context deadline fires mid-read.
+	release := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", "100000")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"message":"partial`))
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		<-release // hold the body open past the client's deadline
+	}))
+	defer ts.Close()
+	defer close(release)
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	defer cancel()
+
+	var out map[string]any
+	err := c.Get(ctx, "/x", nil, &out)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v (%T), want context.DeadlineExceeded — a truncated "+
+			"error body must not surface as an APIError", err, err)
+	}
+}
+
 func TestClientAPIErrorBodyRedactsSecretCanaries(t *testing.T) {
 	const (
 		apiKeyCanary      = "canary-clockify-api-key-1234567890"

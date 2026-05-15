@@ -719,7 +719,13 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 	if resp.StatusCode >= 400 {
 		// Read error body (limited to 64KB) before any other reads.
 		errorReader := io.LimitReader(resp.Body, 64*1024)
-		bodyBytes, _ := io.ReadAll(errorReader)
+		bodyBytes, readErr := io.ReadAll(errorReader)
+		if readErr != nil && ctx.Err() != nil {
+			// The body read was cut short by caller cancellation or a
+			// deadline; surface that rather than an APIError built from a
+			// truncated body that would mislead the caller.
+			return ctx.Err()
+		}
 		// Bound the connection-reuse drain. The previous unbounded
 		// io.Copy(io.Discard, resp.Body) would pull a multi-GB error
 		// body off the wire just to keep the keepalive connection
