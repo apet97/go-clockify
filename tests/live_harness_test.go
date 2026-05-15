@@ -64,7 +64,7 @@ func setupLiveMCPHarness(t *testing.T, _ liveMCPOptions) *liveMCPHarness {
 		}
 	}
 
-	server := mcp.NewServer("livee2e", service.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("livee2e", service.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = service
 	service.EmitResourceUpdate = server.NotifyResourceUpdated

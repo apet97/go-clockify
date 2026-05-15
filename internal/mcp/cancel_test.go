@@ -41,7 +41,7 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 		ReadOnlyHint: true,
 	}}
 
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 
 	pr, pw := io.Pipe()
 	defer pw.Close()
@@ -113,7 +113,7 @@ func TestCancellation_UnknownIDNoOp(t *testing.T) {
 		Handler:      func(_ context.Context, _ map[string]any) (any, error) { return map[string]any{}, nil },
 		ReadOnlyHint: true,
 	}}
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 
 	pr, pw := io.Pipe()
 	defer pw.Close()
@@ -171,7 +171,7 @@ func TestCancellation_NormalCompletionCleansUp(t *testing.T) {
 		},
 		ReadOnlyHint: true,
 	}}
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 
 	var input bytes.Buffer
 	input.WriteString(`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}` + "\n")
@@ -203,7 +203,7 @@ func TestCancellation_NormalCompletionCleansUp(t *testing.T) {
 // TestCancellation_HandleCancelledMalformed exercises the early-return
 // branches of handleCancelled for branch coverage.
 func TestCancellation_HandleCancelledMalformed(t *testing.T) {
-	srv := NewServer("test", nil, nil, nil)
+	srv := NewServer("test", nil)
 	// Nil params: must not panic.
 	srv.handleCancelled(nil)
 	// Missing requestId: silent drop.
@@ -221,7 +221,7 @@ func TestCancellation_HandleCancelledMalformed(t *testing.T) {
 // TestCancellation_RegisterUnregisterHelpers exercises the helper
 // methods directly for full branch coverage.
 func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
-	srv := NewServer("test", nil, nil, nil)
+	srv := NewServer("test", nil)
 
 	// Nil ID is a no-op for all helpers.
 	srv.registerInflight(nil, func() {})
@@ -269,7 +269,7 @@ func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
 }
 
 func TestRepeatInitialize_CancelsInflight(t *testing.T) {
-	srv := NewServer("test", nil, nil, nil)
+	srv := NewServer("test", nil)
 	srv.handleInitialize(map[string]any{})
 
 	var cancelled atomic.Int32

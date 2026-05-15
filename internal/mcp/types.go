@@ -40,17 +40,17 @@ const (
 	RPCCodeServiceUnavailable   = -32030
 )
 
-// InvalidParamsError is returned from Enforcement.BeforeCall when the tool's
-// input arguments fail schema validation. The tools/call dispatch translates
-// it into a JSON-RPC -32602 (invalid params) response, with Pointer exposed
-// under error.data.pointer so clients can locate the offending field.
+// InvalidParamsError is returned by the tools/call dispatch when a tool's
+// input arguments fail runtime JSON-schema validation. The dispatch
+// translates it into a JSON-RPC -32602 (invalid params) response, with
+// Pointer exposed under error.data.pointer so clients can locate the
+// offending field.
 //
 // Pointer is an RFC 6901 JSON Pointer (e.g. "/workspace_id"). An empty
 // pointer means the root value itself was rejected.
 type InvalidParamsError struct {
-	Pointer    string
-	Message    string
-	DidYouMean string
+	Pointer string
+	Message string
 }
 
 func (e *InvalidParamsError) Error() string {
@@ -112,36 +112,4 @@ type Tool struct {
 	InputSchema  map[string]any `json:"inputSchema,omitempty"`
 	OutputSchema map[string]any `json:"outputSchema,omitempty"`
 	Annotations  map[string]any `json:"annotations,omitempty"`
-}
-
-// ToolHints carries semantic hints about a tool's behavior.
-type ToolHints struct {
-	ReadOnly    bool
-	Destructive bool
-	Idempotent  bool
-	// RiskClass is the bitmask risk taxonomy populated on every
-	// ToolDescriptor by internal/tools/applyRiskMetadata. The one-user
-	// runtime exposes it as client-facing metadata only.
-	RiskClass RiskClass
-}
-
-// Enforcement is an optional validation/post-processing hook. The one-user
-// command leaves it nil so all registered tools are callable from startup.
-//
-// A nil Enforcement means no filtering or enforcement.
-type Enforcement interface {
-	// FilterTool reports whether a tool should be listed in tools/list.
-	FilterTool(name string, hints ToolHints) bool
-	// BeforeCall runs before the tool handler. It may:
-	//   - block the call by returning a non-nil error
-	//   - short-circuit with a result (e.g., dry-run preview)
-	//   - return (nil, noop, nil) to proceed normally
-	// The returned release function must be called when the call completes.
-	//
-	// schema is the tool's advertised InputSchema (may be nil) — the
-	// pipeline uses it for runtime JSON-schema validation. Pipelines that
-	// receive nil skip validation and behave as before.
-	BeforeCall(ctx context.Context, name string, args map[string]any, hints ToolHints, schema map[string]any, lookupHandler func(string) (ToolHandler, bool)) (result any, release func(), err error)
-	// AfterCall post-processes a successful tool result (e.g., truncation).
-	AfterCall(result any) (any, error)
 }

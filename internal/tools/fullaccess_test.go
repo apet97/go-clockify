@@ -181,7 +181,7 @@ func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 		assertWorkflowAnnotations(t, reg[i].Tool)
 	}
 
-	server := mcp.NewServer("test", reg, nil, nil)
+	server := mcp.NewServer("test", reg)
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +390,7 @@ func toolNameSet(descriptors []mcp.ToolDescriptor) map[string]bool {
 
 func assertToolsetToolsListMatchesRegistry(t *testing.T, descriptors []mcp.ToolDescriptor) {
 	t.Helper()
-	server := mcp.NewServer("test", descriptors, nil, nil)
+	server := mcp.NewServer("test", descriptors)
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -469,7 +469,7 @@ func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
 
 func BenchmarkOneUserToolsListRealRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
-	server := mcp.NewServer("bench", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)
 	ctx := context.Background()
@@ -492,7 +492,7 @@ func BenchmarkClockifyStatusDispatch(b *testing.B) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("bench", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_status","arguments":{}}}`)
 	ctx := context.Background()
@@ -513,7 +513,7 @@ func BenchmarkClockifyReviewDayDispatch(b *testing.B) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("bench", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_review_day","arguments":{"date":"2026-01-02"}}}`)
 	ctx := context.Background()
@@ -702,7 +702,7 @@ func TestInvoiceClientWorkFeatureUnavailableEnvelope(t *testing.T) {
 	defer upstream.Close()
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), workspaceID)
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}

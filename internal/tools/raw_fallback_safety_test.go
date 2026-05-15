@@ -117,7 +117,7 @@ func TestRawFallbackRecoveryHintsPreferTypedTools(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	cases := []struct {

@@ -37,7 +37,7 @@ func TestProtocolVersion_NegotiationTable(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			server := NewServer("test", nil, nil, nil)
+			server := NewServer("test", nil)
 
 			var params any
 			if tc.requested != "" {
@@ -93,7 +93,7 @@ func TestProtocolVersion_ConfiguredDefaultOnlyAppliesWhenOmitted(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			server := NewServer("test", nil, nil, nil)
+			server := NewServer("test", nil)
 			server.DefaultProtocolVersion = configuredDefault
 
 			params := map[string]any{}
@@ -125,7 +125,8 @@ func TestProtocolVersion_CapabilitiesShape(t *testing.T) {
 				Handler: func(_ context.Context, _ map[string]any) (any, error) {
 					return map[string]any{"ok": true, "action": "t"}, nil
 				},
-			}}, nil, nil)
+			}})
+
 			server.ResourceProvider = &stubResourceProvider{}
 
 			req := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":%q}}`, version)
@@ -184,7 +185,7 @@ func TestProtocolVersion_ToolsCallSurvivesEveryVersion(t *testing.T) {
 					return map[string]any{"ok": true, "action": "ping_tool", "data": map[string]any{"p": "pong"}}, nil
 				},
 				ReadOnlyHint: true,
-			}}, nil, nil)
+			}})
 
 			lines := strings.Join([]string{
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":%q}}`, version),

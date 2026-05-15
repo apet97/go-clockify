@@ -157,7 +157,7 @@ func TestQualityGateNameResolutionStrictAndTimeParsing(t *testing.T) {
 
 func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = svc
 
@@ -262,7 +262,7 @@ func TestQualityGateFakeClockifyDomainWritesAndErrorEdges(t *testing.T) {
 	svc := New(client, fake.WorkspaceID)
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	clientResult := callToolOK(t, server, "clockify_clients_create", map[string]any{"name": "Quality Client"})
@@ -306,7 +306,7 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	fake.SetError("POST", "/workspaces/"+fake.WorkspaceID+"/invoices", 403, "feature is not supported on this plan")
@@ -539,7 +539,7 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	descriptors := map[string]mcp.ToolDescriptor{}
@@ -1538,7 +1538,7 @@ func TestMCPStartupListingsMakeNoClockifyRequests(t *testing.T) {
 	defer upstream.Close()
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = svc
 
@@ -1557,7 +1557,7 @@ func TestMCPStartupListingsMakeNoClockifyRequests(t *testing.T) {
 
 func TestToolsResourceMatchesServerToolsList(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = svc
 	initializeServer(t, server)
@@ -1606,7 +1606,7 @@ func TestPromptAndWorkflowGuidanceToolNamesExist(t *testing.T) {
 		knownTools[descriptor.Tool.Name] = true
 	}
 
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	promptsRaw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"prompts/list"}`))
@@ -1692,7 +1692,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 	svc := New(client, fake.WorkspaceID)
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	const (
@@ -1769,7 +1769,7 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	for _, descriptor := range svc.FullAccessRegistry() {
@@ -1796,7 +1796,7 @@ func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	descriptors := svc.FullAccessRegistry()
@@ -1820,7 +1820,7 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	descriptors := map[string]mcp.ToolDescriptor{}
@@ -1961,7 +1961,7 @@ func TestOneUserProjectMembershipsUpdateKeepsUserIDsCompatibility(t *testing.T) 
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	result := callToolOK(t, server, "clockify_projects_memberships_update", map[string]any{
@@ -1998,7 +1998,7 @@ func TestOneUserStopWorkEmptyUpstreamStopReturnsRecovery(t *testing.T) {
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	failure := callToolError(t, server, "clockify_stop_work", nil)

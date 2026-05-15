@@ -125,7 +125,7 @@ func TestSubscriptionGate_FiresWhenSubscribed(t *testing.T) {
 // no active subscription return false, and URIs added via the
 // public resources/subscribe JSON-RPC path return true.
 func TestServer_HasResourceSubscription(t *testing.T) {
-	srv := mcp.NewServer("test", nil, nil, nil)
+	srv := mcp.NewServer("test", nil)
 	srv.ResourceProvider = stubResourceProvider{}
 
 	if srv.HasResourceSubscription("") {

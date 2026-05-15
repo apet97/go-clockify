@@ -91,7 +91,7 @@ func TestToolsCall_StructuredContent_Object(t *testing.T) {
 			}, nil
 		},
 		ReadOnlyHint: true,
-	}}, nil, nil)
+	}})
 
 	resp := callToolViaRun(t, server, "fake_ok", nil)
 	if resp.Error != nil {
@@ -140,7 +140,7 @@ func TestToolsCall_StructuredContent_SuccessEnvelopeGolden(t *testing.T) {
 			}, nil
 		},
 		ReadOnlyHint: true,
-	}}, nil, nil)
+	}})
 
 	resp := callToolViaRun(t, server, "contract_ok", nil)
 	if resp.Error != nil {
@@ -172,7 +172,7 @@ func TestToolsCall_StructuredContent_RecoverableEnvelopeGolden(t *testing.T) {
 			}, nil
 		},
 		ReadOnlyHint: true,
-	}}, nil, nil)
+	}})
 
 	resp := callToolViaRun(t, server, "contract_recovery", nil)
 	if resp.Error != nil {
@@ -195,7 +195,7 @@ func TestToolsCall_StructuredContent_ResultMarshaledOnce(t *testing.T) {
 			return countedStructuredResult{marshals: &marshals}, nil
 		},
 		ReadOnlyHint: true,
-	}}, nil, nil)
+	}})
 
 	resp := callToolViaRun(t, server, "counted", nil)
 	if resp.Error != nil {
@@ -305,7 +305,7 @@ func TestToolsCall_StructuredContent_NonObject(t *testing.T) {
 					return tc.result, nil
 				},
 				ReadOnlyHint: true,
-			}}, nil, nil)
+			}})
 
 			resp := callToolViaRun(t, server, "fake_scalar", nil)
 			if resp.Error != nil {

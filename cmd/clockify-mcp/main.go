@@ -124,7 +124,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		}
 		service.DefaultTimezone = loc
 	}
-	server := mcp.NewServer(effective, service.RegistryForToolset(cfg.Toolset), nil, nil)
+	server := mcp.NewServer(effective, service.RegistryForToolset(cfg.Toolset))
 	server.StaticToolList = true
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
 	server.ToolTimeout = cfg.ToolTimeout

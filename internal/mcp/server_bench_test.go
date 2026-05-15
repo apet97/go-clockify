@@ -73,7 +73,8 @@ func TestToolsListRepeatedCallsReuseSerializedResult(t *testing.T) {
 			return map[string]any{"ok": true}, nil
 		},
 		ReadOnlyHint: true,
-	}}, nil)
+	}})
+
 	server.MarkInitialized(SupportedProtocolVersions[0], "test", "0")
 
 	ctx := context.Background()
@@ -221,7 +222,7 @@ func newBenchServer(b *testing.B, n int) *Server {
 			ReadOnlyHint: true,
 		})
 	}
-	return NewServer("bench", descriptors, nil, nil)
+	return NewServer("bench", descriptors)
 }
 
 func newPayloadBenchServer(b *testing.B, payload any) *Server {
@@ -235,7 +236,8 @@ func newPayloadBenchServer(b *testing.B, payload any) *Server {
 			return payload, nil
 		},
 		ReadOnlyHint: true,
-	}}, nil, nil)
+	}})
+
 }
 
 func largeToolPayload() map[string]any {

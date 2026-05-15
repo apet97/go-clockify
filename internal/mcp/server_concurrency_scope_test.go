@@ -49,7 +49,7 @@ func TestDispatchMessage_BypassesStdioSemaphore(t *testing.T) {
 		ReadOnlyHint: true,
 	}}
 
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 	srv.initialized.Store(true)
 	srv.MaxInFlightToolCalls = semCap
 	srv.toolCallSem = make(chan struct{}, semCap) // simulate Run having allocated it

@@ -178,7 +178,6 @@ type ToolDescriptor struct {
 
 type Server struct {
 	Version     string
-	Enforcement Enforcement   // nil = no filtering or enforcement
 	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
 	// DefaultProtocolVersion is used only when initialize omits
 	// params.protocolVersion. Empty or unsupported values fall back to
@@ -299,17 +298,16 @@ func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion stri
 	s.initialized.Store(true)
 }
 
-func NewServer(version string, descriptors []ToolDescriptor, enforcement Enforcement, _ ...any) *Server {
+func NewServer(version string, descriptors []ToolDescriptor) *Server {
 	toolMap := make(map[string]ToolDescriptor, len(descriptors))
 	for _, d := range descriptors {
 		toolMap[d.Tool.Name] = d
 	}
 	s := &Server{
-		Version:     version,
-		Enforcement: enforcement,
-		tools:       toolMap,
-		inflight:    make(map[any]context.CancelFunc),
-		prompts:     newPromptRegistry(),
+		Version:  version,
+		tools:    toolMap,
+		inflight: make(map[any]context.CancelFunc),
+		prompts:  newPromptRegistry(),
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
 	return s
@@ -769,9 +767,6 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				data := map[string]any{}
 				if ipe.Pointer != "" {
 					data["pointer"] = ipe.Pointer
-				}
-				if ipe.DidYouMean != "" {
-					data["did_you_mean"] = ipe.DidYouMean
 				}
 				resp.Error = &RPCError{
 					Code:    -32602,

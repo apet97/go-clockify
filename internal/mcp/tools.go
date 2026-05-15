@@ -12,7 +12,6 @@ import (
 
 	"github.com/apet97/go-clockify/internal/jsonschema"
 	"github.com/apet97/go-clockify/internal/metrics"
-	"github.com/apet97/go-clockify/internal/ratelimit"
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
@@ -140,16 +139,7 @@ func (s *Server) buildToolListLocked() []Tool {
 
 	tools := make([]Tool, 0, len(keys))
 	for _, key := range keys {
-		d := s.tools[key]
-		if s.Enforcement != nil && !s.Enforcement.FilterTool(key, ToolHints{
-			ReadOnly:    d.ReadOnlyHint,
-			Destructive: d.DestructiveHint,
-			Idempotent:  d.IdempotentHint,
-			RiskClass:   d.RiskClass,
-		}) {
-			continue
-		}
-		tools = append(tools, d.Tool)
+		tools = append(tools, s.tools[key].Tool)
 	}
 	return tools
 }
@@ -181,10 +171,6 @@ func (s *Server) invalidateToolListCacheLocked() {
 	s.toolListCacheValid = false
 	s.toolListResultJSON = nil
 	s.toolListResultJSONValid = false
-}
-
-func (s *Server) invokeHandler(ctx context.Context, _ string, d ToolDescriptor, args map[string]any, _ ToolHints, _ int64) (any, error) {
-	return d.Handler(ctx, args)
 }
 
 func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, error) {
@@ -223,49 +209,6 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		return nil, err
 	}
 
-	hints := ToolHints{
-		ReadOnly:    d.ReadOnlyHint,
-		Destructive: d.DestructiveHint,
-		Idempotent:  d.IdempotentHint,
-		RiskClass:   d.RiskClass,
-	}
-
-	var release func()
-	if s.Enforcement != nil {
-		lookup := func(name string) (ToolHandler, bool) {
-			s.mu.RLock()
-			td, found := s.tools[name]
-			s.mu.RUnlock()
-			if !found {
-				return nil, false
-			}
-			return td.Handler, true
-		}
-		result, rel, err := s.Enforcement.BeforeCall(ctx, params.Name, params.Arguments, hints, d.Tool.InputSchema, lookup)
-		if rel != nil {
-			release = rel
-			defer release()
-		}
-		if err != nil {
-			var ipe *InvalidParamsError
-			switch {
-			case errors.As(err, &ipe):
-				outcome = "invalid_params"
-			case errors.Is(err, ratelimit.ErrRateLimitExceeded), errors.Is(err, ratelimit.ErrConcurrencyLimitExceeded):
-				outcome = "rate_limited"
-			default:
-				outcome = "tool_error"
-			}
-			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
-			return nil, err
-		}
-		if result != nil {
-			outcome = "dry_run"
-			slog.Info("tool_call", "tool", params.Name, "intercepted", true, "req_id", reqID)
-			return result, nil
-		}
-	}
-
 	start := time.Now()
 	timeout := s.ToolTimeout
 	if timeout <= 0 {
@@ -274,7 +217,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	result, err := s.invokeHandler(callCtx, params.Name, d, params.Arguments, hints, reqID)
+	result, err := d.Handler(callCtx, params.Arguments)
 	duration := time.Since(start)
 	if err != nil {
 		switch {
@@ -292,13 +235,6 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
 
-	if s.Enforcement != nil {
-		processed, err := s.Enforcement.AfterCall(result)
-		if err != nil {
-			return nil, err
-		}
-		result = processed
-	}
 	return result, nil
 }
 

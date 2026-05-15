@@ -45,7 +45,7 @@ func TestStdioDispatch_BoundedConcurrency(t *testing.T) {
 		ReadOnlyHint: true,
 	}}
 
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 	srv.MaxInFlightToolCalls = limit
 
 	var input bytes.Buffer
@@ -148,7 +148,7 @@ func TestStdioDispatch_ContextCancelReleases(t *testing.T) {
 		ReadOnlyHint: true,
 	}}
 
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 	srv.MaxInFlightToolCalls = limit
 
 	var input bytes.Buffer
@@ -212,7 +212,7 @@ func TestStdioDispatch_Unlimited(t *testing.T) {
 		ReadOnlyHint: true,
 	}}
 
-	srv := NewServer("test", descriptors, nil, nil)
+	srv := NewServer("test", descriptors)
 	srv.MaxInFlightToolCalls = 0 // disabled
 
 	var input bytes.Buffer

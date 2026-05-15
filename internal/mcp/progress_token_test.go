@@ -17,7 +17,8 @@ func TestToolsCallExtractsProgressToken(t *testing.T) {
 			Tool:    Tool{Name: "probe", Description: "x", InputSchema: map[string]any{"type": "object"}},
 			Handler: handler,
 		},
-	}, nil, nil)
+	})
+
 	server.initialized.Store(true)
 
 	req := Request{
@@ -53,7 +54,8 @@ func TestToolsCallNoTokenWhenMetaAbsent(t *testing.T) {
 			Tool:    Tool{Name: "probe", Description: "x", InputSchema: map[string]any{"type": "object"}},
 			Handler: handler,
 		},
-	}, nil, nil)
+	})
+
 	server.initialized.Store(true)
 
 	req := Request{

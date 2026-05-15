@@ -11,7 +11,7 @@ func TestInitializeAndToolsList(t *testing.T) {
 	server := NewServer("test", []ToolDescriptor{{
 		Tool:    Tool{Name: "demo_tool", Description: "demo"},
 		Handler: func(context.Context, map[string]any) (any, error) { return map[string]any{"ok": true}, nil },
-	}}, nil, nil)
+	}})
 
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,

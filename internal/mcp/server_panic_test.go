@@ -22,7 +22,7 @@ func TestPanicResponseDoesNotExposePanicValue(t *testing.T) {
 		Handler: func(context.Context, map[string]any) (any, error) {
 			panic("upstream failure containing " + fakeSecret)
 		},
-	}}, nil, nil)
+	}})
 
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,

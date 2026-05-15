@@ -161,7 +161,7 @@ func TestClockifyFixEntryReturnsRecoveryForProtectedTimeEntryStates(t *testing.T
 			defer cleanup()
 
 			svc := New(client, "ws1")
-			server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+			server := mcp.NewServer("test", svc.FullAccessRegistry())
 			initializeServer(t, server)
 			errResult := callToolError(t, server, oneUserToolFixEntry, map[string]any{
 				"entry_id":        "e1",

@@ -15,7 +15,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	exceptions := map[string]string{

@@ -69,7 +69,7 @@ func (s *scopedRecordingNotifier) updates(uri string) int {
 // SetNotifier so each test wires its own notifier set.
 func newScopeTestServer(t *testing.T) *Server {
 	t.Helper()
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	server.ResourceProvider = &stubResourceProvider{}
 	server.initialized.Store(true)
 	return server

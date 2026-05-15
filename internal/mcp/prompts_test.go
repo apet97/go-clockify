@@ -7,7 +7,7 @@ import (
 )
 
 func newPromptsTestServer() *Server {
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	server.initialized.Store(true)
 	return server
 }
@@ -178,7 +178,7 @@ func TestPromptsGetUnknownPromptRejected(t *testing.T) {
 }
 
 func TestInitializeAdvertisesPromptsCapability(t *testing.T) {
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	result := server.handleInitialize(map[string]any{})
 	caps := result["capabilities"].(map[string]any)
 	prompts, ok := caps["prompts"].(map[string]any)

@@ -179,7 +179,8 @@ func TestHandleWithRecover_ReturnsStableEnvelopeOnPanic(t *testing.T) {
 		Handler: func(context.Context, map[string]any) (any, error) {
 			panic("upstream failure containing " + fakeSecret)
 		},
-	}}, nil, nil)
+	}})
+
 	srv.initialized.Store(true)
 
 	resp := srv.HandleWithRecover(context.Background(), Request{
@@ -233,7 +234,8 @@ func TestHandleWithRecover_PassthroughWhenNoPanic(t *testing.T) {
 		Handler: func(context.Context, map[string]any) (any, error) {
 			return map[string]string{"status": "ok"}, nil
 		},
-	}}, nil, nil)
+	}})
+
 	srv.initialized.Store(true)
 
 	resp := srv.HandleWithRecover(context.Background(), Request{

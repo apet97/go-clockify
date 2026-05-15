@@ -62,7 +62,7 @@ func TestFirstSliceInitializeAndToolsList(t *testing.T) {
 	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
-	server := mcp.NewServer("test", svc.FirstSliceRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FirstSliceRegistry())
 
 	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`))
 	if err != nil {
@@ -374,7 +374,7 @@ func TestFirstSliceWritesReturnIDsAndChanges(t *testing.T) {
 
 func TestFirstSliceRecoverableErrorEnvelope(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
-	server := mcp.NewServer("test", svc.FirstSliceRegistry(), nil, nil)
+	server := mcp.NewServer("test", svc.FirstSliceRegistry())
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}

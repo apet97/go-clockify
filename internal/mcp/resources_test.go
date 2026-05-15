@@ -49,7 +49,7 @@ func (r *recordingNotifier) Notify(method string, params any) error {
 }
 
 func newResourceTestServer(provider ResourceProvider) *Server {
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	server.ResourceProvider = provider
 	server.initialized.Store(true)
 	return server
@@ -57,7 +57,7 @@ func newResourceTestServer(provider ResourceProvider) *Server {
 
 func TestInitializeAdvertisesResourcesCapability(t *testing.T) {
 	provider := &stubResourceProvider{}
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	server.ResourceProvider = provider
 
 	result := server.handleInitialize(map[string]any{})
@@ -75,7 +75,7 @@ func TestInitializeAdvertisesResourcesCapability(t *testing.T) {
 }
 
 func TestInitializeOmitsResourcesWhenProviderNil(t *testing.T) {
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	result := server.handleInitialize(map[string]any{})
 	caps := result["capabilities"].(map[string]any)
 	if _, present := caps["resources"]; present {
@@ -159,7 +159,7 @@ func TestResourcesReadMissingURIRejected(t *testing.T) {
 }
 
 func TestResourcesDisabledWhenProviderNil(t *testing.T) {
-	server := NewServer("test", nil, nil, nil)
+	server := NewServer("test", nil)
 	server.initialized.Store(true)
 	resp := server.handle(context.Background(), Request{JSONRPC: "2.0", ID: 1, Method: "resources/list"})
 	if resp.Error == nil || resp.Error.Code != -32601 {

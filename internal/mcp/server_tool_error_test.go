@@ -31,7 +31,7 @@ func TestToolErrorsExposeVerboseMessage(t *testing.T) {
 				verbose: "clockify PUT /workspaces/ws1/invoices/inv1 failed: 403 Forbidden: " + wantBody,
 			}
 		},
-	}}, nil, nil)
+	}})
 
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
@@ -70,7 +70,7 @@ func TestToolErrorSecretCanariesDoNotReachClientOrLogs(t *testing.T) {
 			var out map[string]any
 			return nil, client.Get(ctx, "/user", nil, &out)
 		},
-	}}, nil, nil)
+	}})
 
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`,
@@ -100,7 +100,8 @@ func TestToolsCallTimeoutReturnsStructuredRecoveryEnvelope(t *testing.T) {
 			<-ctx.Done()
 			return nil, ctx.Err()
 		},
-	}}, nil)
+	}})
+
 	server.ToolTimeout = time.Millisecond
 	server.MarkInitialized("2025-11-25", "timeout-test", "test")
 

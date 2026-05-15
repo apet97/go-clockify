@@ -27,7 +27,7 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("live", svc.FullAccessRegistry())
 	initializeServer(t, server)
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
@@ -113,7 +113,7 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("live", svc.FullAccessRegistry())
 	initializeServer(t, server)
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
@@ -148,7 +148,7 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("live", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	runID := cleanDemoRunID(prefix)
@@ -264,7 +264,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live-remaining", svc.FullAccessRegistry(), nil, nil)
+	server := mcp.NewServer("live-remaining", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
 	runID := cleanDemoRunID(prefix)
