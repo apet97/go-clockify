@@ -82,11 +82,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_update` | `domain` | no | no | yes | no | `write` | Update a project by name or ID. |
 | `clockify_projects_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a project by name or ID. |
 | `clockify_projects_archive` | `domain` | no | no | yes | no | `write` | Archive a project by name or ID. |
-| `clockify_projects_rates_update` | `domain` | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. |
+| `clockify_projects_rates_update` | `domain` | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project. |
 | `clockify_tasks_get` | `domain` | yes | no | yes | no | `read` | Get one task by name or ID within a project. |
 | `clockify_tasks_update` | `domain` | no | no | yes | no | `write` | Update a task by name or ID within a project. |
 | `clockify_tasks_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a task by name or ID within a project. |
-| `clockify_tasks_rates_update` | `domain` | no | no | yes | yes | `write`, `billing` | Set a task hourly or cost rate. |
+| `clockify_tasks_rates_update` | `domain` | no | no | yes | yes | `write`, `billing` | Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task. |
 | `clockify_tags_get` | `domain` | yes | no | yes | no | `read` | Get one tag by name or ID. |
 | `clockify_tags_update` | `domain` | no | no | yes | no | `write` | Update a tag by name or ID. |
 | `clockify_tags_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a tag by name or ID. |
@@ -130,7 +130,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_requests_get` | `domain` | yes | no | yes | no | `read` | Get a time off request by policy ID and request ID |
 | `clockify_time_off_requests_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a time off request under a policy. Changes leave balances/approval workflow. |
 | `clockify_time_off_requests_update` | `domain` | no | no | no | no | `write`, `admin` | Update an existing time off request, including approval status when supplied. |
-| `clockify_time_off_requests_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Delete a time off request. Destructive; supports dry_run preview. |
+| `clockify_time_off_requests_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview. |
 | `clockify_time_off_approve` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request and update its approval state. |
 | `clockify_time_off_deny` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request and update its approval state. |
 | `clockify_time_off_policies_list` | `domain` | yes | no | yes | no | `read` | List time off policies for the workspace |
@@ -153,9 +153,9 @@ prefer the documented format on each tool descriptor.
 | `clockify_approvals_withdraw` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Withdraw a submitted or already-approved approval request and update its state. |
 | `clockify_webhooks_list` | `domain` | yes | no | yes | no | `read` | List webhooks in the workspace |
 | `clockify_webhooks_get` | `domain` | yes | no | yes | no | `read` | Get a webhook by ID |
-| `clockify_webhooks_create` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
-| `clockify_webhooks_update` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Update an existing webhook. Supports dry_run:true. |
-| `clockify_webhooks_delete` | `domain` | no | yes | no | yes | `external_side_effect`, `destructive` | Delete a webhook subscription. Destructive; supports dry_run preview. |
+| `clockify_webhooks_create` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook subscription that delivers Clockify events to an external URL. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
+| `clockify_webhooks_update` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Update an existing webhook subscription. Changes affect every future outbound delivery to the configured URL. Supports dry_run:true. |
+| `clockify_webhooks_delete` | `domain` | no | yes | no | yes | `external_side_effect`, `destructive` | Permanently delete a webhook subscription. Destructive: stops all future outbound deliveries to the configured URL. Supports dry_run preview. |
 | `clockify_webhooks_test` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
 | `clockify_webhooks_events` | `domain` | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | `domain` | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |

@@ -287,7 +287,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			args["archived"] = true
 			return s.UpdateProject(ctx, args)
 		}),
-		nativeDomainTool(41, toolRWIdem("clockify_projects_rates_update", "Set a project member hourly or cost rate.", objectSchema(map[string]any{"required": []string{"project_id", "user_id", "rate_kind", "amount"}, "properties": map[string]any{
+		nativeDomainTool(41, toolRWIdem("clockify_projects_rates_update", "Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project.", objectSchema(map[string]any{"required": []string{"project_id", "user_id", "rate_kind", "amount"}, "properties": map[string]any{
 			"project_id": map[string]any{"type": "string"},
 			"user_id":    map[string]any{"type": "string"},
 			"rate_kind":  map[string]any{"type": "string", "enum": []string{"hourly", "cost"}},
@@ -333,7 +333,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "task", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.DeleteTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),
-		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount"}, "properties": map[string]any{
+		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string"},
 			"task":       map[string]any{"type": "string", "description": "Task name or ID."},

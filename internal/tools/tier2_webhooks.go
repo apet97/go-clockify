@@ -50,7 +50,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 3. Create webhook (RW)
 		{
-			Tool: toolRW("clockify_create_webhook", "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.", map[string]any{
+			Tool: toolRW("clockify_create_webhook", "Create a new webhook subscription that delivers Clockify events to an external URL. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.", map[string]any{
 				"type":     "object",
 				"required": []string{"name", "url", "webhook_event"},
 				"properties": map[string]any{
@@ -84,7 +84,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 4. Update webhook (RW)
 		{
-			Tool: toolRW("clockify_update_webhook", "Update an existing webhook. Supports dry_run:true.", map[string]any{
+			Tool: toolRW("clockify_update_webhook", "Update an existing webhook subscription. Changes affect every future outbound delivery to the configured URL. Supports dry_run:true.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{
@@ -119,7 +119,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 5. Delete webhook (destructive)
 		{
-			Tool: toolDestructive("clockify_delete_webhook", "Delete a webhook subscription. Destructive; supports dry_run preview.", map[string]any{
+			Tool: toolDestructive("clockify_delete_webhook", "Permanently delete a webhook subscription. Destructive: stops all future outbound deliveries to the configured URL. Supports dry_run preview.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{

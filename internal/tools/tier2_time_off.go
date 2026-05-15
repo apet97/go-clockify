@@ -82,7 +82,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 5. clockify_delete_time_off_request (destructive)
 		{
 			Tool: toolDestructive("clockify_delete_time_off_request",
-				"Delete a time off request. Destructive; supports dry_run preview.",
+				"Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},

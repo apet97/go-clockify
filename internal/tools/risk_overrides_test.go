@@ -2,6 +2,7 @@ package tools
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -160,6 +161,77 @@ func TestRiskOverridesMarkSensitiveReads(t *testing.T) {
 	for _, name := range tests {
 		assertToolRiskClass(t, registry, name, mcp.RiskRead|mcp.RiskSensitiveRead)
 	}
+}
+
+// TestHighRiskToolDescriptionsSignalSideEffects pins the agent-facing UX
+// contract: every high-risk tool description must surface at least one
+// keyword per active risk bit so callers can decide intent without
+// inspecting the riskClass annotation. Keyword sets are intentionally
+// generous to allow rephrasing, but each bit must have *some* signal.
+func TestHighRiskToolDescriptionsSignalSideEffects(t *testing.T) {
+	keywords := map[mcp.RiskClass][]string{
+		mcp.RiskBilling: {
+			"bill", "invoice", "expense", "payment", "rate ",
+			"balance", "money", "pto", "accrual", "currency",
+		},
+		mcp.RiskAdmin: {
+			"admin", "workspace", "policy", "membership",
+			"custom field", "user group", "approval", "approve",
+			"deny", "reject", "withdraw", "resubmit", "invite",
+			"deactivat", "role", "permission", "submit",
+			"holiday",
+		},
+		mcp.RiskPermissionChange: {
+			"permission", "role", "approval", "approve", "deny",
+			"reject", "withdraw", "resubmit", "membership",
+			"invite", "remove", "add a user",
+		},
+		mcp.RiskExternalSideEffect: {
+			"external", "email", "outbound", "deliver", "send",
+			"test ", "invite",
+		},
+		mcp.RiskDestructive: {
+			"delete", "remove", "permanent", "destructive",
+		},
+	}
+
+	type bit struct {
+		mask mcp.RiskClass
+		name string
+	}
+	highBits := []bit{
+		{mcp.RiskBilling, "RiskBilling"},
+		{mcp.RiskAdmin, "RiskAdmin"},
+		{mcp.RiskPermissionChange, "RiskPermissionChange"},
+		{mcp.RiskExternalSideEffect, "RiskExternalSideEffect"},
+		{mcp.RiskDestructive, "RiskDestructive"},
+	}
+
+	registry := riskTestRegistry(t)
+	for name, descriptor := range registry {
+		if !descriptor.RiskClass.IsHighRisk() {
+			continue
+		}
+		desc := strings.ToLower(descriptor.Tool.Description)
+		for _, b := range highBits {
+			if !descriptor.RiskClass.Has(b.mask) {
+				continue
+			}
+			if !containsAnyKeyword(desc, keywords[b.mask]) {
+				t.Errorf("%s carries %s but description lacks any matching keyword (one of %v): %q",
+					name, b.name, keywords[b.mask], descriptor.Tool.Description)
+			}
+		}
+	}
+}
+
+func containsAnyKeyword(haystack string, needles []string) bool {
+	for _, n := range needles {
+		if strings.Contains(haystack, n) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRiskOverridesKeysAreExposedOneUserTools(t *testing.T) {

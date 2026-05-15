@@ -17978,7 +17978,7 @@
     },
     {
       "name": "clockify_projects_rates_update",
-      "description": "Set a project member hourly or cost rate.",
+      "description": "Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -19910,7 +19910,7 @@
     },
     {
       "name": "clockify_tasks_rates_update",
-      "description": "Set a task hourly or cost rate.",
+      "description": "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -33662,7 +33662,7 @@
     },
     {
       "name": "clockify_time_off_requests_delete",
-      "description": "Delete a time off request. Destructive; supports dry_run preview.",
+      "description": "Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -39905,7 +39905,7 @@
     },
     {
       "name": "clockify_webhooks_create",
-      "description": "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.",
+      "description": "Create a new webhook subscription that delivers Clockify events to an external URL. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -40204,7 +40204,7 @@
     },
     {
       "name": "clockify_webhooks_update",
-      "description": "Update an existing webhook. Supports dry_run:true.",
+      "description": "Update an existing webhook subscription. Changes affect every future outbound delivery to the configured URL. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -40506,7 +40506,7 @@
     },
     {
       "name": "clockify_webhooks_delete",
-      "description": "Delete a webhook subscription. Destructive; supports dry_run preview.",
+      "description": "Permanently delete a webhook subscription. Destructive: stops all future outbound deliveries to the configured URL. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
