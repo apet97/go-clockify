@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -21,9 +22,12 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 		return ResultEnvelope{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
-	query := tagListQuery(args, page, pageSize)
+	query, err := tagListQueryValues(args, page, pageSize)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	var out []clockify.Tag
-	if err := s.Client.Get(ctx, path, query, &out); err != nil {
+	if err := s.Client.GetValues(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
 	meta := addPaginationMeta(map[string]any{
@@ -42,9 +46,18 @@ func tagListQuery(args map[string]any, page, pageSize int) map[string]string {
 	}
 	addStringQuery(query, args, "name", "name")
 	addBoolQuery(query, args, "archived", "archived")
+	addBoolQuery(query, args, "strict_name_search", "strict-name-search")
 	addStringQuery(query, args, "sort_column", "sort-column")
 	addStringQuery(query, args, "sort_order", "sort-order")
 	return query
+}
+
+func tagListQueryValues(args map[string]any, page, pageSize int) (url.Values, error) {
+	values := valuesFromQueryMap(tagListQuery(args, page, pageSize))
+	if err := addRepeatedStringQuery(values, args, "excluded_ids", "excluded-ids"); err != nil {
+		return nil, err
+	}
+	return values, nil
 }
 
 func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

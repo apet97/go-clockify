@@ -96,6 +96,15 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 		"page":      strconv.Itoa(page),
 		"page-size": strconv.Itoa(pageSize),
 	}
+	addStringQuery(query, args, "email", "email")
+	addStringQuery(query, args, "project_id", "project-id")
+	addStringQuery(query, args, "status", "status")
+	addStringQuery(query, args, "account_statuses", "account-statuses")
+	addStringQuery(query, args, "name", "name")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
+	addStringQuery(query, args, "memberships", "memberships")
+	addBoolQuery(query, args, "include_roles", "include-roles")
 	var users []clockify.User
 	if err := s.Client.Get(ctx, path, query, &users); err != nil {
 		return ResultEnvelope{}, err

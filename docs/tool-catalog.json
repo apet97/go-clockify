@@ -10692,6 +10692,12 @@
           "archived": {
             "type": "boolean"
           },
+          "excluded_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "name": {
             "maxLength": 150,
             "type": "string"
@@ -10714,6 +10720,9 @@
           "sort_order": {
             "description": "Clockify sort-order query value.",
             "type": "string"
+          },
+          "strict_name_search": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -22877,6 +22886,30 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "account_statuses": {
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 254,
+            "type": "string"
+          },
+          "include_roles": {
+            "type": "boolean"
+          },
+          "memberships": {
+            "enum": [
+              "ALL",
+              "NONE",
+              "WORKSPACE",
+              "PROJECT",
+              "USERGROUP"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -22887,6 +22920,38 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "sort_column": {
+            "enum": [
+              "ID",
+              "EMAIL",
+              "NAME",
+              "NAME_LOWERCASE",
+              "ACCESS",
+              "HOURLYRATE",
+              "COSTRATE"
+            ],
+            "type": "string"
+          },
+          "sort_order": {
+            "enum": [
+              "ASCENDING",
+              "DESCENDING"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "ACTIVE",
+              "DECLINED",
+              "INACTIVE",
+              "ALL"
+            ],
+            "type": "string"
           }
         },
         "type": "object"

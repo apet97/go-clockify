@@ -386,7 +386,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"dry_run":  map[string]any{"type": "boolean"},
 		}})), "entry", "deleted", s.DeleteEntry),
 
-		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace.", paginationSchema(nil)), "user", "", s.ListUsers),
+		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace.", userListSchema()), "user", "", s.ListUsers),
 		nativeDomainTool(1101, toolRO("clockify_users_profile", "Get the current Clockify user.", objectSchema(nil)), "user", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
 			return s.CurrentUser(ctx)
 		}),
@@ -394,6 +394,20 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			return s.GetWorkspace(ctx)
 		}),
 	}
+}
+
+func userListSchema() map[string]any {
+	return paginationSchema(map[string]any{"properties": map[string]any{
+		"email":            map[string]any{"type": "string"},
+		"project_id":       map[string]any{"type": "string"},
+		"status":           map[string]any{"type": "string", "enum": []string{"PENDING", "ACTIVE", "DECLINED", "INACTIVE", "ALL"}},
+		"account_statuses": map[string]any{"type": "string"},
+		"name":             map[string]any{"type": "string"},
+		"sort_column":      map[string]any{"type": "string", "enum": []string{"ID", "EMAIL", "NAME", "NAME_LOWERCASE", "ACCESS", "HOURLYRATE", "COSTRATE"}},
+		"sort_order":       map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
+		"memberships":      map[string]any{"type": "string", "enum": []string{"ALL", "NONE", "WORKSPACE", "PROJECT", "USERGROUP"}},
+		"include_roles":    map[string]any{"type": "boolean"},
+	}})
 }
 
 func (s *Service) nativeAliasDescriptors() []mcp.ToolDescriptor {
@@ -830,7 +844,7 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 		}
 	}
 	add([]mcp.ToolDescriptor{
-		{Tool: toolRO("clockify_users_list", "List users in the pinned workspace.", paginationSchema(nil)), Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_users_list", "List users in the pinned workspace.", userListSchema()), Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListUsers(ctx, args)
 		}},
 		{Tool: toolRO("clockify_users_profile", "Get the current Clockify user.", map[string]any{"type": "object"}), Handler: func(ctx context.Context, _ map[string]any) (any, error) {

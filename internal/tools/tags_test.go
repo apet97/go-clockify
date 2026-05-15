@@ -36,7 +36,7 @@ func TestTagListSchemaProperties(t *testing.T) {
 		if !ok {
 			t.Fatalf("clockify_tags_list properties = %T", d.Tool.InputSchema["properties"])
 		}
-		for _, prop := range []string{"page", "page_size", "name", "archived", "sort_column", "sort_order"} {
+		for _, prop := range []string{"page", "page_size", "name", "strict_name_search", "excluded_ids", "archived", "sort_column", "sort_order"} {
 			if _, ok := props[prop]; !ok {
 				t.Fatalf("clockify_tags_list missing property %s", prop)
 			}
@@ -53,17 +53,21 @@ func TestListTagsFiltersForwarded(t *testing.T) {
 		}
 		q := r.URL.Query()
 		want := map[string]string{
-			"name":        "billable",
-			"archived":    "true",
-			"sort-column": "NAME",
-			"sort-order":  "ASCENDING",
-			"page":        "2",
-			"page-size":   "50",
+			"name":               "billable",
+			"archived":           "true",
+			"strict-name-search": "true",
+			"sort-column":        "NAME",
+			"sort-order":         "ASCENDING",
+			"page":               "2",
+			"page-size":          "50",
 		}
 		for key, value := range want {
 			if got := q.Get(key); got != value {
 				t.Fatalf("query %s = %q, want %q (raw=%s)", key, got, value, r.URL.RawQuery)
 			}
+		}
+		if got := q["excluded-ids"]; len(got) != 2 || got[0] != "tag-a" || got[1] != "tag-b" {
+			t.Fatalf("query excluded-ids = %#v, want [tag-a tag-b] (raw=%s)", got, r.URL.RawQuery)
 		}
 		respondJSON(t, w, []clockify.Tag{{ID: testTagID, Name: "billable", Archived: true}})
 	})
@@ -71,12 +75,14 @@ func TestListTagsFiltersForwarded(t *testing.T) {
 
 	svc := New(client, "ws1")
 	if _, err := svc.ListTags(context.Background(), map[string]any{
-		"name":        "billable",
-		"archived":    true,
-		"sort_column": "NAME",
-		"sort_order":  "ASCENDING",
-		"page":        2,
-		"page_size":   50,
+		"name":               "billable",
+		"archived":           true,
+		"strict_name_search": true,
+		"excluded_ids":       []string{"tag-a", "tag-b"},
+		"sort_column":        "NAME",
+		"sort_order":         "ASCENDING",
+		"page":               2,
+		"page_size":          50,
 	}); err != nil {
 		t.Fatalf("ListTags: %v", err)
 	}
@@ -89,17 +95,21 @@ func TestTagsListWrapperFiltersForwarded(t *testing.T) {
 		}
 		q := r.URL.Query()
 		want := map[string]string{
-			"name":        "billable",
-			"archived":    "true",
-			"sort-column": "NAME",
-			"sort-order":  "ASCENDING",
-			"page":        "2",
-			"page-size":   "50",
+			"name":               "billable",
+			"archived":           "true",
+			"strict-name-search": "true",
+			"sort-column":        "NAME",
+			"sort-order":         "ASCENDING",
+			"page":               "2",
+			"page-size":          "50",
 		}
 		for key, value := range want {
 			if got := q.Get(key); got != value {
 				t.Fatalf("query %s = %q, want %q (raw=%s)", key, got, value, r.URL.RawQuery)
 			}
+		}
+		if got := q["excluded-ids"]; len(got) != 2 || got[0] != "tag-a" || got[1] != "tag-b" {
+			t.Fatalf("query excluded-ids = %#v, want [tag-a tag-b] (raw=%s)", got, r.URL.RawQuery)
 		}
 		respondJSON(t, w, []clockify.Tag{{ID: testTagID, Name: "billable", Archived: true}})
 	})
@@ -107,12 +117,14 @@ func TestTagsListWrapperFiltersForwarded(t *testing.T) {
 
 	svc := New(client, "ws1")
 	if _, err := svc.TagsList(context.Background(), map[string]any{
-		"name":        "billable",
-		"archived":    true,
-		"sort_column": "NAME",
-		"sort_order":  "ASCENDING",
-		"page":        2,
-		"page_size":   50,
+		"name":               "billable",
+		"archived":           true,
+		"strict_name_search": true,
+		"excluded_ids":       []string{"tag-a", "tag-b"},
+		"sort_column":        "NAME",
+		"sort_order":         "ASCENDING",
+		"page":               2,
+		"page_size":          50,
 	}); err != nil {
 		t.Fatalf("TagsList: %v", err)
 	}

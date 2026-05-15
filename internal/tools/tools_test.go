@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -2280,23 +2281,84 @@ func TestListEntriesProjectFilterPaginatesFilteredResults(t *testing.T) {
 
 // TestListUsersPagination covers the users handler and its pagination contract.
 func TestListUsersPagination(t *testing.T) {
-	var gotPage string
+	var gotQuery url.Values
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/workspaces/ws1/users" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		gotPage = r.URL.Query().Get("page")
+		gotQuery = r.URL.Query()
 		respondJSON(t, w, []clockify.User{{ID: "u1", Name: "Alice"}})
 	})
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	_, err := svc.ListUsers(context.Background(), map[string]any{"page": 3})
+	_, err := svc.ListUsers(context.Background(), map[string]any{
+		"page":             3,
+		"page_size":        25,
+		"email":            "alice@example.test",
+		"project_id":       "p1",
+		"status":           "ACTIVE",
+		"account_statuses": "ACTIVE,PENDING_EMAIL_VERIFICATION",
+		"name":             "Alice",
+		"sort_column":      "NAME",
+		"sort_order":       "ASCENDING",
+		"memberships":      "ALL",
+		"include_roles":    false,
+	})
 	if err != nil {
 		t.Fatalf("list users failed: %v", err)
 	}
-	if gotPage != "3" {
-		t.Fatalf("expected page=3, got %s", gotPage)
+	want := map[string]string{
+		"page":             "3",
+		"page-size":        "25",
+		"email":            "alice@example.test",
+		"project-id":       "p1",
+		"status":           "ACTIVE",
+		"account-statuses": "ACTIVE,PENDING_EMAIL_VERIFICATION",
+		"name":             "Alice",
+		"sort-column":      "NAME",
+		"sort-order":       "ASCENDING",
+		"memberships":      "ALL",
+		"include-roles":    "false",
+	}
+	for key, value := range want {
+		if got := gotQuery.Get(key); got != value {
+			t.Fatalf("expected %s=%q, got %q in query %s", key, value, got, gotQuery.Encode())
+		}
+	}
+}
+
+func TestListUsersSchemaExposesOpenAPIFilters(t *testing.T) {
+	schema := userListSchema()
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected schema properties, got %T", schema["properties"])
+	}
+	for _, name := range []string{
+		"email",
+		"project_id",
+		"status",
+		"account_statuses",
+		"name",
+		"sort_column",
+		"sort_order",
+		"memberships",
+		"include_roles",
+		"page",
+		"page_size",
+	} {
+		if _, ok := props[name]; !ok {
+			t.Fatalf("expected schema property %q in %+v", name, props)
+		}
+	}
+	for _, name := range []string{"include_roles"} {
+		prop, ok := props[name].(map[string]any)
+		if !ok {
+			t.Fatalf("expected %s property map, got %T", name, props[name])
+		}
+		if prop["type"] != "boolean" {
+			t.Fatalf("expected %s boolean schema, got %+v", name, prop)
+		}
 	}
 }
 

@@ -179,10 +179,12 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 		})), s.TasksCreate),
 		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace.", paginationSchema(map[string]any{
 			"properties": map[string]any{
-				"name":        map[string]any{"type": "string"},
-				"archived":    map[string]any{"type": "boolean"},
-				"sort_column": map[string]any{"type": "string", "description": "Clockify sort-column query value."},
-				"sort_order":  map[string]any{"type": "string", "description": "Clockify sort-order query value."},
+				"name":               map[string]any{"type": "string"},
+				"strict_name_search": map[string]any{"type": "boolean"},
+				"excluded_ids":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+				"archived":           map[string]any{"type": "boolean"},
+				"sort_column":        map[string]any{"type": "string", "description": "Clockify sort-column query value."},
+				"sort_order":         map[string]any{"type": "string", "description": "Clockify sort-order query value."},
 			},
 		})), s.TagsList),
 		firstSliceDescriptor(51, toolRW("clockify_tags_create", "Create a tag in the pinned workspace.", objectSchema(map[string]any{
@@ -1314,7 +1316,11 @@ func (s *Service) listTags(ctx context.Context, args map[string]any) ([]clockify
 		return nil, 0, 0, err
 	}
 	var out []clockify.Tag
-	err = s.Client.Get(ctx, path, tagListQuery(args, page, pageSize), &out)
+	values, err := tagListQueryValues(args, page, pageSize)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	err = s.Client.GetValues(ctx, path, values, &out)
 	return out, page, pageSize, err
 }
 
