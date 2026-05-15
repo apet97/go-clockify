@@ -39,23 +39,3 @@ func BenchmarkParseDatetime(b *testing.B) {
 		i++
 	}
 }
-
-// BenchmarkParseDuration covers the second hot path — every duration
-// argument (entry length, time-off duration, billable rate window)
-// routes through this function before hitting the Clockify client.
-func BenchmarkParseDuration(b *testing.B) {
-	corpus := []string{
-		"PT1H",
-		"PT30M",
-		"PT1H30M",
-		"P1D",
-		"P1DT2H",
-	}
-	b.ReportAllocs()
-	i := 0
-	for b.Loop() {
-		input := corpus[i%len(corpus)]
-		_, _ = ParseDuration(input)
-		i++
-	}
-}

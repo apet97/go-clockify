@@ -255,84 +255,6 @@ func TestParseDatetimeRespectsLocalTimezoneAcrossDSTBoundaries(t *testing.T) {
 	}
 }
 
-func TestParseDuration(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   string
-		want    time.Duration
-		wantErr bool
-	}{
-		{
-			name:  "ISO PT1H30M",
-			input: "PT1H30M",
-			want:  1*time.Hour + 30*time.Minute,
-		},
-		{
-			name:  "ISO PT45M",
-			input: "PT45M",
-			want:  45 * time.Minute,
-		},
-		{
-			name:  "ISO PT2H",
-			input: "PT2H",
-			want:  2 * time.Hour,
-		},
-		{
-			name:  "ISO PT1H30M15S",
-			input: "PT1H30M15S",
-			want:  1*time.Hour + 30*time.Minute + 15*time.Second,
-		},
-		{
-			name:  "Go format 2h30m",
-			input: "2h30m",
-			want:  2*time.Hour + 30*time.Minute,
-		},
-		{
-			name:  "Go format 45m",
-			input: "45m",
-			want:  45 * time.Minute,
-		},
-		{
-			name:    "empty",
-			input:   "",
-			wantErr: true,
-		},
-		{
-			name:    "garbage",
-			input:   "garbage",
-			wantErr: true,
-		},
-		{
-			name:  "ISO lowercase pt1h",
-			input: "pt1h",
-			want:  1 * time.Hour,
-		},
-		{
-			name:  "ISO seconds only",
-			input: "PT30S",
-			want:  30 * time.Second,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := ParseDuration(tc.input)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected error for input %q, got %v", tc.input, got)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error for input %q: %v", tc.input, err)
-			}
-			if got != tc.want {
-				t.Errorf("ParseDuration(%q) = %v, want %v", tc.input, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestFormatISO(t *testing.T) {
 	input := time.Date(2026, 4, 1, 14, 30, 0, 0, time.UTC)
 	got := FormatISO(input)
@@ -383,42 +305,6 @@ func TestParseTimeOfDay(t *testing.T) {
 			if h != tc.wantH || m != tc.wantM || s != tc.wantS {
 				t.Errorf("parseTimeOfDay(%q) = (%d,%d,%d), want (%d,%d,%d)",
 					tc.input, h, m, s, tc.wantH, tc.wantM, tc.wantS)
-			}
-		})
-	}
-}
-
-func TestParseISO8601Duration(t *testing.T) {
-	tests := []struct {
-		input   string
-		want    time.Duration
-		wantErr bool
-	}{
-		{"PT1H", 1 * time.Hour, false},
-		{"PT30M", 30 * time.Minute, false},
-		{"PT1H30M", 1*time.Hour + 30*time.Minute, false},
-		{"PT1H30M15S", 1*time.Hour + 30*time.Minute + 15*time.Second, false},
-		{"pt2h", 2 * time.Hour, false},
-		{"PT", 0, true},   // no components
-		{"PT5", 0, true},  // trailing digits
-		{"P1H", 0, true},  // missing T
-		{"PTxH", 0, true}, // non-numeric
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			got, err := parseISO8601Duration(tc.input)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected error for %q, got %v", tc.input, got)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error for %q: %v", tc.input, err)
-			}
-			if got != tc.want {
-				t.Errorf("parseISO8601Duration(%q) = %v, want %v", tc.input, got, tc.want)
 			}
 		})
 	}

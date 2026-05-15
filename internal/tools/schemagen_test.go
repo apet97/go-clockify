@@ -178,7 +178,7 @@ func TestSchemaFor_Struct(t *testing.T) {
 // TestEnvelopeSchemaFor verifies the wrapper shape is stable: ok/action/data
 // always present, action bound as const, data filled from schemaFor[T].
 func TestEnvelopeSchemaFor(t *testing.T) {
-	got := envelopeSchemaFor[SummaryData]("clockify_reports_summary")
+	got := envelopeSchemaFor[QuickReportData]("clockify_reports_summary")
 	if got["type"] != "object" {
 		t.Fatalf("type = %v", got["type"])
 	}

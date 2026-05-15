@@ -120,26 +120,6 @@ func ParseDatetime(s string, loc *time.Location) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unrecognized datetime format: %q", s)
 }
 
-// ParseDuration parses a duration string in either ISO 8601 (PT...) format
-// or Go duration format (e.g. "2h30m", "45m").
-func ParseDuration(s string) (time.Duration, error) {
-	if s == "" {
-		return 0, fmt.Errorf("empty duration string")
-	}
-
-	// ISO 8601 duration
-	if strings.HasPrefix(strings.ToUpper(s), "PT") {
-		return parseISO8601Duration(s)
-	}
-
-	// Go stdlib duration
-	d, err := time.ParseDuration(s)
-	if err != nil {
-		return 0, fmt.Errorf("unrecognized duration format: %q", s)
-	}
-	return d, nil
-}
-
 // FormatISO formats a time as an RFC3339 / ISO 8601 string in UTC.
 func FormatISO(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
@@ -180,60 +160,6 @@ func parseTimeOfDay(s string) (int, int, int, error) {
 	}
 
 	return hour, min, sec, nil
-}
-
-// parseISO8601Duration parses a "PT..." duration string such as "PT1H30M",
-// "PT45M", "PT2H", or "PT1H30M15S".
-func parseISO8601Duration(s string) (time.Duration, error) {
-	upper := strings.ToUpper(s)
-	if len(upper) < 3 || upper[:2] != "PT" {
-		return 0, fmt.Errorf("ISO 8601 duration must start with PT: %q", s)
-	}
-
-	rest := upper[2:]
-	var total time.Duration
-	var numBuf strings.Builder
-
-	for i := 0; i < len(rest); i++ {
-		ch := rest[i]
-		switch {
-		case ch >= '0' && ch <= '9':
-			numBuf.WriteByte(ch)
-		case ch == 'H':
-			n, err := strconv.Atoi(numBuf.String())
-			if err != nil || numBuf.Len() == 0 {
-				return 0, fmt.Errorf("invalid hours in duration %q", s)
-			}
-			total += time.Duration(n) * time.Hour
-			numBuf.Reset()
-		case ch == 'M':
-			n, err := strconv.Atoi(numBuf.String())
-			if err != nil || numBuf.Len() == 0 {
-				return 0, fmt.Errorf("invalid minutes in duration %q", s)
-			}
-			total += time.Duration(n) * time.Minute
-			numBuf.Reset()
-		case ch == 'S':
-			n, err := strconv.Atoi(numBuf.String())
-			if err != nil || numBuf.Len() == 0 {
-				return 0, fmt.Errorf("invalid seconds in duration %q", s)
-			}
-			total += time.Duration(n) * time.Second
-			numBuf.Reset()
-		default:
-			return 0, fmt.Errorf("unexpected character %q in duration %q", string(ch), s)
-		}
-	}
-
-	if numBuf.Len() > 0 {
-		return 0, fmt.Errorf("trailing digits without unit in duration %q", s)
-	}
-
-	if total == 0 {
-		return 0, fmt.Errorf("zero or empty duration %q", s)
-	}
-
-	return total, nil
 }
 
 func isDigit(b byte) bool {

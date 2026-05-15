@@ -165,14 +165,6 @@ type ResultEnvelope struct {
 	Meta   map[string]any `json:"meta,omitempty"`
 }
 
-// WorkspaceContext is the lightweight envelope returned by
-// clockify_workspace_settings when the caller only needs the resolved
-// workspace identifier (full workspace details live behind
-// clockify_workspace_settings).
-type WorkspaceContext struct {
-	WorkspaceID string `json:"workspaceId"`
-}
-
 // WeeklySummaryData is the structured payload for clockify_weekly_
 // summary: a date range, total counts, per-day and per-project rollups,
 // suggested follow-up actions for the agent, and (optionally) the raw
@@ -188,17 +180,6 @@ type WeeklySummaryData struct {
 	UnassignedKey    string               `json:"unassignedKey,omitempty"`
 }
 
-// SummaryData is the structured payload for clockify_reports_summary
-// and clockify_reports_detailed: per-project rollups plus optional raw
-// entries. The WeeklySummaryData variant adds a per-day axis on top.
-type SummaryData struct {
-	Range            DateRange            `json:"range"`
-	Totals           SummaryTotals        `json:"totals"`
-	ByProject        []ProjectSummary     `json:"byProject"`
-	SuggestedActions []ToolSuggestion     `json:"suggestedActions"`
-	Entries          []clockify.TimeEntry `json:"entries,omitempty"`
-}
-
 // QuickReportData powers clockify_reports_summary: a single-glance
 // snapshot with totals, the top project, any running entries, and a
 // short entry sample so an agent can answer "what did I just do?"
@@ -211,12 +192,6 @@ type QuickReportData struct {
 	EntriesSample       []EntryView      `json:"entriesSample,omitempty"`
 	ProjectsRepresented int              `json:"projectsRepresented"`
 	SuggestedActions    []ToolSuggestion `json:"suggestedActions"`
-}
-
-type TimerStatusData struct {
-	Running bool       `json:"running"`
-	Entry   *EntryView `json:"entry,omitempty"`
-	Elapsed string     `json:"elapsed,omitempty"`
 }
 
 // FindAndUpdateEntryData is the structured payload for
@@ -269,8 +244,8 @@ type SummaryTotals struct {
 	TotalHours     float64 `json:"totalHours"`
 }
 
-// ProjectSummary is the per-project rollup row used by SummaryData and
-// WeeklySummaryData. ProjectID is omitempty so entries that did not
+// ProjectSummary is the per-project rollup row used by WeeklySummaryData
+// and QuickReportData. ProjectID is omitempty so entries that did not
 // resolve to a project (e.g. tracked with no project tag) still appear
 // in the rollup keyed only by ProjectName.
 type ProjectSummary struct {

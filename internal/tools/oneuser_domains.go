@@ -1614,5 +1614,3 @@ func rawChange(method string) string {
 		return ""
 	}
 }
-
-var _ = clockify.RawResponse{}
