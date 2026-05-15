@@ -1,5 +1,9 @@
 # Operator upgrade checklist
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This is the flow for upgrading `clockify-mcp` between releases or
 moving between deployment profiles. It covers every change that
 can silently alter request semantics — config keys, policy modes,

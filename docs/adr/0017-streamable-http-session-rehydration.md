@@ -1,5 +1,9 @@
 # 0017 - Streamable-HTTP session rehydration on cross-pod failover
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 ## Status
 
 Accepted — 2026-05-02 (commits `eb5351c` failing-first test +

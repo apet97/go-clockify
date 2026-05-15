@@ -1,5 +1,9 @@
 # Legacy HTTP EOL
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This runbook covers the deprecated POST-only `MCP_TRANSPORT=http`
 transport. New HTTP deployments should use `streamable_http` at
 `/mcp`.

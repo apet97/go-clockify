@@ -1,5 +1,9 @@
 # Claude Code Opus 4.7 Prompts — Remaining Launch Work
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 > **Historical / operator handoff material.** This file is the prompt
 > packet that was used to launch the 2026-05-09 multi-lane Claude Code
 > Opus 4.7 work — lanes 1, 4, and 5 ran from these prompts and landed

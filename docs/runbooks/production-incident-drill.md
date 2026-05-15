@@ -1,5 +1,9 @@
 # Production incident drill
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 A deliberately adversarial exercise that stacks multiple
 failure modes simultaneously and asks the operator to bring
 the service back to a known-good state inside an RTO window.

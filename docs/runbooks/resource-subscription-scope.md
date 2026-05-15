@@ -1,5 +1,9 @@
 # Resource subscription scope
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 `notifications/resources/updated` is delivered **per subscribed stream**,
 not broadcast to every connected stream sharing the same `*mcp.Server`.
 Other server-initiated notifications (`notifications/tools/list_changed`,

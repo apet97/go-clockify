@@ -1,5 +1,9 @@
 # Future: end-to-end trace correlation (MCP → Clockify)
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Status: **stub / not implemented**. This document is a placeholder
 for a future wave. It captures the shape of the work so the next
 observability pass doesn't have to start from a blank page, but

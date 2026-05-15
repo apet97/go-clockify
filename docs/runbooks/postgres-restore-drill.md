@@ -1,5 +1,9 @@
 # Runbook: Postgres Restore Drill
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This runbook describes the procedure for a periodic database restore drill to ensure data integrity and recovery readiness.
 
 ## Objective

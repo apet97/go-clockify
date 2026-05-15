@@ -1,5 +1,9 @@
 # 0009 - Resource delta-sync subscriptions
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 ## Status
 
 Accepted — landed across W3-03a..f (`5fcdfaa`, `ffb2f8c`, `693d22f`,

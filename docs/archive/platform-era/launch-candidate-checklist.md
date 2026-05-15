@@ -1,5 +1,9 @@
 # Launch Candidate Checklist
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 The pre-flight gate to take `clockify-mcp` from "community MCP
 ready / internal-support alpha" to a launch-candidate package for
 official-product review. This is **additive** to the existing

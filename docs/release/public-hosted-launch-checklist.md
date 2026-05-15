@@ -1,5 +1,9 @@
 # Archived Public Hosted Launch Checklist
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This hosted launch checklist is historical only and is not part of the active
 one-user product path.
 

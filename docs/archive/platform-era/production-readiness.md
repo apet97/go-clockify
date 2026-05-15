@@ -1,5 +1,9 @@
 # Production readiness
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This is the single page a platform-team reviewer should need to
 answer "is this ready for production deployment in our environment?"
 Every section below is a one-paragraph summary plus a link to the

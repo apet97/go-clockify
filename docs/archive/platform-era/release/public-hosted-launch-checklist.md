@@ -1,5 +1,9 @@
 # Public Hosted Launch Checklist
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 The pre-flight gates for taking a clockify-mcp deployment from
 "works on my cluster" to "accepting traffic from clients we don't
 control." Run through every section before opening the front door.

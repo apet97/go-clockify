@@ -1,5 +1,9 @@
 # Internal Test Posture
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Use this page when running `clockify-mcp` locally with an owner-level
 Clockify API key. It describes what the local `stdio` profile protects
 by default, what changes when `CLOCKIFY_POLICY` is widened, and which

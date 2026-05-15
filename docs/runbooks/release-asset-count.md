@@ -1,5 +1,9 @@
 # Runbook — release asset count mismatch
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 You are here because `scripts/check-release-assets.sh` failed inside
 `release.yml` between the `Run goreleaser` step and the subsequent
 staging / attestation / npm steps. The release has NOT been tagged

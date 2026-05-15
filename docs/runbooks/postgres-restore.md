@@ -1,5 +1,9 @@
 # Postgres Backup and Restore Runbook
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This runbook outlines the exact commands to take a Postgres backup from a production environment and restore it into a fresh staging namespace to confirm tenants, sessions, and audit history can be read.
 
 ## Prerequisites

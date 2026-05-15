@@ -1,5 +1,9 @@
 # 0024 - Per-tenant aggregate rate-limit
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 ## Status
 
 Accepted — 2026-05-13. Hosted/shared-service profiles add an

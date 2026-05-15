@@ -1,5 +1,9 @@
 # Verifying release artifacts
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Every `go-clockify` release ships with cryptographic provenance on
 both binaries and the container image. This document is the manual
 equivalent of `.github/workflows/release-smoke.yml`, which runs the

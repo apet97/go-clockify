@@ -1,5 +1,9 @@
 # Support Matrix
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This document outlines the supported configurations and clients for `clockify-mcp-go`.
 
 ## Candidate runtime pins

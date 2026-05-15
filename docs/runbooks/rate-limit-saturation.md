@@ -1,5 +1,9 @@
 # Rate-limit saturation
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 ## Why this runbook exists
 
 `go-clockify` enforces two independent rate limits on every tool call:

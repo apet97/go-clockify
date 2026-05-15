@@ -1,5 +1,9 @@
 # 0001 - Stdlib-only default build
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 ## Status
 
 Accepted — the invariant has held since `1833084` (v0.6.0) and is

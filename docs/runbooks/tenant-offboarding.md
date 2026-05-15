@@ -1,5 +1,9 @@
 # Tenant Offboarding
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Use this runbook when a hosted or shared-service tenant must lose
 access to `clockify-mcp`: contract end, suspected compromise, failed
 payment, workspace ownership transfer, or emergency suspension.

@@ -1,5 +1,9 @@
 # Branch protection snapshot
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This file is a **snapshot** of the GitHub branch-protection settings
 applied to `main` in this repository. It is updated when the settings
 in the GitHub UI change. The source of truth is the GitHub repository

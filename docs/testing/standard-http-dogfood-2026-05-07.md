@@ -1,5 +1,9 @@
 # Standard-Policy Single-Tenant HTTP Dogfood — 2026-05-07
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This note records internal dogfood evidence only. It is not
 launch-candidate evidence and does not close Groups 1, 6, or 7 in
 `docs/launch-candidate-checklist.md`.

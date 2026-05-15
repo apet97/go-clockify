@@ -55,3 +55,97 @@ func TestReadmeProtocolVersionMatchesSupported(t *testing.T) {
 			matrix[1], want)
 	}
 }
+
+func TestCurrentProductDocsAvoidPlatformEraLanguage(t *testing.T) {
+	forbidden := platformEraTerms()
+	for _, path := range []string{
+		filepath.Join("..", "README.md"),
+		filepath.Join("..", "docs", "agent-cookbook.md"),
+		filepath.Join("..", "docs", "tool-catalog.md"),
+		filepath.Join("..", "docs", "live-tests.md"),
+		filepath.Join("..", "docs", "goals", "oneuser-tool-coverage.md"),
+	} {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		text := strings.ToLower(string(raw))
+		for _, term := range forbidden {
+			if strings.Contains(text, term) {
+				t.Fatalf("%s contains platform-era product language %q", path, term)
+			}
+		}
+	}
+}
+
+func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
+	const banner = "Historical artifact. Not current one-user MCP product documentation."
+	docsRoot := filepath.Join("..", "docs")
+	allowedCurrentDocs := map[string]bool{
+		filepath.Join(docsRoot, "agent-cookbook.md"):                     true,
+		filepath.Join(docsRoot, "tool-catalog.md"):                       true,
+		filepath.Join(docsRoot, "live-tests.md"):                         true,
+		filepath.Join(docsRoot, "agent-handoff.md"):                      true,
+		filepath.Join(docsRoot, "goals", "oneuser-tool-coverage.md"):     true,
+		filepath.Join(docsRoot, "goals", "perfect-one-user-full-mcp.md"): true,
+	}
+	forbidden := platformEraTerms()
+
+	err := filepath.WalkDir(docsRoot, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if path == filepath.Join(docsRoot, "openapi") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".md" || allowedCurrentDocs[path] {
+			return nil
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		content := string(raw)
+		lower := strings.ToLower(content)
+		hasPlatformTerm := false
+		for _, term := range forbidden {
+			if strings.Contains(lower, term) {
+				hasPlatformTerm = true
+				break
+			}
+		}
+		if hasPlatformTerm && !strings.Contains(content, banner) {
+			t.Fatalf("%s has platform-era language without the historical banner", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func platformEraTerms() []string {
+	return []string{
+		"hosted",
+		"tenant",
+		"control plane",
+		"controlplane",
+		"oidc",
+		"mtls",
+		"grpc",
+		"streamable http",
+		"policy mode",
+		"policy modes",
+		"confirmation token",
+		"confirmation-token",
+		"tier 2",
+		"activation",
+		"shared-service",
+		"shared service",
+		"forward auth",
+		"forward-auth",
+	}
+}

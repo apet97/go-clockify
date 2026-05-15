@@ -1,5 +1,9 @@
 # Deployment profile: self-hosted
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 There is no registered `self-hosted` profile. This page exists only
 for legacy continuity with
 [`deploy/examples/env.self-hosted.example`](../../deploy/examples/env.self-hosted.example),

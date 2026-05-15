@@ -1,5 +1,9 @@
 # Deployment profile: local stdio
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 > Apply with `clockify-mcp --profile=local-stdio` or
 > `MCP_PROFILE=local-stdio`. Example env file:
 > [`deploy/examples/env.local-stdio.example`](../../deploy/examples/env.local-stdio.example).

@@ -1,5 +1,9 @@
 # Architecture Decision Records
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This directory captures the load-bearing architectural decisions
 behind `clockify-mcp` in [MADR 3.0][madr] format. ADRs answer "why"
 for choices a future contributor would otherwise have to reconstruct

@@ -1,5 +1,9 @@
 # Release policy
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 This document is the contract between `go-clockify` releases and the
 operators who deploy them. It exists so a platform-team reviewer can
 answer "what does this project promise about versions?" without asking

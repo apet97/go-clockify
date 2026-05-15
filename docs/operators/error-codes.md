@@ -1,5 +1,9 @@
 # MCP HTTP Error Codes
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 The HTTP transports keep HTTP status codes for client retry/back-off
 logic. MCP endpoint admission failures also return a JSON-RPC 2.0
 envelope with `id:null` because the request has not reached JSON-RPC

@@ -1,5 +1,9 @@
 # Deployment profile: private-network gRPC
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 > Apply with `clockify-mcp --profile=private-network-grpc` or
 > `MCP_PROFILE=private-network-grpc`. Requires a build with
 > `-tags=grpc` (the default binary does not include the gRPC

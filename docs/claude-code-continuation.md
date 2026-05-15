@@ -1,5 +1,9 @@
 # Claude Code Continuation Packet (Historical PR #51 Archive)
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Prepared 2026-05-02 after PR #51 merged into `main`.
 
 > Historical note: this packet records the handoff state immediately

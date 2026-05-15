@@ -1,5 +1,9 @@
 # DPA / Terms / Privacy Evidence Checklist
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Status: **REQUEST PACKET — NO COUNSEL REVIEW PERFORMED**. This is the
 operator-side checklist for packaging the data-processing addendum,
 customer-terms, and privacy / data-handling artifacts that counsel

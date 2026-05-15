@@ -1,5 +1,9 @@
 # Deployment profile: single-tenant HTTP
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 > Apply with `clockify-mcp --profile=single-tenant-http` or
 > `MCP_PROFILE=single-tenant-http`. Example env file:
 > [`deploy/examples/env.single-tenant-http.example`](../../deploy/examples/env.single-tenant-http.example).

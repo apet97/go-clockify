@@ -1,5 +1,9 @@
 # Auth model
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 A reviewer-facing one-page summary of how `clockify-mcp`
 authenticates inbound requests, derives a tenant identity, and
 constructs the `Principal` object that every downstream handler

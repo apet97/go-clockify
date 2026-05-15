@@ -1,5 +1,9 @@
 # Production Profile: Shared Service
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 > Apply with `clockify-mcp --profile=shared-service` (or
 > `clockify-mcp --profile=prod-postgres` to add `ENVIRONMENT=prod`
 > enforcement in one shot) or `MCP_PROFILE=shared-service`. Example

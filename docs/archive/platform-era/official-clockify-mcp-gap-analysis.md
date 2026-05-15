@@ -1,5 +1,9 @@
 # Clockify MCP Official-Launch Gap Analysis
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 A snapshot of where `clockify-mcp` sits on the path from
 "community-grade MCP server" to a Clockify-supported product launch.
 Written 2026-05-02; last updated 2026-05-03 after

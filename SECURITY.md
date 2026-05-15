@@ -43,6 +43,12 @@ Include:
 
 ## Scope
 
+Current product note: the active product is a local one-user, stdio-only MCP
+server for one `CLOCKIFY_API_KEY` and one required `CLOCKIFY_WORKSPACE_ID`.
+HTTP, hosted, tenant, OIDC, mTLS, gRPC, forward-auth, policy-mode, and
+confirmation-token references below are retained as security history for the
+platform-era code path; they are not current one-user setup instructions.
+
 The following are in scope:
 - API key exposure or leakage
 - Command injection via tool inputs

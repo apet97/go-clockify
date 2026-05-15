@@ -1,5 +1,9 @@
 # 0006 - OpenTelemetry tracing via build tag
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 ## Status
 
 Accepted — the OTel sub-module landed in commit `1e2c5c1` (W2-04,

@@ -1,5 +1,9 @@
 # Verifying release artifacts
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Every tagged release of `clockify-mcp` ships 15 binaries across
 five tag combinations (per `scripts/check-release-assets.sh`): the
 five default platforms (`darwin-arm64`, `darwin-x64`, `linux-arm64`,

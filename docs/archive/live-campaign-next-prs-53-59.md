@@ -1,5 +1,9 @@
 # Live-Validation Campaign — Continuation Handoff
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Date: 2026-05-02 (status note added 2026-05-03)
 Historical branch: `test/full-live-workspace-validation` (12 commits,
 superseded by merged PRs #53-#59)

@@ -1,5 +1,9 @@
 # External Security Review Request Packet
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Status: **REQUEST PACKET — NO REVIEW PERFORMED**. This document is the
 operator-side request packet that the maintainer hands to a third-party
 or peer security reviewer. It does not perform a review, does not record

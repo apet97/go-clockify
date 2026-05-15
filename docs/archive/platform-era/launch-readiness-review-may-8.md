@@ -1,5 +1,9 @@
 # May 8 Launch-Readiness Review Disposition
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Source of truth: `~/Downloads/review may 8/` as provided on
 2026-05-08. This file is a maintainer-facing disposition ledger, not a
 replacement for `docs/launch-candidate-checklist.md`.

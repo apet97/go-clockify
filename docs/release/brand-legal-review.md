@@ -1,5 +1,9 @@
 # Brand and Legal Review Questions
 
+> **Historical artifact. Not current one-user MCP product documentation.**
+> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
+
+
 Status: **NEEDS LEGAL REVIEW**. This document frames questions for
 CAKE.com / Clockify product, legal, or brand reviewers. It is not legal
 advice and does not approve any trademark, product, or partnership
