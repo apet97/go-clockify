@@ -193,18 +193,8 @@ func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[str
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, nil)
 }
 
-// RequestJSONValues is the generic JSON transport used by the allowlisted
-// documented-API MCP surface. It deliberately stays below the domain helpers:
-// callers must supply a validated method/path and already-normalized query.
-func (c *Client) RequestJSONValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any, out any) error {
-	host := DocumentedHostMain
-	if reportsHost {
-		host = DocumentedHostReports
-	}
-	return c.RequestJSONValuesForHost(ctx, host, method, path, query, body, out)
-}
-
-// RequestRawValues is the binary-aware sibling of RequestJSONValues.
+// RequestRawValues runs a request against a documented host and returns the
+// raw response bytes and headers instead of unmarshalling JSON.
 func (c *Client) RequestRawValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any) (*RawResponse, error) {
 	host := DocumentedHostMain
 	if reportsHost {
@@ -213,47 +203,15 @@ func (c *Client) RequestRawValues(ctx context.Context, reportsHost bool, method,
 	return c.RequestRawValuesForHost(ctx, host, method, path, query, body)
 }
 
-// RequestJSONValuesForHost is the host-aware variant used by the generated
-// documented-API allowlist. Non-canonical test/custom base URLs stay pinned to
-// the configured base so fake servers and proxies do not need per-host wiring.
-func (c *Client) RequestJSONValuesForHost(ctx context.Context, host, method, path string, query url.Values, body any, out any) error {
-	return c.doJSONValues(ctx, c.DocumentedBaseURL(host), method, path, query, body, out)
-}
-
-// RequestRawValuesForHost is the binary-aware sibling of RequestJSONValuesForHost.
+// RequestRawValuesForHost is the host-aware binary-aware request transport.
+// Non-canonical test/custom base URLs stay pinned to the configured base so
+// fake servers and proxies do not need per-host wiring.
 func (c *Client) RequestRawValuesForHost(ctx context.Context, host, method, path string, query url.Values, body any) (*RawResponse, error) {
 	raw := &RawResponse{}
 	if err := c.doJSONValues(ctx, c.DocumentedBaseURL(host), method, path, query, body, raw); err != nil {
 		return nil, err
 	}
 	return raw, nil
-}
-
-// RequestMultipartValues sends multipart form fields to a validated
-// documented endpoint. File streaming is intentionally not exposed here; the
-// probe-lab docs currently accept form fields for the covered MCP use cases.
-func (c *Client) RequestMultipartValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, form url.Values, out any) error {
-	return c.RequestMultipartValuesWithFiles(ctx, reportsHost, method, path, query, form, nil, out)
-}
-
-// RequestMultipartValuesWithFiles sends multipart form fields plus file parts
-// to a validated documented endpoint.
-func (c *Client) RequestMultipartValuesWithFiles(ctx context.Context, reportsHost bool, method, path string, query url.Values, form url.Values, files []MultipartFile, out any) error {
-	host := DocumentedHostMain
-	if reportsHost {
-		host = DocumentedHostReports
-	}
-	return c.RequestMultipartValuesWithFilesForHost(ctx, host, method, path, query, form, files, out)
-}
-
-// RequestMultipartValuesWithFilesForHost sends multipart fields and file parts
-// to a validated documented endpoint on its generated host.
-func (c *Client) RequestMultipartValuesWithFilesForHost(ctx context.Context, host, method, path string, query url.Values, form url.Values, files []MultipartFile, out any) error {
-	payload, contentType, err := encodeMultipartWithFiles(form, files)
-	if err != nil {
-		return err
-	}
-	return c.doRequestValues(ctx, c.DocumentedBaseURL(host), method, path, query, contentType, payload, out)
 }
 
 // ReportsBaseURL returns the base URL for endpoints that live on
@@ -329,11 +287,11 @@ func (c *Client) DeleteReports(ctx context.Context, path string) error {
 	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodDelete, path, nil, nil, nil)
 }
 
-// RawResponse is the binary-aware envelope returned by GetReportsRaw —
-// the raw response bytes plus enough header context for callers to
-// recover Content-Type and Content-Disposition (filename). Used by the
-// shared-reports export endpoint where the upstream returns binary
-// (PDF/XLSX) or non-JSON text (CSV).
+// RawResponse is the binary-aware envelope returned by RequestRawValues and
+// PostReportsRaw — the raw response bytes plus enough header context for
+// callers to recover Content-Type and Content-Disposition (filename). Used by
+// export endpoints where the upstream returns binary (PDF/XLSX) or non-JSON
+// text (CSV).
 type RawResponse struct {
 	Header http.Header
 	Body   []byte
@@ -350,19 +308,6 @@ type MultipartFile struct {
 }
 
 const maxMultipartFileBytes = 10 << 20 // 10 MiB
-
-// GetReportsRaw is the binary-aware sibling of GetReports. It runs the
-// same retry/tracing/metrics pipeline but skips the JSON unmarshal,
-// exposing the raw body bytes and response headers so callers can
-// inspect Content-Type and Content-Disposition. Use for export
-// endpoints; use GetReports for JSON-shaped reads.
-func (c *Client) GetReportsRaw(ctx context.Context, path string, query map[string]string) (*RawResponse, error) {
-	raw := &RawResponse{}
-	if err := c.doRequest(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, "", nil, raw); err != nil {
-		return nil, err
-	}
-	return raw, nil
-}
 
 // PostMultipart performs a POST with a multipart/form-data body. Each
 // form key maps to one or more values; multi-value keys are written as
@@ -390,15 +335,6 @@ func (c *Client) PostMultipartWithFiles(ctx context.Context, path string, form u
 // encoding rules as PostMultipart.
 func (c *Client) PutMultipart(ctx context.Context, path string, form url.Values, out any) error {
 	payload, contentType, err := encodeMultipartWithFiles(form, nil)
-	if err != nil {
-		return err
-	}
-	return c.doRequest(ctx, c.baseURL, http.MethodPut, path, nil, contentType, payload, out)
-}
-
-// PutMultipartWithFiles performs a PUT with form fields plus binary file parts.
-func (c *Client) PutMultipartWithFiles(ctx context.Context, path string, form url.Values, files []MultipartFile, out any) error {
-	payload, contentType, err := encodeMultipartWithFiles(form, files)
 	if err != nil {
 		return err
 	}

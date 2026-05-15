@@ -1189,13 +1189,13 @@ func contains(haystack, needle string) bool {
 }
 
 // ---------------------------------------------------------------------------
-// GetReportsRaw / RawResponse coverage. The shared-reports export
-// handler depends on these; the JSON-mode siblings are well-covered
-// via the Get/Post/Put/Delete tests above, but the raw branch in
-// doOnce was uncovered until 2026-05-03.
+// RequestRawValues / RawResponse coverage. The shared-reports and
+// invoice export handlers depend on the raw branch in doOnce; the
+// JSON-mode siblings are well-covered via the Get/Post/Put/Delete
+// tests above.
 // ---------------------------------------------------------------------------
 
-func TestGetReportsRawSuccessReturnsBytesAndHeaders(t *testing.T) {
+func TestRequestRawValuesSuccessReturnsBytesAndHeaders(t *testing.T) {
 	pdfMagic := []byte{'%', 'P', 'D', 'F'}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/shared-reports/abc" {
@@ -1211,7 +1211,8 @@ func TestGetReportsRawSuccessReturnsBytesAndHeaders(t *testing.T) {
 	defer ts.Close()
 
 	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
-	raw, err := c.GetReportsRaw(context.Background(), "/shared-reports/abc", map[string]string{"exportType": "PDF"})
+	raw, err := c.RequestRawValues(context.Background(), false, http.MethodGet,
+		"/shared-reports/abc", url.Values{"exportType": {"PDF"}}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1226,7 +1227,7 @@ func TestGetReportsRawSuccessReturnsBytesAndHeaders(t *testing.T) {
 	}
 }
 
-func TestGetReportsRawAPIError(t *testing.T) {
+func TestRequestRawValuesAPIError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"code":404,"message":"NOT FOUND"}`))
@@ -1234,7 +1235,8 @@ func TestGetReportsRawAPIError(t *testing.T) {
 	defer ts.Close()
 
 	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
-	raw, err := c.GetReportsRaw(context.Background(), "/shared-reports/missing", nil)
+	raw, err := c.RequestRawValues(context.Background(), false, http.MethodGet,
+		"/shared-reports/missing", nil, nil)
 	if err == nil {
 		t.Fatalf("expected error on 404, got nil (raw=%v)", raw)
 	}
@@ -1247,7 +1249,7 @@ func TestGetReportsRawAPIError(t *testing.T) {
 	}
 }
 
-func TestGetReportsRawEmptyBodyOK(t *testing.T) {
+func TestRequestRawValuesEmptyBodyOK(t *testing.T) {
 	// Some Reports endpoints reply 200 with no body (e.g. zero-byte
 	// CSV — rare but observed). The raw branch must tolerate it,
 	// returning an empty Body slice rather than erroring.
@@ -1258,7 +1260,8 @@ func TestGetReportsRawEmptyBodyOK(t *testing.T) {
 	defer ts.Close()
 
 	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
-	raw, err := c.GetReportsRaw(context.Background(), "/shared-reports/empty", map[string]string{"exportType": "CSV"})
+	raw, err := c.RequestRawValues(context.Background(), false, http.MethodGet,
+		"/shared-reports/empty", url.Values{"exportType": {"CSV"}}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error on empty body: %v", err)
 	}
