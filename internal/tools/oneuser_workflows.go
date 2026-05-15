@@ -223,6 +223,9 @@ func (s *Service) ClockifyLogWork(ctx context.Context, args map[string]any) (any
 	if strings.TrimSpace(stringArg(args, "end")) == "" {
 		return nil, fmt.Errorf("end is required for clockify_log_work; use clockify_start_work for a running timer")
 	}
+	if err := s.rejectLogWorkOverlap(ctx, args); err != nil {
+		return nil, err
+	}
 	entry, ids, err := s.createEntry(ctx, args)
 	if err != nil {
 		return nil, err
@@ -231,6 +234,32 @@ func (s *Service) ClockifyLogWork(ctx context.Context, args map[string]any) (any
 		{Tool: "clockify_review_day", Args: reviewDayArgsFromEntry(entry), Reason: "Review the day after logging work."},
 		{Tool: "clockify_fix_entry", Args: map[string]any{"entry_id": entry.ID}, Reason: "Adjust this entry if any details are wrong."},
 	}), nil
+}
+
+// rejectLogWorkOverlap fails closed when a clockify_log_work entry overlaps an
+// existing entry, unless allow_overlap is set. logWorkSchema advertises
+// allow_overlap; this is where the handler honors it.
+func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any) error {
+	if boolArg(args, "allow_overlap") {
+		return nil
+	}
+	loc := s.location()
+	start, err := timeparse.ParseDatetime(strings.TrimSpace(stringArg(args, "start")), loc)
+	if err != nil {
+		return fmt.Errorf("invalid start: %w", err)
+	}
+	end, err := timeparse.ParseDatetime(strings.TrimSpace(stringArg(args, "end")), loc)
+	if err != nil {
+		return fmt.Errorf("invalid end: %w", err)
+	}
+	overlaps, _, err := s.findEntryOverlaps(ctx, start, end)
+	if err != nil {
+		return err
+	}
+	if len(overlaps) > 0 {
+		return fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
+	}
+	return nil
 }
 
 func (s *Service) ClockifyStartWork(ctx context.Context, args map[string]any) (any, error) {
@@ -671,6 +700,7 @@ func startWorkSchema() map[string]any {
 	props, _ := schema["properties"].(map[string]any)
 	props["start"] = map[string]any{"type": "string", "description": flexibleDatetimeDescription + ". Default: now."}
 	delete(props, "end")
+	delete(props, "allow_overlap")
 	return schema
 }
 

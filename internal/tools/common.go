@@ -228,15 +228,6 @@ type TimerStatusData struct {
 	Elapsed string     `json:"elapsed,omitempty"`
 }
 
-// LogTimeData is the structured payload for the legacy finished-work helper. Entry
-// is the created TimeEntry; ResolvedProject names the project the
-// agent supplied (by name or ID) so the caller can confirm name
-// resolution succeeded.
-type LogTimeData struct {
-	Entry           EntryView `json:"entry"`
-	ResolvedProject string    `json:"resolvedProject,omitempty"`
-}
-
 // FindAndUpdateEntryData is the structured payload for
 // clockify_find_and_update_entry. Entry is the matched time entry;
 // MatchedBy explains which finder predicate identified it; UpdatedFields
@@ -938,10 +929,6 @@ func isBareDateString(raw string) bool {
 	}
 	_, err := time.Parse("2006-01-02", raw)
 	return err == nil
-}
-
-func parseStartEndInLocation(args map[string]any, loc *time.Location) (time.Time, time.Time, error) {
-	return parseRangeInLocation(args, loc)
 }
 
 // entryRangeQuery builds the base date-range query for time-entry reports.

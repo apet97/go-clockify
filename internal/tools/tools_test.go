@@ -301,7 +301,7 @@ func TestFindAndUpdateEntryDryRunIncludesMatchedIdentityAndProposedChanges(t *te
 	}
 }
 
-func TestLogTimeCreatesFinishedEntry(t *testing.T) {
+func TestClockifyLogWorkCreatesFinishedEntry(t *testing.T) {
 	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -323,7 +323,7 @@ func TestLogTimeCreatesFinishedEntry(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.LogTime(context.Background(), map[string]any{
+	res, err := svc.ClockifyLogWork(context.Background(), map[string]any{
 		"project_id":    "p1",
 		"description":   "Focus",
 		"start":         "2026-04-01T09:00:00Z",
@@ -333,26 +333,29 @@ func TestLogTimeCreatesFinishedEntry(t *testing.T) {
 		"allow_overlap": true,
 	})
 	if err != nil {
-		t.Fatalf("log time failed: %v", err)
+		t.Fatalf("ClockifyLogWork failed: %v", err)
 	}
-	env, ok := result.(ResultEnvelope)
+	tr, ok := res.(ToolResult)
 	if !ok {
-		t.Fatalf("unexpected result type: %T", result)
+		t.Fatalf("unexpected result type: %T", res)
 	}
-	data, ok := env.Data.(LogTimeData)
+	if !tr.OK || tr.Action != oneUserToolLogWork {
+		t.Fatalf("unexpected envelope: ok=%v action=%s", tr.OK, tr.Action)
+	}
+	entry, ok := tr.Data.(clockify.TimeEntry)
 	if !ok {
-		t.Fatalf("unexpected data type: %T", env.Data)
+		t.Fatalf("unexpected data type: %T", tr.Data)
 	}
-	if data.Entry.ID != "e1" {
-		t.Fatalf("unexpected entry: %+v", data.Entry)
+	if entry.ID != "e1" {
+		t.Fatalf("unexpected entry: %+v", entry)
 	}
 	tagIDs, ok := postBody["tagIds"].([]any)
 	if !ok || len(tagIDs) != 2 || tagIDs[0] != "tag1" || tagIDs[1] != "tag2" {
-		t.Fatalf("expected tagIds in log-time payload, got %#v", postBody["tagIds"])
+		t.Fatalf("expected tagIds in log-work payload, got %#v", postBody["tagIds"])
 	}
 }
 
-func TestLogTimeUsesServiceDefaultTimezoneForFlexibleTimes(t *testing.T) {
+func TestClockifyLogWorkUsesServiceDefaultTimezoneForFlexibleTimes(t *testing.T) {
 	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -376,21 +379,21 @@ func TestLogTimeUsesServiceDefaultTimezoneForFlexibleTimes(t *testing.T) {
 	}
 	svc := New(client, "ws1")
 	svc.DefaultTimezone = loc
-	_, err = svc.LogTime(context.Background(), map[string]any{
+	_, err = svc.ClockifyLogWork(context.Background(), map[string]any{
 		"description":   "Focus",
 		"start":         "2026-04-01 09:00",
 		"end":           "2026-04-01 10:00",
 		"allow_overlap": true,
 	})
 	if err != nil {
-		t.Fatalf("log time failed: %v", err)
+		t.Fatalf("ClockifyLogWork failed: %v", err)
 	}
 	if postBody["start"] != "2026-04-01T07:00:00Z" || postBody["end"] != "2026-04-01T08:00:00Z" {
 		t.Fatalf("expected Europe/Belgrade local times to convert to UTC, got %+v", postBody)
 	}
 }
 
-func TestLogTimeAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
+func TestClockifyLogWorkAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
 	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -424,21 +427,21 @@ func TestLogTimeAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	_, err := svc.LogTime(context.Background(), map[string]any{
+	svc.DefaultTimezone = time.UTC
+	_, err := svc.ClockifyLogWork(context.Background(), map[string]any{
 		"description": "Focus",
 		"start":       "2026-04-01 09:00",
 		"end":         "2026-04-01 10:00",
-		"timezone":    "UTC",
 	})
 	if err != nil {
-		t.Fatalf("log time failed: %v", err)
+		t.Fatalf("ClockifyLogWork failed: %v", err)
 	}
 	if postBody["start"] != "2026-04-01T09:00:00Z" || postBody["end"] != "2026-04-01T10:00:00Z" {
 		t.Fatalf("unexpected normalized body: %+v", postBody)
 	}
 }
 
-func TestLogTimeRejectsOverlapUnlessAllowed(t *testing.T) {
+func TestClockifyLogWorkRejectsOverlapUnlessAllowed(t *testing.T) {
 	var postCount int
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -475,7 +478,7 @@ func TestLogTimeRejectsOverlapUnlessAllowed(t *testing.T) {
 		"start":       "2026-04-01T09:00:00Z",
 		"end":         "2026-04-01T10:00:00Z",
 	}
-	_, err := svc.LogTime(context.Background(), args)
+	_, err := svc.ClockifyLogWork(context.Background(), args)
 	if err == nil || !strings.Contains(err.Error(), "overlaps 1 existing entry") {
 		t.Fatalf("expected overlap rejection, got %v", err)
 	}
@@ -484,70 +487,11 @@ func TestLogTimeRejectsOverlapUnlessAllowed(t *testing.T) {
 	}
 
 	args["allow_overlap"] = true
-	if _, err := svc.LogTime(context.Background(), args); err != nil {
-		t.Fatalf("log time with allow_overlap failed: %v", err)
+	if _, err := svc.ClockifyLogWork(context.Background(), args); err != nil {
+		t.Fatalf("ClockifyLogWork with allow_overlap failed: %v", err)
 	}
 	if postCount != 1 {
 		t.Fatalf("expected one POST after allow_overlap, got %d", postCount)
-	}
-}
-
-func TestLogTimeDryRunReportsOverlapWithoutPosting(t *testing.T) {
-	var postCount int
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/user" && r.Method == http.MethodGet:
-			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
-		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
-			respondJSON(t, w, []clockify.TimeEntry{{
-				ID:          "existing1",
-				Description: "Existing",
-				ProjectID:   "p1",
-				TimeInterval: clockify.TimeInterval{
-					Start: "2026-04-01T09:30:00Z",
-					End:   "2026-04-01T10:30:00Z",
-				},
-			}})
-		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
-			postCount++
-			t.Fatal("POST must not run for an overlapping dry-run")
-		default:
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.LogTime(context.Background(), map[string]any{
-		"project_id":  "p1",
-		"description": "Focus",
-		"start":       "2026-04-01T09:00:00Z",
-		"end":         "2026-04-01T10:00:00Z",
-		"dry_run":     true,
-	})
-	if err != nil {
-		t.Fatalf("dry-run log time should return a block preview, got error: %v", err)
-	}
-	if postCount != 0 {
-		t.Fatalf("POST must not run for dry-run, got %d calls", postCount)
-	}
-	env, ok := result.(ResultEnvelope)
-	if !ok {
-		t.Fatalf("unexpected result type: %T", result)
-	}
-	data, ok := env.Data.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected dry-run data type: %T", env.Data)
-	}
-	if data["blocked"] != true {
-		t.Fatalf("expected blocked dry-run preview, got %+v", data)
-	}
-	if warning, _ := data["warning"].(string); !strings.Contains(warning, "overlaps 1 existing entry") {
-		t.Fatalf("expected overlap warning, got %q", warning)
-	}
-	overlaps, ok := data["overlaps"].([]TimeEntryRef)
-	if !ok || len(overlaps) != 1 || overlaps[0].ID != "existing1" {
-		t.Fatalf("unexpected overlaps in dry-run preview: %#v", data["overlaps"])
 	}
 }
 
@@ -1337,17 +1281,6 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 		name string
 		call func() (any, error)
 	}{
-		{
-			name: oneUserToolLogWork,
-			call: func() (any, error) {
-				return svc.LogTime(context.Background(), map[string]any{
-					"start":         "2026-04-01T09:00:00Z",
-					"end":           "2026-04-01T10:00:00Z",
-					"allow_overlap": true,
-					"dry_run":       true,
-				})
-			},
-		},
 		{
 			name: "clockify_entries_timer_stop",
 			call: func() (any, error) {

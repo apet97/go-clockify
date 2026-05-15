@@ -47,6 +47,11 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 func writeContractArgs(tool mcp.Tool) map[string]any {
 	args := oneUserCoverageArgs(tool)
 	switch tool.Name {
+	case "clockify_log_work":
+		// clockify_log_work guards against overlapping entries; this
+		// contract test only asserts the write-envelope shape, so bypass
+		// the guard rather than depend on the fixture's seeded entries.
+		args["allow_overlap"] = true
 	case "clockify_fix_entry":
 		args = map[string]any{
 			"entry_id":    oneUserCoverageID("entry_id"),
