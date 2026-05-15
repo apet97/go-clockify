@@ -4,9 +4,9 @@
 #
 # Static guard for the live-test coverage story in docs/api-coverage.md.
 # This does not prove live tests ran or passed. It fails if the generated
-# catalog gains a tool name that is not at least named by the livee2e source
-# bundle, so manual/scheduled live evidence cannot silently drift away from
-# the 128-tool catalog.
+# catalog gains a workflow/domain tool name that is not at least named by the
+# livee2e source bundle, so manual/scheduled live evidence cannot silently
+# drift away from the startup catalog.
 
 set -euo pipefail
 
@@ -18,10 +18,8 @@ usage() {
 Usage: scripts/check-live-tool-coverage.sh [--plan] [--repo-root PATH]
 
 Checks that:
-  - every Tier-2 catalog tool is referenced by livee2e source files;
-  - every API-backed Tier-1 catalog tool is referenced by livee2e source files;
-  - Tier-1 local tool-surface helpers are explicitly allowed instead of
-    pretending to make live Clockify calls;
+  - every workflow/domain catalog tool is referenced by livee2e source files;
+  - raw fallback tools are not required as typed workflow/domain coverage;
   - livee2e files do not mention unknown clockify_* tool names.
 
 This is a static coverage guard only. Scheduled live-contract evidence still
@@ -58,11 +56,9 @@ Live tool coverage plan
 - Source of truth: docs/tool-catalog.json.
 - Live-test source scan: tests/e2e_live*.go plus the Postgres
   live_audit_phases_test.go contract.
-- Gate: all Tier-2 tools must be named in livee2e source.
-- Gate: all API-backed Tier-1 tools must be named in livee2e source.
-- Allowed Tier-1 local helpers: activate_group, activate_tool,
-  deactivate_group, list_tools. These mutate only the MCP tool surface or
-  query the local catalog, so unit/contract tests are the right evidence.
+- Gate: all workflow/domain tools must be named in livee2e source.
+- Raw fallback tools are checked by catalog-order and api-parity gates; they
+  may appear in contract tests but are not required as typed live coverage.
 - Gate: livee2e source must not carry unknown clockify_* tool names.
 
 This does not replace scheduled cron evidence. It only guards the static
@@ -89,17 +85,27 @@ fi
 tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/check-live-tool-coverage.XXXXXX")"
 trap 'rm -rf "$tmpdir"' EXIT
 
-jq -r '.tier1[]?.name' "$catalog" | sort -u > "$tmpdir/tier1.txt"
-jq -r '.tier2[]?.name' "$catalog" | sort -u > "$tmpdir/tier2.txt"
-jq -r '(.tier1[]?, .tier2[]?) | .name' "$catalog" | sort -u > "$tmpdir/all.txt"
+catalog_contract_errors="$(
+  jq -r '
+    if (.tools | type) != "array" then
+      "catalog must use top-level tools array"
+    else empty end,
+    if has("tier1") or has("tier2") then
+      "catalog must not use legacy tier1/tier2 top-level shape"
+    else empty end,
+    ((.tools // [])[] | select((.name // "") == "") | "catalog tool name is required"),
+    ((.tools // [])[] | select((.category // "") | test("^(workflow|domain|raw)$") | not) | (.name // "<missing>") + ": category must be workflow, domain, or raw")
+  ' "$catalog"
+)"
+if [ -n "$catalog_contract_errors" ]; then
+  echo "[fail] tool catalog contract drift:" >&2
+  sed 's/^/       /' <<<"$catalog_contract_errors" >&2
+  exit 1
+fi
 
-cat > "$tmpdir/tier1-local-only.txt" <<'EOF'
-clockify_activate_group
-clockify_activate_tool
-clockify_deactivate_group
-clockify_list_tools
-EOF
-sort -u "$tmpdir/tier1-local-only.txt" -o "$tmpdir/tier1-local-only.txt"
+jq -r '.tools[] | select(.category == "workflow" or .category == "domain") | .name' "$catalog" | sort -u > "$tmpdir/live-required.txt"
+jq -r '.tools[] | select(.category == "raw") | .name' "$catalog" | sort -u > "$tmpdir/raw.txt"
+jq -r '.tools[] | .name' "$catalog" | sort -u > "$tmpdir/all.txt"
 
 live_files=()
 while IFS= read -r file; do
@@ -115,36 +121,36 @@ if [ "${#live_files[@]}" -eq 0 ]; then
 fi
 
 rg -o --no-filename 'clockify_[a-z0-9_]+' "${live_files[@]}" | sort -u > "$tmpdir/live-refs.txt" || true
+if [ -f "$repo_root/internal/tools/oneuser_quality_test.go" ]; then
+  awk '
+    /^func oneUserNamedLiveEvidence\(\)/ { in_func = 1 }
+    in_func { print }
+    in_func && /^}/ { exit }
+  ' "$repo_root/internal/tools/oneuser_quality_test.go" \
+    | rg -o --no-filename 'clockify_[a-z0-9_]+' >> "$tmpdir/live-refs.txt" || true
+fi
+sort -u "$tmpdir/live-refs.txt" -o "$tmpdir/live-refs.txt"
 
-cat "$tmpdir/live-refs.txt" "$tmpdir/tier1-local-only.txt" | sort -u > "$tmpdir/live-or-local.txt"
-comm -23 "$tmpdir/tier2.txt" "$tmpdir/live-refs.txt" > "$tmpdir/missing-tier2.txt"
-comm -23 "$tmpdir/tier1.txt" "$tmpdir/live-or-local.txt" > "$tmpdir/missing-tier1.txt"
+comm -23 "$tmpdir/live-required.txt" "$tmpdir/live-refs.txt" > "$tmpdir/missing-live-required.txt"
 comm -13 "$tmpdir/all.txt" "$tmpdir/live-refs.txt" > "$tmpdir/unknown-live-refs.txt"
 
 open=0
 unknown=0
 
-tier2_count="$(wc -l < "$tmpdir/tier2.txt" | tr -d ' ')"
-tier1_count="$(wc -l < "$tmpdir/tier1.txt" | tr -d ' ')"
-local_count="$(wc -l < "$tmpdir/tier1-local-only.txt" | tr -d ' ')"
+required_count="$(wc -l < "$tmpdir/live-required.txt" | tr -d ' ')"
+raw_count="$(wc -l < "$tmpdir/raw.txt" | tr -d ' ')"
+catalog_count="$(wc -l < "$tmpdir/all.txt" | tr -d ' ')"
 
-if [ -s "$tmpdir/missing-tier2.txt" ]; then
+if [ -s "$tmpdir/missing-live-required.txt" ]; then
   open=$((open + 1))
-  echo "[open] Tier-2 catalog tools missing livee2e source references"
-  sed 's/^/       tool: /' "$tmpdir/missing-tier2.txt"
+  echo "[open] workflow/domain catalog tools missing livee2e source references"
+  sed 's/^/       tool: /' "$tmpdir/missing-live-required.txt"
   echo "       action: add a livee2e probe, documented unsupported/permission probe, or explicit coverage rationale before claiming full-catalog live coverage."
 else
-  echo "[closed] all ${tier2_count} Tier-2 catalog tools are named in livee2e source"
+  echo "[closed] all ${required_count} workflow/domain catalog tools are named in livee2e source"
 fi
 
-if [ -s "$tmpdir/missing-tier1.txt" ]; then
-  open=$((open + 1))
-  echo "[open] API-backed Tier-1 catalog tools missing livee2e source references"
-  sed 's/^/       tool: /' "$tmpdir/missing-tier1.txt"
-  echo "       action: add a read-only or sacrificial live probe, or move the tool into the local-only allowlist with a documented rationale."
-else
-  echo "[closed] all API-backed Tier-1 catalog tools are named in livee2e source (${local_count} local-only helpers allowed)"
-fi
+echo "[closed] raw fallback tools are not required as typed live coverage (${raw_count} raw fallback tools)"
 
 if [ -s "$tmpdir/unknown-live-refs.txt" ]; then
   open=$((open + 1))
@@ -157,7 +163,7 @@ fi
 
 echo
 echo "Summary: ${open} open, ${unknown} unknown"
-echo "Catalog: ${tier1_count} Tier-1 tools, ${tier2_count} Tier-2 tools"
+echo "Catalog: ${catalog_count} tools (${required_count} workflow/domain live-required, ${raw_count} raw fallback)"
 
 if [ "$open" -ne 0 ] || [ "$unknown" -ne 0 ]; then
   exit 1

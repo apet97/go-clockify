@@ -20,6 +20,7 @@ const (
 	MinToolTimeout              = 5 * time.Second
 	MaxToolTimeout              = 10 * time.Minute
 	DefaultMaxMessageSize       = 4 * 1024 * 1024
+	MaxMessageSize              = 100 * 1024 * 1024
 	DefaultToolset              = "all"
 )
 
@@ -90,7 +91,7 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.ToolTimeout = toolTimeout
-	maxMessageSize, err := parsePositiveInt64Env("CLOCKIFY_MAX_MESSAGE_SIZE", DefaultMaxMessageSize)
+	maxMessageSize, err := parseBoundedPositiveInt64Env("CLOCKIFY_MAX_MESSAGE_SIZE", DefaultMaxMessageSize, MaxMessageSize)
 	if err != nil {
 		return OneUserConfig{}, err
 	}
@@ -150,6 +151,17 @@ func parsePositiveInt64Env(name string, fallback int64) (int64, error) {
 	v, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil || v <= 0 {
 		return 0, fmt.Errorf("%s must be a positive integer", name)
+	}
+	return v, nil
+}
+
+func parseBoundedPositiveInt64Env(name string, fallback, maxValue int64) (int64, error) {
+	v, err := parsePositiveInt64Env(name, fallback)
+	if err != nil {
+		return 0, err
+	}
+	if v > maxValue {
+		return 0, fmt.Errorf("%s must be between 1 and %d", name, maxValue)
 	}
 	return v, nil
 }

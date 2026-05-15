@@ -370,7 +370,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_invoices_items_delete":
 		return entityObjectDataSchema("deleted", "invoiceId", "itemIndex", "itemId")
 	case "clockify_invoices_export":
-		return entityObjectDataSchema("content", "contentType", "headers")
+		return binaryExportDataSchema("content")
 	case "clockify_invoices_import_time", "clockify_invoices_import_expenses":
 		return entityObjectDataSchema("id", "invoiceId", "invoiceItemId", "description")
 	case "clockify_invoices_payments_list":
@@ -430,7 +430,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_scheduling_user_totals":
 		return entityObjectDataSchema("id", "userId", "assignmentId", "total", "totals")
 	case "clockify_reports_attendance", "clockify_reports_money", "clockify_reports_expense", "clockify_reports_export":
-		return entityObjectDataSchema("id", "workspaceId", "totals", "timeentries", "entries", "data")
+		return reportDataSchema(action)
 	case "clockify_approvals_list":
 		return entityArrayDataSchema("id", "approvalId", "status", "userId", "start", "end")
 	case "clockify_approvals_get", "clockify_approvals_submit", "clockify_approvals_approve", "clockify_approvals_reject", "clockify_approvals_withdraw":
@@ -556,6 +556,19 @@ func entityArrayDataSchema(fields ...string) map[string]any {
 		"type":  "array",
 		"items": entityObjectDataSchema(fields...),
 	}
+}
+
+func binaryExportDataSchema(extraFields ...string) map[string]any {
+	fields := []string{"contentType", "filename", "bytes", "bodyEncoding", "base64Bytes", "truncated", "body"}
+	fields = append(fields, extraFields...)
+	return entityObjectDataSchema(fields...)
+}
+
+func reportDataSchema(action string) map[string]any {
+	if action == "clockify_reports_export" {
+		return binaryExportDataSchema("id", "workspaceId", "totals", "timeentries", "entries", "data")
+	}
+	return entityObjectDataSchema("id", "workspaceId", "totals", "timeentries", "entries", "data")
 }
 
 func dataKeysSchema(keys ...string) map[string]any {

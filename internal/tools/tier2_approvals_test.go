@@ -225,3 +225,30 @@ func TestApprovalListSchemaDocumentsSort(t *testing.T) {
 	}
 	t.Fatal("clockify_list_approval_requests descriptor not found")
 }
+
+func TestApprovalListSchemaDocumentsCanonicalFilterStates(t *testing.T) {
+	svc := New(nil, "ws1")
+	handlers, ok := tier2Handlers(svc, "approvals")
+	if !ok {
+		t.Fatal("approvals group not registered")
+	}
+	for _, descriptor := range handlers {
+		if descriptor.Tool.Name != "clockify_list_approval_requests" {
+			continue
+		}
+		props := descriptor.Tool.InputSchema["properties"].(map[string]any)
+		status := props["status"].(map[string]any)
+		enum := status["enum"].([]string)
+		want := []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"}
+		if len(enum) != len(want) {
+			t.Fatalf("status enum length = %d, want %d: %#v", len(enum), len(want), enum)
+		}
+		for i := range want {
+			if enum[i] != want[i] {
+				t.Fatalf("status enum = %#v, want %#v", enum, want)
+			}
+		}
+		return
+	}
+	t.Fatal("clockify_list_approval_requests descriptor not found")
+}

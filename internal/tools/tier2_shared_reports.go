@@ -415,11 +415,15 @@ func (s *Service) exportSharedReport(ctx context.Context, args map[string]any) (
 	}
 	contentType := raw.Header.Get("Content-Type")
 	filename := parseExportFilename(raw.Header.Get("Content-Disposition"))
+	body := base64.StdEncoding.EncodeToString(raw.Body)
 	envelope := map[string]any{
-		"contentType": contentType,
-		"filename":    filename,
-		"bytes":       len(raw.Body),
-		"body":        base64.StdEncoding.EncodeToString(raw.Body),
+		"contentType":  contentType,
+		"filename":     filename,
+		"bytes":        len(raw.Body),
+		"bodyEncoding": "base64",
+		"base64Bytes":  len(body),
+		"truncated":    false,
+		"body":         body,
 	}
 	return ok("clockify_export_shared_report", envelope, map[string]any{
 		"workspaceId": wsID,

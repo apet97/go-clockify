@@ -37234,7 +37234,12 @@
             "type": "string"
           },
           "status": {
-            "description": "Filter by status (e.g. PENDING, APPROVED, REJECTED, WITHDRAWN)",
+            "description": "Documented approval request filter state",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "WITHDRAWN_APPROVAL"
+            ],
             "type": "string"
           }
         },
@@ -37498,7 +37503,12 @@
             "type": "integer"
           },
           "status": {
-            "description": "Optional status filter to narrow the documented list scan",
+            "description": "Documented approval request filter state",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "WITHDRAWN_APPROVAL"
+            ],
             "type": "string"
           }
         },
@@ -45301,11 +45311,18 @@
           "data": {
             "additionalProperties": true,
             "properties": {
+              "base64Bytes": {},
+              "body": {},
+              "bodyEncoding": {},
+              "bytes": {},
+              "contentType": {},
               "data": {},
               "entries": {},
+              "filename": {},
               "id": {},
               "timeentries": {},
               "totals": {},
+              "truncated": {},
               "workspaceId": {}
             },
             "type": "object"
@@ -45567,9 +45584,14 @@
           "data": {
             "additionalProperties": true,
             "properties": {
+              "base64Bytes": {},
+              "body": {},
+              "bodyEncoding": {},
+              "bytes": {},
               "content": {},
               "contentType": {},
-              "headers": {}
+              "filename": {},
+              "truncated": {}
             },
             "type": "object"
           },

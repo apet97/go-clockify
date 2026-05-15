@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -228,6 +229,49 @@ func TestDeleteSharedReportDryRun(t *testing.T) {
 	}
 	if dataMap["note"] == nil {
 		t.Fatal("expected note in dry run result")
+	}
+}
+
+func TestExportSharedReportBinaryReturnsSafeMetadata(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/shared-reports/sr1" || r.Method != http.MethodGet {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if r.URL.Query().Get("exportType") != "PDF" {
+			t.Fatalf("expected exportType=PDF, got %q", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", `attachment; filename="shared.pdf"`)
+		_, _ = w.Write([]byte("pdf-bytes"))
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.exportSharedReport(context.Background(), map[string]any{
+		"report_id": "sr1",
+		"format":    "pdf",
+	})
+	if err != nil {
+		t.Fatalf("export shared report failed: %v", err)
+	}
+	if !result.OK {
+		t.Fatal("expected OK=true")
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected data type: %T", result.Data)
+	}
+	if data["contentType"] != "application/pdf" || data["filename"] != "shared.pdf" {
+		t.Fatalf("unexpected binary metadata: %#v", data)
+	}
+	if data["bytes"] != len("pdf-bytes") {
+		t.Fatalf("bytes = %v, want %d", data["bytes"], len("pdf-bytes"))
+	}
+	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != len(base64.StdEncoding.EncodeToString([]byte("pdf-bytes"))) || data["truncated"] != false {
+		t.Fatalf("missing safe binary metadata: %#v", data)
+	}
+	if data["body"] == "" {
+		t.Fatal("expected body to contain base64-encoded payload")
 	}
 }
 

@@ -36,14 +36,12 @@ write_fixture() {
   mkdir -p "$dir/docs" "$dir/tests" "$dir/internal/controlplane/postgres"
   cat > "$dir/docs/tool-catalog.json" <<'JSON'
 {
-  "tier1": [
-    {"name": "clockify_list_tools"},
-    {"name": "clockify_whoami"},
-    {"name": "clockify_resolve_name"}
-  ],
-  "tier2": [
-    {"name": "clockify_list_invoices"},
-    {"name": "clockify_create_invoice"}
+  "tools": [
+    {"name": "clockify_status", "category": "workflow"},
+    {"name": "clockify_clients_list", "category": "domain"},
+    {"name": "clockify_clients_create", "category": "domain"},
+    {"name": "clockify_api_get", "category": "raw"},
+    {"name": "clockify_api_request", "category": "raw"}
   ]
 }
 JSON
@@ -52,10 +50,18 @@ package e2e_test
 
 func names() []string {
 	return []string{
-		"clockify_whoami",
-		"clockify_resolve_name",
-		"clockify_list_invoices",
-		"clockify_create_invoice",
+		"clockify_status",
+		"clockify_clients_list",
+	}
+}
+EOF
+  mkdir -p "$dir/internal/tools"
+  cat > "$dir/internal/tools/oneuser_quality_test.go" <<'EOF'
+package tools
+
+func oneUserNamedLiveEvidence() map[string]any {
+	return map[string]any{
+		"clockify_clients_create": nil,
 	}
 }
 EOF
@@ -99,31 +105,29 @@ run_case() {
 tests_run=$((tests_run + 1))
 plan_output="$(bash "$script" --plan --repo-root "$repo_root")"
 assert_contains "$plan_output" "Live tool coverage plan" "plan prints header"
-assert_contains "$plan_output" "all Tier-2 tools must be named" "plan documents Tier-2 gate"
-assert_contains "$plan_output" "Allowed Tier-1 local helpers" "plan documents local-only helpers"
+assert_contains "$plan_output" "all workflow/domain tools must be named" "plan documents workflow/domain gate"
+assert_contains "$plan_output" "Raw fallback tools are checked by catalog-order" "plan documents raw fallback split"
 assert_contains "$plan_output" "does not replace scheduled cron evidence" "plan distinguishes cron evidence"
 
 run_case "clean fixture clears the gate" 0 'Summary: 0 open, 0 unknown'
 
-drop_tier2_ref() {
-  perl -0pi -e 's/\n\t\t"clockify_create_invoice",//' "$1/tests/e2e_live_test.go"
+drop_domain_ref() {
+  perl -0pi -e 's/\n\t\t"clockify_clients_create": nil,//' "$1/internal/tools/oneuser_quality_test.go"
 }
-run_case "missing Tier-2 live reference fails closed" 1 'Tier-2 catalog tools missing livee2e source references' drop_tier2_ref
+run_case "missing domain live reference fails closed" 1 'workflow/domain catalog tools missing livee2e source references' drop_domain_ref
 
-drop_tier1_ref() {
-  perl -0pi -e 's/\n\t\t"clockify_resolve_name",//' "$1/tests/e2e_live_test.go"
+drop_workflow_ref() {
+  perl -0pi -e 's/\n\t\t"clockify_status",//' "$1/tests/e2e_live_test.go"
 }
-run_case "missing API-backed Tier-1 live reference fails closed" 1 'API-backed Tier-1 catalog tools missing livee2e source references' drop_tier1_ref
+run_case "missing workflow live reference fails closed" 1 'workflow/domain catalog tools missing livee2e source references' drop_workflow_ref
 
-drop_local_only_ref() {
-  # clockify_list_tools is a Tier-1 local catalog helper, so the fixture
-  # intentionally does not need to mention it in live tests.
-  :
+add_raw_ref() {
+  perl -0pi -e 's/"clockify_clients_create",/"clockify_clients_create",\n\t\t"clockify_api_request",/' "$1/tests/e2e_live_test.go"
 }
-run_case "local-only Tier-1 helper is explicitly allowed" 0 'local-only helpers allowed' drop_local_only_ref
+run_case "raw fallback reference is known but not required" 0 'raw fallback tools are not required as typed live coverage' add_raw_ref
 
 add_unknown_ref() {
-  perl -0pi -e 's/"clockify_create_invoice",/"clockify_create_invoice",\n\t\t"clockify_removed_tool",/' "$1/tests/e2e_live_test.go"
+  perl -0pi -e 's/"clockify_clients_list",/"clockify_clients_list",\n\t\t"clockify_removed_tool",/' "$1/tests/e2e_live_test.go"
 }
 run_case "unknown live tool reference fails closed" 1 'livee2e source mentions unknown clockify_\* tool names' add_unknown_ref
 

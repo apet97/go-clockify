@@ -269,6 +269,10 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 			envName: "CLOCKIFY_MAX_MESSAGE_SIZE",
 			value:   "large",
 		},
+		"too large message size": {
+			envName: "CLOCKIFY_MAX_MESSAGE_SIZE",
+			value:   "104857601",
+		},
 		"bad raw writes": {
 			envName: "CLOCKIFY_ENABLE_RAW_WRITES",
 			value:   "maybe",

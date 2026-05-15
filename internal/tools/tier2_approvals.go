@@ -17,7 +17,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 		{Tool: withOutputSchema(toolRO("clockify_list_approval_requests", "List approval requests with optional status filter and pagination", map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"status": map[string]any{"type": "string", "description": "Filter by status (e.g. PENDING, APPROVED, REJECTED, WITHDRAWN)"},
+				"status": approvalFilterStateSchema(),
 				"sort_column": map[string]any{
 					"type":        "string",
 					"enum":        []string{"ID", "USER_ID", "START", "UPDATED_AT"},
@@ -41,7 +41,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 			"required": []string{"approval_id"},
 			"properties": map[string]any{
 				"approval_id": map[string]any{"type": "string"},
-				"status":      map[string]any{"type": "string", "description": "Optional status filter to narrow the documented list scan"},
+				"status":      approvalFilterStateSchema(),
 				"page_size":   map[string]any{"type": "integer", "description": "Page size for the documented list scan (default 100, max 200)"},
 			},
 		}), approvalViewEnvelope("clockify_get_approval_request", false)), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -306,6 +306,14 @@ func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, a
 		return ResultEnvelope{}, err
 	}
 	return ok(action, approvalViewFromRaw(result), map[string]any{"workspaceId": wsID, "state": state}), nil
+}
+
+func approvalFilterStateSchema() map[string]any {
+	return map[string]any{
+		"type":        "string",
+		"enum":        []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"},
+		"description": "Documented approval request filter state",
+	}
 }
 
 func approvalPeriodInputSchema(forUser bool) map[string]any {
