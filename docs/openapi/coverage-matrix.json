@@ -2,10 +2,10 @@
   "generated_by": "scripts/gen-coverage-matrix",
   "openapi_op_count": 193,
   "openapi_version": "2026-05-12",
-  "raw_allowlist_count": 193,
+  "raw_allowlist_count": 0,
   "rows": [
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -21,7 +21,7 @@
       "notes_count": 0,
       "operationId": "uploadImage",
       "path": "/file/image",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -32,7 +32,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -46,7 +46,7 @@
       "notes_count": 3,
       "operationId": "getSharedReportsSharedReportId",
       "path": "/shared-reports/{sharedReportId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -57,7 +57,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -73,7 +73,7 @@
       "notes_count": 0,
       "operationId": "getCurrentUser",
       "path": "/user",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -84,7 +84,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -100,7 +100,7 @@
       "notes_count": 0,
       "operationId": "getAllMyWorkspaces",
       "path": "/workspaces",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -111,7 +111,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -126,7 +126,7 @@
       "notes_count": 0,
       "operationId": "addWorkspace",
       "path": "/workspaces",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -137,7 +137,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -153,7 +153,7 @@
       "notes_count": 0,
       "operationId": "getWorkspaceInfo",
       "path": "/workspaces/{workspaceId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -164,7 +164,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -176,7 +176,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceId",
       "path": "/workspaces/{workspaceId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -187,7 +187,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -202,7 +202,7 @@
       "notes_count": 0,
       "operationId": "getAddonWebhooksOnWorkspace",
       "path": "/workspaces/{workspaceId}/addons/{addonId}/webhooks",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -213,7 +213,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -229,7 +229,7 @@
       "notes_count": 0,
       "operationId": "getApprovalRequests",
       "path": "/workspaces/{workspaceId}/approval-requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -240,7 +240,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -254,7 +254,7 @@
       "notes_count": 0,
       "operationId": "submitApprovalRequest",
       "path": "/workspaces/{workspaceId}/approval-requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -265,7 +265,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -279,7 +279,7 @@
       "notes_count": 0,
       "operationId": "resubmitEntriesForApproval",
       "path": "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -290,7 +290,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -306,7 +306,7 @@
       "notes_count": 0,
       "operationId": "submitApprovalRequestForUser",
       "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -317,7 +317,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -333,7 +333,7 @@
       "notes_count": 0,
       "operationId": "resubmitEntriesForApprovalForUser",
       "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -344,7 +344,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -359,7 +359,7 @@
       "notes_count": 0,
       "operationId": "updateApprovalRequest",
       "path": "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -370,7 +370,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "har-capture",
@@ -385,7 +385,7 @@
       "notes_count": 3,
       "operationId": "searchAuditLogs",
       "path": "/workspaces/{workspaceId}/audit-log",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -396,7 +396,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -408,7 +408,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdBalance",
       "path": "/workspaces/{workspaceId}/balance",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -419,7 +419,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -431,7 +431,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdBalance",
       "path": "/workspaces/{workspaceId}/balance",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -442,7 +442,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -457,7 +457,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdClients",
       "path": "/workspaces/{workspaceId}/clients",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -468,7 +468,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -483,7 +483,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdClients",
       "path": "/workspaces/{workspaceId}/clients",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -494,7 +494,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -509,7 +509,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -520,7 +520,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -535,7 +535,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -546,7 +546,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -561,7 +561,7 @@
       "notes_count": 1,
       "operationId": "deleteWorkspacesWorkspaceIdClientsClientId",
       "path": "/workspaces/{workspaceId}/clients/{clientId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -572,7 +572,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -584,7 +584,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdClientsClientIdArchive",
       "path": "/workspaces/{workspaceId}/clients/{clientId}/archive",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -595,7 +595,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -611,7 +611,7 @@
       "notes_count": 0,
       "operationId": "updateWorkspaceCostRate",
       "path": "/workspaces/{workspaceId}/cost-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -622,7 +622,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -639,7 +639,7 @@
       "notes_count": 1,
       "operationId": "listWorkspaceCustomFields",
       "path": "/workspaces/{workspaceId}/custom-fields",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -650,7 +650,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -666,7 +666,7 @@
       "notes_count": 0,
       "operationId": "createWorkspaceCustomField",
       "path": "/workspaces/{workspaceId}/custom-fields",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -677,7 +677,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -693,7 +693,7 @@
       "notes_count": 0,
       "operationId": "updateWorkspaceCustomField",
       "path": "/workspaces/{workspaceId}/custom-fields/{customFieldId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -704,7 +704,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -720,7 +720,7 @@
       "notes_count": 0,
       "operationId": "deleteWorkspaceCustomField",
       "path": "/workspaces/{workspaceId}/custom-fields/{customFieldId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -731,7 +731,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi"
@@ -743,7 +743,7 @@
       "notes_count": 0,
       "operationId": "getCreatedEntityInfo",
       "path": "/workspaces/{workspaceId}/entities/created",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -754,7 +754,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi"
@@ -766,7 +766,7 @@
       "notes_count": 0,
       "operationId": "getDeletedEntityInfo",
       "path": "/workspaces/{workspaceId}/entities/deleted",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -777,7 +777,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi"
@@ -789,7 +789,7 @@
       "notes_count": 0,
       "operationId": "getUpdatedEntityInfo",
       "path": "/workspaces/{workspaceId}/entities/updated",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -800,7 +800,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -816,7 +816,7 @@
       "notes_count": 0,
       "operationId": "getWorkspaceExpenses",
       "path": "/workspaces/{workspaceId}/expenses",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -827,7 +827,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -844,7 +844,7 @@
       "notes_count": 1,
       "operationId": "createExpense",
       "path": "/workspaces/{workspaceId}/expenses",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -855,7 +855,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -872,7 +872,7 @@
       "notes_count": 1,
       "operationId": "getExpenseCategories",
       "path": "/workspaces/{workspaceId}/expenses/categories",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -883,7 +883,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -901,7 +901,7 @@
       "notes_count": 2,
       "operationId": "addExpenseCategory",
       "path": "/workspaces/{workspaceId}/expenses/categories",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -912,7 +912,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -929,7 +929,7 @@
       "notes_count": 2,
       "operationId": "updateExpenseCategory",
       "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -940,7 +940,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -957,7 +957,7 @@
       "notes_count": 0,
       "operationId": "deleteExpenseCategory",
       "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -968,7 +968,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -985,7 +985,7 @@
       "notes_count": 1,
       "operationId": "archiveExpenseCategory",
       "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}/status",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -996,7 +996,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1013,7 +1013,7 @@
       "notes_count": 0,
       "operationId": "getExpenseById",
       "path": "/workspaces/{workspaceId}/expenses/{expenseId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1024,7 +1024,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1041,7 +1041,7 @@
       "notes_count": 1,
       "operationId": "updateExpense",
       "path": "/workspaces/{workspaceId}/expenses/{expenseId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1052,7 +1052,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1069,7 +1069,7 @@
       "notes_count": 0,
       "operationId": "deleteExpense",
       "path": "/workspaces/{workspaceId}/expenses/{expenseId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -1080,7 +1080,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1095,7 +1095,7 @@
       "notes_count": 0,
       "operationId": "downloadExpenseReceipt",
       "path": "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1106,7 +1106,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1124,7 +1124,7 @@
       "notes_count": 1,
       "operationId": "getWorkspaceHolidays",
       "path": "/workspaces/{workspaceId}/holidays",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1135,7 +1135,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1153,7 +1153,7 @@
       "notes_count": 1,
       "operationId": "createHoliday",
       "path": "/workspaces/{workspaceId}/holidays",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1164,7 +1164,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1180,7 +1180,7 @@
       "notes_count": 2,
       "operationId": "getWorkspaceHolidaysInPeriod",
       "path": "/workspaces/{workspaceId}/holidays/in-period",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1191,7 +1191,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1208,7 +1208,7 @@
       "notes_count": 0,
       "operationId": "updateHoliday",
       "path": "/workspaces/{workspaceId}/holidays/{holidayId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1219,7 +1219,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1237,7 +1237,7 @@
       "notes_count": 1,
       "operationId": "deleteHoliday",
       "path": "/workspaces/{workspaceId}/holidays/{holidayId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -1248,7 +1248,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1264,7 +1264,7 @@
       "notes_count": 0,
       "operationId": "updateWorkspaceBillableRate",
       "path": "/workspaces/{workspaceId}/hourly-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1275,7 +1275,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1292,7 +1292,7 @@
       "notes_count": 0,
       "operationId": "getWorkspaceInvoices",
       "path": "/workspaces/{workspaceId}/invoices",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1303,7 +1303,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1320,7 +1320,7 @@
       "notes_count": 0,
       "operationId": "addInvoice",
       "path": "/workspaces/{workspaceId}/invoices",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1331,7 +1331,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1347,7 +1347,7 @@
       "notes_count": 0,
       "operationId": "filterInvoices",
       "path": "/workspaces/{workspaceId}/invoices/info",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1358,7 +1358,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1373,7 +1373,7 @@
       "notes_count": 0,
       "operationId": "getInvoiceSettings",
       "path": "/workspaces/{workspaceId}/invoices/settings",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1384,7 +1384,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1399,7 +1399,7 @@
       "notes_count": 0,
       "operationId": "updateInvoiceSettings",
       "path": "/workspaces/{workspaceId}/invoices/settings",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1410,7 +1410,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1428,7 +1428,7 @@
       "notes_count": 1,
       "operationId": "getInvoiceById",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1439,7 +1439,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1455,7 +1455,7 @@
       "notes_count": 0,
       "operationId": "updateInvoice",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1466,7 +1466,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1483,7 +1483,7 @@
       "notes_count": 0,
       "operationId": "deleteInvoice",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -1494,7 +1494,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1509,7 +1509,7 @@
       "notes_count": 0,
       "operationId": "duplicateInvoice",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1520,7 +1520,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1537,7 +1537,7 @@
       "notes_count": 0,
       "operationId": "exportInvoice",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/export",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1548,7 +1548,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1565,7 +1565,7 @@
       "notes_count": 0,
       "operationId": "addInvoiceItem",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/items",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1576,7 +1576,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1591,7 +1591,7 @@
       "notes_count": 0,
       "operationId": "importInvoiceItems",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/items/import",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1602,7 +1602,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1617,7 +1617,7 @@
       "notes_count": 0,
       "operationId": "deleteInvoiceItem",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -1628,7 +1628,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1644,7 +1644,7 @@
       "notes_count": 0,
       "operationId": "getInvoicePayments",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/payments",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1655,7 +1655,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1672,7 +1672,7 @@
       "notes_count": 0,
       "operationId": "addInvoicePayment",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/payments",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1683,7 +1683,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1698,7 +1698,7 @@
       "notes_count": 0,
       "operationId": "deleteInvoicePayment",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -1709,7 +1709,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1726,7 +1726,7 @@
       "notes_count": 0,
       "operationId": "changeInvoiceStatus",
       "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/status",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1737,7 +1737,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1752,7 +1752,7 @@
       "notes_count": 0,
       "operationId": "getMemberProfile",
       "path": "/workspaces/{workspaceId}/member-profile/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1763,7 +1763,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1775,7 +1775,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdMemberProfileUserId",
       "path": "/workspaces/{workspaceId}/member-profile/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1786,7 +1786,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -1801,7 +1801,7 @@
       "notes_count": 0,
       "operationId": "updateMemberProfile",
       "path": "/workspaces/{workspaceId}/member-profile/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1812,7 +1812,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1824,7 +1824,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdPolicies",
       "path": "/workspaces/{workspaceId}/policies",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1835,7 +1835,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1847,7 +1847,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdPolicies",
       "path": "/workspaces/{workspaceId}/policies",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1858,7 +1858,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1870,7 +1870,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdPoliciesPolicyId",
       "path": "/workspaces/{workspaceId}/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -1881,7 +1881,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1893,7 +1893,7 @@
       "notes_count": 1,
       "operationId": "putWorkspacesWorkspaceIdPoliciesPolicyId",
       "path": "/workspaces/{workspaceId}/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1904,7 +1904,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1916,7 +1916,7 @@
       "notes_count": 1,
       "operationId": "deleteWorkspacesWorkspaceIdPoliciesPolicyId",
       "path": "/workspaces/{workspaceId}/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -1927,7 +1927,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -1939,7 +1939,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdPoliciesPolicyIdArchive",
       "path": "/workspaces/{workspaceId}/policies/{policyId}/archive",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1950,7 +1950,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -1962,7 +1962,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdPoliciesPolicyIdRequests",
       "path": "/workspaces/{workspaceId}/policies/{policyId}/requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1973,7 +1973,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -1985,7 +1985,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdPoliciesPolicyIdRequestsRequestId",
       "path": "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -1996,7 +1996,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -2008,7 +2008,7 @@
       "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdPoliciesPolicyIdRequestsRequestId",
       "path": "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -2019,7 +2019,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2035,7 +2035,7 @@
       "notes_count": 1,
       "operationId": "getWorkspaceProjects",
       "path": "/workspaces/{workspaceId}/projects",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2046,7 +2046,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2061,7 +2061,7 @@
       "notes_count": 0,
       "operationId": "createProject",
       "path": "/workspaces/{workspaceId}/projects",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2072,7 +2072,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2086,7 +2086,7 @@
       "notes_count": 0,
       "operationId": "createProjectFromTemplate",
       "path": "/workspaces/{workspaceId}/projects/from-template",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2097,7 +2097,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2112,7 +2112,7 @@
       "notes_count": 0,
       "operationId": "getProjectById",
       "path": "/workspaces/{workspaceId}/projects/{projectId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2123,7 +2123,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2138,7 +2138,7 @@
       "notes_count": 0,
       "operationId": "updateProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2149,7 +2149,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2164,7 +2164,7 @@
       "notes_count": 1,
       "operationId": "deleteProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -2175,7 +2175,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -2187,7 +2187,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdProjectsProjectIdArchive",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/archive",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2198,7 +2198,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -2210,7 +2210,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdProjectsProjectIdCostRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/cost-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2221,7 +2221,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2237,7 +2237,7 @@
       "notes_count": 0,
       "operationId": "listProjectCustomFields",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2248,7 +2248,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2264,7 +2264,7 @@
       "notes_count": 0,
       "operationId": "updateProjectCustomField",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2275,7 +2275,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2291,7 +2291,7 @@
       "notes_count": 1,
       "operationId": "removeProjectCustomField",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -2302,7 +2302,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2317,7 +2317,7 @@
       "notes_count": 0,
       "operationId": "updateProjectEstimate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/estimate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2328,7 +2328,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -2340,7 +2340,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdProjectsProjectIdHourlyRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2351,7 +2351,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2365,7 +2365,7 @@
       "notes_count": 0,
       "operationId": "assignOrRemoveProjectUsers",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/memberships",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2376,7 +2376,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2391,7 +2391,7 @@
       "notes_count": 0,
       "operationId": "updateProjectMemberships",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/memberships",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2402,7 +2402,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2418,7 +2418,7 @@
       "notes_count": 0,
       "operationId": "findTasksOnProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2429,7 +2429,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2445,7 +2445,7 @@
       "notes_count": 0,
       "operationId": "addTaskOnProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2456,7 +2456,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2472,7 +2472,7 @@
       "notes_count": 0,
       "operationId": "getTaskById",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2483,7 +2483,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2498,7 +2498,7 @@
       "notes_count": 0,
       "operationId": "updateTaskOnProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2509,7 +2509,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2525,7 +2525,7 @@
       "notes_count": 2,
       "operationId": "deleteTaskFromProject",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -2536,7 +2536,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2552,7 +2552,7 @@
       "notes_count": 0,
       "operationId": "updateTaskCostRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2563,7 +2563,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2579,7 +2579,7 @@
       "notes_count": 0,
       "operationId": "updateTaskBillableRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2590,7 +2590,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2605,7 +2605,7 @@
       "notes_count": 0,
       "operationId": "updateProjectTemplate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/template",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2616,7 +2616,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2631,7 +2631,7 @@
       "notes_count": 0,
       "operationId": "updateProjectUserCostRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2642,7 +2642,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2657,7 +2657,7 @@
       "notes_count": 0,
       "operationId": "updateProjectUserHourlyRate",
       "path": "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2685,7 +2685,7 @@
       "notes_count": 2,
       "operationId": "generateAttendanceReport",
       "path": "/workspaces/{workspaceId}/reports/attendance",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2717,7 +2717,7 @@
       "notes_count": 2,
       "operationId": "generateDetailedReport",
       "path": "/workspaces/{workspaceId}/reports/detailed",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2747,7 +2747,7 @@
       "notes_count": 3,
       "operationId": "generateDetailedReportV1",
       "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2779,7 +2779,7 @@
       "notes_count": 2,
       "operationId": "generateSummaryReport",
       "path": "/workspaces/{workspaceId}/reports/summary",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2794,7 +2794,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2808,7 +2808,7 @@
       "notes_count": 1,
       "operationId": "generateWeeklyReport",
       "path": "/workspaces/{workspaceId}/reports/weekly",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2819,7 +2819,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -2831,7 +2831,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdSchedulingAssignments",
       "path": "/workspaces/{workspaceId}/scheduling/assignments",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2842,7 +2842,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2858,7 +2858,7 @@
       "notes_count": 0,
       "operationId": "getAllSchedulingAssignments",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/all",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2869,7 +2869,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2886,7 +2886,7 @@
       "notes_count": 1,
       "operationId": "getScheduledAssignmentsPerProject",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/projects/totals",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2897,7 +2897,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2913,7 +2913,7 @@
       "notes_count": 0,
       "operationId": "getScheduledAssignmentsOnProject",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -2924,7 +2924,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2938,7 +2938,7 @@
       "notes_count": 0,
       "operationId": "publishAssignments",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/publish",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2949,7 +2949,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -2965,7 +2965,7 @@
       "notes_count": 0,
       "operationId": "createRecurringAssignment",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2976,7 +2976,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -2988,7 +2988,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdSchedulingAssignmentsRecurringAssignmentId",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -2999,7 +2999,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3014,7 +3014,7 @@
       "notes_count": 0,
       "operationId": "updateRecurringAssignment",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3025,7 +3025,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3041,7 +3041,7 @@
       "notes_count": 0,
       "operationId": "deleteRecurringAssignment",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3052,7 +3052,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3066,7 +3066,7 @@
       "notes_count": 0,
       "operationId": "changeRecurringPeriod",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3077,7 +3077,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3093,7 +3093,7 @@
       "notes_count": 0,
       "operationId": "getUsersCapacityTotals",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3104,7 +3104,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -3116,7 +3116,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdSchedulingAssignmentsUsersTotals",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/users/totals",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3127,7 +3127,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3143,7 +3143,7 @@
       "notes_count": 0,
       "operationId": "getUserCapacityTotal",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3154,7 +3154,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -3166,7 +3166,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdSchedulingAssignmentsAssignmentId",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3177,7 +3177,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -3189,7 +3189,7 @@
       "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdSchedulingAssignmentsAssignmentId",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3200,7 +3200,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3216,7 +3216,7 @@
       "notes_count": 0,
       "operationId": "copyScheduledAssignment",
       "path": "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3227,7 +3227,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3241,7 +3241,7 @@
       "notes_count": 5,
       "operationId": "getWorkspacesWorkspaceIdSharedReports",
       "path": "/workspaces/{workspaceId}/shared-reports",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3252,7 +3252,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3265,7 +3265,7 @@
       "notes_count": 2,
       "operationId": "postWorkspacesWorkspaceIdSharedReports",
       "path": "/workspaces/{workspaceId}/shared-reports",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3276,7 +3276,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3289,7 +3289,7 @@
       "notes_count": 2,
       "operationId": "putWorkspacesWorkspaceIdSharedReportsSharedReportId",
       "path": "/workspaces/{workspaceId}/shared-reports/{sharedReportId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3300,7 +3300,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3313,7 +3313,7 @@
       "notes_count": 2,
       "operationId": "deleteWorkspacesWorkspaceIdSharedReportsSharedReportId",
       "path": "/workspaces/{workspaceId}/shared-reports/{sharedReportId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3324,7 +3324,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3340,7 +3340,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTags",
       "path": "/workspaces/{workspaceId}/tags",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3351,7 +3351,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3367,7 +3367,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdTags",
       "path": "/workspaces/{workspaceId}/tags",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3378,7 +3378,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3394,7 +3394,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTagsTagId",
       "path": "/workspaces/{workspaceId}/tags/{tagId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3405,7 +3405,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3421,7 +3421,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdTagsTagId",
       "path": "/workspaces/{workspaceId}/tags/{tagId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3432,7 +3432,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3448,7 +3448,7 @@
       "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdTagsTagId",
       "path": "/workspaces/{workspaceId}/tags/{tagId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3459,7 +3459,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3473,7 +3473,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdTimeEntries",
       "path": "/workspaces/{workspaceId}/time-entries",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3484,7 +3484,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3498,7 +3498,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdTimeEntriesInvoiced",
       "path": "/workspaces/{workspaceId}/time-entries/invoiced",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3509,7 +3509,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -3521,7 +3521,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdTimeEntriesInvoicedBulk",
       "path": "/workspaces/{workspaceId}/time-entries/invoiced/bulk",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3532,7 +3532,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3546,7 +3546,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTimeEntriesStatusInProgress",
       "path": "/workspaces/{workspaceId}/time-entries/status/in-progress",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3557,7 +3557,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3572,7 +3572,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTimeEntriesTimeEntryId",
       "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3583,7 +3583,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3598,7 +3598,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdTimeEntriesTimeEntryId",
       "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3609,7 +3609,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3624,7 +3624,7 @@
       "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdTimeEntriesTimeEntryId",
       "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3635,7 +3635,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3651,7 +3651,7 @@
       "notes_count": 0,
       "operationId": "getBalancesForPolicy",
       "path": "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3662,7 +3662,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3678,7 +3678,7 @@
       "notes_count": 0,
       "operationId": "updateBalance",
       "path": "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3689,7 +3689,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3703,7 +3703,7 @@
       "notes_count": 0,
       "operationId": "getBalanceForUser",
       "path": "/workspaces/{workspaceId}/time-off/balance/user/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3714,7 +3714,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3730,7 +3730,7 @@
       "notes_count": 1,
       "operationId": "getTimeOffPolicies",
       "path": "/workspaces/{workspaceId}/time-off/policies",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3741,7 +3741,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3756,7 +3756,7 @@
       "notes_count": 0,
       "operationId": "createTimeOffPolicy",
       "path": "/workspaces/{workspaceId}/time-off/policies",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3767,7 +3767,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3782,7 +3782,7 @@
       "notes_count": 0,
       "operationId": "getTimeOffPolicy",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3793,7 +3793,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3806,7 +3806,7 @@
       "notes_count": 1,
       "operationId": "updateTimeOffPolicy",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3817,7 +3817,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3832,7 +3832,7 @@
       "notes_count": 0,
       "operationId": "changeTimeOffPolicyStatus",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3843,7 +3843,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3858,7 +3858,7 @@
       "notes_count": 1,
       "operationId": "deleteTimeOffPolicy",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3869,7 +3869,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3884,7 +3884,7 @@
       "notes_count": 0,
       "operationId": "createTimeOffRequest",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3895,7 +3895,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3910,7 +3910,7 @@
       "notes_count": 0,
       "operationId": "changeTimeOffRequestStatus",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3921,7 +3921,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3936,7 +3936,7 @@
       "notes_count": 0,
       "operationId": "deleteTimeOffRequest",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -3947,7 +3947,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -3961,7 +3961,7 @@
       "notes_count": 0,
       "operationId": "createTimeOffRequestForUser",
       "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -3985,7 +3985,7 @@
       "notes_count": 1,
       "operationId": "getWorkspacesWorkspaceIdTimeOffRequests",
       "path": "/workspaces/{workspaceId}/time-off/requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -3996,7 +3996,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4012,7 +4012,7 @@
       "notes_count": 1,
       "operationId": "getAllTimeOffRequestsOnWorkspace",
       "path": "/workspaces/{workspaceId}/time-off/requests",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4023,7 +4023,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -4035,7 +4035,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdTimeOffRequestsUsersUserId",
       "path": "/workspaces/{workspaceId}/time-off/requests/users/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4046,7 +4046,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -4058,7 +4058,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdTimeOffRequestsRequestId",
       "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4069,7 +4069,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -4081,7 +4081,7 @@
       "notes_count": 0,
       "operationId": "deleteWorkspacesWorkspaceIdTimeOffRequestsRequestId",
       "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -4092,7 +4092,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -4104,7 +4104,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdTimeOffRequestsRequestIdStatus",
       "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}/status",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4115,7 +4115,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4132,7 +4132,7 @@
       "notes_count": 0,
       "operationId": "findAllGroupsOnWorkspace",
       "path": "/workspaces/{workspaceId}/user-groups",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4143,7 +4143,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4160,7 +4160,7 @@
       "notes_count": 0,
       "operationId": "addNewGroup",
       "path": "/workspaces/{workspaceId}/user-groups",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4171,7 +4171,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -4183,7 +4183,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdUserGroupsGroupId",
       "path": "/workspaces/{workspaceId}/user-groups/{groupId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4194,7 +4194,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4211,7 +4211,7 @@
       "notes_count": 0,
       "operationId": "updateGroup",
       "path": "/workspaces/{workspaceId}/user-groups/{groupId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4222,7 +4222,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4239,7 +4239,7 @@
       "notes_count": 0,
       "operationId": "deleteGroup",
       "path": "/workspaces/{workspaceId}/user-groups/{groupId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -4250,7 +4250,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -4262,7 +4262,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdUserGroupsGroupIdUsers",
       "path": "/workspaces/{workspaceId}/user-groups/{groupId}/users",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4273,7 +4273,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4290,7 +4290,7 @@
       "notes_count": 0,
       "operationId": "addUsersToGroup",
       "path": "/workspaces/{workspaceId}/user-groups/{groupId}/users",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4301,7 +4301,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4318,7 +4318,7 @@
       "notes_count": 0,
       "operationId": "removeUserFromGroup",
       "path": "/workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -4329,7 +4329,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4344,7 +4344,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdUserUserIdTimeEntries",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4355,7 +4355,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4370,7 +4370,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdUserUserIdTimeEntries",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4381,7 +4381,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4395,7 +4395,7 @@
       "notes_count": 0,
       "operationId": "putWorkspacesWorkspaceIdUserUserIdTimeEntries",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4406,7 +4406,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4420,7 +4420,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdUserUserIdTimeEntries",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4431,7 +4431,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4444,7 +4444,7 @@
       "notes_count": 0,
       "operationId": "deleteMany",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -4455,7 +4455,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -4467,7 +4467,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdUserUserIdTimeEntriesStop",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries/stop",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4478,7 +4478,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4492,7 +4492,7 @@
       "notes_count": 0,
       "operationId": "postWorkspacesWorkspaceIdUserUserIdTimeEntriesTimeEntryIdDuplicate",
       "path": "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4503,7 +4503,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4519,7 +4519,7 @@
       "notes_count": 0,
       "operationId": "findWorkspaceUsers",
       "path": "/workspaces/{workspaceId}/users",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4530,7 +4530,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4545,7 +4545,7 @@
       "notes_count": 0,
       "operationId": "addUserToWorkspace",
       "path": "/workspaces/{workspaceId}/users",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4556,7 +4556,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4571,7 +4571,7 @@
       "notes_count": 0,
       "operationId": "filterWorkspaceUsers",
       "path": "/workspaces/{workspaceId}/users/info",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4582,7 +4582,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4597,7 +4597,7 @@
       "notes_count": 0,
       "operationId": "updateUserStatus",
       "path": "/workspaces/{workspaceId}/users/{userId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4608,7 +4608,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4623,7 +4623,7 @@
       "notes_count": 0,
       "operationId": "updateUserCostRate",
       "path": "/workspaces/{workspaceId}/users/{userId}/cost-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4634,7 +4634,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4650,7 +4650,7 @@
       "notes_count": 0,
       "operationId": "updateUserCustomFieldValue",
       "path": "/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4661,7 +4661,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4676,7 +4676,7 @@
       "notes_count": 0,
       "operationId": "updateUserHourlyRate",
       "path": "/workspaces/{workspaceId}/users/{userId}/hourly-rate",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4687,7 +4687,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4702,7 +4702,7 @@
       "notes_count": 0,
       "operationId": "findUserTeamManagers",
       "path": "/workspaces/{workspaceId}/users/{userId}/managers",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4713,7 +4713,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4729,7 +4729,7 @@
       "notes_count": 0,
       "operationId": "giveUserManagerRole",
       "path": "/workspaces/{workspaceId}/users/{userId}/roles",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4740,7 +4740,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4756,7 +4756,7 @@
       "notes_count": 0,
       "operationId": "removeUserManagerRole",
       "path": "/workspaces/{workspaceId}/users/{userId}/roles",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -4767,7 +4767,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-supplement"
@@ -4779,7 +4779,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdUsersUserIdTimeOffBalances",
       "path": "/workspaces/{workspaceId}/users/{userId}/time-off/balances",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4790,7 +4790,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4807,7 +4807,7 @@
       "notes_count": 2,
       "operationId": "getWebhooksOnWorkspace",
       "path": "/workspaces/{workspaceId}/webhooks",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4818,7 +4818,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4834,7 +4834,7 @@
       "notes_count": 0,
       "operationId": "createWebhook",
       "path": "/workspaces/{workspaceId}/webhooks",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4845,7 +4845,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-live-success",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4861,7 +4861,7 @@
       "notes_count": 1,
       "operationId": "getWebhookById",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4872,7 +4872,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4888,7 +4888,7 @@
       "notes_count": 0,
       "operationId": "updateWebhook",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4899,7 +4899,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4915,7 +4915,7 @@
       "notes_count": 0,
       "operationId": "deleteWebhook",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "destructive"
       ],
@@ -4926,7 +4926,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-openapi"
@@ -4938,7 +4938,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdWebhooksWebhookIdGenerateNewToken",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4949,7 +4949,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "probe-fragment"
@@ -4961,7 +4961,7 @@
       "notes_count": 0,
       "operationId": "getWorkspacesWorkspaceIdWebhooksWebhookIdLogs",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "read"
       ],
@@ -4972,7 +4972,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -4986,7 +4986,7 @@
       "notes_count": 0,
       "operationId": "getWebhookLogs",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -4997,7 +4997,7 @@
       "typed_tools_orphan": []
     },
     {
-      "coverage_class": "raw-tool-only",
+      "coverage_class": "uncovered",
       "coverage_md_tools": [],
       "evidence": [
         "aiii-openapi",
@@ -5010,7 +5010,7 @@
       "notes_count": 0,
       "operationId": "patchWorkspacesWorkspaceIdWebhooksWebhookIdToken",
       "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/token",
-      "raw_allowlisted": true,
+      "raw_allowlisted": false,
       "risk": [
         "write"
       ],
@@ -5023,155 +5023,143 @@
   ],
   "summary": {
     "by_class": {
-      "raw-tool-live-success": 18,
-      "raw-tool-only": 170,
+      "raw-tool-live-success": 0,
+      "raw-tool-only": 0,
       "typed-tool-live-success": 4,
       "typed-tool-mapped": 0,
-      "uncovered": 0,
+      "uncovered": 188,
       "unsupported": 1
     },
     "by_host": {
       "https://api.clockify.me/api/v1": {
-        "raw-tool-live-success": 15,
-        "raw-tool-only": 166,
+        "uncovered": 181,
         "unsupported": 1
       },
       "https://auditlog-api.api.clockify.me/v1": {
-        "raw-tool-live-success": 1
+        "uncovered": 1
       },
       "https://reports.api.clockify.me/v1": {
-        "raw-tool-live-success": 2,
-        "raw-tool-only": 4,
-        "typed-tool-live-success": 4
+        "typed-tool-live-success": 4,
+        "uncovered": 6
       }
     },
     "by_tag": {
       "Approval": {
-        "raw-tool-only": 6
+        "uncovered": 6
       },
       "Audit Log Report": {
-        "raw-tool-live-success": 1
+        "uncovered": 1
       },
       "Balance": {
-        "raw-tool-only": 6,
+        "uncovered": 6,
         "unsupported": 1
       },
       "Client": {
-        "raw-tool-only": 6
+        "uncovered": 6
       },
       "Custom Fields": {
-        "raw-tool-live-success": 1,
-        "raw-tool-only": 6
+        "uncovered": 7
       },
       "Entity changes (Experimental)": {
-        "raw-tool-only": 3
+        "uncovered": 3
       },
       "Expense Report": {
         "typed-tool-live-success": 1
       },
       "Expense categories": {
-        "raw-tool-live-success": 3,
-        "raw-tool-only": 2
+        "uncovered": 5
       },
       "Expenses": {
-        "raw-tool-only": 6
+        "uncovered": 6
       },
       "Files": {
-        "raw-tool-only": 1
+        "uncovered": 1
       },
       "Holidays": {
-        "raw-tool-live-success": 4,
-        "raw-tool-only": 1
+        "uncovered": 5
       },
       "Invoice items": {
-        "raw-tool-only": 3
+        "uncovered": 3
       },
       "Invoice payments": {
-        "raw-tool-only": 3
+        "uncovered": 3
       },
       "Invoice settings": {
-        "raw-tool-only": 2
+        "uncovered": 2
       },
       "Invoices": {
-        "raw-tool-live-success": 1,
-        "raw-tool-only": 8
+        "uncovered": 9
       },
       "Member profiles": {
-        "raw-tool-only": 2
+        "uncovered": 2
       },
       "Policy": {
-        "raw-tool-only": 6
+        "uncovered": 6
       },
       "Project": {
-        "raw-tool-only": 3
+        "uncovered": 3
       },
       "Projects": {
-        "raw-tool-live-success": 1,
-        "raw-tool-only": 11
+        "uncovered": 12
       },
       "Reports": {
-        "raw-tool-only": 1,
-        "typed-tool-live-success": 3
+        "typed-tool-live-success": 3,
+        "uncovered": 1
       },
       "Roles": {
-        "raw-tool-only": 2
+        "uncovered": 2
       },
       "Scheduling": {
-        "raw-tool-live-success": 1,
-        "raw-tool-only": 15
+        "uncovered": 16
       },
       "SharedReport": {
-        "raw-tool-live-success": 2,
-        "raw-tool-only": 3
+        "uncovered": 5
       },
       "Tag": {
-        "raw-tool-only": 5
+        "uncovered": 5
       },
       "Tasks": {
-        "raw-tool-only": 7
+        "uncovered": 7
       },
       "Time Entries": {
-        "raw-tool-only": 6
+        "uncovered": 6
       },
       "Time Off": {
-        "raw-tool-live-success": 1,
-        "raw-tool-only": 7
+        "uncovered": 8
       },
       "Time Off Policies": {
-        "raw-tool-live-success": 1,
-        "raw-tool-only": 5
+        "uncovered": 6
       },
       "Time entry": {
-        "raw-tool-only": 1
+        "uncovered": 1
       },
       "TimeEntry": {
-        "raw-tool-only": 7
+        "uncovered": 7
       },
       "TimeOff": {
-        "raw-tool-only": 4
+        "uncovered": 4
       },
       "User": {
-        "raw-tool-only": 1
+        "uncovered": 1
       },
       "User Groups": {
-        "raw-tool-only": 8
+        "uncovered": 8
       },
       "Users": {
-        "raw-tool-only": 5
+        "uncovered": 5
       },
       "Webhook": {
-        "raw-tool-only": 1
+        "uncovered": 1
       },
       "Webhooks": {
-        "raw-tool-live-success": 2,
-        "raw-tool-only": 7
+        "uncovered": 9
       },
       "Workspaces": {
-        "raw-tool-only": 10
+        "uncovered": 10
       }
     },
     "no_evidence_count": 0,
-    "no_mcp_tool_count": 0,
+    "no_mcp_tool_count": 188,
     "total": 193
   },
   "tool_catalog": {

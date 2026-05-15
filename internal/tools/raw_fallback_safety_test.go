@@ -110,23 +110,6 @@ func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
 	}
 }
 
-func TestRawFallbackDocumentedAPIWritesFlagDoesNotEnableNonGET(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		t.Fatalf("raw fallback reached upstream with DocumentedAPIWrites only: %s %s", r.Method, r.URL.Path)
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	svc.DocumentedAPIWrites = true
-	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
-		"method": "PATCH",
-		"path":   "/workspaces/{workspaceId}",
-		"body":   map[string]any{"name": "Workspace"},
-	}); err == nil || !strings.Contains(err.Error(), "CLOCKIFY_ENABLE_RAW_WRITES") {
-		t.Fatalf("DocumentedAPIWrites-only raw PATCH err = %v, want CLOCKIFY_ENABLE_RAW_WRITES gate", err)
-	}
-}
-
 func TestRawFallbackRecoveryHintsPreferTypedTools(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("raw fallback reached upstream before recovery: %s %s", r.Method, r.URL.Path)

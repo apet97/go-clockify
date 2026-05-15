@@ -45,11 +45,10 @@ const bodyBufPoolMaxCap = 64 * 1024
 // buffer for the request payload (if any) and one for the response
 // decode, returning both when it returns.
 //
-// Production effect: reduces per-call allocations on the hot tier-1
-// write path by ~1 allocation + ~400 bytes for the request payload
-// and another ~1 allocation for the response decoder state that used
-// to come from json.NewDecoder. See the bench delta in Commit 3's
-// message for measured numbers.
+// Production effect: reduces per-call allocations on the hot
+// time-entry write path by ~1 allocation + ~400 bytes for the request
+// payload and another ~1 allocation for the response decoder state that
+// used to come from json.NewDecoder.
 var bodyBufPool = sync.Pool{
 	New: func() any { return new(bytes.Buffer) },
 }

@@ -105,9 +105,6 @@ type Service struct {
 	// ReportMaxEntries is the hard cap on the number of time entries a report
 	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
 	ReportMaxEntries int
-	// DocumentedAPIWrites enables generic probe_lab_api write/delete calls.
-	// Defaults off; callers opt in explicitly when they want raw mutations.
-	DocumentedAPIWrites bool
 	// EntryFinancialReports forces entry financial enrichment to call the
 	// reports host even when the client is pointed at a non-canonical base URL.
 	// Production Clockify calls auto-enable this path; tests and local proxies

@@ -21,7 +21,6 @@ var tier2GroupBuilders = map[string]func(*Service) []mcp.ToolDescriptor{
 	"user_admin":      userAdminHandlers,
 	"shared_reports":  sharedReportHandlers,
 	"change_tracking": changeTrackingHandlers,
-	"probe_lab_api":   probeLabAPIHandlers,
 }
 
 func tier2Handlers(svc *Service, name string) ([]mcp.ToolDescriptor, bool) {

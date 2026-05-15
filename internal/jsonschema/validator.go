@@ -1,6 +1,6 @@
 // Package jsonschema is a tiny stdlib-only JSON-schema validator scoped to
-// the keyword subset that the Clockify MCP server's Tier 1 + Tier 2 tool
-// input schemas actually use. It is intentionally narrow:
+// the keyword subset that the Clockify MCP server's one-user tool input
+// schemas actually use. It is intentionally narrow:
 //
 // Supported keywords:
 //   - type: object, string, integer, number, boolean, array, null
@@ -19,8 +19,8 @@
 // Not supported (deliberately): $ref, $defs, allOf/oneOf, not,
 // conditionals (if/then/else), dependentSchemas, const,
 // exclusiveMinimum/exclusiveMaximum, multipleOf, propertyNames,
-// patternProperties. None of those keywords appear in the Tier 1 or
-// Tier 2 fleet and adding them would pull complexity with no caller.
+// patternProperties. None of those keywords appear in the current tool
+// surface and adding them would pull complexity with no caller.
 //
 // Values are validated against the JSON-shaped tree the caller passes in,
 // which in the server is always a map[string]any produced by

@@ -5,7 +5,6 @@ Joins:
   - docs/openapi/clockify-openapi.yaml (the contract)
   - docs/tool-catalog.json             (the MCP tool inventory)
   - docs/api-coverage.md               (tool → endpoint → test ledger)
-  - internal/tools/tier2_probe_lab_api_gen.go (raw documented-API allowlist)
   - tests/e2e_live*.go                 (live test → tool name index)
 
 Outputs:
@@ -29,7 +28,6 @@ REPO = Path(__file__).resolve().parent.parent
 OPENAPI = REPO / "docs/openapi/clockify-openapi.yaml"
 CATALOG = REPO / "docs/tool-catalog.json"
 COVERAGE_MD = REPO / "docs/api-coverage.md"
-PROBE_GO = REPO / "internal/tools/tier2_probe_lab_api_gen.go"
 TESTS = sorted((REPO / "tests").glob("e2e_live*.go"))
 OUT_JSON = REPO / "docs/openapi/coverage-matrix.json"
 OUT_MD = REPO / "docs/openapi/coverage-matrix.md"
@@ -42,9 +40,6 @@ METHOD_RE = re.compile(
 )
 TOOL_RE = re.compile(r"`(clockify_[A-Za-z0-9_]+)`")
 TEST_RE = re.compile(r"`(Test[A-Za-z0-9_]+)`")
-PROBE_OP_RE = re.compile(
-    r"Method:\s+http\.Method(\w+),\s+Path:\s+\"([^\"]+)\"", re.DOTALL
-)
 COVERAGE_CLASS_ORDER = [
     "typed-tool-live-success",
     "typed-tool-mapped",
@@ -209,11 +204,15 @@ def parse_coverage_md() -> dict[tuple[str, str], list[dict]]:
 
 
 def parse_allowlist() -> set[tuple[str, str]]:
-    text = PROBE_GO.read_text()
-    out: set[tuple[str, str]] = set()
-    for m in PROBE_OP_RE.finditer(text):
-        out.add((m.group(1).lower(), canon_path(norm_path(m.group(2)))))
-    return out
+    """Return the empty allowlist.
+
+    The historical probe_lab_api gen file populated this set; that
+    surface was deleted because no production tool referenced it. The
+    allowlist concept is preserved here as an empty set so coverage
+    rows degrade to typed-or-uncovered without "raw_allowlisted" leaking
+    a stale third tier.
+    """
+    return set()
 
 
 def parse_test_tools() -> dict[str, set[str]]:
