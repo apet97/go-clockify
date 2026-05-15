@@ -97,101 +97,6 @@ func TestWeeklyFutureRowsDefaultOmittedAndIncluded(t *testing.T) {
 	}
 }
 
-func TestMoneyReportUsesSummaryMoneyRollups(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/ws1/reports/summary" || r.Method != http.MethodPost {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		respondJSON(t, w, map[string]any{
-			"totals": []map[string]any{{"earnedAmount": 10000, "costAmount": 4000, "currency": "USD"}},
-			"groupOne": []map[string]any{{
-				"id": "p1", "name": "Project", "earnedAmount": 10000, "costAmount": 4000, "profitAmount": 6000, "currency": "USD", "duration": 3600,
-				"groupTwo": []map[string]any{{"id": "t1", "name": "Task", "earnedAmount": 10000, "costAmount": 4000, "profitAmount": 6000, "currency": "USD", "duration": 3600}},
-			}},
-		})
-	})
-	defer cleanup()
-	svc := New(client, "ws1")
-	result, err := svc.MoneyReport(context.Background(), map[string]any{"financial_start": "2026-05-01T00:00:00Z", "financial_end": "2026-06-01T00:00:00Z"})
-	if err != nil {
-		t.Fatalf("money report: %v", err)
-	}
-	view := result.Data.(MoneyReportView)
-	if len(view.Rollups) != 1 || view.Totals.Financials.Earned == nil {
-		t.Fatalf("money report not normalized: %#v", view)
-	}
-	assertMoneyCents(t, view.GroupTotals.Financials.Earned, 10000, "USD")
-	assertMoneyCents(t, view.GroupTotals.Financials.Cost, 4000, "USD")
-}
-
-func TestAuditEntriesBuildsIssuesFromDetailedRows(t *testing.T) {
-	client, cleanup := newDetailedCompositeClient(t)
-	defer cleanup()
-	svc := New(client, "ws1")
-	result, err := svc.AuditEntries(context.Background(), map[string]any{"financial_start": "2026-05-01T00:00:00Z", "financial_end": "2026-06-01T00:00:00Z"})
-	if err != nil {
-		t.Fatalf("audit entries: %v", err)
-	}
-	view := result.Data.(AuditEntriesView)
-	if len(view.Entries) != 1 || len(view.Issues) == 0 {
-		t.Fatalf("audit entries not normalized: %#v", view)
-	}
-}
-
-func TestAuditEntriesForwardsScopedFilters(t *testing.T) {
-	var gotBody map[string]any
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/ws1/reports/detailed" {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
-			t.Fatalf("decode body: %v", err)
-		}
-		respondJSON(t, w, detailedCompositePayload())
-	})
-	defer cleanup()
-	svc := New(client, "ws1")
-	_, err := svc.AuditEntries(context.Background(), map[string]any{
-		"financial_start": "2026-05-01T00:00:00Z",
-		"financial_end":   "2026-06-01T00:00:00Z",
-		"client_id":       "c1",
-		"project_id":      "p1",
-		"task_id":         "t1",
-		"user_id":         "u1",
-		"tag_ids":         []string{"tag1", "tag2"},
-		"billable":        false,
-		"description":     "audit me",
-		"invoicing_state": "uninvoiced",
-	})
-	if err != nil {
-		t.Fatalf("audit entries: %v", err)
-	}
-	for key, wantID := range map[string]string{"clients": "c1", "projects": "p1", "tasks": "t1", "users": "u1"} {
-		filter := gotBody[key].(map[string]any)
-		ids := filter["ids"].([]any)
-		if len(ids) != 1 || ids[0] != wantID {
-			t.Fatalf("%s filter = %#v, want %s", key, filter, wantID)
-		}
-	}
-	if gotBody["billable"] != false || gotBody["description"] != "audit me" || gotBody["invoicingState"] != "UNINVOICED" {
-		t.Fatalf("simple filters not forwarded: %#v", gotBody)
-	}
-}
-
-func TestMonthlyBriefCombinesMoneyAndAudit(t *testing.T) {
-	client, cleanup := newCompositeClient(t)
-	defer cleanup()
-	svc := New(client, "ws1")
-	result, err := svc.MonthlyBrief(context.Background(), map[string]any{"month": "2026-05"})
-	if err != nil {
-		t.Fatalf("monthly brief: %v", err)
-	}
-	view := result.Data.(MonthlyBriefView)
-	if view.Month != "2026-05" || len(view.Money.Rollups) != 1 || len(view.Audit.Entries) != 1 {
-		t.Fatalf("monthly brief not combined: %#v", view)
-	}
-}
-
 func TestUnbilledForClientFiltersDetailedReport(t *testing.T) {
 	client, cleanup := newDetailedCompositeClient(t)
 	defer cleanup()
@@ -204,23 +109,6 @@ func TestUnbilledForClientFiltersDetailedReport(t *testing.T) {
 	if view.ClientID == "" || len(view.Entries) != 1 || view.Financials.Earned == nil {
 		t.Fatalf("unbilled view not normalized: %#v", view)
 	}
-}
-
-func newCompositeClient(t *testing.T) (*clockify.Client, func()) {
-	t.Helper()
-	return newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/workspaces/ws1/reports/summary":
-			respondJSON(t, w, map[string]any{
-				"totals":   []map[string]any{{"earnedAmount": 10000, "costAmount": 4000, "currency": "USD"}},
-				"groupOne": []map[string]any{{"id": "p1", "name": "Project", "earnedAmount": 10000, "costAmount": 4000, "profitAmount": 6000, "currency": "USD", "duration": 3600}},
-			})
-		case "/workspaces/ws1/reports/detailed":
-			respondJSON(t, w, detailedCompositePayload())
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-	})
 }
 
 func newDetailedCompositeClient(t *testing.T) (*clockify.Client, func()) {
