@@ -127,13 +127,12 @@ func createPaidFeatureWorkPackage(t *testing.T, ctx context.Context, c *liveCamp
 	start := time.Now().UTC().Add(-72 * time.Hour).Truncate(time.Second)
 	end := start.Add(30 * time.Minute)
 	entry := c.h.callOK(ctx, "clockify_entries_create", map[string]any{
-		"start":         start.Format(time.RFC3339),
-		"end":           end.Format(time.RFC3339),
-		"description":   c.LivePrefix("happy-entry", 0),
-		"project_id":    projectID,
-		"task_id":       taskID,
-		"billable":      true,
-		"allow_overlap": true,
+		"start":       start.Format(time.RFC3339),
+		"end":         end.Format(time.RFC3339),
+		"description": c.LivePrefix("happy-entry", 0),
+		"project_id":  projectID,
+		"task_id":     taskID,
+		"billable":    true,
 	})
 	entryID := requireToolEntityID(t, entry, "entryId", "id")
 	c.RegisterCleanup("entry", entryID, func(ctx context.Context) error {

@@ -849,7 +849,7 @@ func (s *Service) ensureClientNamed(ctx context.Context, name string, upsert boo
 		return clockify.ClientEntity{}, false, fmt.Errorf("client name is required")
 	}
 	if upsert {
-		clients, _, _, err := s.listClients(ctx, map[string]any{"page_size": float64(200)})
+		clients, err := s.listAllClients(ctx, nil)
 		if err != nil {
 			return clockify.ClientEntity{}, false, err
 		}
@@ -875,7 +875,7 @@ func (s *Service) ensureProjectNamed(ctx context.Context, name, clientID string,
 		return clockify.Project{}, false, fmt.Errorf("project name is required")
 	}
 	if upsert {
-		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200), "hydrated": false})
+		projects, err := s.listAllProjects(ctx, map[string]any{"hydrated": false})
 		if err != nil {
 			return clockify.Project{}, false, err
 		}
@@ -907,7 +907,7 @@ func (s *Service) ensureTaskNamed(ctx context.Context, projectID, name string, u
 		return clockify.Task{}, false, fmt.Errorf("task name is required")
 	}
 	if upsert {
-		tasks, _, _, err := s.listTasks(ctx, projectID, map[string]any{"page_size": float64(200)})
+		tasks, err := s.listAllTasks(ctx, projectID, nil)
 		if err != nil {
 			return clockify.Task{}, false, err
 		}
@@ -933,7 +933,7 @@ func (s *Service) ensureTagNamed(ctx context.Context, name string, upsert bool) 
 		return clockify.Tag{}, false, fmt.Errorf("tag name is required")
 	}
 	if upsert {
-		tags, _, _, err := s.listTags(ctx, map[string]any{"page_size": float64(200)})
+		tags, err := s.listAllTags(ctx, nil)
 		if err != nil {
 			return clockify.Tag{}, false, err
 		}

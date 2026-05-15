@@ -793,7 +793,9 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				"isError": true,
 			}
 			var translator errorTranslator
-			if errors.As(err, &translator) {
+			if structured := runtimeCancellationEnvelope(params.Name, err); structured != nil {
+				result["structuredContent"] = structured
+			} else if errors.As(err, &translator) {
 				result["structuredContent"] = map[string]any{"error_translation": translator.ErrorTranslation()}
 			}
 			resp.Result = result
@@ -951,6 +953,34 @@ func toolCallParamsFromMap(m map[string]any) (ToolCallParams, error) {
 		}
 	}
 	return p, nil
+}
+
+func runtimeCancellationEnvelope(toolName string, err error) map[string]any {
+	code := ""
+	hint := ""
+	retryable := true
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		code = "timeout"
+		hint = "The tool exceeded CLOCKIFY_TOOL_TIMEOUT before Clockify returned. Retry with a narrower request, check Clockify availability, or increase CLOCKIFY_TOOL_TIMEOUT for legitimately long operations."
+	case errors.Is(err, context.Canceled):
+		code = "cancelled"
+		hint = "The tool was cancelled before completion. Retry when the client is ready to keep the request open."
+	default:
+		return nil
+	}
+	return map[string]any{
+		"ok":     false,
+		"action": toolName,
+		"error": map[string]any{
+			"code":    code,
+			"message": err.Error(),
+		},
+		"recovery": map[string]any{
+			"hint":      hint,
+			"retryable": retryable,
+		},
+	}
 }
 
 // toolResultEnvelope builds the successful MCP tools/call envelope.

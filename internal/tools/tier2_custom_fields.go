@@ -46,7 +46,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. Create custom field
 		{
 			Tool: toolRW("clockify_create_custom_field",
-				"Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE.",
+				"Create a custom field. Valid type values are TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK. allowed_values is required for dropdown fields.",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"name", "field_type"},
@@ -115,7 +115,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 		// 6. Set custom field value on a project or entry
 		{
 			Tool: toolRW("clockify_set_custom_field_value",
-				"Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value.",
+				"Set a custom field value on a project or time entry. Project values use the documented custom-fields route; entry values preserve the existing entry and replace customFields.",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"field_id", "value"},

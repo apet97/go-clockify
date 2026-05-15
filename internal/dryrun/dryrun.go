@@ -70,13 +70,19 @@ const (
 
 // previewMap maps destructive delete tools to their GET counterparts.
 var previewMap = map[string]string{
-	"clockify_delete_entry":            "clockify_get_entry",
-	"clockify_delete_invoice":          "clockify_get_invoice",
-	"clockify_delete_expense":          "clockify_get_expense",
-	"clockify_delete_custom_field":     "clockify_get_custom_field",
-	"clockify_delete_shared_report":    "clockify_get_shared_report",
-	"clockify_delete_time_off_request": "clockify_get_time_off_request",
-	"clockify_delete_webhook":          "clockify_get_webhook",
+	"clockify_clients_delete":                "clockify_clients_get",
+	"clockify_projects_delete":               "clockify_projects_get",
+	"clockify_tasks_delete":                  "clockify_tasks_get",
+	"clockify_tags_delete":                   "clockify_tags_get",
+	"clockify_entries_delete":                "clockify_entries_get",
+	"clockify_invoices_delete":               "clockify_invoices_get",
+	"clockify_expenses_delete":               "clockify_expenses_get",
+	"clockify_custom_fields_delete":          "clockify_custom_fields_get",
+	"clockify_time_off_requests_delete":      "clockify_time_off_requests_get",
+	"clockify_scheduling_assignments_delete": "clockify_scheduling_assignments_get",
+	"clockify_webhooks_delete":               "clockify_webhooks_get",
+	"clockify_groups_delete":                 "clockify_groups_get",
+	"clockify_holidays_delete":               "clockify_holidays_get",
 }
 
 // confirmTools maps destructive tools that use confirm-pattern interception.
@@ -101,13 +107,9 @@ var confirmTools = map[string]bool{}
 // have no Clockify GET endpoint that returns the doomed resource shape,
 // so dry-run echoes the supplied IDs without any preview content.
 var minimalTools = map[string]bool{
-	"clockify_delete_invoice_item":     true,
-	"clockify_delete_expense_category": true,
-	"clockify_delete_assignment":       true,
-	"clockify_delete_user_group":       true,
-	"clockify_delete_user_group_admin": true,
-	"clockify_delete_holiday":          true,
-	"clockify_remove_user_from_group":  true,
+	"clockify_invoices_items_delete":      true,
+	"clockify_invoices_payments_delete":   true,
+	"clockify_expenses_categories_delete": true,
 }
 
 // ---------------------------------------------------------------------------

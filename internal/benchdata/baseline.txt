@@ -130,51 +130,6 @@ BenchmarkClient_Post-4   	     100	    139150 ns/op	   10265 B/op	     134 alloc
 ok  	github.com/apet97/go-clockify/internal/clockify	0.281s
 goos: linux
 goarch: amd64
-pkg: github.com/apet97/go-clockify/internal/enforcement
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkPipelineBeforeCall-4              	     100	      1295 ns/op	     557 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1329 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1377 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1087 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1097 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	       967.0 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1122 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	       914.1 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1068 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCall-4              	     100	      1118 ns/op	     556 B/op	       9 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       455.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       628.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       596.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       735.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       710.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       834.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       529.1 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       453.8 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       774.4 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineBeforeCallNoPrincipal-4   	     100	       699.6 ns/op	     264 B/op	       4 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      2247 ns/op	     560 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1701 ns/op	     523 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1640 ns/op	     517 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1241 ns/op	     523 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1395 ns/op	     517 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1535 ns/op	     517 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1796 ns/op	     517 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1517 ns/op	     523 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1317 ns/op	     523 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallSmallResult-4    	     100	      1476 ns/op	     523 B/op	      12 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3174259 ns/op	 1459203 B/op	   21564 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3151117 ns/op	 1435675 B/op	   21562 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3129350 ns/op	 1425786 B/op	   21561 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3708005 ns/op	 1452975 B/op	   21563 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3273106 ns/op	 1436518 B/op	   21562 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3139805 ns/op	 1442227 B/op	   21562 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3176034 ns/op	 1452137 B/op	   21563 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3146565 ns/op	 1422511 B/op	   21561 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3169155 ns/op	 1443929 B/op	   21563 allocs/op
-BenchmarkPipelineAfterCallLargeResult-4    	     100	   3125813 ns/op	 1422487 B/op	   21560 allocs/op
-ok  	github.com/apet97/go-clockify/internal/enforcement	3.244s
-goos: linux
-goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/ratelimit
 cpu: AMD EPYC 7763 64-Core Processor
 BenchmarkAcquireForSubjectSteady-4       	     100	      1222 ns/op	     557 B/op	       9 allocs/op
@@ -208,41 +163,6 @@ BenchmarkAcquireGlobal-4                 	     100	       579.2 ns/op	     264 B
 BenchmarkAcquireGlobal-4                 	     100	       581.7 ns/op	     264 B/op	       4 allocs/op
 BenchmarkAcquireGlobal-4                 	     100	       495.2 ns/op	     264 B/op	       4 allocs/op
 ok  	github.com/apet97/go-clockify/internal/ratelimit	0.014s
-goos: linux
-goarch: amd64
-pkg: github.com/apet97/go-clockify/internal/authn
-cpu: AMD EPYC 7763 64-Core Processor
-BenchmarkStaticBearer-4       	     100	       363.6 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       483.2 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       153.2 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       151.4 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       154.6 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       339.1 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       260.4 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       365.4 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       215.2 ns/op	      48 B/op	       1 allocs/op
-BenchmarkStaticBearer-4       	     100	       153.4 ns/op	      48 B/op	       1 allocs/op
-BenchmarkForwardAuth-4        	     100	       786.0 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       600.6 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       475.1 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       473.2 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       489.3 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       912.0 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       548.6 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       415.2 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       467.2 ns/op	     336 B/op	       2 allocs/op
-BenchmarkForwardAuth-4        	     100	       619.1 ns/op	     336 B/op	       2 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       866.1 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       886.6 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       799.7 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	      1102 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	      1289 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       798.4 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	      1199 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       921.5 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	      1551 ns/op	     704 B/op	       1 allocs/op
-BenchmarkOIDCVerifyCached-4   	     100	       890.4 ns/op	     704 B/op	       1 allocs/op
-ok  	github.com/apet97/go-clockify/internal/authn	0.625s
 goos: linux
 goarch: amd64
 pkg: github.com/apet97/go-clockify/internal/tools

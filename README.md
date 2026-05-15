@@ -52,6 +52,10 @@ export CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS="4"
 export CLOCKIFY_MAX_MESSAGE_SIZE="4194304"
 export CLOCKIFY_ENABLE_RAW_WRITES="false"
 export CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=""
+export CLOCKIFY_CIRCUIT_BREAKER="enabled"
+export CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD="5"
+export CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION="45s"
+export CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES="1"
 export MCP_LOG_LEVEL="info"
 ```
 
@@ -206,6 +210,11 @@ Webhook tools require HTTPS, reject embedded credentials, and validate DNS by
 default so hostnames resolving to localhost, private, reserved, link-local, or
 loopback IPs are blocked. `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` is an explicit
 comma-separated escape hatch for trusted test domains.
+
+The upstream circuit breaker is enabled by default for the one-user runtime.
+Set `CLOCKIFY_CIRCUIT_BREAKER=disabled` only for controlled diagnosis; tune the
+threshold, open duration, and half-open probe count with the env vars shown in
+the setup block.
 
 ## Example Flow
 

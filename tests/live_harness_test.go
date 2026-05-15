@@ -73,6 +73,41 @@ func setupLiveMCPHarness(t *testing.T, _ liveMCPOptions) *liveMCPHarness {
 	return &liveMCPHarness{t: t, Service: service, Server: server}
 }
 
+func (h *liveMCPHarness) clearRunningTimer(ctx context.Context) {
+	h.t.Helper()
+	out, err := h.Service.EntriesRunning(ctx, map[string]any{})
+	if err != nil {
+		h.t.Fatalf("preflight running timer check: %v", err)
+	}
+	result, ok := out.(tools.ToolResult)
+	if !ok {
+		h.t.Fatalf("preflight running timer check returned %T", out)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["running"] != true {
+		return
+	}
+	entryID := liveRunningEntryID(data["entry"])
+	if entryID == "" {
+		h.t.Fatalf("preflight running timer check could not extract entry id: %#v", data["entry"])
+	}
+	if _, err := h.Service.DeleteEntry(ctx, map[string]any{"entry_id": entryID}); err != nil {
+		h.t.Fatalf("preflight delete stale running timer: %v", err)
+	}
+}
+
+func liveRunningEntryID(entry any) string {
+	switch value := entry.(type) {
+	case clockify.TimeEntry:
+		return value.ID
+	case map[string]any:
+		if id, ok := value["id"].(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
 func (h *liveMCPHarness) nextRequestID() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()

@@ -29068,7 +29068,7 @@
     },
     {
       "name": "clockify_expenses_create",
-      "description": "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents. Receipt upload is optional: live Clockify accepts no-file expenses even though the public docs require a file. Provide all three file_* fields together to attach a receipt.",
+      "description": "Create an expense. amount defaults to major currency units; pass amount_unit:\"minor\" for cents. Receipt upload is optional; provide all three file_* fields together to attach one.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -31516,7 +31516,7 @@
     },
     {
       "name": "clockify_custom_fields_create",
-      "description": "Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE.",
+      "description": "Create a custom field. Valid type values are TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK. allowed_values is required for dropdown fields.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -32357,7 +32357,7 @@
     },
     {
       "name": "clockify_custom_fields_set_value",
-      "description": "Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value.",
+      "description": "Set a custom field value on a project or time entry. Project values use the documented custom-fields route; entry values preserve the existing entry and replace customFields.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -35018,7 +35018,7 @@
     },
     {
       "name": "clockify_time_off_policies_create",
-      "description": "Create a simplified owner-friendly time off policy. The handler builds a sensible default body around the current user (assigns the policy to them, applies an empty user-group filter, infers approval from auto_approve/requires_approval, and converts days_per_year into automaticAccrual). It intentionally omits Clockify's full surface — color/icon/expiration, half-day defaults, automatic time-entry creation, approval-stage configuration, and assignment filters. Use the raw API fallback (clockify_api_request POST /workspaces/{ws}/time-off/policies) when you need any of those fields.",
+      "description": "Create a simplified time off policy for the current user. Supports approval and days_per_year accrual basics; use clockify_api_request for advanced Clockify fields such as color, icon, expiration, half days, approval stages, or filters.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -35297,7 +35297,7 @@
     },
     {
       "name": "clockify_time_off_policies_update",
-      "description": "Update an existing time off policy by merging the supplied fields into the current upstream body. Same simplified surface as create: it preserves whatever the upstream stores for color/icon/expiration/automatic time-entry creation/approval stages and only mutates the fields you provide. Use the raw API fallback when you need to set fields outside this schema.",
+      "description": "Update a time off policy by merging supplied fields into the current upstream body. Preserves advanced Clockify fields outside this simplified schema; use clockify_api_request for full-surface updates.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,

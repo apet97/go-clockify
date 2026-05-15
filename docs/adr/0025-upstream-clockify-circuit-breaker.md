@@ -16,6 +16,10 @@ profiles (`shared-service`, `prod-postgres`) and leaves local
 profiles disabled unless operators explicitly set
 `CLOCKIFY_CIRCUIT_BREAKER=enabled`.
 
+2026-05-15 one-user update: the current stdio-only product wires the
+breaker into the default command path and enables it by default; use
+`CLOCKIFY_CIRCUIT_BREAKER=disabled` only for controlled local diagnosis.
+
 ## Context
 
 The upstream Clockify client at `internal/clockify/client.go`

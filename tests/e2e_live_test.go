@@ -26,6 +26,7 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 	if statusIDs["workspaceId"] == "" || statusIDs["userId"] == "" {
 		t.Fatalf("clockify_status missing workspace/user IDs: %#v", statusIDs)
 	}
+	h.clearRunningTimer(ctx)
 
 	guide := h.callOK(ctx, "clockify_tools_guide", nil)
 	guideData := extractDataMap(t, guide)

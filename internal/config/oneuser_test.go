@@ -57,6 +57,18 @@ func TestLoadOneUserMinimalConfig(t *testing.T) {
 	if len(cfg.WebhookAllowedDomains) != 0 {
 		t.Fatalf("WebhookAllowedDomains = %#v", cfg.WebhookAllowedDomains)
 	}
+	if !cfg.CircuitBreaker.Enabled {
+		t.Fatal("CircuitBreaker defaulted disabled")
+	}
+	if cfg.CircuitBreaker.FailureThreshold != DefaultCircuitBreakerFailureThreshold {
+		t.Fatalf("CircuitBreaker.FailureThreshold = %d", cfg.CircuitBreaker.FailureThreshold)
+	}
+	if cfg.CircuitBreaker.OpenDuration != DefaultCircuitBreakerOpenDuration {
+		t.Fatalf("CircuitBreaker.OpenDuration = %s", cfg.CircuitBreaker.OpenDuration)
+	}
+	if cfg.CircuitBreaker.HalfOpenProbes != DefaultCircuitBreakerHalfOpenProbes {
+		t.Fatalf("CircuitBreaker.HalfOpenProbes = %d", cfg.CircuitBreaker.HalfOpenProbes)
+	}
 }
 
 func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
@@ -68,6 +80,10 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_TOOLSET", "business")
 	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "true")
 	t.Setenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", "hooks.example.com, .trusted.test, , api.example.com ")
+	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER", "disabled")
+	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "7")
+	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION", "90s")
+	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES", "3")
 
 	cfg, err := LoadOneUser()
 	if err != nil {
@@ -91,6 +107,18 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	wantDomains := []string{"hooks.example.com", ".trusted.test", "api.example.com"}
 	if !reflect.DeepEqual(cfg.WebhookAllowedDomains, wantDomains) {
 		t.Fatalf("WebhookAllowedDomains = %#v, want %#v", cfg.WebhookAllowedDomains, wantDomains)
+	}
+	if cfg.CircuitBreaker.Enabled {
+		t.Fatal("CircuitBreaker.Enabled = true")
+	}
+	if cfg.CircuitBreaker.FailureThreshold != 7 {
+		t.Fatalf("CircuitBreaker.FailureThreshold = %d", cfg.CircuitBreaker.FailureThreshold)
+	}
+	if cfg.CircuitBreaker.OpenDuration != 90*time.Second {
+		t.Fatalf("CircuitBreaker.OpenDuration = %s", cfg.CircuitBreaker.OpenDuration)
+	}
+	if cfg.CircuitBreaker.HalfOpenProbes != 3 {
+		t.Fatalf("CircuitBreaker.HalfOpenProbes = %d", cfg.CircuitBreaker.HalfOpenProbes)
 	}
 }
 
@@ -280,6 +308,22 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 		"bad toolset": {
 			envName: "CLOCKIFY_TOOLSET",
 			value:   "everything",
+		},
+		"bad circuit breaker mode": {
+			envName: "CLOCKIFY_CIRCUIT_BREAKER",
+			value:   "sometimes",
+		},
+		"zero circuit breaker threshold": {
+			envName: "CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD",
+			value:   "0",
+		},
+		"bad circuit breaker duration": {
+			envName: "CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION",
+			value:   "later",
+		},
+		"zero circuit breaker half-open probes": {
+			envName: "CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES",
+			value:   "0",
 		},
 	}
 

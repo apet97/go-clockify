@@ -73,7 +73,7 @@ func TestCheckDryRunNonDestructive_PassThrough(t *testing.T) {
 
 func TestCheckDryRunPreviewTool(t *testing.T) {
 	args := map[string]any{"dry_run": true}
-	action, active := CheckDryRun("clockify_delete_entry", args, true)
+	action, active := CheckDryRun("clockify_entries_delete", args, true)
 	if !active {
 		t.Fatal("expected active=true")
 	}
@@ -84,7 +84,7 @@ func TestCheckDryRunPreviewTool(t *testing.T) {
 
 func TestCheckDryRunMinimal(t *testing.T) {
 	args := map[string]any{"dry_run": true}
-	action, active := CheckDryRun("clockify_delete_invoice_item", args, true)
+	action, active := CheckDryRun("clockify_invoices_items_delete", args, true)
 	if !active {
 		t.Fatal("expected active=true")
 	}
@@ -93,12 +93,12 @@ func TestCheckDryRunMinimal(t *testing.T) {
 	}
 
 	args = map[string]any{"dry_run": true}
-	action, active = CheckDryRun("clockify_delete_assignment", args, true)
+	action, active = CheckDryRun("clockify_invoices_payments_delete", args, true)
 	if !active {
 		t.Fatal("expected active=true")
 	}
 	if action != MinimalFallback {
-		t.Fatalf("expected MinimalFallback for assignment delete, got %d", action)
+		t.Fatalf("expected MinimalFallback for payment delete, got %d", action)
 	}
 }
 
@@ -115,7 +115,7 @@ func TestCheckDryRunDefaultDestructive(t *testing.T) {
 
 func TestCheckDryRunConsumesFlag(t *testing.T) {
 	args := map[string]any{"dry_run": true, "entry_id": "e1"}
-	_, active := CheckDryRun("clockify_delete_entry", args, true)
+	_, active := CheckDryRun("clockify_entries_delete", args, true)
 	if !active {
 		t.Fatal("expected active=true")
 	}
@@ -133,13 +133,16 @@ func TestCheckDryRunConsumesFlag(t *testing.T) {
 
 func TestPreviewToolFor(t *testing.T) {
 	expected := map[string]string{
-		"clockify_delete_entry":            "clockify_get_entry",
-		"clockify_delete_invoice":          "clockify_get_invoice",
-		"clockify_delete_expense":          "clockify_get_expense",
-		"clockify_delete_custom_field":     "clockify_get_custom_field",
-		"clockify_delete_shared_report":    "clockify_get_shared_report",
-		"clockify_delete_time_off_request": "clockify_get_time_off_request",
-		"clockify_delete_webhook":          "clockify_get_webhook",
+		"clockify_clients_delete":           "clockify_clients_get",
+		"clockify_projects_delete":          "clockify_projects_get",
+		"clockify_tasks_delete":             "clockify_tasks_get",
+		"clockify_tags_delete":              "clockify_tags_get",
+		"clockify_entries_delete":           "clockify_entries_get",
+		"clockify_invoices_delete":          "clockify_invoices_get",
+		"clockify_expenses_delete":          "clockify_expenses_get",
+		"clockify_custom_fields_delete":     "clockify_custom_fields_get",
+		"clockify_time_off_requests_delete": "clockify_time_off_requests_get",
+		"clockify_webhooks_delete":          "clockify_webhooks_get",
 	}
 	for del, get := range expected {
 		got, ok := PreviewToolFor(del)
@@ -216,13 +219,13 @@ func TestWrapResult(t *testing.T) {
 
 func TestMinimalResult(t *testing.T) {
 	args := map[string]any{"entry_id": "e1"}
-	m := MinimalResult("clockify_delete_invoice_item", args)
+	m := MinimalResult("clockify_invoices_items_delete", args)
 
 	if m["dry_run"] != true {
 		t.Fatal("expected dry_run=true")
 	}
-	if m["tool"] != "clockify_delete_invoice_item" {
-		t.Fatal("expected tool=clockify_delete_invoice_item")
+	if m["tool"] != "clockify_invoices_items_delete" {
+		t.Fatal("expected tool=clockify_invoices_items_delete")
 	}
 	if m["args"] == nil {
 		t.Fatal("expected args to be non-nil")

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"strings"
@@ -37,6 +38,7 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 	status := callLiveToolDataOrRecovery(t, server, "clockify_status", nil)
 	requireLiveID(t, status, "workspaceId")
 	requireLiveID(t, status, "userId")
+	clearLiveRunningTimer(t, svc)
 
 	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", map[string]any{"run_id": runID, "prefix": prefix, "date": date})
 	for _, key := range []string{"clientId", "projectId", "taskId", "tagId", "entryId"} {
@@ -338,6 +340,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	callLiveToolDataOrRecovery(t, server, "clockify_entries_running", nil)
 	callLiveToolDataOrRecovery(t, server, "clockify_entries_timer_status", nil)
 	callLiveToolDataOrRecovery(t, server, "clockify_entries_timer_stop", nil)
+	clearLiveRunningTimer(t, svc)
 	timerStart := requireLiveOK(t, server, "clockify_entries_timer_start", map[string]any{
 		"project_id":  projectID,
 		"description": unique("timer-start"),
@@ -591,6 +594,39 @@ func requireLiveOK(t *testing.T, server *mcp.Server, name string, args map[strin
 		t.Fatalf("%s returned recovery where success is required: code=%s hint=%s", name, envelope.Error.Code, envelope.Recovery.Hint)
 	}
 	return envelope
+}
+
+func clearLiveRunningTimer(t *testing.T, svc *Service) {
+	t.Helper()
+	out, err := svc.EntriesRunning(context.Background(), map[string]any{})
+	if err != nil {
+		t.Fatalf("preflight running timer check: %v", err)
+	}
+	result, ok := out.(ToolResult)
+	if !ok {
+		t.Fatalf("preflight running timer check returned %T", out)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["running"] != true {
+		return
+	}
+	entryID := liveRunningEntryID(data["entry"])
+	if entryID == "" {
+		t.Fatalf("preflight running timer check could not extract entry id: %#v", data["entry"])
+	}
+	if _, err := svc.DeleteEntry(context.Background(), map[string]any{"entry_id": entryID}); err != nil {
+		t.Fatalf("preflight delete stale running timer: %v", err)
+	}
+}
+
+func liveRunningEntryID(entry any) string {
+	switch value := entry.(type) {
+	case clockify.TimeEntry:
+		return value.ID
+	case map[string]any:
+		return stringFromAny(value["id"])
+	}
+	return ""
 }
 
 // reportProbeArgs are the minimal args for the report route tools. Those

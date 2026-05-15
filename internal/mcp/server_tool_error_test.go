@@ -92,3 +92,50 @@ func TestToolErrorSecretCanariesDoNotReachClientOrLogs(t *testing.T) {
 		}
 	}
 }
+
+func TestToolsCallTimeoutReturnsStructuredRecoveryEnvelope(t *testing.T) {
+	server := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{Name: "slow", InputSchema: map[string]any{"type": "object"}},
+		Handler: func(ctx context.Context, _ map[string]any) (any, error) {
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+	}}, nil)
+	server.ToolTimeout = time.Millisecond
+	server.MarkInitialized("2025-11-25", "timeout-test", "test")
+
+	resp := server.handle(context.Background(), Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+		Params:  map[string]any{"name": "slow", "arguments": map[string]any{}},
+	})
+	if resp.Error != nil {
+		t.Fatalf("expected tool-error result, got JSON-RPC error: %+v", resp.Error)
+	}
+	result, ok := resp.Result.(map[string]any)
+	if !ok {
+		t.Fatalf("result type=%T want map", resp.Result)
+	}
+	if result["isError"] != true {
+		t.Fatalf("isError=%v want true", result["isError"])
+	}
+	structured, ok := result["structuredContent"].(map[string]any)
+	if !ok {
+		t.Fatalf("structuredContent missing or wrong type: %+v", result)
+	}
+	if structured["ok"] != false {
+		t.Fatalf("structuredContent.ok=%v want false", structured["ok"])
+	}
+	errObj, ok := structured["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("structuredContent.error missing: %+v", structured)
+	}
+	if errObj["code"] != "timeout" {
+		t.Fatalf("error.code=%v want timeout", errObj["code"])
+	}
+	recovery, ok := structured["recovery"].(map[string]any)
+	if !ok || recovery["hint"] == "" {
+		t.Fatalf("missing recovery hint: %+v", structured)
+	}
+}

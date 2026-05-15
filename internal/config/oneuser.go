@@ -9,19 +9,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
 const DefaultBaseURL = "https://api.clockify.me/api/v1"
 
 const (
-	DefaultMaxInFlightToolCalls = 4
-	DefaultToolTimeout          = 45 * time.Second
-	MinToolTimeout              = 5 * time.Second
-	MaxToolTimeout              = 10 * time.Minute
-	DefaultMaxMessageSize       = 4 * 1024 * 1024
-	MaxMessageSize              = 100 * 1024 * 1024
-	DefaultToolset              = "all"
+	DefaultMaxInFlightToolCalls           = 4
+	DefaultToolTimeout                    = 45 * time.Second
+	MinToolTimeout                        = 5 * time.Second
+	MaxToolTimeout                        = 10 * time.Minute
+	DefaultMaxMessageSize                 = 4 * 1024 * 1024
+	MaxMessageSize                        = 100 * 1024 * 1024
+	DefaultToolset                        = "all"
+	DefaultCircuitBreakerFailureThreshold = 5
+	DefaultCircuitBreakerOpenDuration     = 45 * time.Second
+	DefaultCircuitBreakerHalfOpenProbes   = 1
 )
 
 // OneUserConfig is the complete runtime configuration for the
@@ -38,6 +42,7 @@ type OneUserConfig struct {
 	Toolset               string
 	EnableRawWrites       bool
 	WebhookAllowedDomains []string
+	CircuitBreaker        clockify.CircuitBreakerConfig
 }
 
 // LoadOneUser reads the intentionally tiny environment surface used by the
@@ -55,6 +60,12 @@ func LoadOneUser() (OneUserConfig, error) {
 		MaxMessageSize:        DefaultMaxMessageSize,
 		Toolset:               DefaultToolset,
 		WebhookAllowedDomains: parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
+		CircuitBreaker: clockify.CircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: DefaultCircuitBreakerFailureThreshold,
+			OpenDuration:     DefaultCircuitBreakerOpenDuration,
+			HalfOpenProbes:   DefaultCircuitBreakerHalfOpenProbes,
+		},
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL
@@ -101,6 +112,11 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.Toolset = toolset
+	breaker, err := parseCircuitBreakerEnv()
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.CircuitBreaker = breaker
 	return cfg, nil
 }
 
@@ -192,6 +208,58 @@ func parseToolsetEnv() (string, error) {
 	default:
 		return "", fmt.Errorf("CLOCKIFY_TOOLSET must be one of core, business, admin, all")
 	}
+}
+
+func parseCircuitBreakerEnv() (clockify.CircuitBreakerConfig, error) {
+	enabled, err := parseCircuitBreakerModeEnv()
+	if err != nil {
+		return clockify.CircuitBreakerConfig{}, err
+	}
+	threshold, err := parsePositiveIntEnv("CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD", DefaultCircuitBreakerFailureThreshold)
+	if err != nil {
+		return clockify.CircuitBreakerConfig{}, err
+	}
+	openDuration, err := parsePositiveDurationEnv("CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION", DefaultCircuitBreakerOpenDuration)
+	if err != nil {
+		return clockify.CircuitBreakerConfig{}, err
+	}
+	halfOpenProbes, err := parsePositiveIntEnv("CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES", DefaultCircuitBreakerHalfOpenProbes)
+	if err != nil {
+		return clockify.CircuitBreakerConfig{}, err
+	}
+	return clockify.CircuitBreakerConfig{
+		Enabled:          enabled,
+		FailureThreshold: threshold,
+		OpenDuration:     openDuration,
+		HalfOpenProbes:   halfOpenProbes,
+	}, nil
+}
+
+func parseCircuitBreakerModeEnv() (bool, error) {
+	raw := strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_CIRCUIT_BREAKER")))
+	switch raw {
+	case "", "auto", "enabled", "enable", "on", "true", "1":
+		return true, nil
+	case "disabled", "disable", "off", "false", "0":
+		return false, nil
+	default:
+		return false, fmt.Errorf("CLOCKIFY_CIRCUIT_BREAKER must be auto, enabled, or disabled")
+	}
+}
+
+func parsePositiveDurationEnv(name string, fallback time.Duration) (time.Duration, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback, nil
+	}
+	v, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a duration like 45s or 2m: %w", name, err)
+	}
+	if v <= 0 {
+		return 0, fmt.Errorf("%s must be positive", name)
+	}
+	return v, nil
 }
 
 func validateOneUserBaseURL(raw string) error {

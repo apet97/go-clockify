@@ -1,6 +1,8 @@
-.PHONY: build test fmt vet check clean gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift api-parity-matrix-drift live-contract-local
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-coverage-matrix coverage-matrix-drift api-parity-matrix-drift live-contract-local
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+BENCH_COUNT ?= 10
+BENCH_PKGS ?= ./internal/clockify ./internal/mcp ./internal/ratelimit ./internal/resolve ./internal/timeparse ./internal/tools
 
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o clockify-mcp ./cmd/clockify-mcp
@@ -18,6 +20,19 @@ check: fmt vet test
 
 clean:
 	rm -f clockify-mcp coverage.out
+
+bench:
+	go test -run '^$$' -bench=. -benchmem -count=$(BENCH_COUNT) $(BENCH_PKGS)
+
+bench-baseline-check:
+	bash scripts/check-bench-baseline.sh
+
+verify-bench: bench-baseline-check
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 go test -run '^$$' -bench=. -benchmem -count=$(BENCH_COUNT) $(BENCH_PKGS) > "$$tmpdir/bench-raw.txt"; \
+	 bash scripts/filter-bench-output.sh < "$$tmpdir/bench-raw.txt" > "$$tmpdir/bench.txt"; \
+	 go run golang.org/x/perf/cmd/benchstat@latest internal/benchdata/baseline.txt "$$tmpdir/bench.txt"
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # one-user runtime registry. Run it after changing any tool descriptor.

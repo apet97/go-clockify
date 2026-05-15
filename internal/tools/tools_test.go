@@ -57,6 +57,16 @@ func TestFullAccessRegistryContainsCoreOneUserTools(t *testing.T) {
 	}
 }
 
+func TestFullAccessToolDescriptionsStayCompact(t *testing.T) {
+	const maxDescriptionLen = 240
+	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if got := len(descriptor.Tool.Description); got > maxDescriptionLen {
+			t.Fatalf("%s description length=%d, want <=%d: %q", descriptor.Tool.Name, got, maxDescriptionLen, descriptor.Tool.Description)
+		}
+	}
+}
+
 func TestSummaryReportUsesReportsAPI(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -1056,6 +1066,44 @@ func TestTimerStatus_NoRunning(t *testing.T) {
 	elapsed, ok := dataMap["elapsed"].(string)
 	if !ok || elapsed != "" {
 		t.Fatalf("expected empty elapsed string, got %q", elapsed)
+	}
+}
+
+func TestEntriesRunningUsesInProgressFilter(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			if r.URL.Query().Get("in-progress") != "true" {
+				t.Fatalf("missing in-progress filter: %s", r.URL.RawQuery)
+			}
+			if r.URL.Query().Get("page-size") != "1" {
+				t.Fatalf("missing page-size=1: %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:          "running",
+				Description: "Running task",
+				UserID:      "u1",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2026-04-06T09:00:00Z",
+				},
+			}})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.EntriesRunning(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := out.(ToolResult)
+	data := result.Data.(map[string]any)
+	if data["running"] != true {
+		t.Fatalf("running data = %+v", data)
 	}
 }
 

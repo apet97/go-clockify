@@ -40,7 +40,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Create expense
-		{Tool: toolRW("clockify_create_expense", "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents. Receipt upload is optional: live Clockify accepts no-file expenses even though the public docs require a file. Provide all three file_* fields together to attach a receipt.", map[string]any{
+		{Tool: toolRW("clockify_create_expense", "Create an expense. amount defaults to major currency units; pass amount_unit:\"minor\" for cents. Receipt upload is optional; provide all three file_* fields together to attach one.", map[string]any{
 			"type":     "object",
 			"required": []string{"amount", "date", "category_id"},
 			"properties": map[string]any{

@@ -90,9 +90,8 @@ Restore the default after the upstream recovers.
 
 ### Confirm the circuit breaker is shedding load
 
-Hosted profiles default `CLOCKIFY_CIRCUIT_BREAKER=auto`, which enables
-the per-endpoint upstream 5xx breaker. Local/self-hosted profiles can
-opt in with `CLOCKIFY_CIRCUIT_BREAKER=enabled`.
+The one-user runtime enables the per-endpoint upstream 5xx breaker by default.
+Set `CLOCKIFY_CIRCUIT_BREAKER=disabled` only for controlled diagnosis.
 
 Useful signals:
 

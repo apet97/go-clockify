@@ -150,7 +150,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 10. clockify_create_time_off_policy (RW)
 		{
 			Tool: toolRW("clockify_create_time_off_policy",
-				"Create a simplified owner-friendly time off policy. The handler builds a sensible default body around the current user (assigns the policy to them, applies an empty user-group filter, infers approval from auto_approve/requires_approval, and converts days_per_year into automaticAccrual). It intentionally omits Clockify's full surface — color/icon/expiration, half-day defaults, automatic time-entry creation, approval-stage configuration, and assignment filters. Use the raw API fallback (clockify_api_request POST /workspaces/{ws}/time-off/policies) when you need any of those fields.",
+				"Create a simplified time off policy for the current user. Supports approval and days_per_year accrual basics; use clockify_api_request for advanced Clockify fields such as color, icon, expiration, half days, approval stages, or filters.",
 				map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
 					"name":              map[string]any{"type": "string"},
 					"accrual":           map[string]any{"type": "boolean", "description": "Whether the policy uses accrual"},
@@ -168,7 +168,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 11. clockify_update_time_off_policy (RW)
 		{
 			Tool: toolRW("clockify_update_time_off_policy",
-				"Update an existing time off policy by merging the supplied fields into the current upstream body. Same simplified surface as create: it preserves whatever the upstream stores for color/icon/expiration/automatic time-entry creation/approval stages and only mutates the fields you provide. Use the raw API fallback when you need to set fields outside this schema.",
+				"Update a time off policy by merging supplied fields into the current upstream body. Preserves advanced Clockify fields outside this simplified schema; use clockify_api_request for full-surface updates.",
 				map[string]any{"type": "object", "required": []string{"policy_id"}, "properties": map[string]any{
 					"policy_id":         map[string]any{"type": "string"},
 					"name":              map[string]any{"type": "string"},
@@ -199,7 +199,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 13. clockify_time_off_balance_update (RW; admin/billing impact)
 		{
-			Tool: toolRW("clockify_time_off_balance_update",
+			Tool: withOutputSchema(toolRW("clockify_time_off_balance_update",
 				"Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "user_ids", "value", "note"}, "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string"},
@@ -207,7 +207,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 					"value":     map[string]any{"type": "number", "minimum": -10000, "maximum": 10000, "description": "Absolute balance value to set (units determined by the policy time-unit, e.g. days or hours). Clockify constrains this to the range [-10000, 10000]."},
 					"note":      map[string]any{"type": "string", "description": "Required note explaining the adjustment; surfaced in Clockify audit history."},
 					"dry_run":   map[string]any{"type": "boolean", "description": "Preview the PATCH payload without calling Clockify."},
-				}}),
+				}}), envelopeOpenMap("clockify_time_off_balance_update")),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.updateTimeOffBalance(ctx, args)

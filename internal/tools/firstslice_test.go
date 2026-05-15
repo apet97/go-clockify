@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -149,6 +151,179 @@ func TestFirstSliceStatusDemoSeedAndCleanup(t *testing.T) {
 	cleanupResult := cleanup.(ToolResult)
 	if len(cleanupResult.Changed.Deleted) != 5 {
 		t.Fatalf("cleanup deleted = %d, want 5: %+v", len(cleanupResult.Changed.Deleted), cleanupResult)
+	}
+}
+
+func TestEnsureDemoProjectRevivesArchivedLeftover(t *testing.T) {
+	const (
+		workspaceID = "ws1"
+		projectID   = "project-archived"
+		clientID    = "client-1"
+		prefix      = "MCP-LIVE-SHARED"
+	)
+	archivedProject := clockify.Project{
+		ID:          projectID,
+		Name:        prefix + " Project",
+		ClientID:    clientID,
+		Archived:    true,
+		Billable:    true,
+		Public:      true,
+		WorkspaceID: workspaceID,
+	}
+	var restored bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/"+workspaceID+"/projects":
+			if r.URL.Query().Get("archived") == "true" {
+				respondJSON(t, w, []clockify.Project{archivedProject})
+				return
+			}
+			respondJSON(t, w, []clockify.Project{})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/"+workspaceID+"/projects/"+projectID:
+			respondJSON(t, w, archivedProject)
+		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/"+workspaceID+"/projects/"+projectID:
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body["archived"] != false {
+				t.Fatalf("restore payload archived=%v, want false", body["archived"])
+			}
+			restored = true
+			updated := archivedProject
+			updated.Archived = false
+			respondJSON(t, w, updated)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, workspaceID)
+	project, reused, err := svc.ensureDemoProject(context.Background(), prefix, clientID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reused || !restored || project.ID != projectID || project.Archived {
+		t.Fatalf("project=%+v reused=%v restored=%v", project, reused, restored)
+	}
+}
+
+func TestWorkflowUpsertScansAllPages(t *testing.T) {
+	ctx := context.Background()
+	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	defer fake.Close()
+	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
+
+	t.Run("client", func(t *testing.T) {
+		for i := 0; i < 240; i++ {
+			if _, err := svc.createClient(ctx, fmt.Sprintf("client-%03d", i)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		page2, _, _, err := svc.listClients(ctx, map[string]any{"page": 2, "page_size": 200})
+		if err != nil {
+			t.Fatal(err)
+		}
+		target := page2[0]
+		client, reused, err := svc.ensureClientNamed(ctx, target.Name, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reused || client.ID != target.ID {
+			t.Fatalf("ensureClientNamed reused=%v id=%q want reused id=%q", reused, client.ID, target.ID)
+		}
+	})
+
+	t.Run("project", func(t *testing.T) {
+		for i := 0; i < 240; i++ {
+			if _, _, err := svc.createProject(ctx, map[string]any{}, fmt.Sprintf("project-%03d", i)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		page2, _, _, err := svc.listProjects(ctx, map[string]any{"page": 2, "page_size": 200, "hydrated": false})
+		if err != nil {
+			t.Fatal(err)
+		}
+		target := page2[0]
+		project, reused, err := svc.ensureProjectNamed(ctx, target.Name, "", true, map[string]any{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reused || project.ID != target.ID {
+			t.Fatalf("ensureProjectNamed reused=%v id=%q want reused id=%q", reused, project.ID, target.ID)
+		}
+	})
+
+	t.Run("task", func(t *testing.T) {
+		project, _, err := svc.createProject(ctx, map[string]any{}, "task-parent")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := 0; i < 240; i++ {
+			if _, err := svc.createTask(ctx, project.ID, fmt.Sprintf("task-%03d", i), nil); err != nil {
+				t.Fatal(err)
+			}
+		}
+		page2, _, _, err := svc.listTasks(ctx, project.ID, map[string]any{"page": 2, "page_size": 200})
+		if err != nil {
+			t.Fatal(err)
+		}
+		target := page2[0]
+		task, reused, err := svc.ensureTaskNamed(ctx, project.ID, target.Name, true, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reused || task.ID != target.ID {
+			t.Fatalf("ensureTaskNamed reused=%v id=%q want reused id=%q", reused, task.ID, target.ID)
+		}
+	})
+
+	t.Run("tag", func(t *testing.T) {
+		for i := 0; i < 240; i++ {
+			if _, err := svc.createTag(ctx, fmt.Sprintf("tag-%03d", i)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		page2, _, _, err := svc.listTags(ctx, map[string]any{"page": 2, "page_size": 200})
+		if err != nil {
+			t.Fatal(err)
+		}
+		target := page2[0]
+		tag, reused, err := svc.ensureTagNamed(ctx, target.Name, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reused || tag.ID != target.ID {
+			t.Fatalf("ensureTagNamed reused=%v id=%q want reused id=%q", reused, tag.ID, target.ID)
+		}
+	})
+}
+
+func TestDemoCleanupScansAllProjectPages(t *testing.T) {
+	ctx := context.Background()
+	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	defer fake.Close()
+	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
+
+	for i := 0; i < 240; i++ {
+		if _, _, err := svc.createProject(ctx, map[string]any{}, fmt.Sprintf("other-project-%03d", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page2, _, _, err := svc.listProjects(ctx, map[string]any{"page": 2, "page_size": 200, "hydrated": false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := page2[0]
+
+	out, err := svc.ClockifyDemoCleanup(ctx, map[string]any{"prefix": target.Name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := mustToolResult(t, out, nil)
+	if len(result.Changed.Deleted) == 0 {
+		t.Fatalf("cleanup did not delete prefixed project beyond first page: %+v", result)
 	}
 }
 

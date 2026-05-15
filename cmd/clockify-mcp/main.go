@@ -88,6 +88,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	effective := effectiveVersion()
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 2)
 	client.SetUserAgent("clockify-mcp-one-user/" + effective)
+	client.SetCircuitBreaker(cfg.CircuitBreaker)
 	defer client.Close()
 
 	service := tools.New(client, cfg.WorkspaceID)
@@ -175,6 +176,10 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   %s\n", optionalList(cfg.WebhookAllowedDomains, "(none)"))
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER           %s\n", circuitBreakerStatus(cfg.CircuitBreaker.Enabled))
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD  %d\n", cfg.CircuitBreaker.FailureThreshold)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION      %s\n", cfg.CircuitBreaker.OpenDuration)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES   %d\n", cfg.CircuitBreaker.HalfOpenProbes)
 	if live {
 		if code := runDoctorLive(cfg, stdout, stderr); code != 0 {
 			return code
@@ -182,6 +187,13 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	}
 	_, _ = fmt.Fprintf(stdout, "\nResult: OK\n")
 	return 0
+}
+
+func circuitBreakerStatus(enabled bool) string {
+	if enabled {
+		return "enabled"
+	}
+	return "disabled"
 }
 
 func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {

@@ -1120,7 +1120,7 @@ func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) 
 	changed := ChangeSet{}
 	warnings := []Warning{}
 
-	entries, _, _, _, err := s.listCurrentUserEntries(ctx, cleanupEntryRangeArgs(args))
+	entries, _, err := s.listAllCurrentUserEntries(ctx, cleanupEntryRangeArgs(args))
 	if err != nil {
 		warnings = append(warnings, Warning{Code: "entries_list_failed", Message: err.Error()})
 	} else {
@@ -1131,13 +1131,13 @@ func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) 
 		}
 	}
 
-	projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200), "hydrated": false})
+	projects, err := s.listAllProjectsIncludingArchived(ctx, map[string]any{"hydrated": false})
 	if err != nil {
 		warnings = append(warnings, Warning{Code: "projects_list_failed", Message: err.Error()})
 	} else {
 		for _, project := range projects {
 			if strings.HasPrefix(project.Name, prefix) {
-				tasks, _, _, taskErr := s.listTasks(ctx, project.ID, map[string]any{"page_size": float64(200)})
+				tasks, taskErr := s.listAllTasks(ctx, project.ID, nil)
 				if taskErr != nil {
 					warnings = append(warnings, Warning{Code: "tasks_list_failed", Message: taskErr.Error()})
 				} else {
@@ -1151,7 +1151,7 @@ func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) 
 		}
 	}
 
-	tags, _, _, err := s.listTags(ctx, map[string]any{"page_size": float64(200)})
+	tags, err := s.listAllTags(ctx, nil)
 	if err != nil {
 		warnings = append(warnings, Warning{Code: "tags_list_failed", Message: err.Error()})
 	} else {
@@ -1168,7 +1168,7 @@ func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) 
 		}
 	}
 
-	clients, _, _, err := s.listClients(ctx, map[string]any{"page_size": float64(200)})
+	clients, err := s.listAllClients(ctx, nil)
 	if err != nil {
 		warnings = append(warnings, Warning{Code: "clients_list_failed", Message: err.Error()})
 	} else {
@@ -1206,7 +1206,7 @@ func (s *Service) getWorkspace(ctx context.Context, wsID string) (clockify.Works
 }
 
 func (s *Service) currentTimer(ctx context.Context) (any, error) {
-	entries, userID, _, _, err := s.listCurrentUserEntries(ctx, map[string]any{"page_size": float64(1)})
+	entries, _, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
 	if err != nil {
 		return nil, err
 	}
@@ -1237,6 +1237,10 @@ func (s *Service) listClients(ctx context.Context, args map[string]any) ([]clock
 	return out, page, pageSize, err
 }
 
+func (s *Service) listAllClients(ctx context.Context, args map[string]any) ([]clockify.ClientEntity, error) {
+	return listAllPages(ctx, args, s.listClients)
+}
+
 func (s *Service) createClient(ctx context.Context, name string) (clockify.ClientEntity, error) {
 	path, err := paths.Workspace(s.WorkspaceID, "clients")
 	if err != nil {
@@ -1260,6 +1264,10 @@ func (s *Service) listProjects(ctx context.Context, args map[string]any) ([]cloc
 	}
 	err = s.Client.GetValues(ctx, path, values, &out)
 	return out, page, pageSize, err
+}
+
+func (s *Service) listAllProjects(ctx context.Context, args map[string]any) ([]clockify.Project, error) {
+	return listAllPages(ctx, args, s.listProjects)
 }
 
 func (s *Service) createProject(ctx context.Context, args map[string]any, name string) (clockify.Project, string, error) {
@@ -1313,6 +1321,12 @@ func (s *Service) listTasks(ctx context.Context, projectID string, args map[stri
 	return out, page, pageSize, err
 }
 
+func (s *Service) listAllTasks(ctx context.Context, projectID string, args map[string]any) ([]clockify.Task, error) {
+	return listAllPages(ctx, args, func(ctx context.Context, args map[string]any) ([]clockify.Task, int, int, error) {
+		return s.listTasks(ctx, projectID, args)
+	})
+}
+
 func (s *Service) createTask(ctx context.Context, projectID, name string, args map[string]any) (clockify.Task, error) {
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
 		return clockify.Task{}, err
@@ -1343,6 +1357,10 @@ func (s *Service) listTags(ctx context.Context, args map[string]any) ([]clockify
 	}
 	err = s.Client.GetValues(ctx, path, values, &out)
 	return out, page, pageSize, err
+}
+
+func (s *Service) listAllTags(ctx context.Context, args map[string]any) ([]clockify.Tag, error) {
+	return listAllPages(ctx, args, s.listTags)
 }
 
 func (s *Service) createTag(ctx context.Context, name string) (clockify.Tag, error) {
@@ -1408,6 +1426,44 @@ func (s *Service) listCurrentUserEntries(ctx context.Context, args map[string]an
 	var entries []clockify.TimeEntry
 	err = s.Client.GetValues(ctx, path, values, &entries)
 	return entries, user.ID, page, pageSize, err
+}
+
+func (s *Service) listAllCurrentUserEntries(ctx context.Context, args map[string]any) ([]clockify.TimeEntry, string, error) {
+	scanArgs := copyArgs(args)
+	scanArgs["page_size"] = float64(200)
+	var all []clockify.TimeEntry
+	var userID string
+	for page := 1; ; page++ {
+		scanArgs["page"] = float64(page)
+		batch, currentUserID, _, pageSize, err := s.listCurrentUserEntries(ctx, scanArgs)
+		if err != nil {
+			return nil, "", err
+		}
+		if userID == "" {
+			userID = currentUserID
+		}
+		all = append(all, batch...)
+		if len(batch) < pageSize {
+			return all, userID, nil
+		}
+	}
+}
+
+func listAllPages[T any](ctx context.Context, args map[string]any, list func(context.Context, map[string]any) ([]T, int, int, error)) ([]T, error) {
+	scanArgs := copyArgs(args)
+	scanArgs["page_size"] = float64(200)
+	var all []T
+	for page := 1; ; page++ {
+		scanArgs["page"] = float64(page)
+		batch, _, pageSize, err := list(ctx, scanArgs)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, batch...)
+		if len(batch) < pageSize {
+			return all, nil
+		}
+	}
 }
 
 // buildEntryPayload assembles the time-entry POST body and the pre-create
@@ -1548,7 +1604,7 @@ func (s *Service) tagIDsFromArgs(ctx context.Context, args map[string]any) ([]st
 func (s *Service) ensureDemoClient(ctx context.Context, prefix string, upsert bool) (clockify.ClientEntity, bool, error) {
 	name := prefix + " Client"
 	if upsert {
-		clients, _, _, err := s.listClients(ctx, map[string]any{"page_size": float64(200)})
+		clients, err := s.listAllClients(ctx, nil)
 		if err != nil {
 			return clockify.ClientEntity{}, false, err
 		}
@@ -1565,24 +1621,92 @@ func (s *Service) ensureDemoClient(ctx context.Context, prefix string, upsert bo
 func (s *Service) ensureDemoProject(ctx context.Context, prefix, clientID string, upsert bool) (clockify.Project, bool, error) {
 	name := prefix + " Project"
 	if upsert {
-		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200), "hydrated": false})
+		projects, err := s.listAllProjectsIncludingArchived(ctx, map[string]any{"hydrated": false})
 		if err != nil {
 			return clockify.Project{}, false, err
 		}
+		var archivedMatch *clockify.Project
 		for _, p := range projects {
-			if p.Name == name {
+			if p.Name != name {
+				continue
+			}
+			if clientID != "" && p.ClientID != "" && p.ClientID != clientID {
+				continue
+			}
+			if !p.Archived {
 				return p, true, nil
 			}
+			project := p
+			archivedMatch = &project
+		}
+		if archivedMatch != nil {
+			project, err := s.restoreArchivedProject(ctx, *archivedMatch, map[string]any{"client_id": clientID, "billable": true})
+			if err != nil {
+				return clockify.Project{}, false, err
+			}
+			return project, true, nil
 		}
 	}
 	project, _, err := s.createProject(ctx, map[string]any{"client_id": clientID, "billable": true}, name)
 	return project, false, err
 }
 
+func (s *Service) listAllProjectsIncludingArchived(ctx context.Context, args map[string]any) ([]clockify.Project, error) {
+	activeArgs := copyArgs(args)
+	delete(activeArgs, "archived")
+	projects, err := s.listAllProjects(ctx, activeArgs)
+	if err != nil {
+		return nil, err
+	}
+	archivedArgs := copyArgs(args)
+	archivedArgs["archived"] = true
+	archived, err := s.listAllProjects(ctx, archivedArgs)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]bool, len(projects)+len(archived))
+	out := make([]clockify.Project, 0, len(projects)+len(archived))
+	for _, project := range append(projects, archived...) {
+		if project.ID != "" && seen[project.ID] {
+			continue
+		}
+		if project.ID != "" {
+			seen[project.ID] = true
+		}
+		out = append(out, project)
+	}
+	return out, nil
+}
+
+func (s *Service) restoreArchivedProject(ctx context.Context, project clockify.Project, args map[string]any) (clockify.Project, error) {
+	path, err := paths.Workspace(s.WorkspaceID, "projects", project.ID)
+	if err != nil {
+		return clockify.Project{}, err
+	}
+	var existing clockify.Project
+	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
+		return clockify.Project{}, err
+	}
+	existing.Archived = false
+	if clientID := strings.TrimSpace(stringArg(args, "client_id")); clientID != "" {
+		existing.ClientID = clientID
+	}
+	payload := projectPutPayload(existing)
+	if err := applyProjectRequestFields(payload, args); err != nil {
+		return clockify.Project{}, err
+	}
+	var updated clockify.Project
+	if err := s.Client.Put(ctx, path, payload, &updated); err != nil {
+		return clockify.Project{}, err
+	}
+	s.emitResourceUpdate(ctx, projectResourceURI(s.WorkspaceID, project.ID))
+	return updated, nil
+}
+
 func (s *Service) ensureDemoTask(ctx context.Context, prefix, projectID string, upsert bool) (clockify.Task, bool, error) {
 	name := prefix + " Task"
 	if upsert {
-		tasks, _, _, err := s.listTasks(ctx, projectID, map[string]any{"page_size": float64(200)})
+		tasks, err := s.listAllTasks(ctx, projectID, nil)
 		if err != nil {
 			return clockify.Task{}, false, err
 		}
@@ -1599,7 +1723,7 @@ func (s *Service) ensureDemoTask(ctx context.Context, prefix, projectID string, 
 func (s *Service) ensureDemoTag(ctx context.Context, prefix string, upsert bool) (clockify.Tag, bool, error) {
 	name := prefix + " Tag"
 	if upsert {
-		tags, _, _, err := s.listTags(ctx, map[string]any{"page_size": float64(200)})
+		tags, err := s.listAllTags(ctx, nil)
 		if err != nil {
 			return clockify.Tag{}, false, err
 		}
