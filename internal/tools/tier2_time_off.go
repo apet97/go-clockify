@@ -971,6 +971,19 @@ func (s *Service) updateTimeOffBalance(ctx context.Context, args map[string]any)
 		resolvedUsers = append(resolvedUsers, resolved)
 	}
 
+	// Clockify's PATCH /time-off/balance/policy/{policyId} requires
+	// userIds to be unique (see BALANCEDOC.md). Two literal IDs that
+	// match, or distinct refs that resolve to the same user, would
+	// otherwise produce a malformed body — fail closed before the
+	// dry-run preview or the PATCH.
+	seen := make(map[string]bool, len(resolvedUsers))
+	for _, id := range resolvedUsers {
+		if seen[id] {
+			return ResultEnvelope{}, fmt.Errorf("user_ids resolves to duplicate user %s; Clockify requires unique userIds", id)
+		}
+		seen[id] = true
+	}
+
 	payload := map[string]any{
 		"note":    note,
 		"userIds": resolvedUsers,

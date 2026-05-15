@@ -777,6 +777,122 @@ func TestUpdateTimeOffBalancePatchesPolicyEndpoint(t *testing.T) {
 	}
 }
 
+// TestUpdateTimeOffBalanceRejectsDuplicateLiteralUserIDs pins the
+// BALANCEDOC.md "userIds non-empty unique" contract: the same literal
+// user ID listed twice must fail closed before any HTTP call.
+func TestUpdateTimeOffBalanceRejectsDuplicateLiteralUserIDs(t *testing.T) {
+	const (
+		policyID = "abc123def456789012345679"
+		userX    = "abc123def456789012345670"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("duplicate user_ids must be rejected before any HTTP call; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateTimeOffBalance(context.Background(), map[string]any{
+		"policy_id": policyID,
+		"user_ids":  []any{userX, userX},
+		"value":     float64(8),
+		"note":      "Manual adjustment",
+	})
+	if err == nil {
+		t.Fatal("expected duplicate user_ids to be rejected")
+	}
+	if !strings.Contains(err.Error(), "duplicate") || !strings.Contains(err.Error(), userX) {
+		t.Fatalf("error = %q, want it to name the duplicate user %s", err, userX)
+	}
+}
+
+// TestUpdateTimeOffBalanceRejectsRefsResolvingToSameUser proves the
+// duplicate check runs after ref resolution: a literal ID and a name
+// that resolve to the same user must be rejected before the PATCH.
+func TestUpdateTimeOffBalanceRejectsRefsResolvingToSameUser(t *testing.T) {
+	const (
+		policyID = "abc123def456789012345679"
+		userX    = "abc123def456789012345670"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/users" {
+			respondJSON(t, w, []map[string]any{{"id": userX, "name": "Alice"}})
+			return
+		}
+		t.Fatalf("refs resolving to the same user must be rejected before PATCH; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.updateTimeOffBalance(context.Background(), map[string]any{
+		"policy_id": policyID,
+		"user_ids":  []any{userX, "Alice"},
+		"value":     float64(8),
+		"note":      "Manual adjustment",
+	})
+	if err == nil {
+		t.Fatal("expected refs resolving to the same user to be rejected")
+	}
+	if !strings.Contains(err.Error(), "duplicate") || !strings.Contains(err.Error(), userX) {
+		t.Fatalf("error = %q, want it to name the duplicate user %s", err, userX)
+	}
+}
+
+// TestUpdateTimeOffBalanceUniqueRefsPatchResolvedBody confirms the
+// duplicate guard does not over-reject: distinct refs (a literal ID and
+// a name resolving to a different user) still PATCH the resolved body.
+func TestUpdateTimeOffBalanceUniqueRefsPatchResolvedBody(t *testing.T) {
+	const (
+		policyID = "abc123def456789012345679"
+		userX    = "abc123def456789012345670"
+		userY    = "abc123def456789012345671"
+	)
+	var (
+		gotMethod string
+		gotPath   string
+		gotBody   map[string]any
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/users" {
+			respondJSON(t, w, []map[string]any{{"id": userY, "name": "Bob"}})
+			return
+		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.updateTimeOffBalance(context.Background(), map[string]any{
+		"policy_id": policyID,
+		"user_ids":  []any{userX, "Bob"},
+		"value":     float64(12),
+		"note":      "Quarterly grant",
+	})
+	if err != nil {
+		t.Fatalf("updateTimeOffBalance: %v", err)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Fatalf("method = %s, want PATCH", gotMethod)
+	}
+	if gotPath != "/workspaces/ws1/time-off/balance/policy/"+policyID {
+		t.Fatalf("path = %s", gotPath)
+	}
+	users, ok := gotBody["userIds"].([]any)
+	if !ok || len(users) != 2 || users[0] != userX || users[1] != userY {
+		t.Fatalf("body userIds = %v, want [%s %s]", gotBody["userIds"], userX, userY)
+	}
+	if gotBody["note"] != "Quarterly grant" || gotBody["value"] != float64(12) {
+		t.Fatalf("body note/value = %v / %v", gotBody["note"], gotBody["value"])
+	}
+	if !result.OK || result.Action != "clockify_time_off_balance_update" {
+		t.Fatalf("envelope = %#v", result)
+	}
+}
+
 func TestUpdateTimeOffBalanceDryRunSkipsHTTP(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("dry_run should not hit Clockify; got %s %s", r.Method, r.URL.Path)
