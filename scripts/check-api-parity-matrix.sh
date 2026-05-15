@@ -78,6 +78,7 @@ catalog_contract_errors="$(
       [
         (if (($tool.name // "") | test("^clockify_")) then empty else err(($tool.name // "<missing>") + ": name must start with clockify_") end),
         (if (($tool.description // "") | length) > 0 then empty else err(($tool.name // "<missing>") + ": description is required") end),
+        (if (($tool.category // "") | test("^(workflow|domain|raw)$")) then empty else err($tool.name + ": category must be workflow, domain, or raw") end),
         (if ($tool.handler_kind // "") != "" then empty else err($tool.name + ": handler_kind is required") end),
         (if ($tool.read_only | type) == "boolean" then empty else err($tool.name + ": read_only boolean is required") end),
         (if ($tool.destructive | type) == "boolean" then empty else err($tool.name + ": destructive boolean is required") end),
@@ -88,6 +89,7 @@ catalog_contract_errors="$(
         (if ($tool.output_schema | type) == "object" then empty else err($tool.name + ": output_schema object is required") end),
         (if (($tool.output_schema.required // []) | index("ok")) and (($tool.output_schema.required // []) | index("action")) then empty else err($tool.name + ": output_schema must require ok and action") end),
         (if ($tool.annotations | type) == "object" then empty else err($tool.name + ": annotations object is required") end),
+        (if ($tool.annotations.category == $tool.category) then empty else err($tool.name + ": annotations.category must mirror category") end),
         (if ($tool.annotations.readOnlyHint == $tool.read_only) then empty else err($tool.name + ": annotations.readOnlyHint must mirror read_only") end),
         (if ($tool.annotations.destructiveHint == $tool.destructive) then empty else err($tool.name + ": annotations.destructiveHint must mirror destructive") end),
         (if ($tool.annotations.idempotentHint == $tool.idempotent) then empty else err($tool.name + ": annotations.idempotentHint must mirror idempotent") end),

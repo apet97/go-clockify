@@ -49,6 +49,7 @@ assert_case() {
         }
       },
       "annotations": {
+        "category": "workflow",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -61,6 +62,7 @@ assert_case() {
     {
       "name": "clockify_api_get",
       "description": "Raw GET fallback within the pinned workspace or Clockify API path.",
+      "category": "raw",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -86,6 +88,7 @@ assert_case() {
         }
       },
       "annotations": {
+        "category": "raw",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -98,6 +101,7 @@ assert_case() {
     {
       "name": "clockify_api_request",
       "description": "Raw method fallback within the pinned workspace or Clockify API path.",
+      "category": "raw",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -125,6 +129,7 @@ assert_case() {
         }
       },
       "annotations": {
+        "category": "raw",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -215,6 +220,19 @@ PY
 }
 MUTATOR=mut_drop_annotations
 assert_case "dropped metadata fails closed" 1 "annotations object is required"
+
+mut_bad_category() {
+  python3 - "$1/docs/tool-catalog.json" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+obj = json.load(open(path))
+obj["tools"][0]["category"] = ""
+json.dump(obj, open(path, "w"), indent=2)
+PY
+}
+MUTATOR=mut_bad_category
+assert_case "missing category fails closed" 1 "category must be workflow, domain, or raw"
 
 mut_move_raw_fallback() {
   python3 - "$1/docs/tool-catalog.json" <<'PY'

@@ -51,6 +51,12 @@ func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 		if descriptor.Tool.OutputSchema == nil {
 			t.Fatalf("%s missing output schema", name)
 		}
+		category, _ := descriptor.Tool.Annotations["category"].(string)
+		switch category {
+		case "workflow", "domain", "raw":
+		default:
+			t.Fatalf("%s category=%q, want workflow/domain/raw", name, category)
+		}
 	}
 
 	for _, forbidden := range []string{

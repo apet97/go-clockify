@@ -426,6 +426,12 @@ func toolDestructive(name, desc string, schema map[string]any) mcp.Tool {
 
 func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	for i := range in {
+		if in[i].Tool.Annotations == nil {
+			in[i].Tool.Annotations = map[string]any{}
+		}
+		if _, ok := in[i].Tool.Annotations["category"]; !ok {
+			in[i].Tool.Annotations["category"] = defaultToolCategory(in[i].Tool.Name)
+		}
 		if value, ok := in[i].Tool.Annotations["readOnlyHint"].(bool); ok {
 			in[i].ReadOnlyHint = value
 		}
@@ -442,6 +448,15 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		applyAgentToolMetadata(&in[i])
 	}
 	return in
+}
+
+func defaultToolCategory(name string) string {
+	switch name {
+	case "clockify_api_get", "clockify_api_request":
+		return "raw"
+	default:
+		return "domain"
+	}
 }
 
 var agentToolMetadata = map[string]map[string]any{

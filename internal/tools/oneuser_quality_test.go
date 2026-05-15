@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -1658,6 +1659,92 @@ func TestToolsResourceMatchesServerToolsList(t *testing.T) {
 	}
 	if resource.Count != len(want) || !slices.Equal(got, want) {
 		t.Fatalf("clockify://tools diverged from tools/list\nresource count=%d got=%v\nwant=%v", resource.Count, got, want)
+	}
+}
+
+func TestPromptAndWorkflowGuidanceToolNamesExist(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	knownTools := map[string]bool{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		knownTools[descriptor.Tool.Name] = true
+	}
+
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	promptsRaw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"prompts/list"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var promptsResp struct {
+		Result struct {
+			Prompts []mcp.Prompt `json:"prompts"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(promptsRaw, &promptsResp); err != nil {
+		t.Fatal(err)
+	}
+	toolToken := regexp.MustCompile("`(clockify_[a-z0-9_]+)`")
+	for _, prompt := range promptsResp.Result.Prompts {
+		for _, message := range prompt.Messages {
+			for _, match := range toolToken.FindAllStringSubmatch(message.Content.Text, -1) {
+				if !knownTools[match[1]] {
+					t.Fatalf("prompt %q mentions stale public tool name %s", prompt.Name, match[1])
+				}
+			}
+		}
+	}
+
+	guide, err := svc.ClockifyToolsGuide(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	envelope, ok := guide.(ToolResult)
+	if !ok {
+		t.Fatalf("ClockifyToolsGuide returned %T, want ToolResult", guide)
+	}
+	data, ok := envelope.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("ClockifyToolsGuide data returned %T, want object", envelope.Data)
+	}
+	assertGuidanceToolValueExists(t, knownTools, data["workflows"], "workflows")
+	assertGuidanceToolValueExists(t, knownTools, data["commonTasks"], "commonTasks")
+	assertGuidanceToolValueExists(t, knownTools, data["rawFallback"], "rawFallback")
+	for _, next := range envelope.Next {
+		if next.Tool != "" && !knownTools[next.Tool] {
+			t.Fatalf("workflow guide next action mentions stale public tool name %s", next.Tool)
+		}
+	}
+}
+
+func assertGuidanceToolValueExists(t *testing.T, knownTools map[string]bool, value any, path string) {
+	t.Helper()
+	switch typed := value.(type) {
+	case []string:
+		for i, item := range typed {
+			if strings.HasPrefix(item, "clockify_") && !knownTools[item] {
+				t.Fatalf("workflow guide %s[%d] mentions stale public tool name %s", path, i, item)
+			}
+		}
+	case []map[string]any:
+		for i, item := range typed {
+			assertGuidanceToolValueExists(t, knownTools, item, fmt.Sprintf("%s[%d]", path, i))
+		}
+	case []any:
+		for i, item := range typed {
+			assertGuidanceToolValueExists(t, knownTools, item, fmt.Sprintf("%s[%d]", path, i))
+		}
+	case map[string]any:
+		for key, item := range typed {
+			switch key {
+			case "tool", "tools", "rawFallback":
+				assertGuidanceToolValueExists(t, knownTools, item, path+"."+key)
+			}
+		}
+	case string:
+		if strings.HasPrefix(typed, "clockify_") && !knownTools[typed] {
+			t.Fatalf("workflow guide %s mentions stale public tool name %s", path, typed)
+		}
 	}
 }
 

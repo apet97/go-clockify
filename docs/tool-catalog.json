@@ -8259,6 +8259,7 @@
     {
       "name": "clockify_clients_list",
       "description": "List clients in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -8540,6 +8541,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -8556,6 +8558,7 @@
     {
       "name": "clockify_clients_create",
       "description": "Create a client in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -8815,6 +8818,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -8831,6 +8835,7 @@
     {
       "name": "clockify_projects_list",
       "description": "List projects in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -9318,6 +9323,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -9334,6 +9340,7 @@
     {
       "name": "clockify_projects_create",
       "description": "Create a project in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -9817,6 +9824,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -9833,6 +9841,7 @@
     {
       "name": "clockify_tasks_list",
       "description": "List tasks for a project.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -10170,6 +10179,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -10186,6 +10196,7 @@
     {
       "name": "clockify_tasks_create",
       "description": "Create a task under a project.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -10504,6 +10515,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -10520,6 +10532,7 @@
     {
       "name": "clockify_tags_list",
       "description": "List tags in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -10786,6 +10799,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -10802,6 +10816,7 @@
     {
       "name": "clockify_tags_create",
       "description": "Create a tag in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -11046,6 +11061,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -11062,6 +11078,7 @@
     {
       "name": "clockify_entries_list",
       "description": "List current-user time entries in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -11426,6 +11443,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -11442,6 +11460,7 @@
     {
       "name": "clockify_entries_create",
       "description": "Create a current-user time entry in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -11807,6 +11826,7 @@
         "bestToolFor": [
           "fill a reviewed timesheet gap"
         ],
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -11826,6 +11846,7 @@
     {
       "name": "clockify_clients_get",
       "description": "Get one client by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -12442,6 +12463,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -12458,6 +12480,7 @@
     {
       "name": "clockify_clients_update",
       "description": "Update a client by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -13105,6 +13128,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -13121,6 +13145,7 @@
     {
       "name": "clockify_clients_delete",
       "description": "Delete a client by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -13358,6 +13383,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -13374,6 +13400,7 @@
     {
       "name": "clockify_projects_get",
       "description": "Get one project by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -14716,6 +14743,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -14732,6 +14760,7 @@
     {
       "name": "clockify_projects_update",
       "description": "Update a project by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -16101,6 +16130,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -16117,6 +16147,7 @@
     {
       "name": "clockify_projects_delete",
       "description": "Delete a project by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -16354,6 +16385,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -16370,6 +16402,7 @@
     {
       "name": "clockify_projects_archive",
       "description": "Archive a project by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -17712,6 +17745,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -17728,6 +17762,7 @@
     {
       "name": "clockify_projects_rates_update",
       "description": "Set a project member hourly or cost rate.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -17992,6 +18027,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -18010,6 +18046,7 @@
     {
       "name": "clockify_tasks_get",
       "description": "Get one task by name or ID within a project.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -18667,6 +18704,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -18683,6 +18721,7 @@
     {
       "name": "clockify_tasks_update",
       "description": "Update a task by name or ID within a project.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -19360,6 +19399,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -19376,6 +19416,7 @@
     {
       "name": "clockify_tasks_delete",
       "description": "Delete a task by name or ID within a project.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -19623,6 +19664,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -19639,6 +19681,7 @@
     {
       "name": "clockify_tasks_rates_update",
       "description": "Set a task hourly or cost rate.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -19908,6 +19951,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -19925,6 +19969,7 @@
     {
       "name": "clockify_tags_get",
       "description": "Get one tag by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -20173,6 +20218,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -20189,6 +20235,7 @@
     {
       "name": "clockify_tags_update",
       "description": "Update a tag by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -20444,6 +20491,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -20460,6 +20508,7 @@
     {
       "name": "clockify_tags_delete",
       "description": "Delete a tag by name or ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -20697,6 +20746,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -20713,6 +20763,7 @@
     {
       "name": "clockify_entries_get",
       "description": "Get one time entry by ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -21520,6 +21571,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -21536,6 +21588,7 @@
     {
       "name": "clockify_entries_update",
       "description": "Update a time entry by ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -22382,6 +22435,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -22398,6 +22452,7 @@
     {
       "name": "clockify_entries_delete",
       "description": "Delete a time entry by ID.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -22630,6 +22685,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -22646,6 +22702,7 @@
     {
       "name": "clockify_users_list",
       "description": "List users in the pinned workspace.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -23021,6 +23078,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -23038,6 +23096,7 @@
     {
       "name": "clockify_users_profile",
       "description": "Get the current Clockify user.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -23398,6 +23457,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -23415,6 +23475,7 @@
     {
       "name": "clockify_workspace_settings",
       "description": "Read pinned workspace settings.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -23814,6 +23875,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -23831,6 +23893,7 @@
     {
       "name": "clockify_invoices_list",
       "description": "List invoices in the workspace with pagination",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -24085,6 +24148,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -24102,6 +24166,7 @@
     {
       "name": "clockify_invoices_get",
       "description": "Get a single invoice by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -24335,6 +24400,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -24352,6 +24418,7 @@
     {
       "name": "clockify_invoices_create",
       "description": "Create a new invoice for a client. Supports dry_run:true.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -24653,6 +24720,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -24670,6 +24738,7 @@
     {
       "name": "clockify_invoices_update",
       "description": "Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -24976,6 +25045,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -24993,6 +25063,7 @@
     {
       "name": "clockify_invoices_delete",
       "description": "Delete an invoice permanently by ID. Supports dry_run preview.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -25229,6 +25300,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -25246,6 +25318,7 @@
     {
       "name": "clockify_invoices_send",
       "description": "Send the invoice email to the client. External side effect; dry_run previews without sending.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -25485,6 +25558,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -25503,6 +25577,7 @@
     {
       "name": "clockify_invoices_mark_paid",
       "description": "Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -25741,6 +25816,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -25758,6 +25834,7 @@
     {
       "name": "clockify_invoices_items_list",
       "description": "List items for an invoice",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -25995,6 +26072,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -26012,6 +26090,7 @@
     {
       "name": "clockify_invoices_items_add",
       "description": "Add an item to an invoice",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -26281,6 +26360,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -26298,6 +26378,7 @@
     {
       "name": "clockify_invoices_items_update",
       "description": "Update an invoice item by line index",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -26577,6 +26658,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -26594,6 +26676,7 @@
     {
       "name": "clockify_invoices_items_delete",
       "description": "Delete an invoice item by line index",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -26842,6 +26925,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -26859,6 +26943,7 @@
     {
       "name": "clockify_projects_templates_list",
       "description": "List project templates in the workspace with pagination",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -27097,6 +27182,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -27113,6 +27199,7 @@
     {
       "name": "clockify_projects_templates_create",
       "description": "Create a new project template",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -27360,6 +27447,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -27376,6 +27464,7 @@
     {
       "name": "clockify_projects_estimates_update",
       "description": "Update a project's documented estimate fields",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -27740,6 +27829,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -27756,6 +27846,7 @@
     {
       "name": "clockify_projects_memberships_update",
       "description": "Replace project memberships and optional user-group filter/rate metadata",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -28117,6 +28208,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -28135,6 +28227,7 @@
     {
       "name": "clockify_expenses_list",
       "description": "List expenses in the workspace with pagination and optional date range",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -28388,6 +28481,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -28405,6 +28499,7 @@
     {
       "name": "clockify_expenses_get",
       "description": "Get a single expense by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -28640,6 +28735,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -28657,6 +28753,7 @@
     {
       "name": "clockify_expenses_create",
       "description": "Create a new expense (multipart form). amount is interpreted as major currency units by default, e.g. 125.00 for $125.00; pass amount_unit:\"minor\" when supplying cents.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -28935,6 +29032,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -28952,6 +29050,7 @@
     {
       "name": "clockify_expenses_update",
       "description": "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -29246,6 +29345,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -29263,6 +29363,7 @@
     {
       "name": "clockify_expenses_delete",
       "description": "Delete an expense by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -29499,6 +29600,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -29516,6 +29618,7 @@
     {
       "name": "clockify_expenses_categories_list",
       "description": "List expense categories in the workspace",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -29746,6 +29849,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -29763,6 +29867,7 @@
     {
       "name": "clockify_expenses_categories_create",
       "description": "Create a new expense category, optionally including upstream unit-price fields.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -30021,6 +30126,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -30038,6 +30144,7 @@
     {
       "name": "clockify_expenses_categories_update",
       "description": "Update an expense category, including upstream unit-price fields.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -30304,6 +30411,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -30321,6 +30429,7 @@
     {
       "name": "clockify_expenses_categories_delete",
       "description": "Delete an expense category",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -30557,6 +30666,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -30574,6 +30684,7 @@
     {
       "name": "clockify_custom_fields_list",
       "description": "List custom fields in the workspace with optional pagination",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -30813,6 +30924,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -30829,6 +30941,7 @@
     {
       "name": "clockify_custom_fields_get",
       "description": "Get a custom field by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -31060,6 +31173,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -31076,6 +31190,7 @@
     {
       "name": "clockify_custom_fields_create",
       "description": "Create a new custom field. The upstream `type` enum is TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK — the historical TEXT/DROPDOWN aliases are rejected. allowed_values is required for both DROPDOWN_SINGLE and DROPDOWN_MULTIPLE.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -31347,6 +31462,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -31364,6 +31480,7 @@
     {
       "name": "clockify_custom_fields_update",
       "description": "Update an existing custom field by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -31635,6 +31752,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -31652,6 +31770,7 @@
     {
       "name": "clockify_custom_fields_delete",
       "description": "Delete a custom field by ID (supports dry_run preview)",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -31888,6 +32007,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -31905,6 +32025,7 @@
     {
       "name": "clockify_custom_fields_set_value",
       "description": "Set a custom field value on a specific project or time entry. Project values use the documented PATCH /projects/{projectId}/custom-fields/{customFieldId} route; time entries are updated by preserving the existing entry and replacing its customFields value.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -32155,6 +32276,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -32172,6 +32294,7 @@
     {
       "name": "clockify_time_off_requests_list",
       "description": "List time off requests with optional status filter",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -32423,6 +32546,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -32440,6 +32564,7 @@
     {
       "name": "clockify_time_off_requests_get",
       "description": "Get a time off request by policy ID and request ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -32677,6 +32802,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -32694,6 +32820,7 @@
     {
       "name": "clockify_time_off_requests_create",
       "description": "Create a time off request under a policy. Changes leave balances/approval workflow.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -32959,6 +33086,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -32976,6 +33104,7 @@
     {
       "name": "clockify_time_off_requests_update",
       "description": "Update an existing time off request, including approval status when supplied.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -33230,6 +33359,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -33247,6 +33377,7 @@
     {
       "name": "clockify_time_off_requests_delete",
       "description": "Delete a time off request. Destructive; supports dry_run preview.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -33488,6 +33619,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -33505,6 +33637,7 @@
     {
       "name": "clockify_time_off_approve",
       "description": "Approve a pending time off request and update its approval state.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -33749,6 +33882,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -33767,6 +33901,7 @@
     {
       "name": "clockify_time_off_deny",
       "description": "Deny a pending time off request and update its approval state.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -34011,6 +34146,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -34029,6 +34165,7 @@
     {
       "name": "clockify_time_off_policies_list",
       "description": "List time off policies for the workspace",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -34271,6 +34408,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -34288,6 +34426,7 @@
     {
       "name": "clockify_time_off_policies_get",
       "description": "Get a time off policy by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -34522,6 +34661,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -34539,6 +34679,7 @@
     {
       "name": "clockify_time_off_policies_create",
       "description": "Create a new time off policy",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -34799,6 +34940,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -34816,6 +34958,7 @@
     {
       "name": "clockify_time_off_policies_update",
       "description": "Update an existing time off policy",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -35076,6 +35219,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -35093,6 +35237,7 @@
     {
       "name": "clockify_time_off_balances",
       "description": "Get time off balance for a user under a specific policy",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -35333,6 +35478,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -35350,6 +35496,7 @@
     {
       "name": "clockify_scheduling_assignments_list",
       "description": "List scheduling assignments within a date range",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -35618,6 +35765,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -35635,6 +35783,7 @@
     {
       "name": "clockify_scheduling_assignments_get",
       "description": "Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -35888,6 +36037,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -35905,6 +36055,7 @@
     {
       "name": "clockify_scheduling_assignments_create",
       "description": "Create a recurring scheduling assignment for a user on a project",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -36190,6 +36341,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -36206,6 +36358,7 @@
     {
       "name": "clockify_scheduling_assignments_update",
       "description": "Update a recurring scheduling assignment by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -36484,6 +36637,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -36500,6 +36654,7 @@
     {
       "name": "clockify_scheduling_assignments_delete",
       "description": "Delete a recurring scheduling assignment by ID (supports dry_run preview)",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -36741,6 +36896,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -36757,6 +36913,7 @@
     {
       "name": "clockify_scheduling_project_totals",
       "description": "Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -37013,6 +37170,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -37030,6 +37188,7 @@
     {
       "name": "clockify_approvals_list",
       "description": "List approval requests with optional status filter and pagination",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -37296,6 +37455,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -37313,6 +37473,7 @@
     {
       "name": "clockify_approvals_get",
       "description": "Get a single approval request by ID by scanning the documented approval-requests list endpoint",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -37558,6 +37719,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -37575,6 +37737,7 @@
     {
       "name": "clockify_approvals_submit",
       "description": "Submit the caller's timesheet for approval and create/update an approval request.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -37833,6 +37996,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -37850,6 +38014,7 @@
     {
       "name": "clockify_approvals_approve",
       "description": "Approve a pending timesheet approval request and update its state.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -38096,6 +38261,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -38114,6 +38280,7 @@
     {
       "name": "clockify_approvals_reject",
       "description": "Reject a pending timesheet approval request and update its state.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -38364,6 +38531,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -38382,6 +38550,7 @@
     {
       "name": "clockify_approvals_withdraw",
       "description": "Withdraw a submitted or already-approved approval request and update its state.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -38635,6 +38804,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -38653,6 +38823,7 @@
     {
       "name": "clockify_webhooks_list",
       "description": "List webhooks in the workspace",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -38894,6 +39065,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -38911,6 +39083,7 @@
     {
       "name": "clockify_webhooks_get",
       "description": "Get a webhook by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -39145,6 +39318,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -39162,6 +39336,7 @@
     {
       "name": "clockify_webhooks_create",
       "description": "Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -39442,6 +39617,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -39459,6 +39635,7 @@
     {
       "name": "clockify_webhooks_update",
       "description": "Update an existing webhook. Supports dry_run:true.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -39742,6 +39919,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -39759,6 +39937,7 @@
     {
       "name": "clockify_webhooks_delete",
       "description": "Delete a webhook subscription. Destructive; supports dry_run preview.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -39996,6 +40175,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -40013,6 +40193,7 @@
     {
       "name": "clockify_webhooks_test",
       "description": "Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -40251,6 +40432,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -40268,6 +40450,7 @@
     {
       "name": "clockify_webhooks_events",
       "description": "List available webhook event types",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -40490,6 +40673,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -40507,6 +40691,7 @@
     {
       "name": "clockify_groups_list",
       "description": "List user groups in the workspace (admin view) with pagination",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -40748,6 +40933,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -40765,6 +40951,7 @@
     {
       "name": "clockify_groups_get",
       "description": "Get a user group by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -40998,6 +41185,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -41015,6 +41203,7 @@
     {
       "name": "clockify_groups_create",
       "description": "Create a new user group with optional member user IDs",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -41258,6 +41447,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -41275,6 +41465,7 @@
     {
       "name": "clockify_groups_update",
       "description": "Update an existing user group by ID",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -41521,6 +41712,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -41538,6 +41730,7 @@
     {
       "name": "clockify_groups_delete",
       "description": "Delete a user group by ID (supports dry_run preview)",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -41774,6 +41967,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -41791,6 +41985,7 @@
     {
       "name": "clockify_groups_add_user",
       "description": "Add a user to a user group",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -42035,6 +42230,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -42053,6 +42249,7 @@
     {
       "name": "clockify_groups_remove_user",
       "description": "Remove a user from a user group",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -42297,6 +42494,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -42315,6 +42513,7 @@
     {
       "name": "clockify_holidays_list",
       "description": "List holidays configured in the workspace",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -42541,6 +42740,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -42557,6 +42757,7 @@
     {
       "name": "clockify_holidays_list_for_user_period",
       "description": "List holidays assigned to a user in a date period",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -42806,6 +43007,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -42822,6 +43024,7 @@
     {
       "name": "clockify_holidays_create",
       "description": "Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -43095,6 +43298,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -43111,6 +43315,7 @@
     {
       "name": "clockify_holidays_delete",
       "description": "Delete a holiday by ID (supports dry_run preview)",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -43343,6 +43548,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -43359,6 +43565,7 @@
     {
       "name": "clockify_users_deactivate",
       "description": "Deactivate a workspace user and remove access. Supports dry_run preview.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -43598,6 +43805,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -43615,6 +43823,7 @@
     {
       "name": "clockify_users_role",
       "description": "Update a user's workspace role. Supports dry_run:true.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -43867,6 +44076,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -43885,6 +44095,7 @@
     {
       "name": "clockify_projects_memberships_list",
       "description": "List project memberships.",
+      "category": "domain",
       "handler_kind": "native handler",
       "method": "GET",
       "path": "/workspaces/{workspaceId}/projects/{project_id}/memberships",
@@ -44121,6 +44332,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -44140,6 +44352,7 @@
     {
       "name": "clockify_reports_attendance",
       "description": "Run the attendance report.",
+      "category": "domain",
       "handler_kind": "native handler",
       "method": "POST",
       "path": "/workspaces/{workspaceId}/reports/attendance",
@@ -44389,6 +44602,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -44407,6 +44621,7 @@
     {
       "name": "clockify_reports_money",
       "description": "Run the money summary report.",
+      "category": "domain",
       "handler_kind": "native handler",
       "method": "POST",
       "path": "/workspaces/{workspaceId}/reports/summary",
@@ -44656,6 +44871,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -44674,6 +44890,7 @@
     {
       "name": "clockify_reports_expense",
       "description": "Run the detailed expense report.",
+      "category": "domain",
       "handler_kind": "native handler",
       "method": "POST",
       "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
@@ -44923,6 +45140,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -44941,6 +45159,7 @@
     {
       "name": "clockify_reports_export",
       "description": "Run a report export request.",
+      "category": "domain",
       "handler_kind": "native handler",
       "method": "POST",
       "path": "/workspaces/{workspaceId}/reports/detailed",
@@ -45190,6 +45409,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -45208,6 +45428,7 @@
     {
       "name": "clockify_invoices_export",
       "description": "Export an invoice.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -45451,6 +45672,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -45468,6 +45690,7 @@
     {
       "name": "clockify_invoices_import_time",
       "description": "Import time entries into an invoice.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -45716,6 +45939,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -45733,6 +45957,7 @@
     {
       "name": "clockify_invoices_import_expenses",
       "description": "Import expenses into an invoice.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -45981,6 +46206,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -45998,6 +46224,7 @@
     {
       "name": "clockify_invoices_payments_list",
       "description": "List invoice payments.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -46251,6 +46478,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -46268,6 +46496,7 @@
     {
       "name": "clockify_invoices_payments_create",
       "description": "Create an invoice payment.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -46520,6 +46749,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -46537,6 +46767,7 @@
     {
       "name": "clockify_invoices_payments_delete",
       "description": "Delete an invoice payment.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": true,
@@ -46775,6 +47006,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": true,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -46792,6 +47024,7 @@
     {
       "name": "clockify_time_off_archive",
       "description": "Archive or reactivate a time off policy.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -47034,6 +47267,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -47051,6 +47285,7 @@
     {
       "name": "clockify_scheduling_user_totals",
       "description": "Get scheduled assignment totals for one user.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -47296,6 +47531,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -47313,6 +47549,7 @@
     {
       "name": "clockify_scheduling_capacity",
       "description": "Get workspace capacity totals.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -47560,6 +47797,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -47577,6 +47815,7 @@
     {
       "name": "clockify_approvals_resubmit",
       "description": "Resubmit rejected or withdrawn entries and expenses and update approval state.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -47830,6 +48069,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -47848,6 +48088,7 @@
     {
       "name": "clockify_holidays_get",
       "description": "Get one holiday.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -48078,6 +48319,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -48094,6 +48336,7 @@
     {
       "name": "clockify_holidays_update",
       "description": "Update a holiday.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -48350,6 +48593,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -48366,6 +48610,7 @@
     {
       "name": "clockify_entries_mark_invoiced",
       "description": "Mark time entries as invoiced or not invoiced.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -48625,6 +48870,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -48642,6 +48888,7 @@
     {
       "name": "clockify_users_invite",
       "description": "Invite users by email. External side effect when send_email is true; supports dry_run.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -48889,6 +49136,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -48908,6 +49156,7 @@
     {
       "name": "clockify_entries_running",
       "description": "Return the current running timer, if any.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -49143,6 +49392,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -49159,6 +49409,7 @@
     {
       "name": "clockify_entries_timer_start",
       "description": "Start a timer.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -49970,6 +50221,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -49986,6 +50238,7 @@
     {
       "name": "clockify_entries_timer_stop",
       "description": "Stop the current timer.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -50791,6 +51044,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -50807,6 +51061,7 @@
     {
       "name": "clockify_entries_timer_status",
       "description": "Show timer status.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -51039,6 +51294,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -51055,6 +51311,7 @@
     {
       "name": "clockify_entries_timer_switch",
       "description": "Switch the running timer to another project.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -51300,6 +51557,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -51316,6 +51574,7 @@
     {
       "name": "clockify_reports_detailed",
       "description": "Run the local detailed time report helper.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -51600,6 +51859,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -51616,6 +51876,7 @@
     {
       "name": "clockify_reports_summary",
       "description": "Run the local summary report helper.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -51900,6 +52161,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -51916,6 +52178,7 @@
     {
       "name": "clockify_reports_weekly",
       "description": "Run the local weekly report helper.",
+      "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -52227,6 +52490,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "domain",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -52243,6 +52507,7 @@
     {
       "name": "clockify_api_get",
       "description": "Raw GET fallback within the pinned workspace or Clockify API path.",
+      "category": "raw",
       "handler_kind": "native handler",
       "read_only": true,
       "destructive": false,
@@ -52470,6 +52735,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "raw",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
@@ -52486,6 +52752,7 @@
     {
       "name": "clockify_api_request",
       "description": "Raw method fallback within the pinned workspace or Clockify API path.",
+      "category": "raw",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
@@ -52728,6 +52995,7 @@
         "type": "object"
       },
       "annotations": {
+        "category": "raw",
         "destructiveHint": false,
         "dryRun": false,
         "handlerKind": "native handler",
