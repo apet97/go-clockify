@@ -121,7 +121,7 @@ func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 	}
 }
 
-func TestCoreRouteDescriptorsDoNotShadowEarlierSources(t *testing.T) {
+func TestTimerAndReportDescriptorsDoNotShadowEarlierSources(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	earlierSources := map[string][]string{
 		"workflow":          descriptorNames(svc.workflowDescriptors()),
@@ -140,14 +140,25 @@ func TestCoreRouteDescriptorsDoNotShadowEarlierSources(t *testing.T) {
 		}
 	}
 
-	for _, descriptor := range svc.coreRouteDescriptors() {
+	for _, descriptor := range svc.timerAndReportDescriptors() {
 		if descriptor.Tool.Annotations["method"] == nil && descriptor.Tool.Annotations["path"] == nil {
 			continue
 		}
 		if source, ok := seen[descriptor.Tool.Name]; ok {
-			t.Fatalf("core route descriptor %s is shadowed by earlier source %s", descriptor.Tool.Name, source)
+			t.Fatalf("timer/report descriptor %s is shadowed by earlier source %s", descriptor.Tool.Name, source)
 		}
-		seen[descriptor.Tool.Name] = "core_route"
+		seen[descriptor.Tool.Name] = "timer_report"
+	}
+}
+
+func TestRemainingHelperDescriptorBucketHasClearName(t *testing.T) {
+	raw, err := os.ReadFile("oneuser_domains.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	staleName := "core" + "RouteDescriptors"
+	if strings.Contains(string(raw), staleName) {
+		t.Fatalf("timer/report helper descriptor bucket should not use the stale %s name", staleName)
 	}
 }
 

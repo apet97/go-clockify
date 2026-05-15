@@ -56,7 +56,7 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	out = append(out, s.nativeCoreDescriptors()...)
 	out = append(out, s.nativeHighValueDescriptors()...)
 	out = append(out, s.nativeAliasDescriptors()...)
-	out = append(out, s.coreRouteDescriptors()...)
+	out = append(out, s.timerAndReportDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
 	return normalizeDescriptors(dedupeToolDescriptors(out))
 }
@@ -81,7 +81,7 @@ func dedupeToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	return out
 }
 
-func (s *Service) coreRouteDescriptors() []mcp.ToolDescriptor {
+func (s *Service) timerAndReportDescriptors() []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, 0, 8)
 	out = append(out,
 		firstSliceDescriptor(66, toolRO("clockify_entries_running", "Return the current running timer, if any.", objectSchema(nil)), s.EntriesRunning),

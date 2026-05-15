@@ -10,6 +10,8 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+const historicalDocBanner = "Historical artifact. Not current one-user MCP product documentation."
+
 // TestReadmeProtocolVersionMatchesSupported guards against drift between
 // the advertised MCP protocol version in README.md and the actual newest
 // version the server negotiates (mcp.SupportedProtocolVersions[0]).
@@ -58,13 +60,7 @@ func TestReadmeProtocolVersionMatchesSupported(t *testing.T) {
 
 func TestCurrentProductDocsAvoidPlatformEraLanguage(t *testing.T) {
 	forbidden := platformEraTerms()
-	for _, path := range []string{
-		filepath.Join("..", "README.md"),
-		filepath.Join("..", "docs", "agent-cookbook.md"),
-		filepath.Join("..", "docs", "tool-catalog.md"),
-		filepath.Join("..", "docs", "live-tests.md"),
-		filepath.Join("..", "docs", "goals", "oneuser-tool-coverage.md"),
-	} {
+	for _, path := range currentProductDocPaths() {
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
@@ -78,8 +74,23 @@ func TestCurrentProductDocsAvoidPlatformEraLanguage(t *testing.T) {
 	}
 }
 
+func TestCurrentProductDocsDoNotLinkHistoricalArtifacts(t *testing.T) {
+	historicalDocs := banneredHistoricalDocs(t)
+	for _, productDoc := range currentProductDocPaths() {
+		raw, err := os.ReadFile(productDoc)
+		if err != nil {
+			t.Fatalf("read %s: %v", productDoc, err)
+		}
+		text := filepath.ToSlash(string(raw))
+		for historicalDoc := range historicalDocs {
+			if strings.Contains(text, historicalDoc) || strings.Contains(text, "./"+historicalDoc) {
+				t.Fatalf("%s links or points current users at historical artifact %s", productDoc, historicalDoc)
+			}
+		}
+	}
+}
+
 func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
-	const banner = "Historical artifact. Not current one-user MCP product documentation."
 	docsRoot := filepath.Join("..", "docs")
 	allowedCurrentDocs := map[string]bool{
 		filepath.Join(docsRoot, "agent-cookbook.md"):                     true,
@@ -117,7 +128,7 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 				break
 			}
 		}
-		if hasPlatformTerm && !strings.Contains(content, banner) {
+		if hasPlatformTerm && !strings.Contains(content, historicalDocBanner) {
 			t.Fatalf("%s has platform-era language without the historical banner", path)
 		}
 		return nil
@@ -125,6 +136,47 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func currentProductDocPaths() []string {
+	return []string{
+		filepath.Join("..", "README.md"),
+		filepath.Join("..", "docs", "agent-cookbook.md"),
+		filepath.Join("..", "docs", "tool-catalog.md"),
+		filepath.Join("..", "docs", "live-tests.md"),
+		filepath.Join("..", "docs", "goals", "oneuser-tool-coverage.md"),
+	}
+}
+
+func banneredHistoricalDocs(t *testing.T) map[string]bool {
+	t.Helper()
+	repoRoot := filepath.Clean("..")
+	docs := map[string]bool{}
+	err := filepath.WalkDir(filepath.Join(repoRoot, "docs"), func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || filepath.Ext(path) != ".md" {
+			return nil
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(string(raw), historicalDocBanner) {
+			return nil
+		}
+		rel, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			return err
+		}
+		docs[filepath.ToSlash(rel)] = true
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return docs
 }
 
 func platformEraTerms() []string {
