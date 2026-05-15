@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/netip"
 	"strings"
 	"testing"
 )
@@ -393,6 +394,119 @@ func TestCreateWebhookDryRunAvoidsPost(t *testing.T) {
 	}
 }
 
+func TestCreateWebhookRejectsUnsafeDNSAnswersByDefault(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unsafe DNS webhook validation must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if !svc.WebhookValidateDNS {
+		t.Fatal("New must enable webhook DNS validation by default")
+	}
+	svc.WebhookHostResolver = func(ctx context.Context, host string) ([]netip.Addr, error) {
+		if host != "webhook.example.com" {
+			t.Fatalf("expected resolver host webhook.example.com, got %q", host)
+		}
+		return []netip.Addr{
+			netip.MustParseAddr("10.0.0.5"),
+			netip.MustParseAddr("127.0.0.1"),
+			netip.MustParseAddr("169.254.169.254"),
+			netip.MustParseAddr("192.0.2.10"),
+		}, nil
+	}
+
+	_, err := svc.CreateWebhook(context.Background(), map[string]any{
+		"name":          "safe name",
+		"url":           "https://webhook.example.com/hook",
+		"webhook_event": "NEW_TIME_ENTRY",
+		"dry_run":       true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "rejected_by=private") {
+		t.Fatalf("expected private DNS rejection, got %v", err)
+	}
+}
+
+func TestCreateWebhookRejectsLocalhostCredentialsAndNonHTTPS(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid webhook URL validation must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	tests := []struct {
+		name    string
+		url     string
+		wantErr string
+	}{
+		{name: "localhost", url: "https://localhost/hook", wantErr: "localhost"},
+		{name: "dot localhost", url: "https://api.localhost/hook", wantErr: "localhost"},
+		{name: "embedded credentials", url: "https://user:pass@example.com/hook", wantErr: "embedded credentials"},
+		{name: "http", url: "http://example.com/hook", wantErr: "HTTPS"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := New(client, "ws1")
+			svc.WebhookHostResolver = func(ctx context.Context, host string) ([]netip.Addr, error) {
+				t.Fatalf("resolver must not run after static URL rejection; got host %q", host)
+				return nil, nil
+			}
+			_, err := svc.CreateWebhook(context.Background(), map[string]any{
+				"name":          "safe name",
+				"url":           tt.url,
+				"webhook_event": "NEW_TIME_ENTRY",
+				"dry_run":       true,
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestWebhookAllowedDomainsBypassOnlyConfiguredHosts(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("allowlist dry-run validation must not hit upstream; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	resolverCalls := 0
+	svc.WebhookHostResolver = func(ctx context.Context, host string) ([]netip.Addr, error) {
+		resolverCalls++
+		return []netip.Addr{netip.MustParseAddr("10.0.0.5")}, nil
+	}
+	svc.WebhookAllowedDomains = []string{"webhook.example.com", ".trusted.example"}
+
+	allowed := []string{
+		"https://webhook.example.com/hook",
+		"https://api.trusted.example/hook",
+	}
+	for _, url := range allowed {
+		if _, err := svc.CreateWebhook(context.Background(), map[string]any{
+			"name":          "safe name",
+			"url":           url,
+			"webhook_event": "NEW_TIME_ENTRY",
+			"dry_run":       true,
+		}); err != nil {
+			t.Fatalf("expected allowlisted URL %s to bypass private DNS check, got %v", url, err)
+		}
+	}
+	if resolverCalls != 0 {
+		t.Fatalf("allowlisted hosts should not call resolver, got %d calls", resolverCalls)
+	}
+
+	_, err := svc.CreateWebhook(context.Background(), map[string]any{
+		"name":          "safe name",
+		"url":           "https://webhook.example.com.evil/hook",
+		"webhook_event": "NEW_TIME_ENTRY",
+		"dry_run":       true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "rejected_by=private") {
+		t.Fatalf("expected non-allowlisted host to retain DNS safety, got %v", err)
+	}
+}
+
 func TestCreateWebhookLegacyEventsArrayFallback(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -673,6 +787,122 @@ func TestUpdateWebhookLegacyEventsArrayFallback(t *testing.T) {
 	}
 	if _, ok := gotBody["events"]; ok {
 		t.Fatalf("body must not send legacy events array: %#v", gotBody)
+	}
+}
+
+func TestDeleteWebhookDryRunAvoidsDeleteAndMasksAuthToken(t *testing.T) {
+	var deleteCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":           "wh1",
+				"authToken":    "delete-secret-1234",
+				"webhookEvent": "NEW_TIME_ENTRY",
+			})
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodDelete:
+			deleteCalled = true
+			t.Fatal("dry-run must not DELETE webhook")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.DeleteWebhook(context.Background(), map[string]any{
+		"webhook_id": "wh1",
+		"dry_run":    true,
+	})
+	if err != nil {
+		t.Fatalf("DeleteWebhook dry run failed: %v", err)
+	}
+	if deleteCalled {
+		t.Fatal("DELETE should not be called during dry run")
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if strings.Contains(string(raw), "delete-secret-1234") || strings.Contains(string(raw), `"authToken"`) {
+		t.Fatalf("dry-run delete leaked webhook auth token: %s", raw)
+	}
+	if !strings.Contains(string(raw), "1234") {
+		t.Fatalf("expected masked suffix in dry-run delete result: %s", raw)
+	}
+}
+
+func TestTestWebhookDryRunAvoidsPostAndMasksAuthToken(t *testing.T) {
+	var postCalled bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":           "wh1",
+				"authToken":    "test-dry-run-secret-1234",
+				"webhookEvent": "NEW_TIME_ENTRY",
+			})
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1/test" && r.Method == http.MethodPost:
+			postCalled = true
+			t.Fatal("dry-run must not POST webhook test delivery")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TestWebhook(context.Background(), map[string]any{
+		"webhook_id": "wh1",
+		"dry_run":    true,
+	})
+	if err != nil {
+		t.Fatalf("TestWebhook dry run failed: %v", err)
+	}
+	if postCalled {
+		t.Fatal("POST should not be called during dry run")
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if strings.Contains(string(raw), "test-dry-run-secret-1234") || strings.Contains(string(raw), `"authToken"`) {
+		t.Fatalf("dry-run test leaked webhook auth token: %s", raw)
+	}
+	if !strings.Contains(string(raw), "1234") {
+		t.Fatalf("expected masked suffix in dry-run test result: %s", raw)
+	}
+}
+
+func TestTestWebhookMasksAuthToken(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/wh1/test" && r.Method == http.MethodPost:
+			respondJSON(t, w, map[string]any{
+				"id":           "wh1",
+				"authToken":    "test-secret-9876",
+				"webhookEvent": "NEW_TIME_ENTRY",
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TestWebhook(context.Background(), map[string]any{"webhook_id": "wh1"})
+	if err != nil {
+		t.Fatalf("TestWebhook failed: %v", err)
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if strings.Contains(string(raw), "test-secret-9876") || strings.Contains(string(raw), `"authToken"`) {
+		t.Fatalf("test webhook leaked webhook auth token: %s", raw)
+	}
+	if !strings.Contains(string(raw), "9876") {
+		t.Fatalf("expected masked suffix in test result: %s", raw)
 	}
 }
 

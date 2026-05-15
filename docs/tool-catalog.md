@@ -149,7 +149,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_approvals_submit` | — | no | no | no | yes | `write`, `admin` | Submit the caller's timesheet for approval and create/update an approval request. |
 | `clockify_approvals_approve` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Approve a pending timesheet approval request and update its state. |
 | `clockify_approvals_reject` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Reject a pending timesheet approval request and update its state. |
-| `clockify_approvals_withdraw` | — | no | no | no | yes | `write`, `admin` | Withdraw a submitted or already-approved approval request and update its state. |
+| `clockify_approvals_withdraw` | — | no | no | no | yes | `write`, `admin`, `permission_change` | Withdraw a submitted or already-approved approval request and update its state. |
 | `clockify_webhooks_list` | — | yes | no | yes | no | `read` | List webhooks in the workspace |
 | `clockify_webhooks_get` | — | yes | no | yes | no | `read` | Get a webhook by ID |
 | `clockify_webhooks_create` | — | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
@@ -184,7 +184,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_archive` | — | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | — | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | — | yes | no | yes | no | `read` | Get workspace capacity totals. |
-| `clockify_approvals_resubmit` | — | no | no | no | no | `write`, `admin` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
+| `clockify_approvals_resubmit` | — | no | no | no | no | `write`, `admin`, `permission_change` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
 | `clockify_holidays_get` | — | yes | no | yes | no | `read` | Get one holiday. |
 | `clockify_holidays_update` | — | no | no | yes | no | `write` | Update a holiday. |
 | `clockify_entries_mark_invoiced` | — | no | no | yes | no | `write`, `billing` | Mark time entries as invoiced or not invoiced. |

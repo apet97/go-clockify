@@ -117,6 +117,55 @@ func TestBuiltinPromptsPreferStructuredToolGuidance(t *testing.T) {
 	}
 }
 
+func TestBuiltinPromptsEncodeOwnerModeSafetyContracts(t *testing.T) {
+	server := newPromptsTestServer()
+	cases := map[string]struct {
+		want    []string
+		notWant []string
+	}{
+		"safe-daily-time-tracking": {
+			want: []string{
+				"only core time-tracking tools",
+				"Do not use invoice, expense, admin, webhook, or raw fallback tools",
+			},
+		},
+		"invoice-client": {
+			want: []string{
+				"First call `clockify_status` to check workspace feature availability",
+				"currency",
+			},
+		},
+		"create-expense": {
+			want: []string{
+				"receipt/file details only when the expense tool schema requires them",
+				"paid feature is unavailable",
+			},
+		},
+		"setup-webhook": {
+			want: []string{
+				"dry_run=true",
+				"Review the preview and DNS/URL validation result before making a non-dry-run create call",
+			},
+			notWant: []string{"first make a non-dry-run"},
+		},
+	}
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			text := getPromptText(t, server, name, map[string]any{})
+			for _, want := range tt.want {
+				if !strings.Contains(text, want) {
+					t.Fatalf("prompt %q missing %q in %q", name, want, text)
+				}
+			}
+			for _, notWant := range tt.notWant {
+				if strings.Contains(strings.ToLower(text), strings.ToLower(notWant)) {
+					t.Fatalf("prompt %q contains forbidden guidance %q in %q", name, notWant, text)
+				}
+			}
+		})
+	}
+}
+
 func TestPromptsGetUnknownPromptRejected(t *testing.T) {
 	server := newPromptsTestServer()
 	resp := server.handle(context.Background(), Request{

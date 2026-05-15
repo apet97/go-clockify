@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"testing"
@@ -209,6 +210,86 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	mustOK(t, res, err, "clockify_delete_expense_category")
 	if _, err := svc.deleteExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
 		t.Fatal("expected validation error for empty category_id")
+	}
+}
+
+func TestCreateExpenseContractDefaultsUserAndAllowsNoFileNoProject(t *testing.T) {
+	var userHit bool
+	var upstreamHit bool
+	var gotForm map[string][]string
+	var gotFiles map[string][]*multipart.FileHeader
+
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		upstreamHit = true
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			userHit = true
+			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester", "email": "t@example.com"})
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
+			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+				t.Fatalf("create_expense expected multipart/form-data, got %q", r.Header.Get("Content-Type"))
+			}
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotForm = r.MultipartForm.Value
+			gotFiles = r.MultipartForm.File
+			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 12.5})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	for _, tt := range []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{name: "amount", args: map[string]any{"date": "2026-04-11T00:00:00Z", "category_id": "cat1"}, want: "amount is required"},
+		{name: "date", args: map[string]any{"amount": 12.5, "category_id": "cat1"}, want: "date is required"},
+		{name: "category", args: map[string]any{"amount": 12.5, "date": "2026-04-11T00:00:00Z"}, want: "category_id is required"},
+	} {
+		upstreamHit = false
+		_, err := svc.createExpense(context.Background(), tt.args)
+		if err == nil || !strings.Contains(err.Error(), tt.want) {
+			t.Fatalf("%s: expected error containing %q, got %v", tt.name, tt.want, err)
+		}
+		if upstreamHit {
+			t.Fatalf("%s: validation hit upstream", tt.name)
+		}
+	}
+
+	upstreamHit = false
+	res, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":      12.5,
+		"date":        "2026-04-11T00:00:00Z",
+		"category_id": "cat1",
+		"notes":       "no-file live narrowing",
+		"billable":    true,
+	})
+	mustOK(t, res, err, "clockify_create_expense")
+	if !userHit {
+		t.Fatal("expected createExpense to resolve omitted user_id via /user")
+	}
+	for field, want := range map[string]string{
+		"userId":     "u-current",
+		"amount":     "12.5",
+		"date":       "2026-04-11T00:00:00Z",
+		"categoryId": "cat1",
+		"notes":      "no-file live narrowing",
+		"billable":   "true",
+	} {
+		if got := gotForm[field]; len(got) != 1 || got[0] != want {
+			t.Fatalf("expected multipart %s=%q, got form=%v", field, want, gotForm)
+		}
+	}
+	if _, ok := gotForm["projectId"]; ok {
+		t.Fatalf("project_id is live-optional and should be omitted when not supplied: form=%v", gotForm)
+	}
+	if len(gotFiles) != 0 {
+		t.Fatalf("file is intentionally not part of the no-file create contract, got files=%v", gotFiles)
 	}
 }
 

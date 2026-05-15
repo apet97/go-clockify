@@ -952,6 +952,7 @@ func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultE
 	if err := s.Client.Post(ctx, testPath, nil, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
+	maskWebhookAuthToken(result)
 
 	return ok("clockify_test_webhook", result, map[string]any{
 		"workspaceId": wsID,

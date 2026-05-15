@@ -38389,7 +38389,8 @@
       "dry_run": true,
       "risk_class": [
         "write",
-        "admin"
+        "admin",
+        "permission_change"
       ],
       "audit_keys": [
         "approval_id"
@@ -38643,7 +38644,8 @@
         "readOnlyHint": false,
         "riskClass": [
           "write",
-          "admin"
+          "admin",
+          "permission_change"
         ],
         "title": "Withdraw Approval"
       }
@@ -47582,7 +47584,8 @@
       "dry_run": false,
       "risk_class": [
         "write",
-        "admin"
+        "admin",
+        "permission_change"
       ],
       "audit_keys": [
         "approval_id",
@@ -47836,7 +47839,8 @@
         "readOnlyHint": false,
         "riskClass": [
           "write",
-          "admin"
+          "admin",
+          "permission_change"
         ],
         "title": "Approvals Resubmit"
       }

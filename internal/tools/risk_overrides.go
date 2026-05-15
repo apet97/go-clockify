@@ -177,11 +177,11 @@ var riskOverrides = map[string]riskOverride{
 		auditKeys: []string{"approval_id"},
 	},
 	"clockify_approvals_withdraw": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
 		auditKeys: []string{"approval_id"},
 	},
 	"clockify_approvals_resubmit": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
 		auditKeys: []string{"approval_id", "entry_ids", "expense_ids"},
 	},
 
