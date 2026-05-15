@@ -32609,7 +32609,14 @@
             "type": "integer"
           },
           "status": {
-            "description": "Filter by status: PENDING, APPROVED, DENIED, ALL (default ALL)",
+            "description": "Filter by status: PENDING, APPROVED, REJECTED, ALL (default ALL). DENIED is accepted as a legacy alias for REJECTED and is translated before the upstream POST.",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "DENIED",
+              "ALL"
+            ],
             "type": "string"
           },
           "user_id": {

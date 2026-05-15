@@ -559,6 +559,45 @@ func TestGetTimeOffRequestUsesBareRequestEndpointAndNormalizesStructuredStatus(t
 	}
 }
 
+func TestListTimeOffRequestsForwardsRejectedStatus(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		wantStat string
+	}{
+		{name: "REJECTED stays REJECTED", input: "REJECTED", wantStat: "REJECTED"},
+		{name: "DENIED maps to REJECTED", input: "DENIED", wantStat: "REJECTED"},
+		{name: "denied lower-case still maps", input: "denied", wantStat: "REJECTED"},
+		{name: "PENDING passes through", input: "PENDING", wantStat: "PENDING"},
+		{name: "APPROVED passes through", input: "APPROVED", wantStat: "APPROVED"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotStatuses []any
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/time-off/requests" {
+					t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+				}
+				var body map[string]any
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatalf("decode body: %v", err)
+				}
+				gotStatuses, _ = body["statuses"].([]any)
+				respondJSON(t, w, map[string]any{"count": 0, "requests": []map[string]any{}})
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			if _, err := svc.listTimeOffRequests(context.Background(), map[string]any{"status": tc.input}); err != nil {
+				t.Fatalf("listTimeOffRequests: %v", err)
+			}
+			if len(gotStatuses) != 1 || gotStatuses[0] != tc.wantStat {
+				t.Fatalf("statuses = %v, want [%s]", gotStatuses, tc.wantStat)
+			}
+		})
+	}
+}
+
 func TestGetTimeOffRequestSearchesApprovedRequestsWhenBareEndpointMisses(t *testing.T) {
 	const (
 		policyID  = "abc123def456789012345678"
