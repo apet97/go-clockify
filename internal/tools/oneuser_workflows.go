@@ -844,7 +844,7 @@ func (s *Service) ensureProjectNamed(ctx context.Context, name, clientID string,
 		return clockify.Project{}, false, fmt.Errorf("project name is required")
 	}
 	if upsert {
-		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200)})
+		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200), "hydrated": false})
 		if err != nil {
 			return clockify.Project{}, false, err
 		}

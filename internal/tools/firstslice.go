@@ -1119,7 +1119,7 @@ func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) 
 		}
 	}
 
-	projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200)})
+	projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200), "hydrated": false})
 	if err != nil {
 		warnings = append(warnings, Warning{Code: "projects_list_failed", Message: err.Error()})
 	} else {
@@ -1539,7 +1539,7 @@ func (s *Service) ensureDemoClient(ctx context.Context, prefix string, upsert bo
 func (s *Service) ensureDemoProject(ctx context.Context, prefix, clientID string, upsert bool) (clockify.Project, bool, error) {
 	name := prefix + " Project"
 	if upsert {
-		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200)})
+		projects, _, _, err := s.listProjects(ctx, map[string]any{"page_size": float64(200), "hydrated": false})
 		if err != nil {
 			return clockify.Project{}, false, err
 		}

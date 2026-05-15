@@ -52,8 +52,16 @@ func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values
 	addBoolQuery(query, args, "is_template", "is-template")
 	addStringQuery(query, args, "sort_column", "sort-column")
 	addStringQuery(query, args, "sort_order", "sort-order")
+	// hydrated defaults to true so the enriched clockify_projects_list
+	// view keeps memberships/rates, but a caller (or an internal
+	// find-by-name lookup) can pass hydrated:false to skip the
+	// expensive per-project hydration. Previously this was force-set to
+	// true, which silently ignored the schema's hydrated argument and
+	// made every project scan pay the hydration cost.
 	addBoolQuery(query, args, "hydrated", "hydrated")
-	query["hydrated"] = "true"
+	if _, ok := query["hydrated"]; !ok {
+		query["hydrated"] = "true"
+	}
 	addStringQuery(query, args, "access", "access")
 	addIntQuery(query, args, "expense_limit", "expense-limit")
 	addStringQuery(query, args, "expense_date", "expense-date")

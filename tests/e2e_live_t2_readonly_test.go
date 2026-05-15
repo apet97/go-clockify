@@ -36,13 +36,24 @@ func TestLiveOneUserOptionalDomainReadOnlySweep(t *testing.T) {
 		"end":      scheduleArgs["end"],
 		"user_ids": []any{c.OwnerUserID},
 	}
+	// clockify_reports_expense is a deliberately minimal report route:
+	// its typed schema only carries start/end/date_range/export_type.
+	// Pagination and sorting are report-body fields, and the live
+	// expense detailed report nests page/pageSize/sortColumn inside an
+	// expenseFilter object (sortOrder stays top-level) — see the
+	// canonical OpenAPI POST /reports/expenses/detailed example. They go
+	// through the `body` raw escape hatch with their exact wire shape.
 	expenseReportArgs := map[string]any{
-		"start":       start.Format("2006-01-02T15:04:05.000"),
-		"end":         end.Format("2006-01-02T15:04:05.000"),
-		"page":        1,
-		"page_size":   10,
-		"sort_column": "ID",
-		"sort_order":  "ASCENDING",
+		"start": start.Format("2006-01-02T15:04:05.000"),
+		"end":   end.Format("2006-01-02T15:04:05.000"),
+		"body": map[string]any{
+			"sortOrder": "ASCENDING",
+			"expenseFilter": map[string]any{
+				"page":       1,
+				"pageSize":   10,
+				"sortColumn": "DATE",
+			},
+		},
 	}
 
 	type call struct {
