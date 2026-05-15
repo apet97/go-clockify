@@ -156,13 +156,28 @@ Migrated Clockify domains:
   expenses, send, mark paid, export, payments
 - expenses: list, get, create, update, delete, categories
 - custom fields: list, get, create, update, delete, set value
-- time off: policies, requests, balances, approve, deny, archive
+- time off: policies, requests, balances, balance update, approve, deny,
+  archive
 - scheduling: assignments, project totals, user totals, capacity
 - approvals: list, get, submit, resubmit, approve, reject, withdraw
 - webhooks: list, get, create, update, delete, test, events
 - groups: list, get, create, update, delete, add user, remove user
 - holidays: list, get, create, update, delete, list for user period
 - users and workspace: list, profile, invite, deactivate, role, settings
+
+Some domain tools expose a deliberately simplified, owner-friendly surface
+rather than the full Clockify request body:
+
+- `clockify_time_off_policies_create` / `clockify_time_off_policies_update`
+  build a sensible default policy body around the current user and omit
+  color, icon, expiration, half-day defaults, automatic time-entry
+  creation, approval-stage configuration, and assignment filters. Use the
+  raw API fallback (`clockify_api_request POST /workspaces/{ws}/time-off/policies`)
+  for full-body policy creation.
+
+Such omissions are recorded per tool in `docs/api-parity-matrix.md`. The
+intent is to keep the primary tools easy for an agent to drive while
+leaving rare edge fields to the raw fallback.
 
 Raw API fallback:
 
