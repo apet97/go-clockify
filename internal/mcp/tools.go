@@ -46,25 +46,6 @@ func (s *Server) listTools() []Tool {
 	return cloneToolList(s.toolListCache)
 }
 
-// VisibleToolCount reports the current tools/list count after enforcement
-// filtering. Activators use it after a successful activation so responses can
-// distinguish a group-local tool count from the session-visible total.
-func (s *Server) VisibleToolCount() int {
-	return len(s.listTools())
-}
-
-// VisibleToolNames reports the current tools/list names after enforcement
-// filtering. Activation responses use it to avoid promising tools that the
-// client still cannot call because bootstrap or policy filtering hides them.
-func (s *Server) VisibleToolNames() map[string]bool {
-	tools := s.listTools()
-	out := make(map[string]bool, len(tools))
-	for _, tool := range tools {
-		out[tool.Name] = true
-	}
-	return out
-}
-
 type toolsListResult struct {
 	Tools []Tool `json:"tools"`
 }

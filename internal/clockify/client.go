@@ -502,12 +502,6 @@ func ListAllWithOptions[T any](ctx context.Context, c *Client, path string, base
 	return all, nil
 }
 
-// ListAllFunc scans pages and invokes onPage for each non-empty page without
-// retaining earlier pages.
-func ListAllFunc[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string, onPage func([]T) error) error {
-	return ListAllFuncWithOptions[T](ctx, c, path, baseQuery, ListAllOptions{}, onPage)
-}
-
 // ListAllFuncWithOptions scans pages using opts and invokes onPage for each
 // non-empty page without retaining earlier pages.
 func ListAllFuncWithOptions[T any](ctx context.Context, c *Client, path string, baseQuery map[string]string, opts ListAllOptions, onPage func([]T) error) error {

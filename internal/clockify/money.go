@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strconv"
 )
 
 // Rate is Clockify's RateDtoV1 / HourlyRateDtoV1. The Amount is always
@@ -150,24 +149,6 @@ func CentsFromReportNumber(v float64) int64 {
 	// math.Round is half-away-from-zero; that matches the standard
 	// rounding Clockify itself uses for display, so we mirror it.
 	return int64(math.Round(v))
-}
-
-// ParseRateAmount accepts the JSON number form that Clockify uses in
-// rate-update request bodies ("amount":1234 or "amount":1234.0) and
-// returns it as int64 cents. Used by tools that need to round-trip a
-// caller's rate amount through the Clockify HTTP client.
-func ParseRateAmount(s string) (int64, error) {
-	if s == "" {
-		return 0, nil
-	}
-	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return i, nil
-	}
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, err
-	}
-	return int64(math.Round(f)), nil
 }
 
 // ProjectMembership models the `memberships[]` element returned on

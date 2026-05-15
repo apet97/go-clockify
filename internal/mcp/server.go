@@ -267,14 +267,6 @@ func (s *Server) Notify(method string, params any) error {
 	return s.hub.notify(method, params)
 }
 
-// NegotiatedProtocolVersion returns the MCP protocol version agreed with the
-// client, or empty string before initialize runs.
-func (s *Server) NegotiatedProtocolVersion() string {
-	s.negotiatedMu.RLock()
-	defer s.negotiatedMu.RUnlock()
-	return s.negotiatedVersion
-}
-
 // ClientInfo returns the client name and version sent during initialize.
 func (s *Server) ClientInfo() (name, version string) {
 	s.negotiatedMu.RLock()
@@ -641,37 +633,6 @@ func (s *Server) writeRawResponse(raw []byte) error {
 	}
 	_, err := s.writer.Write([]byte("\n"))
 	return err
-}
-
-// DispatchMessageWithRecover is the recovery-wrapped variant of
-// DispatchMessage for embedders whose dispatch goroutines must not
-// let a panicking handler escape the embedder boundary.
-//
-// Identical to DispatchMessage on the parse / validate / marshal
-// path; the only difference is that handle() runs through
-// HandleWithRecover so panics are translated into the same stable
-// JSON-RPC tool-error envelope the stdio loop emits.
-func (s *Server) DispatchMessageWithRecover(ctx context.Context, msg []byte, site string) ([]byte, error) {
-	var req Request
-	if err := json.Unmarshal(msg, &req); err != nil {
-		metrics.ProtocolErrorsTotal.Inc("-32700")
-		return json.Marshal(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}})
-	}
-	if rpcErr := validateRequest(req); rpcErr != nil {
-		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(rpcErr.Code))
-		return json.Marshal(Response{JSONRPC: "2.0", ID: req.ID, Error: rpcErr})
-	}
-	if out, ok, err := s.tryMarshalCachedToolsListResponse(req); ok || err != nil {
-		return out, err
-	}
-	resp := s.HandleWithRecover(ctx, req, site)
-	if resp.Error != nil {
-		metrics.ProtocolErrorsTotal.Inc(strconv.Itoa(resp.Error.Code))
-	}
-	if req.ID == nil {
-		return nil, nil
-	}
-	return json.Marshal(resp)
 }
 
 // HandleWithRecover invokes handle with structured panic recovery.

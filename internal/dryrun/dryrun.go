@@ -1,7 +1,6 @@
 package dryrun
 
 import (
-	"fmt"
 	"os"
 	"strings"
 )
@@ -30,10 +29,6 @@ func Preview(tool string, args map[string]any) map[string]any {
 		"note":       "No changes were made.",
 		"validation": unknownValidation("generic dry-run preview did not run tool-specific validation"),
 	}
-}
-
-func NotSupported(tool string) error {
-	return fmt.Errorf("dry_run is not supported for non-destructive tool: %s", tool)
 }
 
 // ---------------------------------------------------------------------------
@@ -212,10 +207,4 @@ func unknownValidation(message string) map[string]any {
 			"message": message,
 		}},
 	}
-}
-
-// NotDestructiveError returns an error for non-destructive tools that
-// received a dry_run flag.
-func NotDestructiveError(toolName string) error {
-	return fmt.Errorf("dry_run is not supported for non-destructive tool: %s", toolName)
 }
