@@ -82,6 +82,34 @@ assert(matrix.dig("summary", "no_mcp_tool_count") == 0, "coverage matrix must ha
 assert(matrix.dig("summary", "no_evidence_count") == 0, "coverage matrix must have zero no-evidence operations")
 assert(matrix["tool_catalog"] == {"domain" => 132, "raw" => 2, "total" => 151, "workflow" => 17}, "coverage matrix must use workflow/domain/raw tool catalog counts")
 
+coverage_contract = IO.popen(
+  ["python3", "-c", %q{
+import runpy
+
+mod = runpy.run_path("scripts/gen-coverage-matrix", run_name="coverage_matrix_contract_test")
+
+try:
+    mod["catalog_tools"]({"tier1": [], "tier2": []})
+except ValueError as exc:
+    assert "catalog must not use legacy tier1/tier2 top-level shape" in str(exc), exc
+else:
+    raise AssertionError("legacy tier1/tier2 catalog shape must fail validation")
+
+try:
+    mod["catalog_tools"]({"generator": "fixture"})
+except ValueError as exc:
+    assert "catalog must use top-level tools array" in str(exc), exc
+else:
+    raise AssertionError("catalog without tools[] must fail validation")
+
+tools = mod["catalog_tools"]({"tools": [{"name": "clockify_status"}]})
+assert tools == [{"name": "clockify_status"}], tools
+}],
+  err: [:child, :out],
+  &:read
+)
+assert($?.success?, "coverage matrix generator must reject legacy catalog shapes: #{coverage_contract}")
+
 Dir.mktmpdir("openapi-catalog-contract") do |repo|
   FileUtils.mkdir_p(File.join(repo, "docs"))
   File.write(File.join(repo, "docs/tool-catalog.json"), JSON.pretty_generate({"tier1" => [], "tier2" => []}))

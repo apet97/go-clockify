@@ -236,10 +236,12 @@ def parse_test_tools() -> dict[str, set[str]]:
 
 
 def catalog_tools(catalog: dict) -> list[dict]:
-    """Return tool descriptors across old and current catalog JSON shapes."""
-    if isinstance(catalog.get("tools"), list):
-        return catalog["tools"]
-    return catalog.get("tier1", []) + catalog.get("tier2", [])
+    """Return tool descriptors from the product-current catalog shape."""
+    if "tier1" in catalog or "tier2" in catalog:
+        raise ValueError("catalog must not use legacy tier1/tier2 top-level shape")
+    if not isinstance(catalog.get("tools"), list):
+        raise ValueError("catalog must use top-level tools array")
+    return catalog["tools"]
 
 
 def catalog_metadata(catalog: dict) -> dict[str, int]:

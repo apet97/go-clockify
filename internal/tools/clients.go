@@ -21,14 +21,7 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
-	query := map[string]string{
-		"page":      strconv.Itoa(page),
-		"page-size": strconv.Itoa(pageSize),
-	}
-	addStringQuery(query, args, "name", "name")
-	addStringQuery(query, args, "sort_column", "sort-column")
-	addStringQuery(query, args, "sort_order", "sort-order")
-	addStringQuery(query, args, "archived", "archived")
+	query := clientListQuery(args, page, pageSize)
 	var out []clockify.ClientEntity
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
@@ -41,6 +34,20 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	return ok("clockify_clients_list", views, withFinancialMeta(meta, financialMeta)), nil
+}
+
+func clientListQuery(args map[string]any, page, pageSize int) map[string]string {
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
+	addStringQuery(query, args, "name", "name")
+	addBoolQuery(query, args, "archived", "archived")
+	addStringQuery(query, args, "address", "address")
+	addStringQuery(query, args, "note", "note")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
+	return query
 }
 
 func (s *Service) GetClient(ctx context.Context, clientRef string) (ResultEnvelope, error) {

@@ -34,7 +34,7 @@ func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 		}
 	}
 
-	requireProps("clockify_clients_list", "page", "page_size")
+	requireProps("clockify_clients_list", "page", "page_size", "name", "archived", "address", "note", "sort_column", "sort_order")
 	requireProps("clockify_clients_get", "client", "client_id")
 	requireProps("clockify_clients_create", "name")
 	requireProps("clockify_clients_update", "client", "client_id", "name")
@@ -58,6 +58,8 @@ func TestClientDocListFiltersForwarded(t *testing.T) {
 		q := r.URL.Query()
 		want := map[string]string{
 			"name":        "Client X",
+			"address":     "123 Main St",
+			"note":        "priority",
 			"sort-column": "NAME",
 			"sort-order":  "DESCENDING",
 			"archived":    "false",
@@ -76,13 +78,55 @@ func TestClientDocListFiltersForwarded(t *testing.T) {
 	svc := New(client, "ws1")
 	if _, err := svc.ListClients(context.Background(), map[string]any{
 		"name":        "Client X",
+		"address":     "123 Main St",
+		"note":        "priority",
 		"sort_column": "NAME",
 		"sort_order":  "DESCENDING",
-		"archived":    "false",
+		"archived":    false,
 		"page":        3,
 		"page_size":   25,
 	}); err != nil {
 		t.Fatalf("ListClients: %v", err)
+	}
+}
+
+func TestClientsListWrapperFiltersForwarded(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/clients" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		q := r.URL.Query()
+		want := map[string]string{
+			"name":        "Client X",
+			"address":     "123 Main St",
+			"note":        "priority",
+			"sort-column": "NAME",
+			"sort-order":  "DESCENDING",
+			"archived":    "false",
+			"page":        "3",
+			"page-size":   "25",
+		}
+		for key, value := range want {
+			if got := q.Get(key); got != value {
+				t.Fatalf("query %s = %q, want %q (raw=%s)", key, got, value, r.URL.RawQuery)
+			}
+		}
+		respondJSON(t, w, []clockify.ClientEntity{{ID: testClientID, Name: "Client X"}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	if _, err := svc.ClientsList(context.Background(), map[string]any{
+		"name":        "Client X",
+		"address":     "123 Main St",
+		"note":        "priority",
+		"sort_column": "NAME",
+		"sort_order":  "DESCENDING",
+		"archived":    false,
+		"page":        3,
+		"page_size":   25,
+	}); err != nil {
+		t.Fatalf("ClientsList: %v", err)
 	}
 }
 

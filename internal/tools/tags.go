@@ -21,10 +21,7 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 		return ResultEnvelope{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
-	query := map[string]string{
-		"page":      strconv.Itoa(page),
-		"page-size": strconv.Itoa(pageSize),
-	}
+	query := tagListQuery(args, page, pageSize)
 	var out []clockify.Tag
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
@@ -36,6 +33,18 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	return ok("clockify_tags_list", out, meta), nil
+}
+
+func tagListQuery(args map[string]any, page, pageSize int) map[string]string {
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page-size": strconv.Itoa(pageSize),
+	}
+	addStringQuery(query, args, "name", "name")
+	addBoolQuery(query, args, "archived", "archived")
+	addStringQuery(query, args, "sort_column", "sort-column")
+	addStringQuery(query, args, "sort_order", "sort-order")
+	return query
 }
 
 func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

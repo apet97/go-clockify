@@ -8271,6 +8271,21 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "address": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 500,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -8281,6 +8296,14 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "sort_column": {
+            "description": "Clockify sort-column query value.",
+            "type": "string"
+          },
+          "sort_order": {
+            "description": "Clockify sort-order query value.",
+            "type": "string"
           }
         },
         "type": "object"
@@ -10544,6 +10567,13 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 150,
+            "type": "string"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -10554,6 +10584,14 @@
             "maximum": 200,
             "minimum": 1,
             "type": "integer"
+          },
+          "sort_column": {
+            "description": "Clockify sort-column query value.",
+            "type": "string"
+          },
+          "sort_order": {
+            "description": "Clockify sort-order query value.",
+            "type": "string"
           }
         },
         "type": "object"

@@ -107,7 +107,16 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 			},
 		})), s.ClockifyDemoCleanup),
 
-		firstSliceDescriptor(20, toolRO("clockify_clients_list", "List clients in the pinned workspace.", paginationSchema(nil)), s.ClientsList),
+		firstSliceDescriptor(20, toolRO("clockify_clients_list", "List clients in the pinned workspace.", paginationSchema(map[string]any{
+			"properties": map[string]any{
+				"name":        map[string]any{"type": "string"},
+				"archived":    map[string]any{"type": "boolean"},
+				"address":     map[string]any{"type": "string"},
+				"note":        map[string]any{"type": "string"},
+				"sort_column": map[string]any{"type": "string", "description": "Clockify sort-column query value."},
+				"sort_order":  map[string]any{"type": "string", "description": "Clockify sort-order query value."},
+			},
+		})), s.ClientsList),
 		firstSliceDescriptor(21, toolRW("clockify_clients_create", "Create a client in the pinned workspace.", objectSchema(map[string]any{
 			"required": []string{"name"},
 			"properties": map[string]any{
@@ -141,7 +150,14 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"billable":   map[string]any{"type": "boolean"},
 			},
 		})), s.TasksCreate),
-		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace.", paginationSchema(nil)), s.TagsList),
+		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace.", paginationSchema(map[string]any{
+			"properties": map[string]any{
+				"name":        map[string]any{"type": "string"},
+				"archived":    map[string]any{"type": "boolean"},
+				"sort_column": map[string]any{"type": "string", "description": "Clockify sort-column query value."},
+				"sort_order":  map[string]any{"type": "string", "description": "Clockify sort-order query value."},
+			},
+		})), s.TagsList),
 		firstSliceDescriptor(51, toolRW("clockify_tags_create", "Create a tag in the pinned workspace.", objectSchema(map[string]any{
 			"required": []string{"name"},
 			"properties": map[string]any{
@@ -1167,7 +1183,7 @@ func (s *Service) listClients(ctx context.Context, args map[string]any) ([]clock
 		return nil, 0, 0, err
 	}
 	var out []clockify.ClientEntity
-	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	err = s.Client.Get(ctx, path, clientListQuery(args, page, pageSize), &out)
 	return out, page, pageSize, err
 }
 
@@ -1267,7 +1283,7 @@ func (s *Service) listTags(ctx context.Context, args map[string]any) ([]clockify
 		return nil, 0, 0, err
 	}
 	var out []clockify.Tag
-	err = s.Client.Get(ctx, path, pageQuery(page, pageSize), &out)
+	err = s.Client.Get(ctx, path, tagListQuery(args, page, pageSize), &out)
 	return out, page, pageSize, err
 }
 
