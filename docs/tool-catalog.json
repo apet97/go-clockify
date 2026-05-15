@@ -34977,7 +34977,7 @@
     },
     {
       "name": "clockify_time_off_policies_create",
-      "description": "Create a new time off policy",
+      "description": "Create a simplified owner-friendly time off policy. The handler builds a sensible default body around the current user (assigns the policy to them, applies an empty user-group filter, infers approval from auto_approve/requires_approval, and converts days_per_year into automaticAccrual). It intentionally omits Clockify's full surface — color/icon/expiration, half-day defaults, automatic time-entry creation, approval-stage configuration, and assignment filters. Use the raw API fallback (clockify_api_request POST /workspaces/{ws}/time-off/policies) when you need any of those fields.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -35256,7 +35256,7 @@
     },
     {
       "name": "clockify_time_off_policies_update",
-      "description": "Update an existing time off policy",
+      "description": "Update an existing time off policy by merging the supplied fields into the current upstream body. Same simplified surface as create: it preserves whatever the upstream stores for color/icon/expiration/automatic time-entry creation/approval stages and only mutates the fields you provide. Use the raw API fallback when you need to set fields outside this schema.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,

@@ -150,7 +150,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 10. clockify_create_time_off_policy (RW)
 		{
 			Tool: toolRW("clockify_create_time_off_policy",
-				"Create a new time off policy",
+				"Create a simplified owner-friendly time off policy. The handler builds a sensible default body around the current user (assigns the policy to them, applies an empty user-group filter, infers approval from auto_approve/requires_approval, and converts days_per_year into automaticAccrual). It intentionally omits Clockify's full surface — color/icon/expiration, half-day defaults, automatic time-entry creation, approval-stage configuration, and assignment filters. Use the raw API fallback (clockify_api_request POST /workspaces/{ws}/time-off/policies) when you need any of those fields.",
 				map[string]any{"type": "object", "required": []string{"name"}, "properties": map[string]any{
 					"name":              map[string]any{"type": "string"},
 					"accrual":           map[string]any{"type": "boolean", "description": "Whether the policy uses accrual"},
@@ -168,7 +168,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 11. clockify_update_time_off_policy (RW)
 		{
 			Tool: toolRW("clockify_update_time_off_policy",
-				"Update an existing time off policy",
+				"Update an existing time off policy by merging the supplied fields into the current upstream body. Same simplified surface as create: it preserves whatever the upstream stores for color/icon/expiration/automatic time-entry creation/approval stages and only mutates the fields you provide. Use the raw API fallback when you need to set fields outside this schema.",
 				map[string]any{"type": "object", "required": []string{"policy_id"}, "properties": map[string]any{
 					"policy_id":         map[string]any{"type": "string"},
 					"name":              map[string]any{"type": "string"},
