@@ -121,6 +121,36 @@ func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 	}
 }
 
+func TestCoreRouteDescriptorsDoNotShadowEarlierSources(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	earlierSources := map[string][]string{
+		"workflow":          descriptorNames(svc.workflowDescriptors()),
+		"first_slice":       descriptorNames(svc.FirstSliceRegistry()),
+		"native_core":       descriptorNames(svc.nativeCoreDescriptors()),
+		"native_high_value": descriptorNames(svc.nativeHighValueDescriptors()),
+		"native_alias":      descriptorNames(svc.nativeAliasDescriptors()),
+	}
+	seen := map[string]string{}
+	for source, names := range earlierSources {
+		for _, name := range names {
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			seen[name] = source
+		}
+	}
+
+	for _, descriptor := range svc.coreRouteDescriptors() {
+		if descriptor.Tool.Annotations["method"] == nil && descriptor.Tool.Annotations["path"] == nil {
+			continue
+		}
+		if source, ok := seen[descriptor.Tool.Name]; ok {
+			t.Fatalf("core route descriptor %s is shadowed by earlier source %s", descriptor.Tool.Name, source)
+		}
+		seen[descriptor.Tool.Name] = "core_route"
+	}
+}
+
 func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	reg := svc.FullAccessRegistry()
@@ -191,6 +221,14 @@ func BenchmarkFullAccessRegistry(b *testing.B) {
 			b.Fatalf("registry size=%d, want 151", got)
 		}
 	}
+}
+
+func descriptorNames(descriptors []mcp.ToolDescriptor) []string {
+	names := make([]string, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		names = append(names, descriptor.Tool.Name)
+	}
+	return names
 }
 
 func BenchmarkOneUserToolsResourceData(b *testing.B) {

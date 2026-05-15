@@ -82,54 +82,7 @@ func dedupeToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 }
 
 func (s *Service) coreRouteDescriptors() []mcp.ToolDescriptor {
-	specs := []routeTool{
-		// Clients.
-		rt(22, "GET", "clockify_clients_get", "Get one client.", "clients/{client_id}", "client", []string{"client_id"}, nil, nil, nil, true, false, false, ""),
-		rt(23, "PUT", "clockify_clients_update", "Update a client.", "clients/{client_id}", "client", []string{"client_id"}, fields("name"), nil, []string{"name"}, false, true, false, "updated"),
-		rt(24, "DELETE", "clockify_clients_delete", "Delete a client.", "clients/{client_id}", "client", []string{"client_id"}, nil, nil, nil, false, false, true, "deleted"),
-
-		// Projects.
-		rt(32, "GET", "clockify_projects_get", "Get one project.", "projects/{project_id}", "project", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
-		rt(33, "PUT", "clockify_projects_update", "Update a project.", "projects/{project_id}", "project", []string{"project_id"}, fields("name", "client_id", "color", "billable", "is_public", "archived", "body"), nil, []string{"name", "client_id", "color", "billable", "is_public", "archived"}, false, true, false, "updated"),
-		rt(34, "DELETE", "clockify_projects_delete", "Delete a project.", "projects/{project_id}", "project", []string{"project_id"}, nil, nil, nil, false, false, true, "deleted"),
-		rt(35, "PUT", "clockify_projects_archive", "Archive a project.", "projects/{project_id}", "project", []string{"project_id"}, fields("body"), nil, nil, false, true, false, "updated").withDefaults(map[string]any{"archived": true}),
-		rt(36, "GET", "clockify_projects_templates_list", "List project templates.", "projects", "project_template", nil, fields("page", "page_size"), []string{"page", "page_size", "is_template"}, nil, true, false, false, "").withDefaults(map[string]any{"is_template": true}),
-		rt(37, "POST", "clockify_projects_templates_create", "Create a project template.", "projects", "project_template", []string{"name"}, fields("name", "client_id", "color", "billable", "is_public", "body"), nil, []string{"name", "client_id", "color", "billable", "is_public"}, false, false, false, "created").withDefaults(map[string]any{"isTemplate": true}),
-		rt(38, "PUT", "clockify_projects_estimates_update", "Update a project estimate.", "projects/{project_id}/estimate", "project", []string{"project_id"}, fields("estimate_type", "estimate_value", "body"), nil, []string{"estimate_type", "estimate_value"}, false, true, false, "updated"),
-		rt(39, "GET", "clockify_projects_memberships_list", "List project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
-		rt(40, "PATCH", "clockify_projects_memberships_update", "Set project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, fields("memberships", "user_ids", "hourly_rate", "body"), nil, []string{"memberships", "user_ids", "hourly_rate"}, false, true, false, "updated"),
-		rt(41, "PUT", "clockify_projects_rates_update", "Set a project member hourly or cost rate.", "projects/{project_id}/users/{user_id}/{rate_kind}-rate", "project_rate", []string{"project_id", "user_id", "rate_kind"}, fields("amount", "currency", "body"), nil, []string{"amount", "currency"}, false, true, false, "updated"),
-
-		// Tasks.
-		rt(42, "GET", "clockify_tasks_get", "Get one task.", "projects/{project_id}/tasks/{task_id}", "task", []string{"project_id", "task_id"}, nil, nil, nil, true, false, false, ""),
-		rt(43, "PUT", "clockify_tasks_update", "Update a task.", "projects/{project_id}/tasks/{task_id}", "task", []string{"project_id", "task_id"}, fields("name", "billable", "assignee_ids", "status", "body"), nil, []string{"name", "billable", "assignee_ids", "status"}, false, true, false, "updated"),
-		rt(44, "DELETE", "clockify_tasks_delete", "Delete a task.", "projects/{project_id}/tasks/{task_id}", "task", []string{"project_id", "task_id"}, nil, nil, nil, false, false, true, "deleted"),
-		rt(45, "PUT", "clockify_tasks_rates_update", "Set a task hourly or cost rate.", "projects/{project_id}/tasks/{task_id}/{rate_kind}-rate", "task_rate", []string{"project_id", "task_id", "rate_kind"}, fields("amount", "currency", "body"), nil, []string{"amount", "currency"}, false, true, false, "updated"),
-
-		// Tags.
-		rt(52, "GET", "clockify_tags_get", "Get one tag.", "tags/{tag_id}", "tag", []string{"tag_id"}, nil, nil, nil, true, false, false, ""),
-		rt(53, "PUT", "clockify_tags_update", "Update a tag.", "tags/{tag_id}", "tag", []string{"tag_id"}, fields("name", "body"), nil, []string{"name"}, false, true, false, "updated"),
-		rt(54, "DELETE", "clockify_tags_delete", "Delete a tag.", "tags/{tag_id}", "tag", []string{"tag_id"}, nil, nil, nil, false, false, true, "deleted"),
-
-		// Time entries and timer helpers not covered by the first slice.
-		rt(62, "GET", "clockify_entries_get", "Get one time entry.", "time-entries/{entry_id}", "entry", []string{"entry_id"}, nil, nil, nil, true, false, false, ""),
-		rt(63, "PUT", "clockify_entries_update", "Update a time entry.", "time-entries/{entry_id}", "entry", []string{"entry_id"}, fields("start", "end", "description", "project_id", "task_id", "tag_ids", "billable", "body"), nil, []string{"start", "end", "description", "project_id", "task_id", "tag_ids", "billable"}, false, true, false, "updated"),
-		rt(64, "DELETE", "clockify_entries_delete", "Delete a time entry.", "time-entries/{entry_id}", "entry", []string{"entry_id"}, nil, nil, nil, false, false, true, "deleted"),
-		rt(65, "PATCH", "clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", "time-entries/invoiced", "entry", []string{"time_entry_ids", "invoiced"}, fields("time_entry_ids", "invoiced", "body"), nil, []string{"time_entry_ids", "invoiced"}, false, true, false, "updated"),
-
-		// Reports.
-		reportRT(100, "clockify_reports_attendance", "Run the attendance report.", "reports/attendance"),
-		reportRT(101, "clockify_reports_money", "Run the money summary report.", "reports/summary"),
-		reportRT(102, "clockify_reports_expense", "Run the detailed expense report.", "reports/expenses/detailed"),
-		reportRT(103, "clockify_reports_export", "Run a report export request.", "reports/detailed"),
-
-		// Time-off archive and documented request fallback.
-		rt(506, "PATCH", "clockify_time_off_archive", "Archive a time off policy or request.", "time-off/policies/{policy_id}", "time_off", []string{"policy_id"}, fields("archived", "body"), nil, []string{"archived"}, false, true, false, "updated").withDefaults(map[string]any{"archived": true}),
-	}
-	out := make([]mcp.ToolDescriptor, 0, len(specs)+4)
-	for _, spec := range specs {
-		out = append(out, s.routeDescriptor(spec))
-	}
+	out := make([]mcp.ToolDescriptor, 0, 8)
 	out = append(out,
 		firstSliceDescriptor(66, toolRO("clockify_entries_running", "Return the current running timer, if any.", objectSchema(nil)), s.EntriesRunning),
 		firstSliceDescriptor(67, toolRW("clockify_entries_timer_start", "Start a timer.", objectSchema(map[string]any{"properties": map[string]any{
@@ -1643,11 +1596,6 @@ func rt(priority int, method, name, desc, path, entity string, required []string
 
 func reportRT(priority int, name, desc, reportPath string) routeTool {
 	return rt(priority, "POST", name, desc, reportPath, "report", nil, fields("date_range_start", "date_range_end", "start", "end", "export_type", "body"), nil, []string{"date_range_start", "date_range_end", "start", "end", "export_type"}, true, false, false, "").withReports()
-}
-
-func (r routeTool) withDefaults(defaults map[string]any) routeTool {
-	r.Defaults = defaults
-	return r
 }
 
 func (r routeTool) withReports() routeTool {
