@@ -1058,6 +1058,125 @@ func TestListInvoiceItemsReadsEmbeddedInvoiceItems(t *testing.T) {
 	}
 }
 
+func TestConvertToInvoiceMinorUnits(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   any
+		unit    string
+		want    int64
+		wantErr string
+	}{
+		{name: "minor int passes through", value: 12500, unit: "minor", want: 12500},
+		{name: "minor default for blank unit", value: 99, unit: "", want: 99},
+		{name: "minor float integer ok", value: float64(12500), unit: "minor", want: 12500},
+		{name: "minor fractional rejected", value: 12500.5, unit: "minor", wantErr: "minor-unit value"},
+		{name: "major converts to minor", value: 125.0, unit: "major", want: 12500},
+		{name: "major rounds 1.23 to 123", value: 1.23, unit: "major", want: 123},
+		{name: "major rounds 1.235 to 124", value: 1.235, unit: "major", want: 124},
+		{name: "major negative rounds toward zero", value: -1.23, unit: "major", want: -123},
+		{name: "bad unit", value: 1, unit: "USD", wantErr: "unit must be minor or major"},
+		{name: "non-numeric rejected", value: "5.00", unit: "minor", wantErr: "value must be a number"},
+		{name: "nil rejected", value: nil, unit: "minor", wantErr: "value is required"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := convertToInvoiceMinorUnits(tc.value, tc.unit)
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("err = %v, want substring %q", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestAddInvoiceItemAcceptsMajorUnit pins the wire shape when the caller
+// opts into major currency input: the upstream still receives the value
+// in minor units (cents). Mirrors the expense amount_unit pattern.
+func TestAddInvoiceItemAcceptsMajorUnit(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/invoices/inv1/items" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": "line-1"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.addInvoiceItem(context.Background(), map[string]any{
+		"invoice_id":      "inv1",
+		"item_type":       "NEW DEFAULT",
+		"quantity":        float64(2),
+		"unit_price":      125.0,
+		"unit_price_unit": "major",
+	})
+	mustOK(t, res, err, "clockify_add_invoice_item")
+	if got, _ := gotBody["unitPrice"].(float64); got != float64(12500) {
+		t.Fatalf("unitPrice wire = %#v, want 12500 (125 major → 12500 minor)", gotBody["unitPrice"])
+	}
+}
+
+func TestAddInvoiceItemRejectsFractionalMinorUnitPrice(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("validation must fail before upstream POST; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	_, err := svc.addInvoiceItem(context.Background(), map[string]any{
+		"invoice_id": "inv1",
+		"item_type":  "NEW DEFAULT",
+		"unit_price": 125.5,
+	})
+	if err == nil || !strings.Contains(err.Error(), "minor-unit value") {
+		t.Fatalf("expected minor-unit fractional error, got %v", err)
+	}
+}
+
+// TestInvoicePaymentCreateAcceptsMajorUnit pins the same major→minor
+// conversion on the AddInvoicePaymentRequest amount field, which the
+// canonical openapi defines as int64 minimum 1.
+func TestInvoicePaymentCreateAcceptsMajorUnit(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/invoices/inv1/payments":
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": "inv1"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/invoices/inv1/payments":
+			respondJSON(t, w, map[string]any{"payments": []map[string]any{{"id": "pay1"}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.createInvoicePaymentOneUser(context.Background(), map[string]any{
+		"invoice_id":  "inv1",
+		"amount":      99.95,
+		"amount_unit": "major",
+		"date":        "2026-05-01T00:00:00Z",
+		"note":        "paid",
+	})
+	mustOK(t, res, err, "clockify_invoices_payments_create")
+	if got, _ := gotBody["amount"].(float64); got != float64(9995) {
+		t.Fatalf("amount wire = %#v, want 9995 (99.95 major → 9995 minor)", gotBody["amount"])
+	}
+}
+
 // mustOK is a small assertion helper for ResultEnvelope happy-paths.
 func mustOK(t *testing.T, res ResultEnvelope, err error, wantAction string) {
 	t.Helper()

@@ -179,36 +179,38 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 12. Add invoice item
-		{Tool: toolRW("clockify_add_invoice_item", "Add an item to an invoice", map[string]any{
+		{Tool: toolRW("clockify_add_invoice_item", "Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:\"major\" to enter the value in major currency units and let the MCP multiply by 100 before the POST.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id", "item_type"},
 			"properties": map[string]any{
-				"invoice_id":  map[string]any{"type": "string"},
-				"description": map[string]any{"type": "string"},
-				"quantity":    map[string]any{"type": "number"},
-				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
-				"apply_taxes": map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
-				"item_type":   map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)"},
-				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice item request without making changes"},
+				"invoice_id":      map[string]any{"type": "string"},
+				"description":     map[string]any{"type": "string"},
+				"quantity":        map[string]any{"type": "number"},
+				"unit_price":      map[string]any{"type": "number", "description": "Unit price. Defaults to minor units/cents (e.g. 12500 for $125.00); pass unit_price_unit:\"major\" to send major currency units instead."},
+				"unit_price_unit": invoiceMinorUnitSchema("unit_price"),
+				"apply_taxes":     map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
+				"item_type":       map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)"},
+				"dry_run":         map[string]any{"type": "boolean", "description": "Preview the invoice item request without making changes"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.addInvoiceItem(ctx, args)
 		}},
 
 		// 13. Update invoice item
-		{Tool: toolRW("clockify_update_invoice_item", "Update an invoice item by line index", map[string]any{
+		{Tool: toolRW("clockify_update_invoice_item", "Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:\"major\".", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id", "item_type"},
 			"properties": map[string]any{
-				"invoice_id":  map[string]any{"type": "string"},
-				"item_index":  map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items"},
-				"item_id":     map[string]any{"type": "string", "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id"},
-				"description": map[string]any{"type": "string"},
-				"quantity":    map[string]any{"type": "number"},
-				"unit_price":  map[string]any{"type": "number", "description": "Raw upstream unit price value; live API uses minor units/cents"},
-				"apply_taxes": map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
-				"item_type":   map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API)"},
-				"dry_run":     map[string]any{"type": "boolean", "description": "Preview the invoice item update without making changes"},
+				"invoice_id":      map[string]any{"type": "string"},
+				"item_index":      map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items"},
+				"item_id":         map[string]any{"type": "string", "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id"},
+				"description":     map[string]any{"type": "string"},
+				"quantity":        map[string]any{"type": "number"},
+				"unit_price":      map[string]any{"type": "number", "description": "Unit price. Defaults to minor units/cents; pass unit_price_unit:\"major\" to send major currency units instead."},
+				"unit_price_unit": invoiceMinorUnitSchema("unit_price"),
+				"apply_taxes":     map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
+				"item_type":       map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API)"},
+				"dry_run":         map[string]any{"type": "boolean", "description": "Preview the invoice item update without making changes"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoiceItem(ctx, args)
@@ -574,6 +576,13 @@ func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[stri
 		return ResultEnvelope{}, err
 	}
 	body := nativeBodyFromArgs(args, "amount", "note")
+	if raw, ok := body["amount"]; ok {
+		converted, err := convertToInvoiceMinorUnits(raw, stringArg(args, "amount_unit"))
+		if err != nil {
+			return ResultEnvelope{}, fmt.Errorf("amount: %w", err)
+		}
+		body["amount"] = converted
+	}
 	body["paymentDate"] = args["date"]
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
@@ -1020,6 +1029,65 @@ func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (Re
 	}), nil
 }
 
+// invoiceMinorUnitSchema returns the shared schema for a *_unit input
+// pinned to invoice surfaces where the wire format is Clockify's minor
+// units (cents) per the canonical OpenAPI. The default is minor so a raw
+// value passes through unchanged; major causes the handler to multiply
+// by 100 before the upstream call.
+func invoiceMinorUnitSchema(field string) map[string]any {
+	return map[string]any{
+		"type":        "string",
+		"enum":        []string{"minor", "major"},
+		"description": fmt.Sprintf("Unit for %s. minor (default) sends the value verbatim, which is the live API expectation; major multiplies by 100 before the request so callers can supply major currency units.", field),
+	}
+}
+
+// convertToInvoiceMinorUnits resolves the *_unit toggle for an invoice
+// amount field and returns the value Clockify expects on the wire (int64
+// minor units). Returns the value unchanged when unit is minor, multiplies
+// by 100 when unit is major, and validates that the resolved value fits
+// in int64 with no fractional cents — the upstream AddInvoicePaymentRequest
+// and InvoiceItemRequest both use integer minor units.
+func convertToInvoiceMinorUnits(value any, unit string) (int64, error) {
+	if value == nil {
+		return 0, fmt.Errorf("value is required")
+	}
+	var asFloat float64
+	switch v := value.(type) {
+	case float64:
+		asFloat = v
+	case float32:
+		asFloat = float64(v)
+	case int:
+		asFloat = float64(v)
+	case int32:
+		asFloat = float64(v)
+	case int64:
+		asFloat = float64(v)
+	default:
+		return 0, fmt.Errorf("value must be a number, got %T", value)
+	}
+	unit = strings.ToLower(strings.TrimSpace(unit))
+	switch unit {
+	case "", "minor":
+		if asFloat != float64(int64(asFloat)) {
+			return 0, fmt.Errorf("minor-unit value %v must be an integer (cents); use _unit:\"major\" to convert from major currency units", value)
+		}
+		return int64(asFloat), nil
+	case "major":
+		// Round to two decimal places before promoting to cents to
+		// dodge IEEE-754 drift like 1.23 * 100 == 122.99999...
+		scaled := asFloat * 100
+		rounded := int64(scaled + 0.5)
+		if scaled < 0 {
+			rounded = int64(scaled - 0.5)
+		}
+		return rounded, nil
+	default:
+		return 0, fmt.Errorf("unit must be minor or major, got %q", unit)
+	}
+}
+
 func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
@@ -1038,7 +1106,11 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 		body["quantity"] = v
 	}
 	if v, ok := args["unit_price"]; ok {
-		body["unitPrice"] = v
+		converted, err := convertToInvoiceMinorUnits(v, stringArg(args, "unit_price_unit"))
+		if err != nil {
+			return ResultEnvelope{}, fmt.Errorf("unit_price: %w", err)
+		}
+		body["unitPrice"] = converted
 	}
 	if v := stringArg(args, "apply_taxes"); v != "" {
 		body["applyTaxes"] = v
@@ -1103,7 +1175,11 @@ func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (R
 		body["quantity"] = v
 	}
 	if v, ok := args["unit_price"]; ok {
-		body["unitPrice"] = v
+		converted, err := convertToInvoiceMinorUnits(v, stringArg(args, "unit_price_unit"))
+		if err != nil {
+			return ResultEnvelope{}, fmt.Errorf("unit_price: %w", err)
+		}
+		body["unitPrice"] = converted
 	}
 	if v := stringArg(args, "apply_taxes"); v != "" {
 		body["applyTaxes"] = v

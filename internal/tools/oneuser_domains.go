@@ -760,9 +760,9 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 			"required":   []string{"invoice_id"},
 			"properties": fields("invoice_id", "page", "page_size"),
 		})), "payment", "", s.listInvoicePayments),
-		nativeDomainTool(214, toolRW("clockify_invoices_payments_create", "Create an invoice payment.", objectSchema(map[string]any{
+		nativeDomainTool(214, toolRW("clockify_invoices_payments_create", "Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:\"major\" to enter the value in major currency units instead.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id"},
-			"properties": fields("invoice_id", "amount", "date", "note", "body"),
+			"properties": withInvoicePaymentAmountUnit(fields("invoice_id", "amount", "date", "note", "body")),
 		})), "payment", "created", s.createInvoicePaymentOneUser),
 		nativeDomainTool(215, toolDestructive("clockify_invoices_payments_delete", "Delete an invoice payment.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id", "payment_id"},
@@ -1693,6 +1693,15 @@ func scalarToString(value any) string {
 	default:
 		return fmt.Sprint(value)
 	}
+}
+
+// withInvoicePaymentAmountUnit annotates the generic fields(...) properties
+// map with an amount_unit toggle so the payment-create surface mirrors
+// invoice items and clockify_create_expense. The wire stays in minor
+// units; major mode just adds a multiply-by-100 step in the handler.
+func withInvoicePaymentAmountUnit(props map[string]any) map[string]any {
+	props["amount_unit"] = invoiceMinorUnitSchema("amount")
+	return props
 }
 
 func fields(names ...string) map[string]any {

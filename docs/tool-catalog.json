@@ -26375,7 +26375,7 @@
     },
     {
       "name": "clockify_invoices_items_add",
-      "description": "Add an item to an invoice",
+      "description": "Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:\"major\" to enter the value in major currency units and let the MCP multiply by 100 before the POST.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -26425,8 +26425,16 @@
             "type": "number"
           },
           "unit_price": {
-            "description": "Raw upstream unit price value; live API uses minor units/cents",
+            "description": "Unit price. Defaults to minor units/cents (e.g. 12500 for $125.00); pass unit_price_unit:\"major\" to send major currency units instead.",
             "type": "number"
+          },
+          "unit_price_unit": {
+            "description": "Unit for unit_price. minor (default) sends the value verbatim, which is the live API expectation; major multiplies by 100 before the request so callers can supply major currency units.",
+            "enum": [
+              "minor",
+              "major"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -26663,7 +26671,7 @@
     },
     {
       "name": "clockify_invoices_items_update",
-      "description": "Update an invoice item by line index",
+      "description": "Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:\"major\".",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -26723,8 +26731,16 @@
             "type": "number"
           },
           "unit_price": {
-            "description": "Raw upstream unit price value; live API uses minor units/cents",
+            "description": "Unit price. Defaults to minor units/cents; pass unit_price_unit:\"major\" to send major currency units instead.",
             "type": "number"
+          },
+          "unit_price_unit": {
+            "description": "Unit for unit_price. minor (default) sends the value verbatim, which is the live API expectation; major multiplies by 100 before the request so callers can supply major currency units.",
+            "enum": [
+              "minor",
+              "major"
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -47117,7 +47133,7 @@
     },
     {
       "name": "clockify_invoices_payments_create",
-      "description": "Create an invoice payment.",
+      "description": "Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:\"major\" to enter the value in major currency units instead.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -47138,6 +47154,14 @@
         "properties": {
           "amount": {
             "type": "number"
+          },
+          "amount_unit": {
+            "description": "Unit for amount. minor (default) sends the value verbatim, which is the live API expectation; major multiplies by 100 before the request so callers can supply major currency units.",
+            "enum": [
+              "minor",
+              "major"
+            ],
+            "type": "string"
           },
           "body": {
             "additionalProperties": true,

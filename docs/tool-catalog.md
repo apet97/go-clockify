@@ -104,8 +104,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_send` | `domain` | no | no | no | yes | `write`, `billing`, `external_side_effect` | Send the invoice email to the client. External side effect; dry_run previews without sending. |
 | `clockify_invoices_mark_paid` | `domain` | no | no | no | yes | `write`, `billing` | Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated. |
 | `clockify_invoices_items_list` | `domain` | yes | no | yes | no | `read` | List items for an invoice |
-| `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice |
-| `clockify_invoices_items_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an invoice item by line index |
+| `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:"major" to enter the value in major currency units and let the MCP multiply by 100 before the POST. |
+| `clockify_invoices_items_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:"major". |
 | `clockify_invoices_items_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an invoice item by line index |
 | `clockify_projects_templates_list` | `domain` | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_projects_templates_create` | `domain` | no | no | no | no | `write` | Create a new project template |
@@ -180,7 +180,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import time entries into an invoice. |
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import expenses into an invoice. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List invoice payments. |
-| `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. |
+| `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
 | `clockify_invoices_payments_delete` | `domain` | no | yes | no | no | `billing`, `destructive` | Delete an invoice payment. |
 | `clockify_time_off_archive` | `domain` | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | `domain` | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
