@@ -69,7 +69,7 @@ func main() {
 	slog.SetDefault(slog.New(logHandler))
 
 	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		writeStartupError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -80,10 +80,31 @@ func run() error {
 	return runWithContext(ctx, os.Stdin, os.Stdout)
 }
 
+// startupConfigError marks a failure that occurred while loading the
+// one-user configuration (a fixable environment problem), as distinct
+// from a runtime failure after the server started. main() uses it to
+// decide whether to point the operator at `clockify-mcp doctor`.
+type startupConfigError struct{ err error }
+
+func (e *startupConfigError) Error() string { return e.err.Error() }
+func (e *startupConfigError) Unwrap() error { return e.err }
+
+// writeStartupError reports a startup failure on w. Configuration
+// failures additionally suggest `clockify-mcp doctor`, mirroring the
+// recovery line the doctor subcommand already prints; runtime failures
+// are reported as-is.
+func writeStartupError(w io.Writer, err error) {
+	_, _ = fmt.Fprintf(w, "error: %v\n", err)
+	var cfgErr *startupConfigError
+	if errors.As(err, &cfgErr) {
+		_, _ = fmt.Fprintln(w, "hint: run 'clockify-mcp doctor' to validate the one-user configuration")
+	}
+}
+
 func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 	cfg, err := config.LoadOneUser()
 	if err != nil {
-		return err
+		return &startupConfigError{err}
 	}
 	effective := effectiveVersion()
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 2)

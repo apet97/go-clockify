@@ -374,3 +374,42 @@ func respondDoctorJSON(t *testing.T, w http.ResponseWriter, v any) {
 		t.Fatal(err)
 	}
 }
+
+func TestWriteStartupErrorAddsDoctorHintForConfigErrors(t *testing.T) {
+	t.Run("config error suggests doctor", func(t *testing.T) {
+		var buf bytes.Buffer
+		writeStartupError(&buf, &startupConfigError{errors.New("CLOCKIFY_API_KEY is required")})
+		out := buf.String()
+		if !strings.Contains(out, "error: CLOCKIFY_API_KEY is required") {
+			t.Fatalf("missing error line: %q", out)
+		}
+		if !strings.Contains(out, "clockify-mcp doctor") {
+			t.Fatalf("config error missing doctor hint: %q", out)
+		}
+	})
+	t.Run("runtime error does not suggest doctor", func(t *testing.T) {
+		var buf bytes.Buffer
+		writeStartupError(&buf, errors.New("stdio transport closed"))
+		out := buf.String()
+		if !strings.Contains(out, "error: stdio transport closed") {
+			t.Fatalf("missing error line: %q", out)
+		}
+		if strings.Contains(out, "doctor") {
+			t.Fatalf("runtime error should not suggest doctor: %q", out)
+		}
+	})
+}
+
+func TestRunWithContextClassifiesConfigError(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "")
+
+	err := runWithContext(context.Background(), strings.NewReader(""), io.Discard)
+	if err == nil {
+		t.Fatal("expected a config-load error, got nil")
+	}
+	var cfgErr *startupConfigError
+	if !errors.As(err, &cfgErr) {
+		t.Fatalf("config-load failure not classified as *startupConfigError: %T %v", err, err)
+	}
+}
