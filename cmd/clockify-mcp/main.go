@@ -75,6 +75,12 @@ func main() {
 }
 
 func run() error {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	return runWithContext(ctx, os.Stdin, os.Stdout)
+}
+
+func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 	cfg, err := config.LoadOneUser()
 	if err != nil {
 		return err
@@ -113,10 +119,7 @@ func run() error {
 		"toolset", cfg.Toolset,
 	)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-
-	return server.Run(ctx, os.Stdin, os.Stdout)
+	return server.Run(ctx, stdin, stdout)
 }
 
 func parseLogLevel(s string) slog.Level {

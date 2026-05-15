@@ -147,6 +147,66 @@ func TestClientAPIError(t *testing.T) {
 	}
 }
 
+func TestClientAPIErrorBodyRedactsSecretCanaries(t *testing.T) {
+	const (
+		apiKeyCanary      = "canary-clockify-api-key-1234567890"
+		webhookAuthCanary = "canary-webhook-auth-token-1234567890"
+	)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{
+			"message":"bad request",
+			"apiKey":"` + apiKeyCanary + `",
+			"details":{"authToken":"` + webhookAuthCanary + `"}
+		}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient(apiKeyCanary, ts.URL, 5*time.Second, 0)
+	var out map[string]any
+	err := c.Get(context.Background(), "/user", nil, &out)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	for _, got := range []struct {
+		name  string
+		value string
+	}{
+		{"APIError.Body", apiErr.Body},
+		{"APIError.Error", apiErr.Error()},
+		{"APIError translation", fmt.Sprint(apiErr.ErrorTranslation())},
+	} {
+		if strings.Contains(got.value, apiKeyCanary) || strings.Contains(got.value, webhookAuthCanary) {
+			t.Fatalf("%s leaked secret canary: %s", got.name, got.value)
+		}
+	}
+	if !strings.Contains(apiErr.Body, "[REDACTED]") {
+		t.Fatalf("expected redacted marker in APIError.Body, got %s", apiErr.Body)
+	}
+}
+
+func TestClientAPIErrorBodyRedactsBeforeTruncating(t *testing.T) {
+	const apiKeyCanary = "canary-clockify-api-key-before-truncate"
+	body := strings.Repeat("x", 900) + `{"apiKey":"` + apiKeyCanary + `","message":"bad request"}` + strings.Repeat("y", 200)
+	if len(body) <= 1000 {
+		t.Fatal("test body must exercise the truncation path")
+	}
+	got := trimBody(body)
+	if strings.Contains(got, apiKeyCanary) {
+		t.Fatalf("trimBody leaked secret canary after truncation: %s", got)
+	}
+	if !strings.Contains(got, "[REDACTED]") {
+		t.Fatalf("expected redacted marker before truncation, got %s", got)
+	}
+	if len(got) > 1003 {
+		t.Fatalf("trimmed body length=%d want <=1003", len(got))
+	}
+}
+
 // --- Retry Logic ---
 
 func TestRetryOn429ThenSuccess(t *testing.T) {

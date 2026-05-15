@@ -16,9 +16,11 @@ correctness-regression patches on the stable v1 wire format — security
 CVEs that meet that bar are backported, others are not.
 
 See [SUPPORT.md](SUPPORT.md) for the canonical version-status state and
-[docs/release-policy.md](docs/release-policy.md) for the full support
-window, deprecation policy, and definition of "breaking change" used by
-this project.
+[docs/release-policy.md](docs/release-policy.md) for the historical release
+policy record. Current one-user setup and product routing start from
+[README.md](README.md), [docs/agent-cookbook.md](docs/agent-cookbook.md),
+[docs/tool-catalog.md](docs/tool-catalog.md), and
+[docs/goals/oneuser-tool-coverage.md](docs/goals/oneuser-tool-coverage.md).
 
 ## Reporting a Vulnerability
 
@@ -81,7 +83,7 @@ The following are in scope:
 - **Dry-run**: three-strategy (confirm pattern, GET preview, minimal fallback) dry-run for every destructive operation; enabled by default. Non-destructive RW tools whose execution triggers an external side effect (`clockify_send_invoice`, `clockify_mark_invoice_paid`, `clockify_test_webhook`, `clockify_deactivate_user`) also honour `dry_run:true` — the handler GETs a preview and returns it without issuing the PUT/POST, so agent flows can stage a confirmation step before billing or admin actions land.
 - **Name resolution**: ambiguous matches fail closed (no guessing).
 - **Stdout purity**: protocol responses only on stdout; every log goes to stderr via slog — never mixes with JSON-RPC frames in stdio mode.
-- **Tool annotations**: all 139 current catalog tools carry `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, and `title`. Spec-strict MCP clients get the correct safety hints on every descriptor.
+- **Tool annotations**: all 151 current catalog tools carry `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, and `title`. Spec-strict MCP clients get the correct safety hints on every descriptor.
 - **Response limits**: 10MB on Clockify API responses, 4MB default on HTTP request bodies (`MCP_MAX_MESSAGE_SIZE`, capped at 100MB).
 - **Zero external dependencies in the default binary** (stdlib only) — minimal supply chain attack surface. The root `go.mod` has zero `require` lines beyond the workspace pointer to the local `internal/tracing/otel` sub-module; the build-tagged sub-modules (`internal/transport/grpc`, `internal/controlplane/postgres`, `internal/tracing/otel`) live in their own `go.mod` files and only enter the build under `-tags=grpc`/`postgres`/`otel`. The root `go.sum` covers those sub-module deps for reproducibility but is irrelevant to the default-binary attack surface.
 - **Initialization guard**: `tools/call` rejected before `initialize` handshake (`-32002 server not initialized`).

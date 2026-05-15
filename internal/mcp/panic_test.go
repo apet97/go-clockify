@@ -93,7 +93,10 @@ func TestRecoverDispatch_NilSink(t *testing.T) {
 }
 
 func TestRecoverDispatch_RedactingLoggerMasksSecretShapedPanicValue(t *testing.T) {
-	const secret = "pk_abcdefghijklmnopqrstuvwxyz123456"
+	const (
+		apiKeyCanary      = "api_key=canary-clockify-api-key-1234567890"
+		webhookAuthCanary = "authToken=canary-webhook-auth-token-1234567890"
+	)
 
 	var logs bytes.Buffer
 	prev := slog.Default()
@@ -104,14 +107,14 @@ func TestRecoverDispatch_RedactingLoggerMasksSecretShapedPanicValue(t *testing.T
 
 	func() {
 		defer RecoverDispatch("req-1", "test_site", "tool", func(Response) {})
-		panic("upstream failure containing " + secret)
+		panic("upstream failure containing " + apiKeyCanary + " and " + webhookAuthCanary)
 	}()
 
 	got := logs.String()
 	if !strings.Contains(got, "panic_recovered") {
 		t.Fatalf("expected panic recovery log, got %q", got)
 	}
-	if strings.Contains(got, secret) {
+	if strings.Contains(got, apiKeyCanary) || strings.Contains(got, webhookAuthCanary) {
 		t.Fatalf("secret-shaped panic value leaked into operator log: %s", got)
 	}
 	if !strings.Contains(got, "[REDACTED]") {

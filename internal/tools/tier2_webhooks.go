@@ -552,6 +552,10 @@ func (s *Service) GetWebhook(ctx context.Context, args map[string]any) (ResultEn
 
 func maskWebhookAuthToken(webhook map[string]any) {
 	raw, ok := webhook["authToken"].(string)
+	if !ok {
+		raw, ok = webhook["auth_token"].(string)
+	}
+	delete(webhook, "auth_token")
 	if !ok || raw == "" {
 		delete(webhook, "authToken")
 		if _, exists := webhook["secret_token_present"]; !exists {

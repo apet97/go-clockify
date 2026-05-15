@@ -337,7 +337,23 @@ func buildTimesheetReview(entries []clockify.TimeEntry, start, end time.Time, lo
 				Reason: "Stop the running timer if the work session is finished.",
 			})
 		}
-		if strings.TrimSpace(entry.ProjectID) == "" {
+		if !entry.IsRunning() && !endTime.After(startTime) {
+			issues = append(issues, TimesheetIssue{
+				Type:     "zero_duration",
+				Severity: "warning",
+				Message:  "Entry has zero tracked duration.",
+				EntryID:  entry.ID,
+				Start:    startTime.Format(time.RFC3339),
+				End:      endTime.Format(time.RFC3339),
+			})
+			addSuggestion(ToolSuggestion{
+				Tool:        "clockify_entries_update",
+				Reason:      "Adjust the start or end time after confirming the intended duration.",
+				Arguments:   map[string]any{"entry_id": entry.ID},
+				MissingArgs: []string{"start", "end"},
+			})
+		}
+		if strings.TrimSpace(entry.ProjectID) == "" && strings.ToUpper(strings.TrimSpace(entry.Type)) != "BREAK" {
 			issues = append(issues, TimesheetIssue{
 				Type:     "missing_project",
 				Severity: "warning",

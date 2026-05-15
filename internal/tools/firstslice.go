@@ -270,14 +270,18 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_review_day", "clockify_review_week":
 		return schemaFor[TimesheetReviewData]()
 	case "clockify_clients_list":
-		return objectListDataSchema("clients", schemaFor[[]ClientView]())
-	case "clockify_clients_get", "clockify_clients_create", "clockify_clients_update":
+		return objectListDataSchema("clients", schemaFor[[]clockify.ClientEntity]())
+	case "clockify_clients_create":
+		return schemaFor[clockify.ClientEntity]()
+	case "clockify_clients_get", "clockify_clients_update":
 		return schemaFor[ClientView]()
 	case "clockify_clients_delete":
 		return entityObjectDataSchema("deleted", "clientId")
 	case "clockify_projects_list":
-		return objectListDataSchema("projects", schemaFor[[]ProjectView]())
-	case "clockify_projects_get", "clockify_projects_create", "clockify_projects_update", "clockify_projects_archive":
+		return objectListDataSchema("projects", schemaFor[[]clockify.Project]())
+	case "clockify_projects_create":
+		return schemaFor[clockify.Project]()
+	case "clockify_projects_get", "clockify_projects_update", "clockify_projects_archive":
 		return schemaFor[ProjectView]()
 	case "clockify_projects_delete":
 		return entityObjectDataSchema("deleted", "projectId")
@@ -290,12 +294,14 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_projects_estimates_update":
 		return entityObjectDataSchema("id", "projectId", "timeEstimate", "budgetEstimate", "estimate")
 	case "clockify_projects_memberships_list":
-		return entityArrayDataSchema("id", "userId", "membershipId", "hourlyRate", "costRate")
+		return entityObjectDataSchema("id", "userId", "membershipId", "hourlyRate", "costRate")
 	case "clockify_projects_memberships_update":
 		return entityObjectDataSchema("id", "projectId", "memberships", "userGroups")
 	case "clockify_tasks_list":
-		return objectListDataSchema("tasks", schemaFor[[]TaskView]())
-	case "clockify_tasks_get", "clockify_tasks_create", "clockify_tasks_update":
+		return objectListDataSchema("tasks", schemaFor[[]clockify.Task]())
+	case "clockify_tasks_create":
+		return schemaFor[clockify.Task]()
+	case "clockify_tasks_get", "clockify_tasks_update":
 		return schemaFor[TaskView]()
 	case "clockify_tasks_delete":
 		return entityObjectDataSchema("deleted", "taskId", "projectId")
@@ -308,7 +314,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_tags_delete":
 		return entityObjectDataSchema("deleted", "tagId")
 	case "clockify_entries_list":
-		return objectListDataSchema("entries", schemaFor[[]EntryView]())
+		return objectListDataSchema("entries", schemaFor[[]clockify.TimeEntry]())
 	case "clockify_entries_get", "clockify_entries_update":
 		return schemaFor[EntryView]()
 	case "clockify_entries_create":
@@ -318,14 +324,18 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_entries_running":
 		return objectDataSchema(map[string]any{
 			"running":        map[string]any{"type": "boolean"},
-			"entry":          map[string]any{"type": "object"},
+			"entry":          nullableObjectSchema(),
 			"userId":         map[string]any{"type": "string"},
 			"elapsedSeconds": map[string]any{"type": "integer"},
 		})
 	case "clockify_entries_timer_start", "clockify_entries_timer_stop":
 		return schemaFor[EntryView]()
 	case "clockify_entries_timer_status":
-		return schemaFor[TimerStatusData]()
+		return objectDataSchema(map[string]any{
+			"running": map[string]any{"type": "boolean"},
+			"entry":   nullableObjectSchema(),
+			"elapsed": map[string]any{"type": "string"},
+		})
 	case "clockify_entries_timer_switch":
 		return objectDataSchema(map[string]any{
 			"stopped": map[string]any{"type": "object"},
@@ -333,9 +343,20 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 			"error":   map[string]any{"type": "string"},
 		})
 	case "clockify_reports_detailed", "clockify_reports_summary":
-		return schemaFor[SummaryData]()
+		return objectDataSchema(map[string]any{
+			"range":   schemaFor[DateRange](),
+			"totals":  openObjectOrArraySchema(),
+			"entries": arraySchema("Report entries or raw report rows."),
+			"data":    openObjectOrArraySchema(),
+		})
 	case "clockify_reports_weekly":
-		return schemaFor[WeeklySummaryData]()
+		return objectDataSchema(map[string]any{
+			"byDay":   schemaFor[[]DaySummary](),
+			"range":   schemaFor[DateRange](),
+			"totals":  openObjectOrArraySchema(),
+			"entries": arraySchema("Weekly report entries or raw report rows."),
+			"data":    openObjectOrArraySchema(),
+		})
 	case "clockify_invoices_list":
 		return entityArrayDataSchema("id", "number", "status", "clientId")
 	case "clockify_invoices_get", "clockify_invoices_create", "clockify_invoices_update", "clockify_invoices_send", "clockify_invoices_mark_paid":
@@ -396,13 +417,17 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityObjectDataSchema("id", "policyId", "archived")
 	case "clockify_scheduling_assignments_list":
 		return entityArrayDataSchema("id", "assignmentId", "projectId", "userId", "start", "end")
-	case "clockify_scheduling_assignments_create", "clockify_scheduling_assignments_get", "clockify_scheduling_assignments_update":
+	case "clockify_scheduling_assignments_create", "clockify_scheduling_assignments_update":
+		return entityArrayDataSchema("id", "assignmentId", "projectId", "userId", "start", "end")
+	case "clockify_scheduling_assignments_get":
 		return entityObjectDataSchema("id", "assignmentId", "projectId", "userId", "start", "end")
 	case "clockify_scheduling_assignments_delete":
 		return entityObjectDataSchema("deleted", "assignmentId")
 	case "clockify_scheduling_project_totals":
-		return entityObjectDataSchema("id", "projectId", "total", "totals")
-	case "clockify_scheduling_user_totals", "clockify_scheduling_capacity":
+		return entityArrayDataSchema("id", "projectId", "total", "totals")
+	case "clockify_scheduling_capacity":
+		return entityArrayDataSchema("id", "userId", "assignmentId", "total", "totals")
+	case "clockify_scheduling_user_totals":
 		return entityObjectDataSchema("id", "userId", "assignmentId", "total", "totals")
 	case "clockify_reports_attendance", "clockify_reports_money", "clockify_reports_expense", "clockify_reports_export":
 		return entityObjectDataSchema("id", "workspaceId", "totals", "timeentries", "entries", "data")
@@ -421,7 +446,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_webhooks_test":
 		return entityObjectDataSchema("id", "webhookId", "status")
 	case "clockify_webhooks_events":
-		return entityArrayDataSchema("id", "name", "event", "webhookEvent")
+		return stringArraySchema("Supported Clockify webhook event names.")
 	case "clockify_groups_list":
 		return entityArrayDataSchema("id", "groupId", "name", "userIds")
 	case "clockify_groups_create", "clockify_groups_get", "clockify_groups_update":
@@ -491,6 +516,21 @@ func objectDataSchema(properties map[string]any) map[string]any {
 		"type":                 "object",
 		"additionalProperties": true,
 		"properties":           properties,
+	}
+}
+
+func nullableObjectSchema() map[string]any {
+	return map[string]any{
+		"type":                 []string{"object", "null"},
+		"additionalProperties": true,
+	}
+}
+
+func openObjectOrArraySchema() map[string]any {
+	return map[string]any{
+		"type":                 []string{"object", "array"},
+		"additionalProperties": true,
+		"items":                map[string]any{},
 	}
 }
 

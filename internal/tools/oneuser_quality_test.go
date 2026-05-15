@@ -379,6 +379,98 @@ func TestOneUserDocsAvoidRemovedToolNames(t *testing.T) {
 	}
 }
 
+func TestOneUserMarkdownRoutesCurrentDocsAndMarksPlatformHistory(t *testing.T) {
+	currentEntrypoints := map[string][]string{
+		"README.md":                           {"README.md", "../README.md"},
+		"docs/agent-cookbook.md":              {"docs/agent-cookbook.md", "agent-cookbook.md"},
+		"docs/tool-catalog.md":                {"docs/tool-catalog.md", "tool-catalog.md"},
+		"docs/goals/oneuser-tool-coverage.md": {"docs/goals/oneuser-tool-coverage.md", "goals/oneuser-tool-coverage.md"},
+	}
+	for _, path := range []string{"../../docs/README.md", "../../AGENTS.md", "../../SECURITY.md"} {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(raw)
+		for entrypoint, variants := range currentEntrypoints {
+			if !slices.ContainsFunc(variants, func(variant string) bool { return strings.Contains(text, variant) }) {
+				t.Fatalf("%s does not route readers to current entrypoint %s", path, entrypoint)
+			}
+		}
+	}
+
+	staleTerms := []string{
+		"clockify_activate_group",
+		"clockify_activate_tool",
+		"clockify_deactivate_group",
+		"clockify_policy_info",
+		"clockify_search_tools",
+		"clockify_list_tools",
+		"confirmation token",
+		"policy mode",
+		"shared-service",
+		"shared service",
+		"multi-tenant",
+		"control-plane",
+		"control plane",
+		"forward_auth",
+		"forward auth",
+		"streamable_http",
+		"prod-postgres",
+	}
+	allowedCurrentDocs := map[string]bool{
+		"../../docs/README.md":                          true,
+		"../../docs/agent-cookbook.md":                  true,
+		"../../docs/agent-handoff.md":                   true,
+		"../../docs/api-coverage.md":                    true,
+		"../../docs/coverage-policy.md":                 true,
+		"../../docs/goals/oneuser-tool-coverage.md":     true,
+		"../../docs/goals/perfect-one-user-full-mcp.md": true,
+		"../../docs/live-tests.md":                      true,
+		"../../docs/performance.md":                     true,
+		"../../docs/policy/production-tool-scope.md":    true,
+		"../../docs/tool-catalog.md":                    true,
+	}
+	err := filepath.WalkDir("../../docs", func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			switch path {
+			case "../../docs/archive", "../../docs/openapi/sources":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".md" || allowedCurrentDocs[path] {
+			return nil
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		text := strings.ToLower(string(raw))
+		matched := ""
+		for _, term := range staleTerms {
+			if strings.Contains(text, term) {
+				matched = term
+				break
+			}
+		}
+		if matched == "" {
+			return nil
+		}
+		head := strings.ToLower(strings.Join(strings.Split(string(raw), "\n")[:min(12, len(strings.Split(string(raw), "\n")))], "\n"))
+		if !strings.Contains(head, "historical") && !strings.Contains(head, "not current one-user") && !strings.Contains(head, "not active product guidance") {
+			t.Fatalf("%s contains platform-era term %q without a historical/current-routing banner", path, matched)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	workflowDataSchemas := map[string][]string{
@@ -861,7 +953,7 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_webhooks_update":               {"id"},
 		"clockify_webhooks_delete":               {"webhookId"},
 		"clockify_webhooks_test":                 {"id"},
-		"clockify_webhooks_events":               {"name", "event"},
+		"clockify_webhooks_events":               {},
 		"clockify_time_off_requests_list":        {"requestId", "policyId", "status"},
 		"clockify_time_off_requests_get":         {"id"},
 		"clockify_time_off_requests_create":      {"id"},
@@ -1589,6 +1681,31 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 	}
 }
 
+func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.EnableRawWrites = true
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("test", svc.FullAccessRegistry(), nil, nil)
+	initializeServer(t, server)
+
+	descriptors := svc.FullAccessRegistry()
+	if len(descriptors) != 151 {
+		t.Fatalf("FullAccessRegistry returned %d tools, want 151", len(descriptors))
+	}
+	for _, descriptor := range descriptors {
+		t.Run(descriptor.Tool.Name, func(t *testing.T) {
+			raw := callToolRaw(t, server, descriptor.Tool.Name, oneUserCoverageArgs(descriptor.Tool))
+			structured := decodeStructuredContentMap(t, descriptor.Tool.Name, raw)
+			if err := jsonschema.Validate(descriptor.Tool.OutputSchema, structured); err != nil {
+				pretty, _ := json.MarshalIndent(structured, "", "  ")
+				t.Fatalf("%s structuredContent failed advertised output schema: %v\nvalue=%s", descriptor.Tool.Name, err, pretty)
+			}
+		})
+	}
+}
+
 func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
@@ -1946,6 +2063,26 @@ func decodeStructuredToolResult(t *testing.T, name string, raw []byte) ToolResul
 	}
 	if resp.Error != nil || !resp.Result.StructuredContent.OK {
 		t.Fatalf("tool %s did not return ok result: %s", name, raw)
+	}
+	return resp.Result.StructuredContent
+}
+
+func decodeStructuredContentMap(t *testing.T, name string, raw []byte) map[string]any {
+	t.Helper()
+	var resp struct {
+		Result struct {
+			StructuredContent map[string]any `json:"structuredContent"`
+		} `json:"result"`
+		Error any `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("tool %s returned RPC error: %s", name, raw)
+	}
+	if len(resp.Result.StructuredContent) == 0 {
+		t.Fatalf("tool %s returned no object structuredContent: %s", name, raw)
 	}
 	return resp.Result.StructuredContent
 }

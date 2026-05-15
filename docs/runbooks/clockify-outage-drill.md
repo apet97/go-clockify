@@ -1,5 +1,9 @@
 # Runbook: Clockify Outage Drill
 
+> Historical drill note. For current one-user setup and tool routing, start
+> from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and
+> `docs/goals/oneuser-tool-coverage.md`.
+
 This runbook describes the procedure for simulating an upstream Clockify API outage to test system resilience and error handling.
 
 ## Objective
@@ -22,7 +26,7 @@ Configure a local proxy to return `503 Service Unavailable` for all requests to 
 ## Drill Scenarios
 
 ### Scenario A: Full API Outage
-- [ ] Attempt a `clockify_whoami` tool call.
+- [ ] Attempt a `clockify_status` tool call.
 - [ ] Verify that the application returns a clear error message (e.g., `Upstream API Unavailable`).
 - [ ] Confirm no panics are logged.
 - [ ] Check that `clockify_upstream_requests_total{status="5xx"}` increments — the failure-side counter sits on the same series as success, distinguished by the `status` bucket label (`2xx` / `3xx` / `4xx` / `5xx`). For the 429 scenario, expect `status="4xx"` instead. Registered at `internal/metrics/metrics.go:654` with labels `endpoint`, `method`, `status`. The retry counter `clockify_upstream_retries_total{reason="server_error|timeout"}` is the secondary signal once the client retries kick in.

@@ -3,6 +3,7 @@ package clockify
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -22,6 +23,28 @@ type ErrorTranslation struct {
 	Remediation string   `json:"remediation,omitempty"`
 	Refs        []string `json:"refs,omitempty"`
 }
+
+var sensitiveErrorBodyFields = []string{
+	"api_key",
+	"apiKey",
+	"apikey",
+	"auth_token",
+	"authToken",
+	"authorization",
+	"token",
+	"secret",
+	"password",
+	"x-api-key",
+	"x-addon-token",
+}
+
+var sensitiveQuotedPairPatterns = func() []*regexp.Regexp {
+	out := make([]*regexp.Regexp, 0, len(sensitiveErrorBodyFields))
+	for _, field := range sensitiveErrorBodyFields {
+		out = append(out, regexp.MustCompile(`(?i)("`+regexp.QuoteMeta(field)+`"\s*:\s*)("[^"]*"|[^,&\s;}]+)`))
+	}
+	return out
+}()
 
 func (e *APIError) Error() string {
 	if e == nil {
@@ -84,6 +107,7 @@ func TranslateAPIError(statusCode int, body string) ErrorTranslation {
 
 func trimBody(s string) string {
 	s = strings.TrimSpace(s)
+	s = redactSensitiveErrorBody(s)
 	if len(s) > 1000 {
 		return s[:1000] + "..."
 	}
@@ -106,4 +130,95 @@ func compactUpstreamErrorBody(body string) (string, bool) {
 		return message, true
 	}
 	return fmt.Sprintf("%s (upstream_code=%v)", message, payload.Code), true
+}
+
+func redactSensitiveErrorBody(body string) string {
+	if body == "" {
+		return body
+	}
+	var payload any
+	if err := json.Unmarshal([]byte(body), &payload); err == nil {
+		redacted := redactSensitiveJSONValue(payload)
+		if out, err := json.Marshal(redacted); err == nil {
+			return string(out)
+		}
+	}
+	return redactSensitivePairs(body)
+}
+
+func redactSensitiveJSONValue(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, v := range x {
+			if isSensitiveErrorBodyKey(k) {
+				out[k] = "[REDACTED]"
+				continue
+			}
+			out[k] = redactSensitiveJSONValue(v)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, v := range x {
+			out[i] = redactSensitiveJSONValue(v)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func isSensitiveErrorBodyKey(key string) bool {
+	key = strings.ToLower(strings.ReplaceAll(key, "-", "_"))
+	for _, needle := range []string{
+		"api_key",
+		"apikey",
+		"auth_token",
+		"authtoken",
+		"authorization",
+		"token",
+		"secret",
+		"password",
+		"credential",
+		"x_api_key",
+		"x_addon_token",
+	} {
+		if strings.Contains(key, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func redactSensitivePairs(body string) string {
+	out := body
+	for _, field := range sensitiveErrorBodyFields {
+		out = redactDelimitedSecret(out, field, '=')
+		out = redactDelimitedSecret(out, field, ':')
+	}
+	for _, pattern := range sensitiveQuotedPairPatterns {
+		out = pattern.ReplaceAllString(out, `${1}"[REDACTED]"`)
+	}
+	return out
+}
+
+func redactDelimitedSecret(body, field string, sep byte) string {
+	needle := field + string(sep)
+	var b strings.Builder
+	for {
+		idx := strings.Index(body, needle)
+		if idx < 0 {
+			b.WriteString(body)
+			return b.String()
+		}
+		b.WriteString(body[:idx+len(needle)])
+		b.WriteString("[REDACTED]")
+		rest := body[idx+len(needle):]
+		end := strings.IndexAny(rest, "& \t\r\n,;}")
+		if end < 0 {
+			return b.String()
+		}
+		body = rest[end:]
+	}
 }

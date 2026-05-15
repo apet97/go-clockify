@@ -532,6 +532,9 @@ func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (
 	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	if envelope.Categories == nil {
+		envelope.Categories = []map[string]any{}
+	}
 	return ok("clockify_list_expense_categories", envelope.Categories, map[string]any{
 		"workspaceId": wsID,
 		"count":       envelope.Count,

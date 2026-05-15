@@ -143,6 +143,42 @@ func TestGetWebhookMasksAuthToken(t *testing.T) {
 	}
 }
 
+func TestWebhookMaskingRedactsSnakeCaseAuthToken(t *testing.T) {
+	const webhookAuthCanary = "canary-webhook-auth-token-1234567890"
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/webhooks/abc123def456789012345678" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"id":           "abc123def456789012345678",
+				"auth_token":   webhookAuthCanary,
+				"webhookEvent": "NEW_TIME_ENTRY",
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.GetWebhook(context.Background(), map[string]any{"webhook_id": "abc123def456789012345678"})
+	if err != nil {
+		t.Fatalf("GetWebhook failed: %v", err)
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if strings.Contains(string(raw), webhookAuthCanary) {
+		t.Fatalf("tool result leaked webhook auth canary: %s", raw)
+	}
+	if strings.Contains(string(raw), `"authToken"`) || strings.Contains(string(raw), `"auth_token"`) {
+		t.Fatalf("tool result exposed auth token field: %s", raw)
+	}
+	if !strings.Contains(string(raw), "7890") {
+		t.Fatalf("expected masked suffix in result: %s", raw)
+	}
+}
+
 func TestCreateWebhookUsesSingularEventAndTriggerSource(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

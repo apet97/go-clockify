@@ -2,12 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/testclockify"
 )
 
 func TestEffectiveVersionFallsBackToDev(t *testing.T) {
@@ -229,6 +235,121 @@ func TestRunDoctorOneUserMissingConfig(t *testing.T) {
 	if strings.Contains(stdout.String(), "profile") || strings.Contains(stdout.String(), "ten"+"ant") || strings.Contains(stdout.String(), "policy") {
 		t.Fatalf("doctor failure output reintroduced old product language:\n%s", stdout.String())
 	}
+}
+
+func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
+	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	defer fake.Close()
+
+	t.Setenv("CLOCKIFY_API_KEY", "stdio-secret-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", fake.WorkspaceID)
+	t.Setenv("CLOCKIFY_BASE_URL", fake.URL)
+
+	input := strings.Join([]string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"cmd-smoke","version":"test"}}}`,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`,
+		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"clockify_clients_create","arguments":{"name":"Command Smoke Client"}}}`,
+	}, "\n") + "\n"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var stdout bytes.Buffer
+	if err := runWithContext(ctx, strings.NewReader(input), &stdout); err != nil {
+		t.Fatalf("runWithContext: %v\nstdout=%s", err, stdout.String())
+	}
+	if strings.Contains(stdout.String(), "stdio-secret-key") {
+		t.Fatalf("stdio smoke leaked API key: %s", stdout.String())
+	}
+
+	responses := decodeRunResponses(t, stdout.Bytes())
+	if len(responses) != 3 {
+		t.Fatalf("response count=%d want 3: %s", len(responses), stdout.String())
+	}
+	initialize := responses[1]
+	if initialize.Error != nil {
+		t.Fatalf("initialize error: %+v", initialize.Error)
+	}
+	capabilities := resultObject(t, initialize, "capabilities")
+	toolsCap := mapObject(t, capabilities, "tools")
+	if _, ok := toolsCap["listChanged"]; ok {
+		t.Fatalf("production command should not advertise tools.listChanged with StaticToolList=true: %+v", toolsCap)
+	}
+
+	list := responses[2]
+	tools := arrayField(t, resultObject(t, list, ""), "tools")
+	if len(tools) != 151 {
+		t.Fatalf("tools/list count=%d want 151", len(tools))
+	}
+
+	call := responses[3]
+	structured := resultObject(t, call, "structuredContent")
+	if structured["ok"] != true || structured["action"] != "clockify_clients_create" {
+		t.Fatalf("bad client-create structuredContent: %+v", structured)
+	}
+	ids := mapObject(t, structured, "ids")
+	if ids["workspaceId"] != fake.WorkspaceID || ids["clientId"] == "" {
+		t.Fatalf("client-create missing IDs: %+v", ids)
+	}
+}
+
+type testRPCResponse struct {
+	ID     int            `json:"id"`
+	Result map[string]any `json:"result"`
+	Error  map[string]any `json:"error,omitempty"`
+}
+
+func decodeRunResponses(t *testing.T, raw []byte) map[int]testRPCResponse {
+	t.Helper()
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	out := map[int]testRPCResponse{}
+	for {
+		var resp testRPCResponse
+		if err := dec.Decode(&resp); err != nil {
+			if errors.Is(err, io.EOF) {
+				return out
+			}
+			t.Fatalf("decode response stream: %v\nraw=%s", err, string(raw))
+		}
+		out[resp.ID] = resp
+	}
+}
+
+func resultObject(t *testing.T, resp testRPCResponse, key string) map[string]any {
+	t.Helper()
+	if resp.Error != nil {
+		t.Fatalf("response %d returned error: %+v", resp.ID, resp.Error)
+	}
+	if key == "" {
+		return resp.Result
+	}
+	return mapObject(t, resp.Result, key)
+}
+
+func mapObject(t *testing.T, parent map[string]any, key string) map[string]any {
+	t.Helper()
+	raw, ok := parent[key]
+	if !ok {
+		t.Fatalf("missing object key %q in %+v", key, parent)
+	}
+	obj, ok := raw.(map[string]any)
+	if !ok {
+		t.Fatalf("%s type=%T want object: %+v", key, raw, raw)
+	}
+	return obj
+}
+
+func arrayField(t *testing.T, parent map[string]any, key string) []any {
+	t.Helper()
+	raw, ok := parent[key]
+	if !ok {
+		t.Fatalf("missing array key %q in %+v", key, parent)
+	}
+	arr, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("%s type=%T want array: %+v", key, raw, raw)
+	}
+	return arr
 }
 
 func respondDoctorJSON(t *testing.T, w http.ResponseWriter, v any) {

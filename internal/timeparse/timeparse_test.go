@@ -212,6 +212,49 @@ func TestParseDatetime(t *testing.T) {
 	}
 }
 
+func TestParseDatetimeRespectsLocalTimezoneAcrossDSTBoundaries(t *testing.T) {
+	tests := []struct {
+		name  string
+		loc   string
+		input string
+		want  string
+	}{
+		{
+			name:  "spring forward uses post-transition offset",
+			loc:   "America/New_York",
+			input: "2026-03-08 03:30",
+			want:  "2026-03-08T07:30:00Z",
+		},
+		{
+			name:  "fall back ambiguous hour chooses Go local interpretation",
+			loc:   "America/New_York",
+			input: "2026-11-01 01:30",
+			want:  "2026-11-01T05:30:00Z",
+		},
+		{
+			name:  "europe summer offset",
+			loc:   "Europe/Belgrade",
+			input: "2026-07-01T09:15",
+			want:  "2026-07-01T07:15:00Z",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			loc, err := time.LoadLocation(tc.loc)
+			if err != nil {
+				t.Fatalf("load location: %v", err)
+			}
+			got, err := ParseDatetime(tc.input, loc)
+			if err != nil {
+				t.Fatalf("ParseDatetime(%q): %v", tc.input, err)
+			}
+			if got.Format(time.RFC3339) != tc.want {
+				t.Fatalf("ParseDatetime(%q, %s) = %s, want %s", tc.input, tc.loc, got.Format(time.RFC3339), tc.want)
+			}
+		})
+	}
+}
+
 func TestParseDuration(t *testing.T) {
 	tests := []struct {
 		name    string
