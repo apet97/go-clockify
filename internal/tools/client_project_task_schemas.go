@@ -81,6 +81,8 @@ func userGroupsInputSchema() map[string]any {
 	}
 }
 
+var reportDateRangeTypeEnums = []string{"ABSOLUTE", "TODAY", "YESTERDAY", "THIS_WEEK", "LAST_WEEK", "PAST_TWO_WEEKS", "THIS_MONTH", "LAST_MONTH", "THIS_YEAR", "LAST_YEAR"}
+
 func addFinancialRangeInputProperties(props map[string]any) {
 	props["financial_start"] = map[string]any{"type": "string", "description": "Optional Reports API enrichment range start. Defaults to three years before request time when no financial range is supplied."}
 	props["financial_end"] = map[string]any{"type": "string", "description": "Optional Reports API enrichment range end. Defaults to request time when no financial range is supplied."}

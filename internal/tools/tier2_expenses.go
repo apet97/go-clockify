@@ -157,11 +157,6 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}), ReadOnlyHint: false, DestructiveHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.deleteExpenseCategory(ctx, args)
 		}},
-
-		// 11. Expense report
-		{Tool: withOutputSchema(toolRO("clockify_expense_report", "Generate a Clockify expense detailed report via the Reports API", expenseReportInputSchema()), envelopeOpenMap("clockify_expense_report")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.expenseReport(ctx, args)
-		}},
 	}
 }
 
@@ -740,34 +735,4 @@ func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any
 		"deleted":    true,
 		"categoryId": catID,
 	}, map[string]any{"workspaceId": wsID}), nil
-}
-
-func (s *Service) expenseReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	body, err := buildExpenseReportBody(args)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	path, err := paths.Workspace(wsID, "reports", "expenses", "detailed")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	data, binary, err := s.postReportsAPI(ctx, path, body)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	meta := map[string]any{
-		"workspaceId": wsID,
-		"source":      "reports-api",
-		"exportType":  body["exportType"],
-	}
-	if binary {
-		meta["binary"] = true
-	} else {
-		appendExpenseReportViews(data)
-	}
-	return ok("clockify_expense_report", data, meta), nil
 }

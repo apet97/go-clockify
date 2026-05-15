@@ -55,8 +55,8 @@ func TestExpenseHandlersCount(t *testing.T) {
 	if !ok {
 		t.Fatal("expenses group not registered")
 	}
-	if len(descs) != 11 {
-		t.Fatalf("expected 11 expense tools, got %d", len(descs))
+	if len(descs) != 10 {
+		t.Fatalf("expected 10 expense tools, got %d", len(descs))
 	}
 
 	names := map[string]bool{}
@@ -74,7 +74,6 @@ func TestExpenseHandlersCount(t *testing.T) {
 		"clockify_update_expense_category",
 		"clockify_archive_expense_category",
 		"clockify_delete_expense_category",
-		"clockify_expense_report",
 	} {
 		if !names[want] {
 			t.Fatalf("missing expense tool: %s", want)
@@ -354,77 +353,6 @@ func TestInvoiceReport(t *testing.T) {
 	}
 	if result.Meta["aggregationScope"] != "page" {
 		t.Fatalf("expected meta aggregationScope=page, got %v", result.Meta["aggregationScope"])
-	}
-}
-
-func TestExpenseReport(t *testing.T) {
-	var gotBody map[string]any
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/workspaces/ws1/reports/expenses/detailed" && r.Method == http.MethodPost:
-			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
-				t.Fatalf("decode expense report body: %v", err)
-			}
-			respondJSON(t, w, map[string]any{
-				"expenses": []map[string]any{
-					{"id": "e1", "amount": 50.0, "categoryId": "cat1"},
-					{"id": "e2", "amount": 75.0, "categoryId": "cat1"},
-					{"id": "e3", "amount": 120.0, "categoryId": "cat2"},
-				},
-				"totals": map[string]any{
-					"expensesCount":       3,
-					"totalAmount":         245.0,
-					"totalAmountBillable": 125.0,
-				},
-			})
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.expenseReport(context.Background(), map[string]any{
-		"start":       "2026-04-01T00:00:00.000",
-		"end":         "2026-04-30T23:59:59.999",
-		"page":        1,
-		"page_size":   50,
-		"sort_column": "AMOUNT",
-		"sort_order":  "DESCENDING",
-		"categories": map[string]any{
-			"contains": "CONTAINS",
-			"ids":      []any{"cat1"},
-			"status":   "ACTIVE",
-		},
-	})
-	if err != nil {
-		t.Fatalf("expense report failed: %v", err)
-	}
-	if gotBody["dateRangeStart"] != "2026-04-01T00:00:00.000" || gotBody["dateRangeEnd"] != "2026-04-30T23:59:59.999" {
-		t.Fatalf("date aliases not forwarded as dateRangeStart/dateRangeEnd: %#v", gotBody)
-	}
-	if gotBody["dateRangeType"] != "ABSOLUTE" || gotBody["exportType"] != "JSON" {
-		t.Fatalf("unexpected report defaults: %#v", gotBody)
-	}
-	if gotBody["pageSize"] != float64(50) || gotBody["sortColumn"] != "AMOUNT" || gotBody["sortOrder"] != "DESCENDING" {
-		t.Fatalf("expense report paging/sort not normalized: %#v", gotBody)
-	}
-	categories, _ := gotBody["categories"].(map[string]any)
-	if categories["contains"] != "CONTAINS" || categories["status"] != "ACTIVE" {
-		t.Fatalf("expense categories filter not normalized: %#v", categories)
-	}
-	data, ok := result.Data.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map data, got %T", result.Data)
-	}
-	if _, ok := data["expenses"]; !ok {
-		t.Fatalf("expected upstream expenses in data, got %#v", data)
-	}
-	if _, ok := data["totals"]; !ok {
-		t.Fatalf("expected upstream totals in data, got %#v", data)
-	}
-	if result.Meta["source"] != "reports-api" {
-		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
 	}
 }
 
