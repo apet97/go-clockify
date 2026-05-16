@@ -98,6 +98,10 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		// 6. List expense categories
 		{Tool: withOutputSchema(toolRO("clockify_list_expense_categories", "List expense categories in the workspace", map[string]any{
 			"type": "object",
+			"properties": map[string]any{
+				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
+				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
+			},
 		}), envelopeOpenMapSlice("clockify_list_expense_categories")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenseCategories(ctx, args)
 		}},
@@ -245,6 +249,13 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	date := stringArg(args, "date")
 	if date == "" {
 		return ResultEnvelope{}, fmt.Errorf("date is required")
+	}
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if _, err := parseFlexibleDateTime(date, loc); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
 	}
 	categoryID := stringArg(args, "category_id")
 	if categoryID == "" {
@@ -461,6 +472,15 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	if err := validateUpdateExpenseChangedValues(changeFields, args); err != nil {
 		return ResultEnvelope{}, err
 	}
+	if date := stringArg(args, "date"); date != "" {
+		loc, err := s.locationFromArgs(args)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		if _, err := parseFlexibleDateTime(date, loc); err != nil {
+			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
+		}
+	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -567,7 +587,7 @@ func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (Resul
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+func (s *Service) listExpenseCategories(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -586,12 +606,24 @@ func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (
 	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	if envelope.Categories == nil {
-		envelope.Categories = []map[string]any{}
+	all := envelope.Categories
+	if all == nil {
+		all = []map[string]any{}
 	}
-	return ok("clockify_list_expense_categories", envelope.Categories, emptyListMeta(map[string]any{
+	page, pageSize := paginationFromArgs(args)
+	start := (page - 1) * pageSize
+	end := min(start+pageSize, len(all))
+	items := []map[string]any{}
+	if start < len(all) {
+		items = all[start:end]
+	}
+	return ok("clockify_list_expense_categories", items, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
-		"count":       envelope.Count,
+		"count":       len(items),
+		"total":       len(all),
+		"page":        page,
+		"pageSize":    pageSize,
+		"has_more":    end < len(all),
 	}, "clockify_expenses_categories_create")), nil
 }
 

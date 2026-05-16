@@ -244,13 +244,15 @@ func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any)
 		return nil
 	}
 	loc := s.location()
-	start, err := timeparse.ParseDatetime(strings.TrimSpace(stringArg(args, "start")), loc)
+	startRaw := strings.TrimSpace(stringArg(args, "start"))
+	start, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
-		return fmt.Errorf("invalid start: %w", err)
+		return fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", startRaw)
 	}
-	end, err := timeparse.ParseDatetime(strings.TrimSpace(stringArg(args, "end")), loc)
+	endRaw := strings.TrimSpace(stringArg(args, "end"))
+	end, err := timeparse.ParseDatetime(endRaw, loc)
 	if err != nil {
-		return fmt.Errorf("invalid end: %w", err)
+		return fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
 	}
 	overlaps, _, err := s.findEntryOverlaps(ctx, start, end)
 	if err != nil {
@@ -370,8 +372,10 @@ func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any)
 	if strings.TrimSpace(stringArg(startArgs, "start")) == "" {
 		startArgs["start"] = time.Now().UTC().Format(time.RFC3339)
 		startDefaulted = true
-	} else if _, err := timeparse.ParseDatetime(stringArg(startArgs, "start"), s.location()); err != nil {
-		return nil, false, fmt.Errorf("invalid start: %w", err)
+	} else if raw := stringArg(startArgs, "start"); raw != "" {
+		if _, err := timeparse.ParseDatetime(raw, s.location()); err != nil {
+			return nil, false, fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", raw)
+		}
 	}
 	delete(startArgs, "end")
 
@@ -701,7 +705,7 @@ func logWorkSchema() map[string]any {
 	return objectSchema(map[string]any{"required": []string{"start", "end"}, "properties": map[string]any{
 		"start":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"end":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"description":   map[string]any{"type": "string"},
+		"description":   map[string]any{"type": "string", "description": "What you are working on — free text shown on the time entry. Optional but recommended."},
 		"project":       map[string]any{"type": "string"},
 		"project_id":    map[string]any{"type": "string"},
 		"task":          map[string]any{"type": "string"},

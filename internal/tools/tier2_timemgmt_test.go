@@ -1483,3 +1483,17 @@ func TestTimeOffPoliciesListPaginationMeta(t *testing.T) {
 		t.Fatalf("unexpected pagination meta: %#v", res.Meta)
 	}
 }
+
+func TestCreateAssignment_RejectsGarbageDate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	_, err := svc.createAssignment(context.Background(), map[string]any{
+		"user_id":       "5e1b2c3d4e5f6a7b8c9d0e1f",
+		"project_id":    "6e1b2c3d4e5f6a7b8c9d0e1f",
+		"start":         "last tuesday",
+		"end":           "2026-05-17",
+		"hours_per_day": 8.0,
+	})
+	if err == nil || !strings.Contains(err.Error(), "could not parse date") {
+		t.Fatalf("expected could not parse date error, got %v", err)
+	}
+}

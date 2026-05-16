@@ -3178,3 +3178,26 @@ func oneUserCoverageEntityID(path string) string {
 func blockedTerm(parts ...string) string {
 	return strings.Join(parts, "")
 }
+
+func TestStartWorkDescriptionIsDocumented(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if descriptor.Tool.Name != "clockify_start_work" {
+			continue
+		}
+		schema := descriptor.Tool.InputSchema
+		props, ok := schema["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing properties: %#v", schema)
+		}
+		descProp, ok := props["description"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing description property: %#v", props)
+		}
+		if doc, _ := descProp["description"].(string); strings.TrimSpace(doc) == "" {
+			t.Fatalf("description parameter is not documented: %#v", descProp)
+		}
+		return
+	}
+	t.Fatal("clockify_start_work not found")
+}

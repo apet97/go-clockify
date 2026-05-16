@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func readBody(t *testing.T, r *http.Request) string {
@@ -779,4 +782,79 @@ func TestUpdateExpenseSchemaOmitsFileToken(t *testing.T) {
 		return
 	}
 	t.Fatal("clockify_update_expense descriptor not found")
+}
+
+func TestListExpenseCategories_PaginationMeta(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/expenses/categories" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{
+				"count": 12,
+				"categories": []map[string]any{
+					{"id": "cat1", "name": "Category 1"},
+					{"id": "cat2", "name": "Category 2"},
+					{"id": "cat3", "name": "Category 3"},
+					{"id": "cat4", "name": "Category 4"},
+					{"id": "cat5", "name": "Category 5"},
+					{"id": "cat6", "name": "Category 6"},
+					{"id": "cat7", "name": "Category 7"},
+				},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	first, err := svc.listExpenseCategories(context.Background(), map[string]any{"page_size": 5})
+	if err != nil {
+		t.Fatalf("listExpenseCategories page 1: %v", err)
+	}
+	items, ok := first.Data.([]map[string]any)
+	if !ok {
+		t.Fatalf("expected []map[string]any, got %T", first.Data)
+	}
+	if len(items) != 5 {
+		t.Fatalf("page 1 len=%d, want 5", len(items))
+	}
+	if first.Meta["page"] != 1 || first.Meta["pageSize"] != 5 || first.Meta["has_more"] != true {
+		t.Fatalf("unexpected page 1 meta: %#v", first.Meta)
+	}
+
+	second, err := svc.listExpenseCategories(context.Background(), map[string]any{"page": 2, "page_size": 5})
+	if err != nil {
+		t.Fatalf("listExpenseCategories page 2: %v", err)
+	}
+	secondItems := second.Data.([]map[string]any)
+	if len(secondItems) != 2 {
+		t.Fatalf("page 2 len=%d, want 2", len(secondItems))
+	}
+	if items[0]["id"] == secondItems[0]["id"] {
+		t.Fatalf("page 2 did not advance: page1=%#v page2=%#v", items, secondItems)
+	}
+}
+
+func TestCreateExpense_RejectsGarbageDate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	_, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":      1.0,
+		"date":        "last tuesday",
+		"category_id": "cat1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "could not parse date") {
+		t.Fatalf("expected could not parse date error, got %v", err)
+	}
+}
+
+func TestUpdateExpense_RejectsGarbageDate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	_, err := svc.updateExpense(context.Background(), map[string]any{
+		"expense_id":    "exp1",
+		"change_fields": []any{"DATE"},
+		"date":          "last tuesday",
+	})
+	if err == nil || !strings.Contains(err.Error(), "could not parse date") {
+		t.Fatalf("expected could not parse date error, got %v", err)
+	}
 }

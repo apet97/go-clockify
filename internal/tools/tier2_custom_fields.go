@@ -157,8 +157,7 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 		return ResultEnvelope{}, err
 	}
 
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
+	page, pageSize := paginationFromArgs(args)
 
 	query := map[string]string{
 		"page":      strconv.Itoa(page),
@@ -173,11 +172,26 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_custom_fields", out, emptyListMeta(map[string]any{
+	all := out
+	if all == nil {
+		all = []map[string]any{}
+	}
+	items := all
+	if len(all) > pageSize {
+		start := (page - 1) * pageSize
+		end := min(start+pageSize, len(all))
+		items = []map[string]any{}
+		if start < len(all) {
+			items = all[start:end]
+		}
+	}
+	return ok("clockify_list_custom_fields", items, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
-		"count":       len(out),
+		"count":       len(items),
+		"total":       len(all),
 		"page":        page,
 		"pageSize":    pageSize,
+		"has_more":    len(items) == pageSize,
 	}, "clockify_custom_fields_create")), nil
 }
 
