@@ -113,6 +113,9 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 			}
 		}
 	}
+	if err := validateReportDateRange(body); err != nil {
+		return nil, err
+	}
 	if filterKey != "" {
 		filter, ok, err := mapArg(args, filterKey)
 		if err != nil {
@@ -203,6 +206,29 @@ func setReportCommonFields(body map[string]any, args map[string]any) {
 	if userCustomFields, ok, err := mapSliceArg(args, "user_custom_fields"); err == nil && ok {
 		body["userCustomFields"] = normalizeCustomFieldFilters(userCustomFields)
 	}
+}
+
+// validateReportDateRange rejects an inverted absolute date range before it
+// reaches Clockify, which would otherwise return an empty report or an opaque
+// error. Weekly reports compute their own range (validated separately), and an
+// unparseable value is left for the API to reject on format — only a clearly
+// backwards range is blocked here. The ordering is timezone-invariant, so the
+// comparison parses both bounds in UTC.
+func validateReportDateRange(body map[string]any) error {
+	startRaw, _ := body["dateRangeStart"].(string)
+	endRaw, _ := body["dateRangeEnd"].(string)
+	if startRaw == "" || endRaw == "" {
+		return nil
+	}
+	start, errStart := parseFlexibleDateTime(startRaw, time.UTC)
+	end, errEnd := parseFlexibleDateTime(endRaw, time.UTC)
+	if errStart != nil || errEnd != nil {
+		return nil
+	}
+	if end.Before(start) {
+		return fmt.Errorf("date_range_end (%s) must not precede date_range_start (%s)", endRaw, startRaw)
+	}
+	return nil
 }
 
 func setWeeklyDateRange(body map[string]any, args map[string]any, defaultTimezone *time.Location) error {
