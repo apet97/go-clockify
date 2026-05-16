@@ -71,8 +71,8 @@ PY
   else
     expected_tool_count=$(printf "%s\n" "$catalog_data" | sed -n '1p')
     known_tools=$(printf "%s\n" "$catalog_data" | sed '1d')
-    if [ "$expected_tool_count" != "154" ]; then
-      err "$CATALOG_FILE tool count drift: found $expected_tool_count tools, expected 154"
+    if [ "$expected_tool_count" != "156" ]; then
+      err "$CATALOG_FILE tool count drift: found $expected_tool_count tools, expected 156"
     fi
   fi
 else
@@ -169,7 +169,7 @@ required_agents_terms=(
   'One `CLOCKIFY_API_KEY`.'
   'One required `CLOCKIFY_WORKSPACE_ID`.'
   "Stdio transport only"
-  "Exactly 154 tools loaded at startup"
+  "Exactly 156 tools loaded at startup"
 )
 if [ -f AGENTS.md ]; then
   for pattern in "${required_agents_terms[@]}"; do
