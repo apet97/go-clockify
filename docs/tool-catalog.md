@@ -129,7 +129,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_requests_list` | `domain` | yes | no | yes | no | `read` | List time off requests with optional status filter |
 | `clockify_time_off_requests_get` | `domain` | yes | no | yes | no | `read` | Get a time off request by policy ID and request ID |
 | `clockify_time_off_requests_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a time off request under a policy. Changes leave balances/approval workflow. |
-| `clockify_time_off_requests_update` | `domain` | no | no | no | no | `write`, `admin` | Update an existing time off request, including approval status when supplied. |
+| `clockify_time_off_requests_update` | `domain` | no | no | no | yes | `write`, `admin` | Update an existing time off request, including approval status when supplied. |
 | `clockify_time_off_requests_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview. |
 | `clockify_time_off_approve` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request and update its approval state. |
 | `clockify_time_off_deny` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request and update its approval state. |

@@ -33443,7 +33443,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -33458,6 +33458,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "note": {
             "maxLength": 500,
             "type": "string"
@@ -33695,7 +33699,7 @@
       "annotations": {
         "category": "domain",
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -37858,10 +37862,12 @@
             "type": "string"
           },
           "status": {
-            "description": "Documented approval request filter state",
+            "description": "Approval request filter state. Includes REJECTED and WITHDRAWN_SUBMISSION, which the workspace transitions requests into.",
             "enum": [
               "PENDING",
               "APPROVED",
+              "REJECTED",
+              "WITHDRAWN_SUBMISSION",
               "WITHDRAWN_APPROVAL"
             ],
             "type": "string"
@@ -38127,10 +38133,12 @@
             "type": "integer"
           },
           "status": {
-            "description": "Documented approval request filter state",
+            "description": "Approval request filter state. Includes REJECTED and WITHDRAWN_SUBMISSION, which the workspace transitions requests into.",
             "enum": [
               "PENDING",
               "APPROVED",
+              "REJECTED",
+              "WITHDRAWN_SUBMISSION",
               "WITHDRAWN_APPROVAL"
             ],
             "type": "string"

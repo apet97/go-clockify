@@ -239,7 +239,9 @@ func TestApprovalListSchemaDocumentsCanonicalFilterStates(t *testing.T) {
 		props := descriptor.Tool.InputSchema["properties"].(map[string]any)
 		status := props["status"].(map[string]any)
 		enum := status["enum"].([]string)
-		want := []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"}
+		// REJECTED and WITHDRAWN_SUBMISSION are real states the workspace
+		// transitions requests into, so the filter enum must include them.
+		want := []string{"PENDING", "APPROVED", "REJECTED", "WITHDRAWN_SUBMISSION", "WITHDRAWN_APPROVAL"}
 		if len(enum) != len(want) {
 			t.Fatalf("status enum length = %d, want %d: %#v", len(enum), len(want), enum)
 		}

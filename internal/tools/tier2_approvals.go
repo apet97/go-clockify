@@ -311,8 +311,8 @@ func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, a
 func approvalFilterStateSchema() map[string]any {
 	return map[string]any{
 		"type":        "string",
-		"enum":        []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"},
-		"description": "Documented approval request filter state",
+		"enum":        []string{"PENDING", "APPROVED", "REJECTED", "WITHDRAWN_SUBMISSION", "WITHDRAWN_APPROVAL"},
+		"description": "Approval request filter state. Includes REJECTED and WITHDRAWN_SUBMISSION, which the workspace transitions requests into.",
 	}
 }
 

@@ -73,6 +73,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 						"description": "Status to set via Clockify's PATCH route",
 						"enum":        []string{"APPROVED", "REJECTED"},
 					},
+					"dry_run": map[string]any{"type": "boolean", "description": "Preview the update payload without calling Clockify."},
 				}}),
 			ReadOnlyHint: false,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -309,7 +310,10 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	if note == "" {
 		return ResultEnvelope{}, fmt.Errorf("note is required")
 	}
-	loc, _ := s.locationFromArgs(args)
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, fmt.Errorf("invalid timezone: %w", err)
+	}
 	days, err := timeOffRequestDays(startRaw, endRaw, loc)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -416,6 +420,14 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 	}
 	if _, ok := body["status"]; !ok {
 		return ResultEnvelope{}, fmt.Errorf("status is required for time off request update; use APPROVED or REJECTED")
+	}
+
+	if dryrun.Enabled(args) {
+		return ok("clockify_update_time_off_request", dryrunPreviewPayload("clockify_update_time_off_request", body), map[string]any{
+			"workspaceId": wsID,
+			"policyId":    policyID,
+			"requestId":   requestID,
+		}), nil
 	}
 
 	var result map[string]any
