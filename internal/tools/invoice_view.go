@@ -99,7 +99,6 @@ func invoiceViewFromRaw(raw map[string]any) InvoiceView {
 	}
 	view["payment_summary"] = invoicePaymentSummary(payments, currency)
 	view["suggestedActions"] = invoiceSuggestions(id, status, moneyFromAny(firstPresent(raw, "balance"), currency))
-	view["raw"] = maps.Clone(raw)
 	return view
 }
 
