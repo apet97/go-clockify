@@ -310,7 +310,7 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 	initializeServer(t, server)
 
 	fake.SetError("POST", "/workspaces/"+fake.WorkspaceID+"/invoices", 403, "feature is not supported on this plan")
-	feature := callToolError(t, server, "clockify_invoice_client_work", map[string]any{"client_id": "client-paid-feature"})
+	feature := callToolError(t, server, "clockify_invoice_client_work", map[string]any{"client_id": "client-paid-feature", "currency": "USD"})
 	if feature.Error.Code != "feature_unavailable" || feature.Recovery.Hint == "" || feature.Recovery.Tool == "" {
 		t.Fatalf("bad feature_unavailable envelope: %+v", feature)
 	}
@@ -348,6 +348,7 @@ func TestInvoiceClientWorkImportFailureReturnsRecoverableError(t *testing.T) {
 	invoiceImport := callToolError(t, server, "clockify_invoice_client_work", map[string]any{
 		"client_id": clientResult.IDs["clientId"],
 		"number":    "INV-IMPORT-FAIL",
+		"currency":  "USD",
 		"from":      "not-a-date",
 		"to":        "2026-12-31",
 	})
@@ -613,7 +614,7 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 		"entry_id":    logged.IDs["entryId"],
 		"description": "Schema fixed work",
 	})
-	callAndValidate("clockify_invoice_client_work", map[string]any{"client_id": packageResult.IDs["clientId"], "number": "INV-SCHEMA-1"})
+	callAndValidate("clockify_invoice_client_work", map[string]any{"client_id": packageResult.IDs["clientId"], "number": "INV-SCHEMA-1", "currency": "USD"})
 	callAndValidate("clockify_record_expense", map[string]any{"amount": float64(10), "category_id": "65b382b606de527a7ee2b60b", "date": "2026-01-02T00:00:00Z"})
 	callAndValidate("clockify_request_time_off", map[string]any{"policy_id": "65b382b606de527a7ee2b60c", "start": "2026-01-05", "end": "2026-01-06", "note": "Schema coverage"})
 	callAndValidate("clockify_schedule_work", map[string]any{"user_id": "65b382b606de527a7ee2b60e", "project_id": "65b382b606de527a7ee2b60d", "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(6)})
@@ -1727,7 +1728,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 		userID     = "65b382b606de527a7ee2b60e"
 	)
 
-	invoice := callToolOK(t, server, "clockify_invoice_client_work", map[string]any{"client_id": clientID, "number": "INV-FAKE-1"})
+	invoice := callToolOK(t, server, "clockify_invoice_client_work", map[string]any{"client_id": clientID, "number": "INV-FAKE-1", "currency": "USD"})
 	requireID(t, invoice, "workspaceId")
 	requireID(t, invoice, "clientId")
 	requireID(t, invoice, "invoiceId")
