@@ -701,7 +701,7 @@ func logWorkSchema() map[string]any {
 	return objectSchema(map[string]any{"required": []string{"start", "end"}, "properties": map[string]any{
 		"start":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"end":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"description":   map[string]any{"type": "string"},
+		"description":   map[string]any{"type": "string", "description": "What you are working on — free text shown on the time entry. Optional but recommended."},
 		"project":       map[string]any{"type": "string"},
 		"project_id":    map[string]any{"type": "string"},
 		"task":          map[string]any{"type": "string"},
