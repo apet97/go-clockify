@@ -2,7 +2,7 @@
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
-BENCH_PKGS ?= ./internal/clockify ./internal/mcp ./internal/ratelimit ./internal/resolve ./internal/timeparse ./internal/tools
+BENCH_PKGS ?= ./internal/clockify ./internal/mcp ./internal/resolve ./internal/timeparse ./internal/tools
 
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o clockify-mcp ./cmd/clockify-mcp

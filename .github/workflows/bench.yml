@@ -26,7 +26,6 @@ jobs:
             ./internal/clockify \
             ./internal/timeparse \
             ./internal/resolve \
-            ./internal/ratelimit \
             ./internal/tools \
             ./internal/mcp > /tmp/bench-raw.txt
           bash scripts/filter-bench-output.sh < /tmp/bench-raw.txt > /tmp/bench.txt
