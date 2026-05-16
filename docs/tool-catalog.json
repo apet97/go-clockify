@@ -7116,6 +7116,9 @@
             "type": "string"
           },
           "hours_per_day": {
+            "description": "Work hours per day (0.5-24).",
+            "maximum": 24,
+            "minimum": 0.5,
             "type": "number"
           },
           "include_non_working_days": {
@@ -7153,6 +7156,9 @@
             "type": "string"
           },
           "weeks": {
+            "description": "Repeat interval in weeks when repeat is true. Default: 1.",
+            "maximum": 99,
+            "minimum": 1,
             "type": "integer"
           }
         },
@@ -36686,7 +36692,9 @@
             "type": "string"
           },
           "hours_per_day": {
-            "description": "Hours per day",
+            "description": "Work hours per day (0.5-24).",
+            "maximum": 24,
+            "minimum": 0.5,
             "type": "number"
           },
           "include_non_working_days": {
@@ -36724,7 +36732,9 @@
             "type": "string"
           },
           "weeks": {
-            "description": "Repeat interval in weeks when repeat is true (1-99)",
+            "description": "Repeat interval in weeks when repeat is true. Default: 1.",
+            "maximum": 99,
+            "minimum": 1,
             "type": "integer"
           }
         },
@@ -36992,6 +37002,9 @@
             "type": "string"
           },
           "hours_per_day": {
+            "description": "Work hours per day (0.5-24).",
+            "maximum": 24,
+            "minimum": 0.5,
             "type": "number"
           },
           "include_non_working_days": {

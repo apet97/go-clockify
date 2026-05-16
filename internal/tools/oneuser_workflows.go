@@ -803,14 +803,14 @@ func scheduleWorkSchema() map[string]any {
 		"project_id":               map[string]any{"type": "string"},
 		"start":                    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"end":                      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"hours_per_day":            map[string]any{"type": "number"},
+		"hours_per_day":            map[string]any{"type": "number", "minimum": 0.5, "maximum": 24, "description": "Work hours per day (0.5-24)."},
 		"billable":                 map[string]any{"type": "boolean"},
 		"include_non_working_days": map[string]any{"type": "boolean"},
 		"start_time":               map[string]any{"type": "string"},
 		"task_id":                  map[string]any{"type": "string"},
 		"note":                     map[string]any{"type": "string"},
 		"repeat":                   map[string]any{"type": "boolean"},
-		"weeks":                    map[string]any{"type": "integer"},
+		"weeks":                    map[string]any{"type": "integer", "minimum": 1, "maximum": 99, "description": "Repeat interval in weeks when repeat is true. Default: 1."},
 	}})
 }
 

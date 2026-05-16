@@ -11,7 +11,6 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
 	"github.com/apet97/go-clockify/internal/resolve"
-	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
 func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
@@ -73,14 +72,14 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"project_id":               map[string]any{"type": "string", "description": "Project ID or name"},
 					"start":                    map[string]any{"type": "string", "description": "Start date/time. " + flexibleDatetimeDescription},
 					"end":                      map[string]any{"type": "string", "description": "End date/time. " + flexibleDatetimeDescription},
-					"hours_per_day":            map[string]any{"type": "number", "description": "Hours per day"},
+					"hours_per_day":            map[string]any{"type": "number", "minimum": 0.5, "maximum": 24, "description": "Work hours per day (0.5-24)."},
 					"billable":                 map[string]any{"type": "boolean"},
 					"include_non_working_days": map[string]any{"type": "boolean"},
 					"start_time":               map[string]any{"type": "string", "description": "Optional hh:mm:ss start time"},
 					"task_id":                  map[string]any{"type": "string"},
 					"note":                     map[string]any{"type": "string"},
 					"repeat":                   map[string]any{"type": "boolean", "description": "Whether to repeat the assignment"},
-					"weeks":                    map[string]any{"type": "integer", "description": "Repeat interval in weeks when repeat is true (1-99)"},
+					"weeks":                    map[string]any{"type": "integer", "minimum": 1, "maximum": 99, "description": "Repeat interval in weeks when repeat is true. Default: 1."},
 					"timezone":                 timezoneInputProperty(),
 				}}),
 			ReadOnlyHint: false,
@@ -96,7 +95,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 					"assignment_id":            map[string]any{"type": "string"},
 					"start":                    map[string]any{"type": "string", "description": "Start date/time. " + flexibleDatetimeDescription},
 					"end":                      map[string]any{"type": "string", "description": "End date/time. " + flexibleDatetimeDescription},
-					"hours_per_day":            map[string]any{"type": "number"},
+					"hours_per_day":            map[string]any{"type": "number", "minimum": 0.5, "maximum": 24, "description": "Work hours per day (0.5-24)."},
 					"billable":                 map[string]any{"type": "boolean"},
 					"include_non_working_days": map[string]any{"type": "boolean"},
 					"start_time":               map[string]any{"type": "string", "description": "Optional hh:mm:ss start time"},
@@ -338,30 +337,20 @@ func defaultAssignmentScanRange(now time.Time) (string, string) {
 	return now.AddDate(-1, 0, 0).Format(time.RFC3339), now.AddDate(1, 0, 0).Format(time.RFC3339)
 }
 
-// schedulingRangeArgs parses the start/end pair from args using loc as
-// the default location for naked timestamps (e.g. "2026-04-01 09:00").
-// Pass a non-UTC location when the caller has supplied a `timezone`
-// argument or the service has a non-UTC DefaultTimezone — otherwise
-// "9:00" on the same day across the date line gets recorded as the
-// wrong wall-clock hour. Nil loc falls back to time.UTC.
+// schedulingRangeArgs parses the required start/end pair from args using
+// loc as the default location for naked timestamps (e.g. "2026-04-01
+// 09:00"). Pass a non-UTC location when the caller supplied a `timezone`
+// argument or the service has a non-UTC DefaultTimezone. It delegates to
+// parseRangeInLocation so scheduling shares one range parser: start/end
+// are required, a bare end date counts as the end of that day, and an
+// inverted range (end <= start) is rejected. The result is the RFC3339
+// UTC pair the Clockify scheduling API expects.
 func schedulingRangeArgs(args map[string]any, loc *time.Location) (string, string, error) {
-	startRaw := stringArg(args, "start")
-	endRaw := stringArg(args, "end")
-	if startRaw == "" || endRaw == "" {
-		return "", "", fmt.Errorf("start and end are required")
-	}
-	if loc == nil {
-		loc = time.UTC
-	}
-	start, err := timeparse.ParseDatetime(startRaw, loc)
+	start, end, err := parseRangeInLocation(args, loc)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid start: %w", err)
+		return "", "", err
 	}
-	end, err := timeparse.ParseDatetime(endRaw, loc)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid end: %w", err)
-	}
-	return start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339), nil
+	return start.Format(time.RFC3339), end.Format(time.RFC3339), nil
 }
 
 func (s *Service) createAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -407,7 +396,7 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	}
 
 	addSchedulingOptionalFields(payload, args)
-	addRecurringAssignment(payload, args)
+	weeksApplied := addRecurringAssignment(payload, args)
 	if note := stringArg(args, "note"); note != "" {
 		payload["note"] = note
 	}
@@ -426,9 +415,10 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	}
 
 	return ok("clockify_create_assignment", result, map[string]any{
-		"workspaceId": wsID,
-		"userId":      userID,
-		"projectId":   projectID,
+		"workspaceId":  wsID,
+		"userId":       userID,
+		"projectId":    projectID,
+		"weeksApplied": weeksApplied,
 	}), nil
 }
 
@@ -540,13 +530,17 @@ func addSchedulingOptionalFields(payload map[string]any, args map[string]any) {
 	}
 }
 
-func addRecurringAssignment(payload map[string]any, args map[string]any) {
+// addRecurringAssignment sets the recurringAssignment payload field and
+// returns the weeks interval actually applied. A missing or sub-1 value
+// defaults to 1; the schema's minimum:1 keeps 0 from reaching here, but
+// the clamp stays as defence so the API never sees weeks:0.
+func addRecurringAssignment(payload map[string]any, args map[string]any) int {
 	weeks := intArg(args, "weeks", 0)
-	if weeks > 0 {
-		payload["recurringAssignment"] = map[string]any{"weeks": weeks}
-		return
+	if weeks < 1 {
+		weeks = 1
 	}
-	payload["recurringAssignment"] = map[string]any{"weeks": 1}
+	payload["recurringAssignment"] = map[string]any{"weeks": weeks}
+	return weeks
 }
 
 func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
