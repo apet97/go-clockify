@@ -46396,7 +46396,9 @@
       ],
       "audit_keys": [
         "invoice_id",
-        "time_entry_ids",
+        "from",
+        "to",
+        "project_ids",
         "time_entry_group_type"
       ],
       "input_schema": {
@@ -46673,8 +46675,10 @@
       ],
       "audit_keys": [
         "invoice_id",
-        "expense_ids",
-        "include_expenses"
+        "from",
+        "to",
+        "project_ids",
+        "time_entry_group_type"
       ],
       "input_schema": {
         "additionalProperties": false,

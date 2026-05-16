@@ -857,6 +857,20 @@ func TestInvoiceItemDryRunsDoNotMutate(t *testing.T) {
 	}
 }
 
+func TestBuildInvoiceImportBodyValidatesDateRange(t *testing.T) {
+	client, cleanup := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("buildInvoiceImportBody must not make HTTP calls; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	if _, err := buildInvoiceImportBody(svc, map[string]any{"from": "2026-05-01", "to": "2026-05-01"}, false); err != nil {
+		t.Fatalf("same-day date-only range must be valid (to expands to end of day): %v", err)
+	}
+	if _, err := buildInvoiceImportBody(svc, map[string]any{"from": "2026-05-10", "to": "2026-05-01"}, false); err == nil {
+		t.Fatal("a backward from/to range must be rejected")
+	}
+}
+
 func TestInvoiceImportUsesImportExpensesWireField(t *testing.T) {
 	var bodies []map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

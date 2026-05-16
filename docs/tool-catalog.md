@@ -245,8 +245,8 @@ list also surfaces in `docs/tool-catalog.json`.
 | `clockify_invoices_delete` | `invoice_id` |
 | `clockify_invoices_export` | `invoice_id` |
 | `clockify_invoices_get` | `invoice_id` |
-| `clockify_invoices_import_expenses` | `invoice_id`, `expense_ids`, `include_expenses` |
-| `clockify_invoices_import_time` | `invoice_id`, `time_entry_ids`, `time_entry_group_type` |
+| `clockify_invoices_import_expenses` | `invoice_id`, `from`, `to`, `project_ids`, `time_entry_group_type` |
+| `clockify_invoices_import_time` | `invoice_id`, `from`, `to`, `project_ids`, `time_entry_group_type` |
 | `clockify_invoices_items_add` | `invoice_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_invoices_items_delete` | `invoice_id`, `item_index`, `item_id` |
 | `clockify_invoices_items_list` | `invoice_id` |

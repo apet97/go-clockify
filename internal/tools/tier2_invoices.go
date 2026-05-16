@@ -576,6 +576,15 @@ func buildInvoiceImportBody(s *Service, args map[string]any, importExpenses bool
 	if err != nil {
 		return nil, fmt.Errorf("could not parse date %q for to — use YYYY-MM-DD or RFC3339", to)
 	}
+	// A date-only `to` (YYYY-MM-DD, no time) means the end of that day, so the
+	// whole final day stays inside the window; then require a forward range —
+	// a zero or negative window silently imports nothing.
+	if !strings.Contains(to, "T") {
+		toTime = toTime.Add(24*time.Hour - time.Second)
+	}
+	if !toTime.After(fromTime) {
+		return nil, fmt.Errorf("to (%s) must be after from (%s) — widen the billing window", to, from)
+	}
 	groupType := strings.TrimSpace(stringArg(args, "time_entry_group_type"))
 	if groupType == "" {
 		groupType = "DETAILED"
