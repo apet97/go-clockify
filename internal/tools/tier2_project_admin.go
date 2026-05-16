@@ -766,8 +766,17 @@ func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (Res
 		})
 	}
 
+	failed := 0
+	for _, r := range results {
+		if archived, _ := r["archived"].(bool); !archived {
+			failed++
+		}
+	}
 	return ok("clockify_archive_projects", results, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(results),
+		"workspaceId":    wsID,
+		"count":          len(results),
+		"failedCount":    failed,
+		"allSucceeded":   failed == 0,
+		"partialFailure": failed > 0 && failed < len(results),
 	}), nil
 }

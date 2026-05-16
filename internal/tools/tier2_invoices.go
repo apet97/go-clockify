@@ -390,7 +390,7 @@ func (s *Service) invoicePaymentViews(ctx context.Context, wsID, invoiceID strin
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		var rows []map[string]any
 		if retryErr := s.Client.Get(ctx, path, query, &rows); retryErr != nil {
-			return nil, err
+			return nil, fmt.Errorf("invoice payment fetch failed: %w (retry as a bare array also failed: %v)", err, retryErr)
 		}
 		return invoicePaymentViewsFromRaw(rows), nil
 	}

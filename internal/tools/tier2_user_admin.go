@@ -689,6 +689,12 @@ func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
+	// image_url and remove_profile_image are mutually exclusive — sending
+	// both leaves the upstream's resulting image undefined.
+	if strings.TrimSpace(stringArg(args, "image_url")) != "" && boolArg(args, "remove_profile_image") {
+		return ResultEnvelope{}, fmt.Errorf("image_url and remove_profile_image are mutually exclusive: set one or the other, not both")
+	}
+
 	payload := map[string]any{}
 	setIfString(payload, args, "name", "name")
 	setIfString(payload, args, "image_url", "imageUrl")
