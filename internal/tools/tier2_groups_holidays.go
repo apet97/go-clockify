@@ -264,9 +264,11 @@ func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
+	requestedUserIDs := createGroupUserIDs(args)
+
 	body := map[string]any{"name": name}
-	if userIDs, ok := args["user_ids"].([]any); ok && len(userIDs) > 0 {
-		body["userIds"] = userIDs
+	if len(requestedUserIDs) > 0 {
+		body["userIds"] = requestedUserIDs
 	}
 
 	path, err := paths.Workspace(wsID, "user-groups")
@@ -277,7 +279,60 @@ func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any)
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_create_user_group_admin", out, map[string]any{"workspaceId": wsID}), nil
+
+	// Clockify's group-create endpoint does not reliably attach members, so
+	// add each requested user explicitly. Members that were already attached
+	// by the create call simply succeed again or are skipped by Clockify.
+	groupID := firstReportString(out, "id", "_id")
+	addedUserIDs := []string{}
+	memberFailures := []map[string]any{}
+	if groupID != "" {
+		for _, uid := range requestedUserIDs {
+			memberPath, perr := paths.Workspace(wsID, "user-groups", groupID, "users")
+			if perr != nil {
+				memberFailures = append(memberFailures, map[string]any{"userId": uid, "error": perr.Error()})
+				continue
+			}
+			var memberOut map[string]any
+			if aerr := s.Client.Post(ctx, memberPath, map[string]any{"userId": uid}, &memberOut); aerr != nil {
+				memberFailures = append(memberFailures, map[string]any{"userId": uid, "error": aerr.Error()})
+				continue
+			}
+			addedUserIDs = append(addedUserIDs, uid)
+		}
+	}
+
+	meta := map[string]any{
+		"workspaceId":  wsID,
+		"addedUserIds": addedUserIDs,
+	}
+	if len(memberFailures) > 0 {
+		meta["memberAddFailures"] = memberFailures
+	}
+	return ok("clockify_create_user_group_admin", out, meta), nil
+}
+
+// createGroupUserIDs reads the user_ids argument tolerantly: the MCP layer may
+// decode a JSON array as []any or []string depending on the call path.
+func createGroupUserIDs(args map[string]any) []string {
+	out := []string{}
+	switch v := args["user_ids"].(type) {
+	case []string:
+		for _, s := range v {
+			if t := strings.TrimSpace(s); t != "" {
+				out = append(out, t)
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				if t := strings.TrimSpace(s); t != "" {
+					out = append(out, t)
+				}
+			}
+		}
+	}
+	return out
 }
 
 func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

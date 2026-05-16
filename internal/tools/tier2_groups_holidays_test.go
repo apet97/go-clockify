@@ -21,6 +21,7 @@ func assertQueryValue(t *testing.T, query url.Values, key, want string) {
 // handlers via a mocked Clockify API.
 func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	mux := http.NewServeMux()
+	addedGroupUsers := map[string]bool{}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/user-groups":
@@ -29,6 +30,17 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 			respondJSON(t, w, map[string]any{"id": "g1", "name": "Engineering"})
 		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/user-groups":
 			respondJSON(t, w, map[string]any{"id": "g-new", "name": "Design"})
+		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/user-groups/g-new/users":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("add group user parse body: %v", err)
+			}
+			uid, _ := body["userId"].(string)
+			if uid == "" {
+				t.Fatalf("add group user missing userId: %v", body)
+			}
+			addedGroupUsers[uid] = true
+			respondJSON(t, w, map[string]any{"id": "g-new", "userId": uid})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/user-groups/g1":
 			respondJSON(t, w, map[string]any{"id": "g1", "name": "Renamed"})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/user-groups/g1":
@@ -81,6 +93,11 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 		"user_ids": []any{"u1", "u2"},
 	})
 	mustOK(t, res, err, "clockify_create_user_group_admin")
+	for _, uid := range []string{"u1", "u2"} {
+		if !addedGroupUsers[uid] {
+			t.Fatalf("CreateUserGroupAdmin did not add requested user %s; added=%v", uid, addedGroupUsers)
+		}
+	}
 	if _, err := svc.CreateUserGroupAdmin(ctx, map[string]any{"name": ""}); err == nil {
 		t.Fatal("expected validation error for missing name")
 	}
