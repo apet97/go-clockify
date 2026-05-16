@@ -46,7 +46,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 			"properties": map[string]any{
 				"amount":              map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units, e.g. 125.00 for $125.00; use amount_unit:\"minor\" for cents/minor units."},
 				"amount_unit":         map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount. major (default) sends the value as entered; minor divides by 100 before sending to Clockify."},
-				"date":                map[string]any{"type": "string", "description": "Expense date (RFC3339 yyyy-MM-ddThh:mm:ssZ)"},
+				"date":                map[string]any{"type": "string", "description": "Expense date as an ISO 8601 / RFC 3339 timestamp, e.g. 2026-05-16T14:30:00Z or 2026-05-16T14:30:00+02:00."},
 				"category_id":         map[string]any{"type": "string", "description": "Expense category ID (required)"},
 				"user_id":             map[string]any{"type": "string", "description": "User the expense is logged against; defaults to the calling user"},
 				"project_id":          map[string]any{"type": "string", "description": "Project ID (optional)"},
@@ -56,6 +56,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"file_name":           map[string]any{"type": "string", "description": "Optional receipt file name. Send file_name, file_content_base64, and file_content_type together to attach a receipt."},
 				"file_content_base64": map[string]any{"type": "string", "description": "Optional base64-encoded receipt body. Decoded payload is capped at the multipart file limit (10 MiB)."},
 				"file_content_type":   map[string]any{"type": "string", "description": "Optional MIME type for the receipt, e.g. application/pdf or image/png."},
+				"dry_run":             map[string]any{"type": "boolean", "description": "Preview the resolved expense payload without creating it."},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.createExpense(ctx, args)
@@ -70,7 +71,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"change_fields": map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": []string{"USER", "DATE", "PROJECT", "TASK", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE"}}, "description": "Field tokens to update. Each listed token requires the matching argument: USER=user_id, DATE=date, PROJECT=project_id, TASK=task_id, CATEGORY=category_id, NOTES=notes, AMOUNT=amount, BILLABLE=billable. Receipt-file replacement is not supported on update; delete and recreate the expense with file_* fields instead."},
 				"amount":        map[string]any{"type": "number", "description": "Expense amount. Defaults to major currency units; use amount_unit:\"minor\" for cents/minor units."},
 				"amount_unit":   map[string]any{"type": "string", "enum": []string{"major", "minor"}, "description": "Unit for amount when AMOUNT is included in change_fields."},
-				"date":          map[string]any{"type": "string", "description": "RFC3339 yyyy-MM-ddThh:mm:ssZ"},
+				"date":          map[string]any{"type": "string", "description": "Expense date as an ISO 8601 / RFC 3339 timestamp, e.g. 2026-05-16T14:30:00Z or 2026-05-16T14:30:00+02:00."},
 				"category_id":   map[string]any{"type": "string"},
 				"project_id":    map[string]any{"type": "string"},
 				"task_id":       map[string]any{"type": "string"},
@@ -288,6 +289,17 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	files, err := expenseReceiptFiles(args)
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+
+	if dryrun.Enabled(args) {
+		preview := make(map[string]any, len(form)+1)
+		for key := range form {
+			preview[key] = form.Get(key)
+		}
+		if len(files) > 0 {
+			preview["receiptFiles"] = len(files)
+		}
+		return ok("clockify_create_expense", dryrunPreviewPayload("clockify_create_expense", preview), map[string]any{"workspaceId": wsID}), nil
 	}
 
 	var created map[string]any

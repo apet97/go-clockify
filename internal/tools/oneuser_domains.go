@@ -318,7 +318,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "task", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.UpdateTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),
-		nativeDomainTool(44, toolDestructive("clockify_tasks_delete", "Permanently delete a task by name or ID within a project. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
+		nativeDomainTool(44, toolDestructive("clockify_tasks_delete", "Permanently delete a task by name or ID within a project. A task that is not DONE is marked DONE first (Clockify requires it), then deleted. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"project", "task"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string", "description": "Project ID."},
 			"task":       map[string]any{"type": "string", "description": "Task name or ID."},

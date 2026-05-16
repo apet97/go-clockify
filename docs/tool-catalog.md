@@ -72,7 +72,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_tasks_list` | `domain` | yes | no | yes | no | `read` | List tasks for a project. |
 | `clockify_tasks_create` | `domain` | no | no | no | no | `write` | Create a task under a project. |
 | `clockify_tags_list` | `domain` | yes | no | yes | no | `read` | List tags in the pinned workspace. |
-| `clockify_tags_create` | `domain` | no | no | no | no | `write` | Create a tag in the pinned workspace. |
+| `clockify_tags_create` | `domain` | no | no | no | no | `write` | Create a tag in the pinned workspace. Retrying after a network timeout can create a duplicate tag; check with clockify_tags_list before retrying. |
 | `clockify_entries_list` | `domain` | yes | no | yes | no | `read` | List current-user time entries in the pinned workspace. |
 | `clockify_entries_create` | `domain` | no | no | no | yes | `write` | Create a current-user time entry in the pinned workspace. This is a direct create with no overlap guard; use clockify_log_work for overlap-protected logging. |
 | `clockify_clients_get` | `domain` | yes | no | yes | no | `read` | Get one client by name or ID. |
@@ -85,7 +85,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_rates_update` | `domain` | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project. |
 | `clockify_tasks_get` | `domain` | yes | no | yes | no | `read` | Get one task by name or ID within a project. |
 | `clockify_tasks_update` | `domain` | no | no | yes | no | `write` | Update a task by name or ID within a project. |
-| `clockify_tasks_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a task by name or ID within a project. Destructive; supports dry_run preview. |
+| `clockify_tasks_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a task by name or ID within a project. A task that is not DONE is marked DONE first (Clockify requires it), then deleted. Destructive; supports dry_run preview. |
 | `clockify_tasks_rates_update` | `domain` | no | no | yes | yes | `write`, `billing` | Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task. |
 | `clockify_tags_get` | `domain` | yes | no | yes | no | `read` | Get one tag by name or ID. |
 | `clockify_tags_update` | `domain` | no | no | yes | no | `write` | Update a tag by name or ID. |
@@ -113,7 +113,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_memberships_update` | `domain` | no | no | yes | yes | `write`, `admin`, `permission_change` | Replace project memberships and optional user-group filter/rate metadata |
 | `clockify_expenses_list` | `domain` | yes | no | yes | no | `read` | List expenses in the workspace with pagination and optional date range |
 | `clockify_expenses_get` | `domain` | yes | no | yes | no | `read` | Get a single expense by ID |
-| `clockify_expenses_create` | `domain` | no | no | no | no | `write`, `billing` | Create an expense. amount defaults to major currency units; pass amount_unit:"minor" for cents. Receipt upload is optional; provide all three file_* fields together to attach one. |
+| `clockify_expenses_create` | `domain` | no | no | no | yes | `write`, `billing` | Create an expense. amount defaults to major currency units; pass amount_unit:"minor" for cents. Receipt upload is optional; provide all three file_* fields together to attach one. |
 | `clockify_expenses_update` | `domain` | no | no | no | no | `write`, `billing` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
 | `clockify_expenses_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an expense by ID. Billing impact; destructive; supports dry_run preview. |
 | `clockify_expenses_categories_list` | `domain` | yes | no | yes | no | `read` | List expense categories in the workspace |
@@ -141,7 +141,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_balances_update` | `domain` | no | no | no | yes | `write`, `billing`, `admin` | Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview. |
 | `clockify_scheduling_assignments_list` | `domain` | yes | no | yes | no | `read` | List scheduling assignments within a date range |
 | `clockify_scheduling_assignments_get` | `domain` | yes | no | yes | no | `read` | Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward. |
-| `clockify_scheduling_assignments_create` | `domain` | no | no | no | no | `write` | Create a recurring scheduling assignment for a user on a project |
+| `clockify_scheduling_assignments_create` | `domain` | no | no | no | no | `write` | Create a recurring scheduling assignment for a user on a project. Retrying after a network timeout can create a duplicate assignment; check with clockify_list_assignments before retrying. |
 | `clockify_scheduling_assignments_update` | `domain` | no | no | no | no | `write` | Update a recurring scheduling assignment by ID |
 | `clockify_scheduling_assignments_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a recurring scheduling assignment by ID (supports dry_run preview) |
 | `clockify_scheduling_project_totals` | `domain` | yes | no | yes | no | `read` | Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available |

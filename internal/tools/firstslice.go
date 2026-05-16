@@ -189,7 +189,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"sort_order":         map[string]any{"type": "string", "description": "Clockify sort-order query value."},
 			},
 		})), s.TagsList),
-		firstSliceDescriptor(51, toolRW("clockify_tags_create", "Create a tag in the pinned workspace.", objectSchema(map[string]any{
+		firstSliceDescriptor(51, toolRW("clockify_tags_create", "Create a tag in the pinned workspace. Retrying after a network timeout can create a duplicate tag; check with clockify_tags_list before retrying.", objectSchema(map[string]any{
 			"required": []string{"name"},
 			"properties": map[string]any{
 				"name": map[string]any{"type": "string"},
