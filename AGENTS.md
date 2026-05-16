@@ -1,8 +1,7 @@
 # AGENTS.md - go-clockify
 
-Read this first. This file is the tracked, binding agent contract for the
-repo. `CLAUDE.md` may exist locally, but it is workstation context and is
-ignored by git.
+Read this first. This is the tracked, binding agent contract for the repo.
+`CLAUDE.md` is local workstation context and is git-ignored.
 
 ## Product Contract
 
@@ -19,7 +18,7 @@ ignored by git.
 - Recoverable failures return `ok:false`, an error code, and recovery guidance.
 - Optional live evidence stays split into protocol/recovery vs happy-path.
 
-Do not change those invariants unless the maintainer explicitly changes the
+Do not change these invariants unless the maintainer explicitly changes the
 product definition.
 
 ## Start Here
@@ -29,29 +28,24 @@ product definition.
 3. `docs/tool-catalog.md` - generated runtime tool list and order.
 4. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
 5. `docs/live-tests.md` - live-test gates and sacrificial workspace rules.
-6. `docs/launch-readiness-review-may-8.md` - May 8 review disposition ledger.
+6. `docs/launch-readiness-review-may-8.md` - launch disposition ledger; do not
+   mark launch-ready while it shows open external-evidence or approval gates.
 
-The May 8 review disposition ledger contains the objective-to-artifact
-completion audit. Do not mark launch-ready while that audit says external
-evidence or approval gates remain open.
-
-Historical docs can explain prior decisions, but current implementation work
-starts from the files above plus the code. Do not route users to archived or
-bannered platform-era docs as setup instructions.
+Historical docs explain prior decisions; current work starts from the files
+above plus the code. Do not route users to archived or bannered platform-era
+docs as setup instructions.
 
 ## Safety Rules
 
-- Never print, commit, or log API keys, workspace IDs from private context, or
-  tokens.
-- Use only the configured sacrificial workspace for live tests.
-- Do not mutate live Clockify unless the user asked for live calls or the test
-  gate explicitly requires them.
-- Do not weaken validation, schemas, or recovery behavior to make tests pass.
+- Never print, commit, or log API keys, workspace IDs, or tokens.
+- Use only the configured sacrificial workspace for live tests, and do not
+  mutate live Clockify unless the user asked or a test gate requires it.
+- Do not weaken validation, schemas, or recovery behavior to pass tests.
 - Do not remove tools to simplify the catalog.
 - Do not reintroduce old activation, policy, control-plane, or multi-user
   concepts.
-- Preserve user changes in a dirty tree; inspect before editing.
-- Prefer small focused diffs and repo-local helpers.
+- Preserve user changes in a dirty tree; inspect before editing; prefer small
+  focused diffs and repo-local helpers.
 - If MCP tool errors ever become remotely exposed, revisit error-message
   sanitization before shipping that path.
 
@@ -62,50 +56,30 @@ bannered platform-era docs as setup instructions.
 | Full tests | `go test -count=1 ./...` |
 | Race/check gate | `make check` |
 | Diff hygiene | `git diff --check` |
-| Package list | `go list ./...` |
-| Tool catalog drift | `make catalog-drift` |
-| Regenerate catalog | `make gen-tool-catalog` |
-| Focus tools | `go test -count=1 ./internal/tools` |
-| Focus MCP | `go test -count=1 ./internal/mcp` |
-| Live compile only | `go test -tags=livee2e -count=0 ./tests/...` |
 | Local lint | `golangci-lint run` |
+| Catalog drift / regenerate | `make catalog-drift` · `make gen-tool-catalog` |
+| Focus tools / MCP | `go test -count=1 ./internal/tools` · `./internal/mcp` |
+| Live compile only | `go test -tags=livee2e -count=0 ./tests/...` |
 
-Dependency sanity for the default command:
-
-```sh
-go list -deps ./cmd/clockify-mcp \
-  | grep -E 'controlplane|oidc|grpc|vault|policy|enforcement|runtime|postgres|otel|pprof|auth' \
-  || true
-```
-
-Runtime-related `internal/runtime/...` and Go `runtime` hits are not
-themselves product regressions; inspect any non-runtime hit.
+The default command must stay free of controlplane/oidc/grpc/vault/policy/
+postgres/auth dependencies; check with
+`go list -deps ./cmd/clockify-mcp` (`internal/runtime/...` and Go `runtime`
+hits are expected, not regressions).
 
 ## Live Tests
 
-Required live env:
-
 ```sh
-export CLOCKIFY_API_KEY='...'
-export CLOCKIFY_WORKSPACE_ID='...'
-export CLOCKIFY_RUN_LIVE_E2E=1
-export CLOCKIFY_LIVE_PREFIX='MCP-LIVE-YYYYMMDD'
+export CLOCKIFY_API_KEY='...' CLOCKIFY_WORKSPACE_ID='...'
+export CLOCKIFY_RUN_LIVE_E2E=1 CLOCKIFY_LIVE_PREFIX='MCP-LIVE-YYYYMMDD'
 ```
 
-Extra gates:
+Extra mutation gates: `CLOCKIFY_LIVE_OPTIONAL_DOMAINS`,
+`CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS`, `CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS`,
+`CLOCKIFY_LIVE_WORKSPACE_CONFIRM`, `CLOCKIFY_LIVE_ADMIN_ENABLED`,
+`CLOCKIFY_LIVE_BILLING_ENABLED`, `CLOCKIFY_LIVE_SETTINGS_ENABLED`.
 
-```sh
-export CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1
-export CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1
-export CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1
-export CLOCKIFY_LIVE_WORKSPACE_CONFIRM="$CLOCKIFY_WORKSPACE_ID"
-export CLOCKIFY_LIVE_ADMIN_ENABLED=true
-export CLOCKIFY_LIVE_BILLING_ENABLED=true
-export CLOCKIFY_LIVE_SETTINGS_ENABLED=true
-```
-
-Only mark live happy-path evidence when the tool returns `ok:true` against a
-real entity. A useful recovery envelope is protocol/recovery evidence only.
+Mark live happy-path evidence only when the tool returns `ok:true` against a
+real entity; a useful recovery envelope is protocol/recovery evidence only.
 
 ## Code Map
 
@@ -117,78 +91,55 @@ real entity. A useful recovery envelope is protocol/recovery evidence only.
 | Workflow tools | `internal/tools/oneuser_workflows.go` |
 | Domain registry | `internal/tools/oneuser_domains.go` |
 | Native domain logic | `internal/tools/*_view.go`, `internal/tools/tier2_*.go` |
-| Resources/prompts | `internal/tools/oneuser_resources.go`, `internal/tools/oneuser_prompts.go` |
+| Resources / prompts | `internal/tools/oneuser_resources.go`, `oneuser_prompts.go` |
 | Clockify client | `internal/clockify/client.go` |
 | Fake server | `internal/testclockify/fake_server.go` |
 | Live tests | `internal/tools/oneuser_live_test.go`, `tests/e2e_live*.go` |
-| Generated catalog | `docs/tool-catalog.md`, `docs/tool-catalog.json` |
-| Coverage ledger | `docs/goals/oneuser-tool-coverage.md` |
+| Generated catalog / ledger | `docs/tool-catalog.{md,json}`, `docs/goals/oneuser-tool-coverage.md` |
 
 ## Registry Shape
 
-The product registry is `Service.FullAccessRegistry()`.
+`Service.FullAccessRegistry()` composes the registry in order:
+`workflowDescriptors` → `FirstSliceRegistry` → `nativeCoreDescriptors` →
+`nativeHighValueDescriptors` → `nativeDomainExtras` → `timerAndReportDescriptors`
+→ `rawAPIDescriptors`. `routeTool` still backs route-based native descriptors —
+do not delete it.
 
-Current composition:
-
-1. `workflowDescriptors()`
-2. `FirstSliceRegistry()`
-3. `nativeCoreDescriptors()`
-4. `nativeHighValueDescriptors()`
-5. `nativeDomainExtras()`
-6. `timerAndReportDescriptors()`
-7. `rawAPIDescriptors()`
-
-`routeTool` still supports native route-backed descriptors. Do not delete it
-just because the older route bucket was pruned.
-
-## Generated Files
-
-`docs/tool-catalog.md` and `docs/tool-catalog.json` are generated from the
-runtime registry. After descriptor/schema/order changes:
-
-```sh
-make gen-tool-catalog
-make catalog-drift
-```
-
-The catalog should still show 156 tools, workflow tools first, and raw API
-fallback tools last.
+`docs/tool-catalog.{md,json}` are generated from the registry. After any
+descriptor, schema, or order change, run `make gen-tool-catalog` then
+`make catalog-drift`. The catalog stays at 156 tools, workflow-first, raw-last.
 
 ## Coverage Ledger Rules
 
 - `docs/goals/oneuser-tool-coverage.md` is the source of truth.
-- Fake smoke is not live proof.
-- Live protocol/recovery and live happy-path are separate columns.
+- Fake smoke is not live proof; live protocol/recovery and live happy-path are
+  separate columns.
 - Do not count bogus-ID or unavailable-feature recovery as happy path.
-- Preserve recovery probes for destructive, noisy, or permission-sensitive
-  paths.
+- Preserve recovery probes for destructive, noisy, or permission-sensitive paths.
 - Update ledger validation tests when evidence changes.
 
 ## Known Clockify API Gotchas
 
-- Time-off request listing is POST-based:
+- Time-off request listing is POST, not GET (GET returned 405 in live probes):
   `POST /workspaces/{workspaceId}/time-off/requests`.
-- Do not convert that path to GET; prior live probes returned 405.
-- Invoice mark-paid may require payment creation rather than direct status
-  mutation; keep the ledger honest when the API rejects direct status changes.
-- Holiday get/update behavior may differ from list/create/delete; do not mark
-  happy-path unless live evidence proves it.
+- Invoice mark-paid may require payment creation rather than a direct status
+  change; keep the ledger honest when the API rejects direct mutation.
+- Holiday get/update behavior differs from list/create/delete; do not mark
+  happy-path without live evidence.
 
 ## Testing Discipline
 
 - Add or update tests before changing behavior.
-- For narrow docs edits, run the focused doc tests that cover the touched
-  surface.
-- For registry or schema edits, run `go test -count=1 ./internal/tools` plus
-  catalog drift.
-- For MCP protocol edits, run `go test -count=1 ./internal/mcp`.
+- Registry/schema edits: `go test -count=1 ./internal/tools` plus catalog drift.
+  MCP protocol edits: `go test -count=1 ./internal/mcp`.
+- For narrow docs edits, run the focused doc tests covering the touched surface.
 - Before claiming completion, run fresh verification and report exactly what
-  passed or what was not run.
+  passed and what was not run.
 
 ## Git Discipline
 
 - Do not use destructive git commands unless explicitly asked.
-- Do not commit ignored local files unless the user explicitly requests that.
+- Do not commit ignored local files unless the user requests it.
 - Keep commits atomic and evidence-backed.
-- If pushing direct to `main`, watch GitHub checks and report their final
-  status.
+- When pushing direct to `main`, watch GitHub checks and report their final
+  status, including any branch-protection bypass notice.
