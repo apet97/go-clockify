@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -254,9 +255,11 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if _, err := parseFlexibleDateTime(date, loc); err != nil {
+	parsedDate, err := parseFlexibleDateTime(date, loc)
+	if err != nil {
 		return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
 	}
+	date = parsedDate.UTC().Format(time.RFC3339)
 	categoryID := stringArg(args, "category_id")
 	if categoryID == "" {
 		return ResultEnvelope{}, fmt.Errorf("category_id is required")
