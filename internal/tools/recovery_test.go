@@ -1,6 +1,9 @@
 package tools
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestDefaultRecoveryRoutesScheduleWorkToProjects asserts the schedule_work
 // workflow tool routes recovery to clockify_projects_list — listing existing
@@ -51,6 +54,36 @@ func TestLooksLikeFeatureUnavailableMatchesRoutingLayerGate(t *testing.T) {
 	for _, tc := range cases {
 		if got := looksLikeFeatureUnavailable(tc.message); got != tc.want {
 			t.Errorf("looksLikeFeatureUnavailable(%q) = %v, want %v", tc.message, got, tc.want)
+		}
+	}
+}
+
+// TestDefaultRecoveryCoversReportTools asserts report tools get a report-specific
+// recovery hint instead of the generic clockify_status fallback. [audit P1-4]
+func TestDefaultRecoveryCoversReportTools(t *testing.T) {
+	for _, action := range []string{
+		"clockify_reports_money",
+		"clockify_reports_export",
+		"clockify_reports_attendance",
+		"clockify_reports_weekly",
+	} {
+		got := defaultRecovery(action, nil)
+		if got.Tool != "clockify_reports_summary" {
+			t.Errorf("%s recovery Tool = %q, want clockify_reports_summary", action, got.Tool)
+		}
+		if !strings.Contains(got.Hint, "date range") {
+			t.Errorf("%s recovery hint should mention the date range, got %q", action, got.Hint)
+		}
+	}
+}
+
+// TestDefaultRecoverySchedulingMentionsRole asserts scheduling-write recovery
+// hints explain the 403 role/publish precondition. [audit P2-6]
+func TestDefaultRecoverySchedulingMentionsRole(t *testing.T) {
+	for _, action := range []string{"clockify_schedule_work", "clockify_scheduling_assignments_create"} {
+		got := defaultRecovery(action, nil)
+		if !strings.Contains(got.Hint, "403") {
+			t.Errorf("%s recovery hint should mention the 403 precondition, got %q", action, got.Hint)
 		}
 	}
 }
