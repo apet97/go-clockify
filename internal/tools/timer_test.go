@@ -1,0 +1,84 @@
+package tools
+
+import (
+	"context"
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+)
+
+func TestStartTimer_ForceProjectsBlocksProjectlessStart(t *testing.T) {
+	postIssued := false
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{})
+		case r.URL.Path == "/workspaces/ws1" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Workspace{ID: "ws1", WorkspaceSettings: map[string]any{"forceProjects": true}})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			postIssued = true
+			respondJSON(t, w, clockify.TimeEntry{ID: "should-not-create"})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.StartTimerArgs(context.Background(), map[string]any{})
+	if err == nil || !strings.Contains(err.Error(), "requires a project") {
+		t.Fatalf("expected requires a project error, got %v", err)
+	}
+	if postIssued {
+		t.Fatal("timer POST was issued despite forceProjects projectless guard")
+	}
+}
+
+func TestStartTimer_RunningTimerBlocks(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:           "running1",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-16T10:00:00Z"},
+			}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.StartTimerArgs(context.Background(), map[string]any{"project_id": "p1"})
+	if err == nil || !strings.Contains(err.Error(), "already running") {
+		t.Fatalf("expected already running error, got %v", err)
+	}
+}
+
+func TestStopTimer_ProjectErrorIsExplained(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodPatch:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"message":"Project is either required field or given project is archived","code":400}`))
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.StopTimer(context.Background(), map[string]any{})
+	if err == nil || !strings.Contains(err.Error(), "assign a project with clockify_entries_update") {
+		t.Fatalf("expected project recovery error, got %v", err)
+	}
+}

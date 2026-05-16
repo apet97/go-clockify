@@ -746,7 +746,7 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	body := map[string]any{"clientId": clientID}
+	body := map[string]any{"clientId": clientID, "status": "UNSENT"}
 	if v := stringArg(args, "number"); v != "" {
 		body["number"] = v
 	}
@@ -761,6 +761,9 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 	}
 	if v := stringArg(args, "note"); v != "" {
 		body["note"] = v
+	}
+	if v := stringArg(args, "status"); v != "" {
+		body["status"] = v
 	}
 	applyInvoiceOptionalFields(body, args)
 	if dryrun.Enabled(args) {

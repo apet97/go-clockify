@@ -878,3 +878,95 @@ func TestAggregateEntriesRange_NeverLosesData(t *testing.T) {
 		})
 	}
 }
+
+func TestReportAmountMeta_NormalizesCents(t *testing.T) {
+	got := reportAmountMeta(map[string]any{"totals": []any{map[string]any{
+		"totalAmount":           744266.6666,
+		"totalAmountByCurrency": []any{map[string]any{"currency": "USD", "amount": 744267.0}},
+	}}})
+	if got == nil {
+		t.Fatal("reportAmountMeta returned nil")
+	}
+	if got["totalAmount"] != 7442.67 {
+		t.Fatalf("totalAmount = %v, want 7442.67", got["totalAmount"])
+	}
+	byCurrency := got["byCurrency"].([]map[string]any)
+	if byCurrency[0]["amount"] != 7442.67 {
+		t.Fatalf("byCurrency amount = %v, want 7442.67", byCurrency[0]["amount"])
+	}
+}
+
+func TestRichReportTools_AcceptPlainDatesAndLabelMoney(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
+		case strings.HasPrefix(r.URL.Path, "/workspaces/ws1/reports/") && r.Method == http.MethodPost:
+			respondJSON(t, w, map[string]any{"totals": []any{map[string]any{"totalAmount": 12345.0}}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	tools := map[string]func(context.Context, map[string]any) (ResultEnvelope, error){
+		"clockify_reports_money":      svc.MoneyReport,
+		"clockify_reports_attendance": svc.AttendanceReport,
+		"clockify_reports_expense":    svc.ExpenseReport,
+		"clockify_reports_export":     svc.DetailedReport,
+	}
+	for name, handler := range tools {
+		t.Run(name, func(t *testing.T) {
+			res, err := handler(context.Background(), map[string]any{"date_range_start": "2026-05-01", "date_range_end": "2026-05-31"})
+			if err != nil {
+				t.Fatalf("%s failed: %v", name, err)
+			}
+			if res.Meta["amountUnit"] != "cents" {
+				t.Fatalf("%s amountUnit = %v, want cents", name, res.Meta["amountUnit"])
+			}
+		})
+	}
+}
+
+func TestDetailedReport_TruncationFlag(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		rows      int
+		truncated bool
+	}{
+		{name: "at cap", rows: reportPageSize, truncated: true},
+		{name: "below cap", rows: reportPageSize - 1, truncated: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user" && r.Method == http.MethodGet:
+					respondJSON(t, w, map[string]any{"id": "u1", "settings": map[string]any{}})
+				case r.URL.Path == "/workspaces/ws1/reports/detailed" && r.Method == http.MethodPost:
+					respondJSON(t, w, map[string]any{"timeEntries": reportTestRows(tc.rows)})
+				default:
+					t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+				}
+			})
+			defer cleanup()
+
+			svc := New(client, "ws1")
+			res, err := svc.DetailedReport(context.Background(), map[string]any{"date_range_start": "2026-05-01", "date_range_end": "2026-05-31"})
+			if err != nil {
+				t.Fatalf("DetailedReport: %v", err)
+			}
+			if res.Meta["truncated"] != tc.truncated {
+				t.Fatalf("truncated = %v, want %v (meta=%#v)", res.Meta["truncated"], tc.truncated, res.Meta)
+			}
+		})
+	}
+}
+
+func reportTestRows(n int) []map[string]any {
+	rows := make([]map[string]any, n)
+	for i := 0; i < n; i++ {
+		rows[i] = map[string]any{"id": fmt.Sprintf("e-%d", i), "description": "row"}
+	}
+	return rows
+}

@@ -350,6 +350,9 @@ func schedulingRangeArgs(args map[string]any, loc *time.Location) (string, strin
 	if err != nil {
 		return "", "", err
 	}
+	if !end.After(start) {
+		return "", "", fmt.Errorf("end must be after start (got start=%s end=%s)", stringArg(args, "start"), stringArg(args, "end"))
+	}
 	return start.Format(time.RFC3339), end.Format(time.RFC3339), nil
 }
 

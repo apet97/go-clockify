@@ -1433,3 +1433,53 @@ func TestDeleteAssignmentDryRun(t *testing.T) {
 		t.Fatalf("expected minimal dry-run resource nil, got %#v", dataMap["resource"])
 	}
 }
+
+func TestTimeOffBalanceDefaultsToCurrentUser(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u-current", Name: "Tester"})
+		case r.URL.Path == "/workspaces/ws1/time-off/balance/user/u-current" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"count": 1, "balances": []map[string]any{{"policyId": "pol1", "policyName": "PTO", "userId": "u-current", "balance": 3, "policyTimeUnit": "DAYS"}}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.timeOffBalance(context.Background(), map[string]any{})
+	if err != nil {
+		t.Fatalf("timeOffBalance no-arg failed: %v", err)
+	}
+	if res.Meta["userId"] != "u-current" {
+		t.Fatalf("userId meta = %v, want u-current", res.Meta["userId"])
+	}
+	if _, ok := res.Data.([]TimeOffBalanceView); !ok {
+		t.Fatalf("data type = %T, want []TimeOffBalanceView", res.Data)
+	}
+}
+
+func TestTimeOffPoliciesListPaginationMeta(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/time-off/policies" && r.Method == http.MethodGet:
+			if r.URL.Query().Get("page") != "2" || r.URL.Query().Get("page-size") != "1" {
+				t.Fatalf("unexpected pagination query: %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []map[string]any{{"id": "pol2", "name": "Second"}})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.listTimeOffPolicies(context.Background(), map[string]any{"page": 2, "page_size": 1})
+	if err != nil {
+		t.Fatalf("listTimeOffPolicies: %v", err)
+	}
+	if res.Meta["page"] != 2 || res.Meta["pageSize"] != 1 || res.Meta["has_more"] != true {
+		t.Fatalf("unexpected pagination meta: %#v", res.Meta)
+	}
+}

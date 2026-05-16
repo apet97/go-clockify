@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -770,4 +771,85 @@ func TestPaidFeatureErrorEnvelopeCode(t *testing.T) {
 	if envelope.Recovery.Hint == "" {
 		t.Fatalf("missing recovery: %+v", envelope)
 	}
+}
+
+func TestSchedulingCapacityRequiresUserIds(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if descriptor.Tool.Name != "clockify_scheduling_capacity" {
+			continue
+		}
+		required := inputSchemaRequiredFields(descriptor.Tool.InputSchema)
+		for _, field := range required {
+			if field == "user_ids" {
+				return
+			}
+		}
+		t.Fatalf("clockify_scheduling_capacity required=%v, want user_ids", required)
+	}
+	t.Fatal("clockify_scheduling_capacity not found")
+}
+
+func TestFullAccessInputSchemasAreValidAndTyped(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if err := assertSchemaRequiredAndPropertyTypes(descriptor.Tool.InputSchema, descriptor.Tool.Name, "$inputSchema"); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+func assertSchemaRequiredAndPropertyTypes(schema any, tool, path string) error {
+	m, ok := schema.(map[string]any)
+	if !ok {
+		return nil
+	}
+	if req, exists := m["required"]; exists {
+		if req == nil {
+			return newSchemaError(tool, path, "required is null")
+		}
+		switch items := req.(type) {
+		case []string:
+			// ok
+		case []any:
+			for i, item := range items {
+				if _, ok := item.(string); !ok {
+					return newSchemaError(tool, path, fmt.Sprintf("required[%d] is not a string", i))
+				}
+			}
+		default:
+			return newSchemaError(tool, path, fmt.Sprintf("required has unsupported type %T", req))
+		}
+	}
+	if props, ok := m["properties"].(map[string]any); ok {
+		for name, raw := range props {
+			pm, ok := raw.(map[string]any)
+			if !ok {
+				return newSchemaError(tool, path+"."+name, "property schema is not an object")
+			}
+			if _, hasType := pm["type"]; !hasType {
+				if _, hasAnyOf := pm["anyOf"]; !hasAnyOf {
+					if _, hasConst := pm["const"]; !hasConst {
+						return newSchemaError(tool, path+"."+name, "property is missing type/anyOf/const")
+					}
+				}
+			}
+			if err := assertSchemaRequiredAndPropertyTypes(pm, tool, path+"."+name); err != nil {
+				return err
+			}
+		}
+	}
+	if items, ok := m["items"].(map[string]any); ok {
+		if err := assertSchemaRequiredAndPropertyTypes(items, tool, path+"[*]"); err != nil {
+			return err
+		}
+	}
+	if options, ok := m["anyOf"].([]any); ok {
+		for i, option := range options {
+			if err := assertSchemaRequiredAndPropertyTypes(option, tool, fmt.Sprintf("%s.anyOf[%d]", path, i)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

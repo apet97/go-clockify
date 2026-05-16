@@ -422,6 +422,22 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	return ok("clockify_reports_summary", data, meta), nil
 }
 
+func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	return s.reportsAPIReport(ctx, args, reportEndpoint{
+		toolName:  "clockify_reports_money",
+		pathName:  "summary",
+		filterKey: "summary_filter",
+	})
+}
+
+func (s *Service) ExpenseReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	return s.reportsAPIReport(ctx, args, reportEndpoint{
+		toolName:  "clockify_reports_expense",
+		pathName:  "expenses/detailed",
+		filterKey: "detailed_filter",
+	})
+}
+
 func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_detailed",

@@ -23,14 +23,19 @@ func expenseViewFromRaw(raw map[string]any) ExpenseView {
 		"currency": currency,
 		"has_file": hasAnyKey(raw, "file", "fileId", "file_id", "receipt", "receiptId"),
 	}
-	view["category"] = map[string]any{
+	category := map[string]any{
 		"id":             firstReportString(raw, "categoryId", "category_id"),
-		"name":           firstReportString(raw, "categoryName", "category_name"),
 		"price_in_cents": firstPresent(raw, "categoryPriceInCents", "priceInCents", "price_in_cents"),
-		"unit":           firstReportString(raw, "categoryUnit", "unit"),
 		"archived":       firstPresent(raw, "categoryArchived", "archived"),
 		"has_unit_price": firstPresent(raw, "categoryHasUnitPrice", "hasUnitPrice", "has_unit_price"),
 	}
+	if name := firstReportString(raw, "categoryName", "category_name"); name != "" {
+		category["name"] = name
+	}
+	if unit := firstReportString(raw, "categoryUnit", "unit"); unit != "" {
+		category["unit"] = unit
+	}
+	view["category"] = category
 	view["receipt"] = map[string]any{
 		"has_file":  hasAnyKey(raw, "file", "fileId", "file_id", "receipt", "receiptId"),
 		"file_id":   firstReportString(raw, "fileId", "file_id", "receiptId", "receipt_id"),
@@ -144,7 +149,7 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 	view["period"] = firstPresent(raw, "timeOffPeriod", "time_off_period", "period")
 	view["day_period"] = firstPresent(raw, "dayPeriod", "day_period", "halfDay", "half_day")
 	view["duration"] = map[string]any{
-		"days":  firstPresent(raw, "days", "durationDays"),
+		"days":  firstPresent(raw, "days", "durationDays", "balanceDiff"),
 		"hours": firstPresent(raw, "hours", "durationHours"),
 		"raw":   firstPresent(raw, "duration"),
 	}
@@ -177,7 +182,7 @@ func timeOffBalanceViewFromRaw(raw map[string]any) TimeOffBalanceView {
 		"accrued":   firstPresent(raw, "accrued", "accruedBalance"),
 		"pending":   firstPresent(raw, "pending", "pendingBalance"),
 		"remaining": firstPresent(raw, "remaining", "remainingBalance"),
-		"unit":      firstReportString(raw, "timeUnit", "unit"),
+		"unit":      firstReportString(raw, "timeUnit", "unit", "policyTimeUnit", "policy_time_unit"),
 	}
 	view["user"] = map[string]any{
 		"id":   firstReportString(raw, "userId", "user_id"),

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -38,7 +39,8 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		return ResultEnvelope{}, err
 	}
 	applyReportsAPIMoneyDefaults(body, endpoint)
-	path, err := paths.Workspace(wsID, "reports", endpoint.pathName)
+	pathParts := append([]string{"reports"}, strings.Split(endpoint.pathName, "/")...)
+	path, err := paths.Workspace(wsID, pathParts...)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -51,13 +53,23 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		"source":      "reports-api",
 		"exportType":  body["exportType"],
 	}
+	meta["amountUnit"] = "cents"
+	if am := reportAmountMeta(data); am != nil {
+		meta["totalAmount"] = am
+	}
 	if defaultsMeta != nil {
 		meta["defaults"] = defaultsMeta
 	}
 	if binary {
 		meta["binary"] = true
 	} else if endpoint.pathName == "detailed" {
-		meta["normalizedEntries"] = appendDetailedReportViews(data)
+		entryCount := appendDetailedReportViews(data)
+		meta["normalizedEntries"] = entryCount
+		meta["truncated"] = entryCount >= reportPageSize
+		meta["rowCount"] = entryCount
+		if entryCount >= reportPageSize {
+			meta["next_hint"] = "result hit the row cap — narrow the date range to see all rows"
+		}
 	} else if endpoint.pathName == "summary" {
 		meta["normalizedRollups"] = appendSummaryReportViews(data, body)
 	} else if endpoint.pathName == "weekly" {
@@ -110,6 +122,23 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 		if _, hasStart := body["dateRangeStart"]; hasStart {
 			if _, hasEnd := body["dateRangeEnd"]; hasEnd {
 				body["dateRangeType"] = "ABSOLUTE"
+			}
+		}
+	}
+	// H3/L7: validate and coerce human dates (YYYY-MM-DD etc.) to the
+	// format the Clockify reports API requires. Already-ISO values are kept
+	// unchanged for backward compatibility, but malformed date args stop here
+	// with an actionable recovery message.
+	for _, k := range []string{"dateRangeStart", "dateRangeEnd"} {
+		if raw, ok := body[k].(string); ok && raw != "" {
+			t, perr := parseFlexibleDateTime(raw, time.UTC)
+			if perr != nil {
+				if _, clockifyErr := time.Parse("2006-01-02T15:04:05.000", raw); clockifyErr != nil {
+					return nil, fmt.Errorf("could not parse date %q — use YYYY-MM-DD or RFC3339", raw)
+				}
+			}
+			if perr == nil && !strings.Contains(raw, "T") {
+				body[k] = t.Format("2006-01-02T15:04:05.000")
 			}
 		}
 	}
@@ -477,4 +506,48 @@ func snakeReportKeyToCamel(key string) string {
 	default:
 		return key
 	}
+}
+
+// reportAmountMeta pulls per-currency money totals out of a raw reports
+// API body and returns them normalized to MAJOR currency units (raw
+// values are MINOR units / cents). Rounding to 2dp also removes
+// repeating-decimal artifacts. Returns nil when no totals are present.
+func reportAmountMeta(data any) map[string]any {
+	body, ok := data.(map[string]any)
+	if !ok {
+		return nil
+	}
+	totals, ok := body["totals"].([]any)
+	if !ok || len(totals) == 0 {
+		return nil
+	}
+	first, ok := totals[0].(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := map[string]any{}
+	if byCur, ok := first["totalAmountByCurrency"].([]any); ok {
+		list := make([]map[string]any, 0, len(byCur))
+		for _, c := range byCur {
+			m, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			cents, _ := reportNumber(m["amount"])
+			list = append(list, map[string]any{
+				"currency":    m["currency"],
+				"amountCents": cents,
+				"amount":      math.Round(cents) / 100,
+			})
+		}
+		out["byCurrency"] = list
+	}
+	if cents, ok := reportNumber(first["totalAmount"]); ok {
+		out["totalAmountCents"] = cents
+		out["totalAmount"] = math.Round(cents) / 100
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
