@@ -568,7 +568,19 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_audit_logs_search":
 		return entityArrayDataSchema("action", "timestamp", "userId", "userEmail", "userName", "content", "previousContent", "workspaceId")
 	case "clockify_entity_changes_list":
-		return entityArrayDataSchema("id", "documentCode", "auditMetadata", "document", "deletedAt")
+		return map[string]any{
+			"type": "array",
+			"items": objectDataSchema(map[string]any{
+				"id":           map[string]any{"type": "string"},
+				"documentCode": map[string]any{"type": "string", "description": "Entity type code, e.g. PROJECTS."},
+				"auditMetadata": objectDataSchema(map[string]any{
+					"createdAt": map[string]any{"type": "string", "description": "When the entity was created (ISO 8601)."},
+					"updatedAt": map[string]any{"type": "string", "description": "When the entity was last updated (ISO 8601)."},
+				}),
+				"document":  map[string]any{"description": "The entity document; fields vary by entity type."},
+				"deletedAt": map[string]any{"type": "string", "description": "Deletion timestamp; present on the deleted feed."},
+			}),
+		}
 	case "clockify_api_get", "clockify_api_request":
 		// Raw API fallback tools return whatever the Clockify endpoint
 		// produced, so there is no typed data schema to advertise.

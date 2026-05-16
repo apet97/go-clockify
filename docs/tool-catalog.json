@@ -49930,10 +49930,11 @@
             "type": "array"
           },
           "author_ids": {
-            "description": "User IDs whose actions to match. Use \"SYSTEM\" to include system-generated audit entries.",
+            "description": "User IDs whose actions to match; at least one is required. Use \"SYSTEM\" to include system-generated audit entries.",
             "items": {
               "type": "string"
             },
+            "minItems": 1,
             "type": "array"
           },
           "authors_contains": {
@@ -49945,16 +49946,16 @@
             "type": "string"
           },
           "end": {
-            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now') The start-to-end window must not exceed 31 days; split longer periods into separate calls.",
             "type": "string"
           },
           "page": {
-            "description": "Result page (Clockify audit-log default 1).",
-            "minimum": 0,
+            "description": "Result page, 1-indexed (Clockify audit-log default 1).",
+            "minimum": 1,
             "type": "integer"
           },
           "start": {
-            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now') The start-to-end window must not exceed 31 days; split longer periods into separate calls.",
             "type": "string"
           }
         },
@@ -50260,7 +50261,9 @@
         },
         "required": [
           "change_type",
-          "entity_types"
+          "entity_types",
+          "start",
+          "end"
         ],
         "type": "object"
       },
@@ -50369,11 +50372,34 @@
             "items": {
               "additionalProperties": true,
               "properties": {
-                "auditMetadata": {},
-                "deletedAt": {},
-                "document": {},
-                "documentCode": {},
-                "id": {}
+                "auditMetadata": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "createdAt": {
+                      "description": "When the entity was created (ISO 8601).",
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "description": "When the entity was last updated (ISO 8601).",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "deletedAt": {
+                  "description": "Deletion timestamp; present on the deleted feed.",
+                  "type": "string"
+                },
+                "document": {
+                  "description": "The entity document; fields vary by entity type."
+                },
+                "documentCode": {
+                  "description": "Entity type code, e.g. PROJECTS.",
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
               },
               "type": "object"
             },

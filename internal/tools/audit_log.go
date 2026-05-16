@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/mcp"
 	"github.com/apet97/go-clockify/internal/paths"
@@ -64,24 +65,25 @@ func auditLogsSearchSchema() map[string]any {
 			},
 			"author_ids": map[string]any{
 				"type":        "array",
+				"minItems":    1,
 				"items":       map[string]any{"type": "string"},
-				"description": `User IDs whose actions to match. Use "SYSTEM" to include system-generated audit entries.`,
+				"description": `User IDs whose actions to match; at least one is required. Use "SYSTEM" to include system-generated audit entries.`,
 			},
 			"authors_contains": map[string]any{
 				"type":        "string",
 				"enum":        []string{"CONTAINS", "DOES_NOT_CONTAIN"},
 				"description": "Treat author_ids as an include (CONTAINS) or exclude (DOES_NOT_CONTAIN) filter. Default CONTAINS.",
 			},
-			"start": map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			"end":   map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			"page":  map[string]any{"type": "integer", "minimum": 0, "description": "Result page (Clockify audit-log default 1)."},
+			"start": map[string]any{"type": "string", "description": flexibleDatetimeDescription + " The start-to-end window must not exceed 31 days; split longer periods into separate calls."},
+			"end":   map[string]any{"type": "string", "description": flexibleDatetimeDescription + " The start-to-end window must not exceed 31 days; split longer periods into separate calls."},
+			"page":  map[string]any{"type": "integer", "minimum": 1, "description": "Result page, 1-indexed (Clockify audit-log default 1)."},
 		},
 	})
 }
 
 func entityChangesListSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"required": []string{"change_type", "entity_types"},
+		"required": []string{"change_type", "entity_types", "start", "end"},
 		"properties": map[string]any{
 			"change_type": map[string]any{
 				"type":        "string",
@@ -132,6 +134,14 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 	startTime, endTime, err := parseRangeInLocation(args, s.location())
 	if err != nil {
 		return ResultEnvelope{}, err
+	}
+	// The Clockify audit-log API rejects windows wider than 31 days with an
+	// opaque 400. Catch it here with a recovery instruction instead.
+	const auditLogMaxRangeDays = 31
+	if endTime.Sub(startTime) > auditLogMaxRangeDays*24*time.Hour {
+		return ResultEnvelope{}, fmt.Errorf(
+			"audit log date range of %.0f days exceeds the Clockify maximum of %d days; split the request into %d-day windows",
+			endTime.Sub(startTime).Hours()/24, auditLogMaxRangeDays, auditLogMaxRangeDays)
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -187,38 +197,36 @@ func (s *Service) EntityChangesList(ctx context.Context, args map[string]any) (R
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	loc := s.location()
+	// start/end are required (Axiom 14: the resolved date range must be
+	// explicit). parseRangeInLocation also enforces end > start.
+	startTime, endTime, err := parseRangeInLocation(args, s.location())
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	query := url.Values{}
 	for _, entityType := range entityTypes {
 		query.Add("type", entityType)
 	}
-	if raw := strings.TrimSpace(stringArg(args, "start")); raw != "" {
-		t, err := timeparse.ParseDatetime(raw, loc)
-		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
-		}
-		query.Set("start", timeparse.FormatISO(t))
-	}
-	if raw := strings.TrimSpace(stringArg(args, "end")); raw != "" {
-		t, err := timeparse.ParseDatetime(raw, loc)
-		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
-		}
-		query.Set("end", timeparse.FormatISO(t))
-	}
+	query.Set("start", timeparse.FormatISO(startTime))
+	query.Set("end", timeparse.FormatISO(endTime))
+	page := intArg(args, "page", 0)
+	limit := intArg(args, "limit", 50)
 	if _, present := args["page"]; present {
-		query.Set("page", strconv.Itoa(intArg(args, "page", 0)))
+		query.Set("page", strconv.Itoa(page))
 	}
 	if _, present := args["limit"]; present {
-		query.Set("limit", strconv.Itoa(intArg(args, "limit", 50)))
+		query.Set("limit", strconv.Itoa(limit))
 	}
 	var changes []map[string]any
 	if err := s.Client.GetValues(ctx, path, query, &changes); err != nil {
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_entity_changes_list", changes, map[string]any{
-		"workspaceId": wsID,
-		"changeType":  changeType,
-		"count":       len(changes),
+		"workspaceId":   wsID,
+		"changeType":    changeType,
+		"count":         len(changes),
+		"page":          page,
+		"limit":         limit,
+		"has_more_hint": len(changes) == limit,
 	}), nil
 }

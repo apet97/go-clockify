@@ -30,10 +30,24 @@ func TestAuditLogsSearchSchemaIsTyped(t *testing.T) {
 	if enum, _ := items["enum"].([]string); len(enum) == 0 {
 		t.Fatal("actions items must carry the audit-log action enum")
 	}
+	authorIDs, _ := props["author_ids"].(map[string]any)
+	if mi, _ := authorIDs["minItems"].(int); mi != 1 {
+		t.Fatalf("author_ids minItems = %v, want 1 (the field is required, so an empty array is an invalid state)", authorIDs["minItems"])
+	}
 }
 
 func TestEntityChangesListSchemaIsTyped(t *testing.T) {
 	schema := entityChangesListSchema()
+	required, _ := schema["required"].([]string)
+	wantRequired := map[string]bool{"change_type": true, "entity_types": true, "start": true, "end": true}
+	if len(required) != len(wantRequired) {
+		t.Fatalf("required = %v, want %v (start/end must be explicit)", required, wantRequired)
+	}
+	for _, field := range required {
+		if !wantRequired[field] {
+			t.Fatalf("unexpected required field %q", field)
+		}
+	}
 	props, _ := schema["properties"].(map[string]any)
 	changeType, _ := props["change_type"].(map[string]any)
 	enum, _ := changeType["enum"].([]string)
@@ -113,6 +127,8 @@ func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
 	env, err := svc.EntityChangesList(context.Background(), map[string]any{
 		"change_type":  "created",
 		"entity_types": []any{"TIME_ENTRY", "PROJECTS"},
+		"start":        "2026-05-01",
+		"end":          "2026-05-15",
 	})
 	if err != nil {
 		t.Fatalf("EntityChangesList: %v", err)
@@ -123,11 +139,53 @@ func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
 	if !strings.Contains(gotQuery, "type=TIME_ENTRY") || !strings.Contains(gotQuery, "type=PROJECTS") {
 		t.Fatalf("query = %s, want repeated type params", gotQuery)
 	}
+	if !strings.Contains(gotQuery, "start=") || !strings.Contains(gotQuery, "end=") {
+		t.Fatalf("query = %s, want explicit start/end params", gotQuery)
+	}
 	if !env.OK || env.Meta["changeType"] != "created" {
 		t.Fatalf("envelope = %+v", env)
 	}
 	if got, _ := env.Meta["count"].(int); got != 1 {
 		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
+	}
+	if _, ok := env.Meta["has_more_hint"]; !ok {
+		t.Fatalf("meta missing has_more_hint: %+v", env.Meta)
+	}
+	if env.Meta["page"] == nil || env.Meta["limit"] == nil {
+		t.Fatalf("meta missing page/limit pagination signal: %+v", env.Meta)
+	}
+}
+
+// TestAuditLogsSearchRejectsOverlongRange locks the client-side 31-day guard:
+// Clockify's audit-log API hard-rejects wider windows with an opaque 400, so
+// the tool fails early with a recovery instruction instead. [audit P3-1]
+func TestAuditLogsSearchRejectsOverlongRange(t *testing.T) {
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	_, err := svc.AuditLogsSearch(context.Background(), map[string]any{
+		"actions":    []any{"CREATE_PROJECT"},
+		"author_ids": []any{"65b382b606de527a7ee2b622"},
+		"start":      "2026-01-01",
+		"end":        "2026-03-01",
+	})
+	if err == nil {
+		t.Fatal("expected an error for a date range wider than 31 days")
+	}
+	if !strings.Contains(err.Error(), "31") {
+		t.Fatalf("error should cite the 31-day maximum: %v", err)
+	}
+}
+
+// TestEntityChangesListRequiresDateRange locks N-2: start/end are required so
+// the call never silently fetches an unbounded entity-change history.
+func TestEntityChangesListRequiresDateRange(t *testing.T) {
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	if _, err := svc.EntityChangesList(context.Background(), map[string]any{
+		"change_type":  "created",
+		"entity_types": []any{"TIME_ENTRY"},
+	}); err == nil {
+		t.Fatal("expected an error when start/end are omitted")
 	}
 }
 
