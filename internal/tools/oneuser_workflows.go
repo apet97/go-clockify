@@ -523,12 +523,15 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 		}
 		imported, importErr := s.importInvoiceTimeOneUser(ctx, importArgs)
 		if importErr != nil {
-			standard.Warnings = append(standard.Warnings, Warning{Code: "invoice_import_failed", Message: importErr.Error()})
-		} else {
-			standard.Data = map[string]any{
-				"invoice": standard.Data,
-				"import":  standardizeDomainResult("clockify_invoices_import_time", "invoice_item", "updated", imported, importArgs),
-			}
+			return recoverable("clockify_invoice_client_work", importErr, RecoveryHint{
+				Hint: fmt.Sprintf("Invoice %s was created, but importing the time entries failed, so the invoice total is still 0. Retry the import with clockify_invoices_import_time, or add line items manually with clockify_invoices_items_add.", invoiceID),
+				Tool: "clockify_invoices_import_time",
+				Args: importArgs,
+			}), nil
+		}
+		standard.Data = map[string]any{
+			"invoice": standard.Data,
+			"import":  standardizeDomainResult("clockify_invoices_import_time", "invoice_item", "updated", imported, importArgs),
 		}
 	}
 	standard.Next = []NextAction{

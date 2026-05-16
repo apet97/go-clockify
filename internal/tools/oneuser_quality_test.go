@@ -336,6 +336,28 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 	}
 }
 
+func TestInvoiceClientWorkImportFailureReturnsRecoverableError(t *testing.T) {
+	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	defer fake.Close()
+	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
+	svc := New(client, fake.WorkspaceID)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	initializeServer(t, server)
+
+	clientResult := callToolOK(t, server, "clockify_clients_create", map[string]any{"name": "Import Failure Client"})
+	invoiceImport := callToolError(t, server, "clockify_invoice_client_work", map[string]any{
+		"client_id":      clientResult.IDs["clientId"],
+		"number":         "INV-IMPORT-FAIL",
+		"time_entry_ids": []any{"65b382b606de527a7ee2b615"},
+	})
+	if invoiceImport.Error.Code == "" || invoiceImport.Recovery.Tool != "clockify_invoices_import_time" {
+		t.Fatalf("bad invoice import failure envelope: %+v", invoiceImport)
+	}
+	if invoiceImport.Recovery.Args["invoice_id"] == "" {
+		t.Fatalf("invoice import recovery missing created invoice id: %+v", invoiceImport.Recovery.Args)
+	}
+}
+
 func TestOneUserDocsAvoidRemovedToolNames(t *testing.T) {
 	for _, path := range []string{
 		"../../README.md",
@@ -997,10 +1019,10 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_scheduling_project_totals":     {"projectId", "totals"},
 		"clockify_scheduling_user_totals":        {"id"},
 		"clockify_scheduling_capacity":           {"id"},
-		"clockify_reports_attendance":            {"id"},
-		"clockify_reports_money":                 {"id"},
-		"clockify_reports_expense":               {"id"},
-		"clockify_reports_export":                {"contentType", "filename", "bytes", "bodyEncoding", "base64Bytes", "truncated"},
+		"clockify_reports_attendance":            {"workspaceId"},
+		"clockify_reports_money":                 {"workspaceId"},
+		"clockify_reports_expense":               {"workspaceId"},
+		"clockify_reports_export":                {"workspaceId"},
 		"clockify_approvals_list":                {"approvalId", "status"},
 		"clockify_approvals_get":                 {"approvalId", "status"},
 		"clockify_approvals_submit":              {"approvalId", "status"},
@@ -1508,17 +1530,14 @@ func TestOneUserStatusIsUsefulFirstCall(t *testing.T) {
 	if data.User.ID == "" || data.User.Name == "" || data.User.Email == "" {
 		t.Fatalf("status missing user identity: %+v", data.User)
 	}
-	if data.PinnedWorkspace.ID != fake.WorkspaceID || data.PinnedWorkspace.Name == "" {
-		t.Fatalf("status missing pinned workspace: %+v", data.PinnedWorkspace)
+	if data.Workspace.ID != fake.WorkspaceID || data.Workspace.Name == "" {
+		t.Fatalf("status missing workspace: %+v", data.Workspace)
 	}
 	if data.ActiveWorkspaceID == "" || data.DefaultWorkspaceID == "" {
 		t.Fatalf("status missing active/default workspace: %+v", data)
 	}
 	if data.Timezone != "UTC" || data.WeekStart == "" {
 		t.Fatalf("status missing timezone/week start: %+v", data)
-	}
-	if len(data.WorkspaceFeatures) == 0 {
-		t.Fatalf("status missing raw workspace features: %+v", data)
 	}
 	for _, feature := range []string{"invoices", "expenses", "customFields", "timeOff", "scheduling", "approvals", "webhooks", "reports", "groups", "holidays", "sharedReports"} {
 		if data.FeatureStatus[feature] == "" {
@@ -2931,6 +2950,10 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return oneUserCoverageID(name + "_id")
 	case "date":
 		return "2026-01-02"
+	case "date_range_start":
+		return "2026-01-02"
+	case "date_range_end":
+		return "2026-01-03"
 	case "start", "start_time":
 		return "2026-01-02T09:00:00Z"
 	case "end", "end_time":

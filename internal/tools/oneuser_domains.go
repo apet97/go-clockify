@@ -521,10 +521,6 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	specs := []routeTool{
 		rt(39, "GET", "clockify_projects_memberships_list", "List project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
-		reportRT(100, "clockify_reports_attendance", "Run the attendance report.", "reports/attendance"),
-		reportRT(101, "clockify_reports_money", "Run the money summary report.", "reports/summary"),
-		reportRT(102, "clockify_reports_expense", "Run the detailed expense report.", "reports/expenses/detailed"),
-		reportRT(103, "clockify_reports_export", "Export a report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.", "reports/detailed"),
 	}
 	out := make([]mcp.ToolDescriptor, 0, len(specs))
 	for _, spec := range specs {
@@ -534,7 +530,7 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(100, toolRO("clockify_reports_attendance", "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.AttendanceReport),
 		nativeDomainTool(101, toolRO("clockify_reports_money", "Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.MoneyReport),
 		nativeDomainTool(102, toolRO("clockify_reports_expense", "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.ExpenseReport),
-		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON returns the decoded object; PDF/CSV/XLSX return a safe binary envelope. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.DetailedReport),
+		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes.", reportInputSchema()), "report", "", s.DetailedReport),
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
@@ -1437,7 +1433,7 @@ func reportHelperSchema() map[string]any {
 		"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"project":         map[string]any{"type": "string"},
 		"include_entries": map[string]any{"type": "boolean"},
-		"max_entries":     map[string]any{"type": "integer", "minimum": 0},
+		"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit."},
 		"week_start":      map[string]any{"type": "string", "description": "YYYY-MM-DD or RFC3339 week start."},
 		"timezone":        map[string]any{"type": "string"},
 	}})

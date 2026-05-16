@@ -131,7 +131,7 @@ func compactUpstreamErrorBody(body string) (string, bool) {
 	if payload.Code == nil {
 		return message, true
 	}
-	return fmt.Sprintf("%s (upstream_code=%v)", message, payload.Code), true
+	return fmt.Sprintf("%s (clockify_error_code=%v)", message, payload.Code), true
 }
 
 func redactSensitiveErrorBody(body string) string {

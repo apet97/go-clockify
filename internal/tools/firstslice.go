@@ -76,13 +76,11 @@ type RecoveryHint struct {
 type statusData struct {
 	User                  clockify.User      `json:"user"`
 	Workspace             clockify.Workspace `json:"workspace"`
-	PinnedWorkspace       clockify.Workspace `json:"pinnedWorkspace"`
 	ActiveWorkspaceID     string             `json:"activeWorkspaceId,omitempty"`
 	DefaultWorkspaceID    string             `json:"defaultWorkspaceId,omitempty"`
 	Timezone              string             `json:"timezone"`
 	WeekStart             string             `json:"weekStart,omitempty"`
 	CurrentTimer          any                `json:"currentTimer,omitempty"`
-	WorkspaceFeatures     []string           `json:"workspaceFeatures,omitempty"`
 	FeatureSubscription   string             `json:"featureSubscriptionType,omitempty"`
 	FeatureStatus         map[string]string  `json:"featureStatus"`
 	RecommendedFirstTools []string           `json:"recommendedFirstTools"`
@@ -776,6 +774,8 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		return RecoveryHint{Hint: "List clients, projects, tasks, or tags, then retry with returned IDs or exact names.", Tool: "clockify_tools_guide"}
 	case strings.Contains(action, "log_work"), strings.Contains(action, "start_work"), strings.Contains(action, "stop_work"), strings.Contains(action, "switch_work"), strings.Contains(action, "fix_entry"), strings.Contains(action, "review_day"), strings.Contains(action, "review_week"):
 		return RecoveryHint{Hint: "Check the entry, project, task, tag, and time fields; use returned IDs or exact names.", Tool: "clockify_review_day"}
+	case strings.Contains(action, "reports_"), strings.Contains(action, "_report"):
+		return RecoveryHint{Hint: "Reports need an explicit date range. Pass date_range_start and date_range_end as YYYY-MM-DD (the money and summary reports also accept an optional summary_filter object). The weekly report needs start and end exactly 7 days apart.", Tool: "clockify_reports_summary"}
 	case strings.Contains(action, "invoice"):
 		return RecoveryHint{Hint: "If invoicing is unavailable, report that and continue. Otherwise list clients or invoices, then retry with returned IDs.", Tool: "clockify_invoices_list"}
 	case strings.Contains(action, "expense"):
@@ -786,13 +786,13 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		// The schedule_work workflow tool fails on an invalid project/user
 		// ID; listing existing assignments does not resolve those, so route
 		// to the project list (then resolve the user) — not the domain tool.
-		return RecoveryHint{Hint: "If scheduling is unavailable, report that and continue. Otherwise list projects and users, then retry clockify_schedule_work with the returned IDs.", Tool: "clockify_projects_list"}
+		return RecoveryHint{Hint: "Scheduling writes can return 403 even for the workspace owner — Clockify may require a manager/admin role or a published schedule. If scheduling is unavailable, report that and continue. Otherwise verify the project and user IDs, then retry.", Tool: "clockify_projects_list"}
 	case strings.Contains(action, "scheduling"):
 		// The clockify_scheduling_* domain family. The substring is
 		// "scheduling", not "schedule": the workflow tool above is the only
 		// "schedule" action, and the domain tools never contain it — so a
 		// "schedule" substring here would have matched nothing.
-		return RecoveryHint{Hint: "If scheduling is unavailable, report that and continue. Otherwise list users/projects and retry with returned IDs.", Tool: "clockify_scheduling_assignments_list"}
+		return RecoveryHint{Hint: "Scheduling writes can return 403 even for the workspace owner — Clockify may require a manager/admin role or a published schedule. If scheduling is unavailable, report that and continue. Otherwise list users/projects and retry with returned IDs.", Tool: "clockify_scheduling_assignments_list"}
 	case strings.Contains(action, "webhook"):
 		return RecoveryHint{Hint: "If webhooks are unavailable, report that and continue. Otherwise verify the HTTPS callback URL and event, then retry.", Tool: "clockify_webhooks_events"}
 	case strings.Contains(action, "projects"):
@@ -840,13 +840,11 @@ func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, er
 	}, statusData{
 		User:                  user,
 		Workspace:             workspace,
-		PinnedWorkspace:       workspace,
 		ActiveWorkspaceID:     user.ActiveWorkspace,
 		DefaultWorkspaceID:    user.DefaultWorkspace,
 		Timezone:              s.timezoneName(),
 		WeekStart:             statusWeekStart(workspace, user),
 		CurrentTimer:          currentTimer,
-		WorkspaceFeatures:     append([]string(nil), workspace.Features...),
 		FeatureSubscription:   workspace.FeatureSubscriptionType,
 		FeatureStatus:         featureStatus,
 		RecommendedFirstTools: []string{"clockify_tools_guide", "clockify_create_work_package", "clockify_log_work", "clockify_start_work", "clockify_review_day"},

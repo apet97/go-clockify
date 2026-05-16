@@ -189,7 +189,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"unit_price":      map[string]any{"type": "number", "description": "Unit price. Defaults to minor units/cents (e.g. 12500 for $125.00); pass unit_price_unit:\"major\" to send major currency units instead."},
 				"unit_price_unit": invoiceMinorUnitSchema("unit_price"),
 				"apply_taxes":     map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
-				"item_type":       map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)"},
+				"item_type":       map[string]any{"type": "string", "description": "Invoice item type name as configured in the workspace's invoice settings (required by the Clockify API)."},
 				"dry_run":         map[string]any{"type": "boolean", "description": "Preview the invoice item request without making changes"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {

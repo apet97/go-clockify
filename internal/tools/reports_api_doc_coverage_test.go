@@ -17,12 +17,17 @@ func TestReportRouteSchemasExposeCurrentOneUserFields(t *testing.T) {
 	} {
 		t.Run(tool, func(t *testing.T) {
 			props := schemaProperties(t, descriptors[tool], tool)
-			for _, key := range []string{"date_range_start", "date_range_end", "start", "end", "export_type", "body"} {
+			for _, key := range []string{"date_range_start", "date_range_end", "start", "end", "export_type"} {
 				if _, ok := props[key]; !ok {
-					t.Fatalf("%s missing current report route property %s", tool, key)
+					t.Fatalf("%s missing current report property %s", tool, key)
 				}
 			}
-			for _, stale := range []string{"summary_filter", "detailed_filter", "attendance_filter", "weekly_filter"} {
+			for _, key := range []string{"summary_filter", "detailed_filter", "attendance_filter"} {
+				if _, ok := props[key]; !ok {
+					t.Fatalf("%s missing current report filter property %s", tool, key)
+				}
+			}
+			for _, stale := range []string{"weekly_filter", "body"} {
 				if _, ok := props[stale]; ok {
 					t.Fatalf("%s must not expose removed legacy report filter %s", tool, stale)
 				}

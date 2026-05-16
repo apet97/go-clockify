@@ -59,6 +59,9 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 					t.Fatalf("create_expense missing required field %q (form=%v)", field, r.Form)
 				}
 			}
+			if got := r.FormValue("date"); got != "2026-04-11T00:00:00Z" {
+				t.Fatalf("create_expense date = %q, want normalized RFC3339", got)
+			}
 			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 200})
 		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			ct := r.Header.Get("Content-Type")
@@ -107,6 +110,7 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	client, cleanup := newTestClient(t, mux.ServeHTTP)
 	defer cleanup()
 	svc := New(client, "ws1")
+	svc.DefaultTimezone = time.UTC
 	ctx := context.Background()
 
 	// listExpenses
