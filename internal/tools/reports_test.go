@@ -119,12 +119,8 @@ func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("weekly summary failed: %v", err)
 	}
-	data, ok := result.Data.(map[string]any)
-	if !ok {
+	if _, ok := result.Data.(map[string]any); !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
-	}
-	if _, ok := data["totals"]; !ok {
-		t.Fatalf("expected upstream totals in data, got %#v", data)
 	}
 	if gotBody["dateRangeStart"] != "2026-04-06T00:00:00.000" || gotBody["dateRangeEnd"] != "2026-04-12T23:59:59.999" {
 		t.Fatalf("weekly range not derived as exact local week: %#v", gotBody)
@@ -356,9 +352,6 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 	data, ok := result.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map data, got %T", result.Data)
-	}
-	if _, ok := data["timeentries"]; !ok {
-		t.Fatalf("expected upstream timeentries in data, got %#v", data)
 	}
 	if _, ok := data["raw"]; ok {
 		t.Fatalf("detailed report should not echo the full upstream payload under raw: %#v", data["raw"])

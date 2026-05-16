@@ -70,6 +70,13 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		if entryCount >= reportPageSize {
 			meta["next_hint"] = "result hit the row cap — narrow the date range to see all rows"
 		}
+		if lim := s.reportLimitsForArgs(args); lim.MaxEntriesRequested && lim.AppliedMaxEntries > 0 {
+			if entries, ok := data["entries"].([]ReportEntryView); ok && len(entries) > lim.AppliedMaxEntries {
+				data["entries"] = entries[:lim.AppliedMaxEntries]
+				meta["truncated"] = true
+				meta["normalizedEntries"] = lim.AppliedMaxEntries
+			}
+		}
 	} else if endpoint.pathName == "summary" {
 		meta["normalizedRollups"] = appendSummaryReportViews(data, body)
 	} else if endpoint.pathName == "weekly" {
