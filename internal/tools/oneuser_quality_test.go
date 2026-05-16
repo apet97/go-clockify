@@ -1530,17 +1530,14 @@ func TestOneUserStatusIsUsefulFirstCall(t *testing.T) {
 	if data.User.ID == "" || data.User.Name == "" || data.User.Email == "" {
 		t.Fatalf("status missing user identity: %+v", data.User)
 	}
-	if data.PinnedWorkspace.ID != fake.WorkspaceID || data.PinnedWorkspace.Name == "" {
-		t.Fatalf("status missing pinned workspace: %+v", data.PinnedWorkspace)
+	if data.Workspace.ID != fake.WorkspaceID || data.Workspace.Name == "" {
+		t.Fatalf("status missing workspace: %+v", data.Workspace)
 	}
 	if data.ActiveWorkspaceID == "" || data.DefaultWorkspaceID == "" {
 		t.Fatalf("status missing active/default workspace: %+v", data)
 	}
 	if data.Timezone != "UTC" || data.WeekStart == "" {
 		t.Fatalf("status missing timezone/week start: %+v", data)
-	}
-	if len(data.WorkspaceFeatures) == 0 {
-		t.Fatalf("status missing raw workspace features: %+v", data)
 	}
 	for _, feature := range []string{"invoices", "expenses", "customFields", "timeOff", "scheduling", "approvals", "webhooks", "reports", "groups", "holidays", "sharedReports"} {
 		if data.FeatureStatus[feature] == "" {

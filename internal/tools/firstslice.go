@@ -76,13 +76,11 @@ type RecoveryHint struct {
 type statusData struct {
 	User                  clockify.User      `json:"user"`
 	Workspace             clockify.Workspace `json:"workspace"`
-	PinnedWorkspace       clockify.Workspace `json:"pinnedWorkspace"`
 	ActiveWorkspaceID     string             `json:"activeWorkspaceId,omitempty"`
 	DefaultWorkspaceID    string             `json:"defaultWorkspaceId,omitempty"`
 	Timezone              string             `json:"timezone"`
 	WeekStart             string             `json:"weekStart,omitempty"`
 	CurrentTimer          any                `json:"currentTimer,omitempty"`
-	WorkspaceFeatures     []string           `json:"workspaceFeatures,omitempty"`
 	FeatureSubscription   string             `json:"featureSubscriptionType,omitempty"`
 	FeatureStatus         map[string]string  `json:"featureStatus"`
 	RecommendedFirstTools []string           `json:"recommendedFirstTools"`
@@ -842,13 +840,11 @@ func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, er
 	}, statusData{
 		User:                  user,
 		Workspace:             workspace,
-		PinnedWorkspace:       workspace,
 		ActiveWorkspaceID:     user.ActiveWorkspace,
 		DefaultWorkspaceID:    user.DefaultWorkspace,
 		Timezone:              s.timezoneName(),
 		WeekStart:             statusWeekStart(workspace, user),
 		CurrentTimer:          currentTimer,
-		WorkspaceFeatures:     append([]string(nil), workspace.Features...),
 		FeatureSubscription:   workspace.FeatureSubscriptionType,
 		FeatureStatus:         featureStatus,
 		RecommendedFirstTools: []string{"clockify_tools_guide", "clockify_create_work_package", "clockify_log_work", "clockify_start_work", "clockify_review_day"},
