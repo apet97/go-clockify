@@ -336,6 +336,28 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 	}
 }
 
+func TestInvoiceClientWorkImportFailureReturnsRecoverableError(t *testing.T) {
+	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	defer fake.Close()
+	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
+	svc := New(client, fake.WorkspaceID)
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	initializeServer(t, server)
+
+	clientResult := callToolOK(t, server, "clockify_clients_create", map[string]any{"name": "Import Failure Client"})
+	invoiceImport := callToolError(t, server, "clockify_invoice_client_work", map[string]any{
+		"client_id":      clientResult.IDs["clientId"],
+		"number":         "INV-IMPORT-FAIL",
+		"time_entry_ids": []any{"65b382b606de527a7ee2b615"},
+	})
+	if invoiceImport.Error.Code == "" || invoiceImport.Recovery.Tool != "clockify_invoices_import_time" {
+		t.Fatalf("bad invoice import failure envelope: %+v", invoiceImport)
+	}
+	if invoiceImport.Recovery.Args["invoice_id"] == "" {
+		t.Fatalf("invoice import recovery missing created invoice id: %+v", invoiceImport.Recovery.Args)
+	}
+}
+
 func TestOneUserDocsAvoidRemovedToolNames(t *testing.T) {
 	for _, path := range []string{
 		"../../README.md",
