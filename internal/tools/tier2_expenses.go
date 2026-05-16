@@ -250,6 +250,13 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	if date == "" {
 		return ResultEnvelope{}, fmt.Errorf("date is required")
 	}
+	loc, err := s.locationFromArgs(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if _, err := parseFlexibleDateTime(date, loc); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
+	}
 	categoryID := stringArg(args, "category_id")
 	if categoryID == "" {
 		return ResultEnvelope{}, fmt.Errorf("category_id is required")
@@ -464,6 +471,15 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	}
 	if err := validateUpdateExpenseChangedValues(changeFields, args); err != nil {
 		return ResultEnvelope{}, err
+	}
+	if date := stringArg(args, "date"); date != "" {
+		loc, err := s.locationFromArgs(args)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		if _, err := parseFlexibleDateTime(date, loc); err != nil {
+			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
+		}
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

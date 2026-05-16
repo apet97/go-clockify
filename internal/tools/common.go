@@ -891,11 +891,11 @@ func parseRangeInLocation(args map[string]any, loc *time.Location) (time.Time, t
 	}
 	start, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("invalid start: %w", err)
+		return time.Time{}, time.Time{}, fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", startRaw)
 	}
 	end, err := timeparse.ParseDatetime(endRaw, loc)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("invalid end: %w", err)
+		return time.Time{}, time.Time{}, fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
 	}
 	if !end.After(start) && isBareDateString(endRaw) {
 		end = end.AddDate(0, 0, 1)

@@ -1528,13 +1528,13 @@ func (s *Service) buildEntryPayload(ctx context.Context, args map[string]any) (m
 	loc := s.location()
 	startTime, err := timeparse.ParseDatetime(startRaw, loc)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid start: %w", err)
+		return nil, nil, fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", startRaw)
 	}
 	payload := map[string]any{"start": timeparse.FormatISO(startTime)}
 	if endRaw := strings.TrimSpace(stringArg(args, "end")); endRaw != "" {
 		endTime, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid end: %w", err)
+			return nil, nil, fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
 		}
 		if !endTime.After(startTime) {
 			return nil, nil, fmt.Errorf("end must be after start")

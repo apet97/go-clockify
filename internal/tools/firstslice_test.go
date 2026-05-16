@@ -430,3 +430,11 @@ func requireCreated(t *testing.T, result ToolResult, entity string) {
 	}
 	t.Fatalf("created %s missing from change set: %+v", entity, result.Changed)
 }
+
+func TestEntriesCreate_RejectsGarbageDate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	_, _, err := svc.buildEntryPayload(context.Background(), map[string]any{"start": "last tuesday"})
+	if err == nil || !strings.Contains(err.Error(), "could not parse date") {
+		t.Fatalf("expected could not parse date error, got %v", err)
+	}
+}

@@ -195,7 +195,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if startRaw := stringArg(args, "start"); startRaw != "" {
 		t, err := timeparse.ParseDatetime(startRaw, loc)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
+			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", startRaw)
 		}
 		formatted := timeparse.FormatISO(t)
 		if formatted != existing.TimeInterval.Start {
@@ -208,7 +208,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if endRaw := stringArg(args, "end"); endRaw != "" {
 		t, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
+			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
 		}
 		formatted := timeparse.FormatISO(t)
 		if formatted != existing.TimeInterval.End {

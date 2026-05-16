@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func readBody(t *testing.T, r *http.Request) string {
@@ -829,5 +832,29 @@ func TestListExpenseCategories_PaginationMeta(t *testing.T) {
 	}
 	if items[0]["id"] == secondItems[0]["id"] {
 		t.Fatalf("page 2 did not advance: page1=%#v page2=%#v", items, secondItems)
+	}
+}
+
+func TestCreateExpense_RejectsGarbageDate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	_, err := svc.createExpense(context.Background(), map[string]any{
+		"amount":      1.0,
+		"date":        "last tuesday",
+		"category_id": "cat1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "could not parse date") {
+		t.Fatalf("expected could not parse date error, got %v", err)
+	}
+}
+
+func TestUpdateExpense_RejectsGarbageDate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	_, err := svc.updateExpense(context.Background(), map[string]any{
+		"expense_id":    "exp1",
+		"change_fields": []any{"DATE"},
+		"date":          "last tuesday",
+	})
+	if err == nil || !strings.Contains(err.Error(), "could not parse date") {
+		t.Fatalf("expected could not parse date error, got %v", err)
 	}
 }
