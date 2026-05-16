@@ -263,7 +263,7 @@ func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any)
 }
 
 func (s *Service) ClockifyStartWork(ctx context.Context, args map[string]any) (any, error) {
-	startArgs, err := s.prepareStartWorkArgs(ctx, args)
+	startArgs, startDefaulted, err := s.prepareStartWorkArgs(ctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -271,10 +271,15 @@ func (s *Service) ClockifyStartWork(ctx context.Context, args map[string]any) (a
 	if err != nil {
 		return nil, err
 	}
+	meta := map[string]any{}
+	if startDefaulted {
+		meta["startWasDefaulted"] = true
+		meta["resolvedStart"] = startArgs["start"]
+	}
 	return result("clockify_start_work", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, nil, []NextAction{
 		{Tool: "clockify_stop_work", Reason: "Stop this timer when the work session is finished."},
 		{Tool: "clockify_switch_work", Reason: "Switch to another project/task without manually stopping first."},
-	}), nil
+	}, meta), nil
 }
 
 func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (any, error) {
@@ -311,9 +316,16 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 
 func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (any, error) {
 	warnings := []Warning{}
-	startArgs, err := s.prepareStartWorkArgs(ctx, args)
+	startArgs, startDefaulted, err := s.prepareStartWorkArgs(ctx, args)
 	if err != nil {
 		return nil, err
+	}
+	// meta echoes a defaulted start so the model never has to guess whether
+	// the resolved start time came from the caller or from time.Now().
+	meta := map[string]any{}
+	if startDefaulted {
+		meta["startWasDefaulted"] = true
+		meta["resolvedStart"] = startArgs["start"]
 	}
 	stopped, stopErr := s.ClockifyStopWork(ctx, map[string]any{})
 	if stopErr != nil {
@@ -328,11 +340,12 @@ func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (
 			warnings = append(warnings, Warning{Code: "partial_failure", Message: "Stopped the previous timer but could not start the new one."})
 		}
 		return result("clockify_switch_work", "entry", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+			"status":  "partial_failure",
 			"stopped": stopped,
 			"error":   err.Error(),
 		}, ChangeSet{Updated: refsFromToolResult(stopped)}, warnings, []NextAction{
 			{Tool: "clockify_start_work", Args: startArgs, Reason: "Retry starting the target timer after fixing the error."},
-		}), nil
+		}, meta), nil
 	}
 	startResult, _ := started.(ToolResult)
 	ids := map[string]string{"workspaceId": s.WorkspaceID}
@@ -340,19 +353,25 @@ func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (
 		ids[k] = v
 	}
 	return result("clockify_switch_work", "entry", ids, map[string]any{
+		"status":  "ok",
 		"stopped": stopped,
 		"started": started,
 	}, ChangeSet{Created: startResult.Changed.Created, Updated: refsFromToolResult(stopped)}, warnings, []NextAction{
 		{Tool: "clockify_stop_work", Reason: "Stop the newly started timer when finished."},
-	}), nil
+	}, meta), nil
 }
 
-func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any) (map[string]any, error) {
+// prepareStartWorkArgs resolves caller args into the shape createEntry
+// expects. The returned bool reports whether `start` was absent and
+// defaulted to now, so the caller can echo the resolved value (Axiom 22).
+func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any) (map[string]any, bool, error) {
 	startArgs := copyArgs(args)
+	startDefaulted := false
 	if strings.TrimSpace(stringArg(startArgs, "start")) == "" {
 		startArgs["start"] = time.Now().UTC().Format(time.RFC3339)
+		startDefaulted = true
 	} else if _, err := timeparse.ParseDatetime(stringArg(startArgs, "start"), s.location()); err != nil {
-		return nil, fmt.Errorf("invalid start: %w", err)
+		return nil, false, fmt.Errorf("invalid start: %w", err)
 	}
 	delete(startArgs, "end")
 
@@ -361,27 +380,27 @@ func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any)
 		if project := strings.TrimSpace(stringArg(startArgs, "project")); project != "" {
 			resolved, err := s.resolveProjectID(ctx, s.WorkspaceID, project)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			projectID = resolved
 			startArgs["project_id"] = resolved
 			delete(startArgs, "project")
 		}
 	} else if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if taskID := strings.TrimSpace(stringArg(startArgs, "task_id")); taskID != "" {
 		if err := resolve.ValidateID(taskID, "task_id"); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	} else if task := strings.TrimSpace(stringArg(startArgs, "task")); task != "" {
 		if projectID == "" {
-			return nil, fmt.Errorf("project_id or project is required when resolving task by name")
+			return nil, false, fmt.Errorf("project_id or project is required when resolving task by name")
 		}
 		resolved, err := s.resolveTaskID(ctx, s.WorkspaceID, projectID, task)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		startArgs["task_id"] = resolved
 		delete(startArgs, "task")
@@ -389,14 +408,14 @@ func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any)
 
 	tagIDs, err := s.tagIDsFromArgs(ctx, startArgs)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if len(tagIDs) > 0 {
 		startArgs["tag_ids"] = tagIDs
 		delete(startArgs, "tag")
 	}
 
-	return startArgs, nil
+	return startArgs, startDefaulted, nil
 }
 
 func (s *Service) ClockifyReviewDay(ctx context.Context, args map[string]any) (any, error) {

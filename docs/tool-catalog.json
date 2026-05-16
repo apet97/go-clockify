@@ -2960,6 +2960,14 @@
                 "description": "Result from starting the new timer.",
                 "type": "object"
               },
+              "status": {
+                "description": "ok = the previous timer stopped and the new one started; partial_failure = stopped but the new timer did not start.",
+                "enum": [
+                  "ok",
+                  "partial_failure"
+                ],
+                "type": "string"
+              },
               "stopped": {
                 "description": "Result from stopping the previous timer, when one was running.",
                 "type": "object"

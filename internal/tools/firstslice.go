@@ -320,6 +320,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return schemaFor[FindAndUpdateEntryData]()
 	case "clockify_switch_work":
 		return objectDataSchema(map[string]any{
+			"status":  map[string]any{"type": "string", "enum": []string{"ok", "partial_failure"}, "description": "ok = the previous timer stopped and the new one started; partial_failure = stopped but the new timer did not start."},
 			"stopped": map[string]any{"type": "object", "description": "Result from stopping the previous timer, when one was running."},
 			"started": map[string]any{"type": "object", "description": "Result from starting the new timer."},
 			"error":   map[string]any{"type": "string", "description": "Retryable start error after a previous timer was stopped."},
