@@ -89,25 +89,12 @@ type statusData struct {
 }
 
 func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
+	// clockify_status, clockify_demo_seed, and clockify_demo_cleanup are
+	// registered by workflowDescriptors(), which buildFullAccessRegistry
+	// appends first; dedupeToolDescriptors keeps that (richer, workflow-
+	// annotated) copy, so registering them here too only wasted a cold-
+	// start allocation.
 	descriptors := []mcp.ToolDescriptor{
-		firstSliceDescriptor(0, toolRO("clockify_status", "Show current user, pinned workspace, timezone, features, and current timer.", objectSchema(nil)), s.ClockifyStatus),
-		firstSliceDescriptor(10, toolRWIdem("clockify_demo_seed", "Create or reuse deterministic demo client/project/task/tag/time-entry objects.", objectSchema(map[string]any{
-			"properties": map[string]any{
-				"run_id": map[string]any{"type": "string", "description": "Stable run id. Default: phase1."},
-				"prefix": map[string]any{"type": "string", "description": "Explicit object-name prefix. Default: DEMO-<run_id>."},
-				"date":   map[string]any{"type": "string", "description": "YYYY-MM-DD date for the demo time entry. Default: 2026-01-02."},
-				"upsert": map[string]any{"type": "boolean", "description": "Reuse existing prefixed objects. Default: true."},
-			},
-		})), s.ClockifyDemoSeed),
-		firstSliceDescriptor(11, toolRWIdem("clockify_demo_cleanup", "Delete deterministic demo objects by prefix, continuing through partial failures.", objectSchema(map[string]any{
-			"properties": map[string]any{
-				"run_id": map[string]any{"type": "string", "description": "Stable run id. Default: phase1."},
-				"prefix": map[string]any{"type": "string", "description": "Explicit object-name prefix. Default: DEMO-<run_id>."},
-				"start":  map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"end":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-			},
-		})), s.ClockifyDemoCleanup),
-
 		firstSliceDescriptor(20, toolRO("clockify_clients_list", "List clients in the pinned workspace.", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"name":        map[string]any{"type": "string"},

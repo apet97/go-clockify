@@ -14,8 +14,11 @@ import (
 	"github.com/apet97/go-clockify/internal/testclockify"
 )
 
+// firstSliceTools is the standalone FirstSliceRegistry() set. clockify_status,
+// clockify_demo_seed, and clockify_demo_cleanup are intentionally absent: they
+// are registered by workflowDescriptors() and were dropped from this slice to
+// remove the duplicate registration. The full registry still exposes them.
 var firstSliceTools = []string{
-	"clockify_status",
 	"clockify_clients_list",
 	"clockify_clients_create",
 	"clockify_projects_list",
@@ -26,8 +29,6 @@ var firstSliceTools = []string{
 	"clockify_tags_create",
 	"clockify_entries_list",
 	"clockify_entries_create",
-	"clockify_demo_seed",
-	"clockify_demo_cleanup",
 }
 
 func TestFirstSliceRegistryContainsOnlyPhase1Tools(t *testing.T) {
@@ -101,8 +102,8 @@ func TestFirstSliceInitializeAndToolsList(t *testing.T) {
 			t.Fatalf("tools/list missing %s; got %#v", want, names)
 		}
 	}
-	if resp.Result.Tools[0].Name != "clockify_status" {
-		t.Fatalf("first listed tool = %q, want clockify_status", resp.Result.Tools[0].Name)
+	if resp.Result.Tools[0].Name != "clockify_clients_list" {
+		t.Fatalf("first listed tool = %q, want clockify_clients_list", resp.Result.Tools[0].Name)
 	}
 }
 
