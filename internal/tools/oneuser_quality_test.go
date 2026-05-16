@@ -200,8 +200,8 @@ func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 			t.Fatalf("tools/list golden contains old tool %s", forbidden)
 		}
 	}
-	if len(tools) != 152 {
-		t.Fatalf("tools/list returned %d tools, want 152", len(tools))
+	if len(tools) != 154 {
+		t.Fatalf("tools/list returned %d tools, want 154", len(tools))
 	}
 	if tools[0].Name != "clockify_status" {
 		t.Fatalf("first tool=%s, want clockify_status", tools[0].Name)
@@ -1267,6 +1267,8 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_approvals_resubmit",
 		"clockify_holidays_get",
 		"clockify_holidays_update",
+		"clockify_audit_logs_search",
+		"clockify_entity_changes_list",
 		"clockify_api_get",
 		"clockify_api_request",
 	)
@@ -1800,8 +1802,8 @@ func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.
 	initializeServer(t, server)
 
 	descriptors := svc.FullAccessRegistry()
-	if len(descriptors) != 152 {
-		t.Fatalf("FullAccessRegistry returned %d tools, want 152", len(descriptors))
+	if len(descriptors) != 154 {
+		t.Fatalf("FullAccessRegistry returned %d tools, want 154", len(descriptors))
 	}
 	for _, descriptor := range descriptors {
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
@@ -2862,6 +2864,10 @@ func oneUserCoverageArgs(tool mcp.Tool) map[string]any {
 		args["invoiced"] = true
 	case "clockify_users_invite":
 		args["emails"] = []any{"coverage@example.com"}
+	case "clockify_audit_logs_search":
+		args["actions"] = []any{"CREATE_PROJECT"}
+	case "clockify_entity_changes_list":
+		args["entity_types"] = []any{"TIME_ENTRY"}
 	}
 	return args
 }
@@ -3063,6 +3069,10 @@ func oneUserCoveragePayload(workspaceID, userID, method, path string) any {
 		return []any{entity}
 	case strings.Contains(path, "/reports/") || strings.Contains(path, "/report"):
 		return map[string]any{"totals": []any{entity}, "timeentries": []any{entity}, "entries": []any{entity}, "data": []any{entity}, "id": entity["id"], "workspaceId": workspaceID}
+	case method == http.MethodPost && strings.HasSuffix(path, "/audit-log"):
+		return []any{entity}
+	case method == http.MethodGet && strings.Contains(path, "/entities/"):
+		return []any{entity}
 	default:
 		return entity
 	}

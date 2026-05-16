@@ -29,7 +29,7 @@ secret mechanism or a local, ignored environment file.
 Clients should call `tools/list` after `initialize`. The list is static for a
 process lifetime:
 
-- 152 tools total.
+- 154 tools total.
 - 17 workflow tools first.
 - 133 domain tools second.
 - 2 raw API fallback tools last.

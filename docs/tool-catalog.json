@@ -49861,6 +49861,631 @@
       }
     },
     {
+      "name": "clockify_audit_logs_search",
+      "description": "Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API.",
+      "category": "domain",
+      "handler_kind": "native handler",
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "description": "Audit-log action types to include; at least one is required.",
+            "items": {
+              "enum": [
+                "CREATE_TIME_PERSONAL_TIMER",
+                "CREATE_TIME_PERSONAL_MANUAL",
+                "CREATE_TIME_IMPORT",
+                "CREATE_TIME_KIOSK",
+                "CREATE_TIME_FOR_OTHER",
+                "RESTORE_TIME",
+                "RESTORE_TIME_FOR_OTHER",
+                "UPDATE_TIME_PERSONAL",
+                "UPDATE_TIME_FOR_OTHER",
+                "DELETE_TIME_PERSONAL",
+                "DELETE_TIME_FOR_OTHER",
+                "CREATE_PROJECT",
+                "CREATE_PROJECT_IMPORT",
+                "CREATE_PROJECT_QUICKBOOKS",
+                "UPDATE_PROJECT",
+                "DELETE_PROJECT",
+                "CREATE_TASK",
+                "CREATE_TASK_IMPORT",
+                "UPDATE_TASK",
+                "DELETE_TASK",
+                "CREATE_CLIENT",
+                "CREATE_CLIENT_IMPORT",
+                "CREATE_CLIENT_QUICKBOOKS",
+                "UPDATE_CLIENT",
+                "DELETE_CLIENT",
+                "CREATE_TAG",
+                "CREATE_TAG_IMPORT",
+                "UPDATE_TAG",
+                "DELETE_TAG",
+                "CREATE_EXPENSE",
+                "CREATE_EXPENSE_FOR_OTHER",
+                "RESTORE_EXPENSE",
+                "RESTORE_EXPENSE_FOR_OTHER",
+                "UPDATE_EXPENSE",
+                "UPDATE_EXPENSE_FOR_OTHER",
+                "DELETE_EXPENSE",
+                "DELETE_EXPENSE_FOR_OTHER"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "author_ids": {
+            "description": "User IDs whose actions to match. Use \"SYSTEM\" to include system-generated audit entries.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "authors_contains": {
+            "description": "Treat author_ids as an include (CONTAINS) or exclude (DOES_NOT_CONTAIN) filter. Default CONTAINS.",
+            "enum": [
+              "CONTAINS",
+              "DOES_NOT_CONTAIN"
+            ],
+            "type": "string"
+          },
+          "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "page": {
+            "description": "Result page (Clockify audit-log default 1).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actions",
+          "author_ids",
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_audit_logs_search",
+            "type": "string"
+          },
+          "changed": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "deleted": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reused": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "updated": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "action": {},
+                "content": {},
+                "previousContent": {},
+                "timestamp": {},
+                "userEmail": {},
+                "userId": {},
+                "userName": {},
+                "workspaceId": {}
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "next": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "args": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tool"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "recovery": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "hint": {
+                "type": "string"
+              },
+              "tool": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hint"
+            ],
+            "type": "object"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "category": "domain",
+        "destructiveHint": false,
+        "dryRun": false,
+        "handlerKind": "native handler",
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "priority": 1200,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Audit Logs Search"
+      }
+    },
+    {
+      "name": "clockify_entity_changes_list",
+      "description": "List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type.",
+      "category": "domain",
+      "handler_kind": "native handler",
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "change_type": {
+            "description": "Which change feed to read: created, updated, or deleted entities.",
+            "enum": [
+              "created",
+              "updated",
+              "deleted"
+            ],
+            "type": "string"
+          },
+          "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "entity_types": {
+            "description": "Entity types to include; at least one is required.",
+            "items": {
+              "enum": [
+                "CLIENTS",
+                "PROJECTS",
+                "TAGS",
+                "TASKS",
+                "SCHEDULED_ASSIGNMENT",
+                "TIME_ENTRY",
+                "TIME_ENTRY_RATE",
+                "TIME_ENTRY_CUSTOM_FIELD_VALUE"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "limit": {
+            "description": "Maximum results per page (Clockify entity-changes default 50).",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "description": "Result page, 0-indexed (Clockify entity-changes default 0).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_type",
+          "entity_types"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_entity_changes_list",
+            "type": "string"
+          },
+          "changed": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "deleted": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reused": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "updated": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "auditMetadata": {},
+                "deletedAt": {},
+                "document": {},
+                "documentCode": {},
+                "id": {}
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "next": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "args": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tool"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "recovery": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "hint": {
+                "type": "string"
+              },
+              "tool": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hint"
+            ],
+            "type": "object"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "category": "domain",
+        "destructiveHint": false,
+        "dryRun": false,
+        "handlerKind": "native handler",
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "priority": 1201,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Entity Changes List"
+      }
+    },
+    {
       "name": "clockify_entries_running",
       "description": "Return the current running timer, if any.",
       "category": "domain",

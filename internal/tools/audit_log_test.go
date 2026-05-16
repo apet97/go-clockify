@@ -1,0 +1,142 @@
+package tools
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+)
+
+func TestAuditLogsSearchSchemaIsTyped(t *testing.T) {
+	schema := auditLogsSearchSchema()
+	required, _ := schema["required"].([]string)
+	wantRequired := map[string]bool{"actions": true, "author_ids": true, "start": true, "end": true}
+	if len(required) != len(wantRequired) {
+		t.Fatalf("required = %v, want %d fields", required, len(wantRequired))
+	}
+	for _, field := range required {
+		if !wantRequired[field] {
+			t.Fatalf("unexpected required field %q", field)
+		}
+	}
+	props, _ := schema["properties"].(map[string]any)
+	actions, _ := props["actions"].(map[string]any)
+	items, _ := actions["items"].(map[string]any)
+	if enum, _ := items["enum"].([]string); len(enum) == 0 {
+		t.Fatal("actions items must carry the audit-log action enum")
+	}
+}
+
+func TestEntityChangesListSchemaIsTyped(t *testing.T) {
+	schema := entityChangesListSchema()
+	props, _ := schema["properties"].(map[string]any)
+	changeType, _ := props["change_type"].(map[string]any)
+	enum, _ := changeType["enum"].([]string)
+	if len(enum) != 3 || enum[0] != "created" || enum[2] != "deleted" {
+		t.Fatalf("change_type enum = %v, want created/updated/deleted", enum)
+	}
+	entityTypes, _ := props["entity_types"].(map[string]any)
+	items, _ := entityTypes["items"].(map[string]any)
+	if e, _ := items["enum"].([]string); len(e) == 0 {
+		t.Fatal("entity_types items must carry the entity-type enum")
+	}
+}
+
+func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
+	var gotPath string
+	var gotBody map[string]any
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"action":"CREATE_PROJECT","timestamp":"2026-05-01T00:00:00Z"}]`))
+	}))
+	defer ts.Close()
+
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	env, err := svc.AuditLogsSearch(context.Background(), map[string]any{
+		"actions":    []any{"CREATE_PROJECT"},
+		"author_ids": []any{"65b382b606de527a7ee2b622"},
+		"start":      "2026-05-01",
+		"end":        "2026-05-15",
+	})
+	if err != nil {
+		t.Fatalf("AuditLogsSearch: %v", err)
+	}
+	if gotPath != "/workspaces/65b382b606de527a7ee2b60e/audit-log" {
+		t.Fatalf("path = %s, want /workspaces/.../audit-log", gotPath)
+	}
+	authors, ok := gotBody["authors"].(map[string]any)
+	if !ok || authors["contains"] != "CONTAINS" {
+		t.Fatalf("authors body = %v, want default contains=CONTAINS", gotBody["authors"])
+	}
+	if gotBody["start"] != "2026-05-01T00:00:00Z" {
+		t.Fatalf("start = %v, want RFC3339 UTC", gotBody["start"])
+	}
+	if !env.OK || env.Action != "clockify_audit_logs_search" {
+		t.Fatalf("envelope = %+v", env)
+	}
+	if got, _ := env.Meta["count"].(int); got != 1 {
+		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
+	}
+}
+
+func TestAuditLogsSearchRejectsMissingActions(t *testing.T) {
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	if _, err := svc.AuditLogsSearch(context.Background(), map[string]any{
+		"author_ids": []any{"u1"},
+		"start":      "2026-05-01",
+		"end":        "2026-05-15",
+	}); err == nil {
+		t.Fatal("expected error when actions is missing")
+	}
+}
+
+func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
+	var gotPath, gotQuery string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"id":"x1","documentCode":"TIME_ENTRY"}]`))
+	}))
+	defer ts.Close()
+
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	env, err := svc.EntityChangesList(context.Background(), map[string]any{
+		"change_type":  "created",
+		"entity_types": []any{"TIME_ENTRY", "PROJECTS"},
+	})
+	if err != nil {
+		t.Fatalf("EntityChangesList: %v", err)
+	}
+	if gotPath != "/workspaces/65b382b606de527a7ee2b60e/entities/created" {
+		t.Fatalf("path = %s, want /workspaces/.../entities/created", gotPath)
+	}
+	if !strings.Contains(gotQuery, "type=TIME_ENTRY") || !strings.Contains(gotQuery, "type=PROJECTS") {
+		t.Fatalf("query = %s, want repeated type params", gotQuery)
+	}
+	if !env.OK || env.Meta["changeType"] != "created" {
+		t.Fatalf("envelope = %+v", env)
+	}
+	if got, _ := env.Meta["count"].(int); got != 1 {
+		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
+	}
+}
+
+func TestEntityChangesListRejectsBadChangeType(t *testing.T) {
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	if _, err := svc.EntityChangesList(context.Background(), map[string]any{
+		"change_type":  "modified",
+		"entity_types": []any{"TIME_ENTRY"},
+	}); err == nil {
+		t.Fatal("expected error for invalid change_type")
+	}
+}

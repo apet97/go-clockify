@@ -563,6 +563,10 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 			"deletedCount":  map[string]any{"type": "integer"},
 			"warningsCount": map[string]any{"type": "integer"},
 		})
+	case "clockify_audit_logs_search":
+		return entityArrayDataSchema("action", "timestamp", "userId", "userEmail", "userName", "content", "previousContent", "workspaceId")
+	case "clockify_entity_changes_list":
+		return entityArrayDataSchema("id", "documentCode", "auditMetadata", "document", "deletedAt")
 	default:
 		return nil
 	}

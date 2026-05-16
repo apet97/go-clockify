@@ -3,11 +3,11 @@
 Coverage ledger for the one-user full-access Clockify MCP. It is derived from `docs/tool-catalog.json` plus the current fake/live test posture. It is intentionally conservative: descriptor-only coverage is not counted as fake smoke, live protocol/recovery coverage means the sacrificial workspace exercises either success or a useful recovery envelope, and live happy-path coverage means a real created/read entity succeeded.
 
 Summary:
-- Total tools: 152
+- Total tools: 154
 - Workflow tools: 17
-- Domain tools: 133
+- Domain tools: 135
 - Raw fallback tools: 2
-- Fake-smoke yes: 152
+- Fake-smoke yes: 154
 - Live protocol/recovery tested yes: 150
 - Live happy-path tested yes: 127
 
@@ -171,5 +171,7 @@ Remaining honest gaps:
 | `clockify_reports_detailed` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_summary` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_weekly` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_audit_logs_search` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | verify_live_coverage |
+| `clockify_entity_changes_list` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | verify_live_coverage |
 | `clockify_api_get` | raw | raw fallback | GET caller-supplied path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |
 | `clockify_api_request` | raw | raw fallback | caller-supplied method/path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |

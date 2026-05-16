@@ -2,7 +2,7 @@
 
 `go-clockify` is a local one-user Clockify MCP server written in Go. The
 runtime shape is intentionally small: one API key, one required workspace id,
-stdio transport, and all 152 tools loaded at startup.
+stdio transport, and all 154 tools loaded at startup.
 
 ## Development Setup
 

@@ -10,9 +10,9 @@ Native workflow and domain tools may choose endpoints in code; raw fallback
 tools intentionally accept caller-supplied paths.
 
 Summary:
-- Total tools: 152
+- Total tools: 154
 - Workflow tools: 17
-- Domain tools: 133
+- Domain tools: 135
 - Raw fallback tools: 2
 
 | Tool | Class | Method / source / path | Required args | Optional args | Request / wire notes | Response / output schema posture | Paid feature / live evidence note |
@@ -159,6 +159,8 @@ Summary:
 | `clockify_holidays_update` | domain | native handler / code-selected endpoint | `holiday_id` | `end_date`, `name`, `occurs_annually`, `start_date`, `user_group_ids`, `user_ids` | write; idempotent; risk=write | typed data envelope | live_protocol=yes; live_happy_path=no; ledger_schema=typed; status=ready; next=maintain_recovery_probe |
 | `clockify_entries_mark_invoiced` | domain | native handler / code-selected endpoint | `time_entry_ids`, `invoiced` | `body` | write; idempotent; risk=write+billing | typed data envelope | live_protocol=yes; live_happy_path=yes; ledger_schema=typed; status=ready; next=maintain_contract_tests |
 | `clockify_users_invite` | domain | native handler / code-selected endpoint | none | `email`, `emails`, `send_email` | write; non_idempotent; risk=write+admin+permission_change+external_side_effect | typed data envelope | live_protocol=yes; live_happy_path=no; ledger_schema=typed; status=ready; next=maintain_recovery_probe |
+| `clockify_audit_logs_search` | domain | native handler / code-selected endpoint | `actions`, `author_ids`, `start`, `end` | `authors_contains`, `page` | read; idempotent; risk=read | typed data envelope | live_protocol=no; live_happy_path=no; ledger_schema=typed; status=ready; next=verify_live_coverage |
+| `clockify_entity_changes_list` | domain | native handler / code-selected endpoint | `change_type`, `entity_types` | `end`, `limit`, `page`, `start` | read; idempotent; risk=read | typed data envelope | live_protocol=no; live_happy_path=no; ledger_schema=typed; status=ready; next=verify_live_coverage |
 | `clockify_entries_running` | domain | native handler / code-selected endpoint | none | none | read; idempotent; risk=read | typed data envelope | live_protocol=yes; live_happy_path=no; ledger_schema=typed; status=ready; next=maintain_recovery_probe |
 | `clockify_entries_timer_start` | domain | native handler / code-selected endpoint | none | `description`, `project`, `project_id` | write; non_idempotent; risk=write | typed data envelope | live_protocol=yes; live_happy_path=yes; ledger_schema=typed; status=ready; next=maintain_contract_tests |
 | `clockify_entries_timer_stop` | domain | native handler / code-selected endpoint | none | `end` | write; idempotent; risk=write | typed data envelope | live_protocol=yes; live_happy_path=no; ledger_schema=typed; status=ready; next=maintain_recovery_probe |

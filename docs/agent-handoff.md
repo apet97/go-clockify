@@ -12,7 +12,7 @@ workspace. The environment contract is intentionally small:
 - `CLOCKIFY_WORKSPACE_ID` is required.
 - `CLOCKIFY_TIMEZONE`, `CLOCKIFY_BASE_URL`, and log-level settings are optional.
 
-The runtime registers all 152 tools at startup. Agents should call workflow
+The runtime registers all 154 tools at startup. Agents should call workflow
 tools first, use domain tools for precise CRUD, and use raw API fallback tools
 only when no workflow or domain tool fits.
 

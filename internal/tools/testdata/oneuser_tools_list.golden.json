@@ -149,6 +149,8 @@
   "clockify_users_deactivate",
   "clockify_users_role",
   "clockify_workspace_settings",
+  "clockify_audit_logs_search",
+  "clockify_entity_changes_list",
   "clockify_api_get",
   "clockify_api_request"
 ]

@@ -10,9 +10,9 @@ authoritative tool list is generated in `docs/tool-catalog.md` and
 | Class | Count | Notes |
 |------|------:|-------|
 | Workflow tools | 17 | Preferred agent-facing tools for common work |
-| Domain tools | 133 | Direct Clockify domain operations |
+| Domain tools | 135 | Direct Clockify domain operations |
 | Raw fallback tools | 2 | Last-resort pinned-workspace API access |
-| Total | 152 | All loaded at startup |
+| Total | 154 | All loaded at startup |
 
 The runtime order is intentional: workflow tools first, domain tools second,
 raw fallback tools last.
@@ -60,7 +60,8 @@ live workflow smoke and the opt-in paid-feature recovery smoke.
 
 Domain tools cover clients, projects, tasks, tags, entries, reports, invoices,
 expenses, custom fields, time off, scheduling, approvals, webhooks, groups,
-holidays, users, and workspace settings. Some domain tools are still thin
+holidays, users, workspace settings, the audit log, and experimental entity
+changes. Some domain tools are still thin
 wrappers over older internal handlers; this is tracked honestly in
 `docs/goals/oneuser-tool-coverage.md` and should be reduced over time without
 removing tools.

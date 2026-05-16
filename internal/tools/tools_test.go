@@ -16,8 +16,8 @@ import (
 func TestFullAccessRegistryContainsCoreOneUserTools(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	reg := svc.FullAccessRegistry()
-	if len(reg) != 152 {
-		t.Fatalf("registry size=%d, want 152", len(reg))
+	if len(reg) != 154 {
+		t.Fatalf("registry size=%d, want 154", len(reg))
 	}
 
 	names := map[string]bool{}

@@ -13,7 +13,7 @@ ignored by git.
 - One required `CLOCKIFY_WORKSPACE_ID`.
 - Stdio transport only.
 - Full access from startup.
-- Exactly 152 tools loaded at startup.
+- Exactly 154 tools loaded at startup.
 - Workflow tools first, domain tools second, raw API fallback last.
 - Every write returns useful IDs.
 - Recoverable failures return `ok:false`, an error code, and recovery guidance.
@@ -134,7 +134,7 @@ Current composition:
 2. `FirstSliceRegistry()`
 3. `nativeCoreDescriptors()`
 4. `nativeHighValueDescriptors()`
-5. `nativeAliasDescriptors()`; should emit no wrappers.
+5. `auditLogDescriptors()`
 6. `timerAndReportDescriptors()`
 7. `rawAPIDescriptors()`
 
@@ -151,7 +151,7 @@ make gen-tool-catalog
 make catalog-drift
 ```
 
-The catalog should still show 152 tools, workflow tools first, and raw API
+The catalog should still show 154 tools, workflow tools first, and raw API
 fallback tools last.
 
 ## Coverage Ledger Rules

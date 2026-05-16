@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`clockify_audit_logs_search`** — typed tool for the Clockify Audit Log
+  report (`POST /v1/workspaces/{ws}/audit-log` on the dedicated audit-log
+  host). Searches create/update/delete actions by author and date range,
+  reached through the new host-aware `Client.PostAuditLog`.
+- **`clockify_entity_changes_list`** — typed tool for the experimental
+  Entity Changes feed (`GET /v1/workspaces/{ws}/entities/{created,updated,
+  deleted}`), selected by a `change_type` enum. Its output schema follows
+  the live-verified bare-array response shape rather than the stale
+  documented envelope. Registry grows 152 → 154 tools.
+
 ## [1.3.0] - 2026-05-15
 
 v1.3.0 reshapes go-clockify into a focused **one-user, full-access,
