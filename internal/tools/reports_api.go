@@ -39,7 +39,8 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		return ResultEnvelope{}, err
 	}
 	applyReportsAPIMoneyDefaults(body, endpoint)
-	path, err := paths.Workspace(wsID, "reports", endpoint.pathName)
+	pathParts := append([]string{"reports"}, strings.Split(endpoint.pathName, "/")...)
+	path, err := paths.Workspace(wsID, pathParts...)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}

@@ -31578,6 +31578,26 @@
             "type": "string"
           },
           "workspace_default_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Workspace-wide default value. Type follows field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."
           }
         },
@@ -31872,6 +31892,26 @@
             "type": "string"
           },
           "workspace_default_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Workspace-wide default value. Type follows the (resolved) field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."
           }
         },
@@ -32394,6 +32434,26 @@
             "type": "string"
           },
           "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Value to set (type depends on field_type)"
           }
         },

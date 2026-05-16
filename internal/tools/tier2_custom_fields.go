@@ -15,6 +15,19 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+func customFieldAnyValueSchema(description string) map[string]any {
+	return map[string]any{
+		"description": description,
+		"anyOf": []any{
+			map[string]any{"type": "string"},
+			map[string]any{"type": "number"},
+			map[string]any{"type": "boolean"},
+			map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			map[string]any{"type": "null"},
+		},
+	}
+}
+
 func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List custom fields
@@ -60,7 +73,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 						"allowed_values":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Allowed values; required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE"},
 						"required":                map[string]any{"type": "boolean", "description": "Whether the field is required"},
 						"status":                  customFieldStatusSchema("Custom-field visibility; defaults to VISIBLE so values can be set immediately"),
-						"workspace_default_value": map[string]any{"description": "Workspace-wide default value. Type follows field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."},
+						"workspace_default_value": customFieldAnyValueSchema("Workspace-wide default value. Type follows field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."),
 					},
 				}),
 			ReadOnlyHint: false,
@@ -86,7 +99,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 						"allowed_values":          map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 						"required":                map[string]any{"type": "boolean"},
 						"status":                  customFieldStatusSchema("Custom-field visibility"),
-						"workspace_default_value": map[string]any{"description": "Workspace-wide default value. Type follows the (resolved) field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."},
+						"workspace_default_value": customFieldAnyValueSchema("Workspace-wide default value. Type follows the (resolved) field_type: TXT/LINK/DROPDOWN_SINGLE need a string, NUMBER needs a number, CHECKBOX needs a boolean, DROPDOWN_MULTIPLE needs a list of strings. Dropdown defaults must be a subset of allowed_values."),
 					},
 				}),
 			ReadOnlyHint: false,
@@ -121,7 +134,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 					"required": []string{"field_id", "value"},
 					"properties": map[string]any{
 						"field_id":   map[string]any{"type": "string", "description": "Custom field ID"},
-						"value":      map[string]any{"description": "Value to set (type depends on field_type)"},
+						"value":      customFieldAnyValueSchema("Value to set (type depends on field_type)"),
 						"project_id": map[string]any{"type": "string", "description": "Project ID (set value on project)"},
 						"entry_id":   map[string]any{"type": "string", "description": "Time entry ID (set value on entry)"},
 					},
