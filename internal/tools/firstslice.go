@@ -732,7 +732,7 @@ func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 
 func looksLikeFeatureUnavailable(message string) bool {
 	message = strings.ToLower(message)
-	for _, needle := range []string{"feature", "paid", "plan", "subscription", "upgrade", "not available", "not supported"} {
+	for _, needle := range []string{"feature", "paid", "plan", "subscription", "upgrade", "not available", "not supported", "no static resource"} {
 		if strings.Contains(message, needle) {
 			return true
 		}
@@ -758,7 +758,16 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		return RecoveryHint{Hint: "If expenses are unavailable, report that and continue. Otherwise list expense categories and retry with returned IDs.", Tool: "clockify_expenses_categories_list"}
 	case strings.Contains(action, "time_off"):
 		return RecoveryHint{Hint: "If time off is unavailable, report that and continue. Otherwise list policies and retry with a returned policy ID.", Tool: "clockify_time_off_policies_list"}
-	case strings.Contains(action, "schedule"):
+	case action == "clockify_schedule_work":
+		// The schedule_work workflow tool fails on an invalid project/user
+		// ID; listing existing assignments does not resolve those, so route
+		// to the project list (then resolve the user) — not the domain tool.
+		return RecoveryHint{Hint: "If scheduling is unavailable, report that and continue. Otherwise list projects and users, then retry clockify_schedule_work with the returned IDs.", Tool: "clockify_projects_list"}
+	case strings.Contains(action, "scheduling"):
+		// The clockify_scheduling_* domain family. The substring is
+		// "scheduling", not "schedule": the workflow tool above is the only
+		// "schedule" action, and the domain tools never contain it — so a
+		// "schedule" substring here would have matched nothing.
 		return RecoveryHint{Hint: "If scheduling is unavailable, report that and continue. Otherwise list users/projects and retry with returned IDs.", Tool: "clockify_scheduling_assignments_list"}
 	case strings.Contains(action, "webhook"):
 		return RecoveryHint{Hint: "If webhooks are unavailable, report that and continue. Otherwise verify the HTTPS callback URL and event, then retry.", Tool: "clockify_webhooks_events"}
@@ -772,6 +781,10 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		return RecoveryHint{Hint: "List tags and reuse an existing tag ID, or retry with a different name.", Tool: "clockify_tags_list"}
 	case strings.Contains(action, "entries"):
 		return RecoveryHint{Hint: "Check start/end times and project/task/tag IDs, list entries or projects, then retry.", Tool: "clockify_entries_list"}
+	case action == "clockify_audit_logs_search":
+		return RecoveryHint{Hint: `Audit log search failed. Keep the start/end window within 31 days, verify author IDs (or pass "SYSTEM"), then retry. Audit log can also be plan-gated.`, Tool: "clockify_users_list"}
+	case action == "clockify_entity_changes_list":
+		return RecoveryHint{Hint: "Entity-changes list failed. Verify change_type, entity_types, and the start/end window, then retry.", Tool: "clockify_status"}
 	default:
 		return RecoveryHint{Hint: "Check the returned error, call clockify_status, then retry with IDs returned by previous calls.", Tool: "clockify_status"}
 	}
