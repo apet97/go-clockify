@@ -41,7 +41,11 @@ func TestReportRouteBodyPrefersExplicitDateRangeOverAliases(t *testing.T) {
 }
 
 func TestSchedulingCapacityRouteUsesPostBody(t *testing.T) {
-	spec := rt(607, "POST", "clockify_scheduling_capacity", "Get workspace capacity totals.", "scheduling/assignments/user-filter/totals", "scheduling", nil, fields("start", "end", "user_ids"), nil, []string{"start", "end", "user_ids"}, true, false, false, "")
+	spec := rt(607, "POST", "clockify_scheduling_capacity", "Get workspace capacity totals.", "scheduling/assignments/user-filter/totals", "scheduling", nil, map[string]any{
+		"start":    map[string]any{"type": "string"},
+		"end":      map[string]any{"type": "string"},
+		"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+	}, nil, []string{"start", "end", "user_ids"}, true, false, false, "")
 
 	query := routeQuery(spec, map[string]any{
 		"start":    "2026-05-01T00:00:00Z",

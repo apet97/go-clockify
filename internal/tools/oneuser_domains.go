@@ -526,8 +526,11 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	}
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
-		"required":   []string{"policy_id"},
-		"properties": fields("policy_id", "archived"),
+		"required": []string{"policy_id"},
+		"properties": map[string]any{
+			"policy_id": map[string]any{"type": "string", "description": "Time-off policy ID"},
+			"archived":  map[string]any{"type": "boolean", "description": "True to archive the policy; false to reactivate it"},
+		},
 	})), "time_off", "updated", s.archiveTimeOffPolicy))
 	out = append(out, s.explicitPostTimeOffNativeDescriptors()...)
 	return out
@@ -536,24 +539,48 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.", objectSchema(map[string]any{
-			"required":   []string{"invoice_id"},
-			"properties": fields("invoice_id", "format", "user_locale"),
+			"required": []string{"invoice_id"},
+			"properties": map[string]any{
+				"invoice_id":  map[string]any{"type": "string", "description": "Invoice ID"},
+				"format":      map[string]any{"type": "string", "description": "Export format, e.g. PDF, CSV, or XLSX"},
+				"user_locale": map[string]any{"type": "string", "description": "Locale for the exported document, e.g. en"},
+			},
 		})), "invoice_export", "", s.exportInvoiceOneUser),
 		nativeDomainTool(211, toolRW("clockify_invoices_import_time", "Import time entries into an invoice.", objectSchema(map[string]any{
-			"required":   []string{"invoice_id"},
-			"properties": fields("invoice_id", "time_entry_ids", "time_entry_group_type", "body"),
+			"required": []string{"invoice_id"},
+			"properties": map[string]any{
+				"invoice_id":            map[string]any{"type": "string", "description": "Invoice ID"},
+				"time_entry_ids":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Time entry IDs to import"},
+				"time_entry_group_type": map[string]any{"type": "string", "description": "How imported entries are grouped on the invoice"},
+				"body":                  rawBodyField(),
+			},
 		})), "invoice_item", "updated", s.importInvoiceTimeOneUser),
 		nativeDomainTool(212, toolRW("clockify_invoices_import_expenses", "Import expenses into an invoice.", objectSchema(map[string]any{
-			"required":   []string{"invoice_id"},
-			"properties": fields("invoice_id", "expense_ids", "include_expenses", "body"),
+			"required": []string{"invoice_id"},
+			"properties": map[string]any{
+				"invoice_id":       map[string]any{"type": "string", "description": "Invoice ID"},
+				"expense_ids":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Expense IDs to import"},
+				"include_expenses": map[string]any{"type": "boolean", "description": "Whether to include expenses in the import"},
+				"body":             rawBodyField(),
+			},
 		})), "invoice_item", "updated", s.importInvoiceExpensesOneUser),
 		nativeDomainTool(213, toolRO("clockify_invoices_payments_list", "List invoice payments.", objectSchema(map[string]any{
-			"required":   []string{"invoice_id"},
-			"properties": fields("invoice_id", "page", "page_size"),
+			"required": []string{"invoice_id"},
+			"properties": map[string]any{
+				"invoice_id": map[string]any{"type": "string", "description": "Invoice ID"},
+				"page":       map[string]any{"type": "integer"},
+				"page_size":  map[string]any{"type": "integer"},
+			},
 		})), "payment", "", s.listInvoicePayments),
 		nativeDomainTool(214, toolRW("clockify_invoices_payments_create", "Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:\"major\" to enter the value in major currency units instead.", objectSchema(map[string]any{
-			"required":   []string{"invoice_id"},
-			"properties": withInvoicePaymentAmountUnit(fields("invoice_id", "amount", "date", "note", "body")),
+			"required": []string{"invoice_id"},
+			"properties": map[string]any{
+				"invoice_id":  map[string]any{"type": "string", "description": "Invoice ID"},
+				"amount":      map[string]any{"type": "number", "description": "Payment amount"},
+				"amount_unit": invoiceMinorUnitSchema("amount"),
+				"date":        map[string]any{"type": "string", "description": "Payment date"},
+				"note":        map[string]any{"type": "string", "description": "Optional payment note"},
+			},
 		})), "payment", "created", s.createInvoicePaymentOneUser),
 		nativeDomainTool(215, toolDestructive("clockify_invoices_payments_delete", "Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview.", objectSchema(map[string]any{
 			"required":   []string{"invoice_id", "payment_id"},
@@ -565,24 +592,45 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		nativeDomainTool(606, toolRO("clockify_scheduling_user_totals", "Get scheduled assignment totals for one user.", objectSchema(map[string]any{
-			"required":   []string{"user_id"},
-			"properties": fields("user_id", "start", "end"),
+			"required": []string{"user_id"},
+			"properties": map[string]any{
+				"user_id": map[string]any{"type": "string", "description": "User ID"},
+				"start":   map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":     map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			},
 		})), "scheduling", "", s.schedulingUserTotalsOneUser),
 		nativeDomainTool(607, toolRO("clockify_scheduling_capacity", "Get workspace capacity totals.", objectSchema(map[string]any{
-			"required":   nil,
-			"properties": fields("start", "end", "user_ids"),
+			"required": nil,
+			"properties": map[string]any{
+				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"end":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional user IDs scoping the capacity totals"},
+			},
 		})), "scheduling", "", s.schedulingCapacityOneUser),
 		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{
-			"required":   []string{"approval_id"},
-			"properties": fields("approval_id", "entry_ids", "expense_ids", "note", "body"),
+			"required": []string{"approval_id"},
+			"properties": map[string]any{
+				"approval_id": map[string]any{"type": "string", "description": "Approval request ID"},
+				"entry_ids":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Time entry IDs to resubmit"},
+				"expense_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Expense IDs to resubmit"},
+				"note":        map[string]any{"type": "string", "description": "Optional resubmission note"},
+			},
 		})), "approval", "updated", s.resubmitApprovalOneUser),
 		nativeDomainTool(1001, toolRO("clockify_holidays_get", "Get one holiday.", objectSchema(map[string]any{
 			"required":   []string{"holiday_id"},
 			"properties": map[string]any{"holiday_id": map[string]any{"type": "string"}},
 		})), "holiday", "", s.GetHoliday),
 		nativeDomainTool(1002, toolRWIdem("clockify_holidays_update", "Update a holiday.", objectSchema(map[string]any{
-			"required":   []string{"holiday_id"},
-			"properties": fields("holiday_id", "name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids", "body"),
+			"required": []string{"holiday_id"},
+			"properties": map[string]any{
+				"holiday_id":      map[string]any{"type": "string", "description": "Holiday ID"},
+				"name":            map[string]any{"type": "string", "description": "Holiday name"},
+				"start_date":      map[string]any{"type": "string", "description": "Holiday start date (YYYY-MM-DD)"},
+				"end_date":        map[string]any{"type": "string", "description": "Holiday end date (YYYY-MM-DD)"},
+				"occurs_annually": map[string]any{"type": "boolean", "description": "Whether the holiday repeats every year"},
+				"user_ids":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs the holiday applies to"},
+				"user_group_ids":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User group IDs the holiday applies to"},
+			},
 		})), "holiday", "updated", s.UpdateHoliday),
 	}
 }
@@ -1361,36 +1409,14 @@ func scalarToString(value any) string {
 	}
 }
 
-// withInvoicePaymentAmountUnit annotates the generic fields(...) properties
-// map with an amount_unit toggle so the payment-create surface mirrors
-// invoice items and clockify_create_expense. The wire stays in minor
-// units; major mode just adds a multiply-by-100 step in the handler.
-func withInvoicePaymentAmountUnit(props map[string]any) map[string]any {
-	props["amount_unit"] = invoiceMinorUnitSchema("amount")
-	return props
-}
-
-func fields(names ...string) map[string]any {
-	props := map[string]any{
-		"body": map[string]any{"type": "object", "additionalProperties": true, "description": "Optional raw Clockify request body fields merged with typed fields."},
-	}
-	for _, name := range names {
-		switch {
-		case strings.HasSuffix(name, "_ids"), name == "emails", name == "memberships", name == "trigger_source":
-			props[name] = map[string]any{"type": "array", "items": map[string]any{}}
-		case strings.Contains(name, "amount") || strings.Contains(name, "price") || strings.Contains(name, "rate") || strings.Contains(name, "value"):
-			props[name] = map[string]any{"type": "number"}
-		case name == "billable" || name == "is_public" || name == "archived" || name == "invoiced" || name == "include_expenses" || name == "occurs_annually" || name == "send_email":
-			props[name] = map[string]any{"type": "boolean"}
-		case name == "page" || name == "page_size":
-			props[name] = map[string]any{"type": "integer"}
-		case name == "body":
-			continue
-		default:
-			props[name] = map[string]any{"type": "string"}
-		}
-	}
-	return props
+// rawBodyField is the fenced raw-passthrough escape hatch. A few tools
+// (invoice imports, report export) accept Clockify request fields this MCP
+// does not model individually; they carry this field. Tools that fully
+// model their input do not — the raw API tools are the general escape
+// hatch. Each caller gets a fresh map so tightenInputSchema cannot mutate
+// a shared instance.
+func rawBodyField() map[string]any {
+	return map[string]any{"type": "object", "additionalProperties": true, "description": "Optional raw Clockify request body fields merged with the typed fields above."}
 }
 
 func reportHelperSchema() map[string]any {
@@ -1433,7 +1459,15 @@ func rt(priority int, method, name, desc, path, entity string, required []string
 }
 
 func reportRT(priority int, name, desc, reportPath string) routeTool {
-	return rt(priority, "POST", name, desc, reportPath, "report", nil, fields("date_range_start", "date_range_end", "start", "end", "export_type", "body"), nil, []string{"date_range_start", "date_range_end", "start", "end", "export_type"}, true, false, false, "").withReports()
+	props := map[string]any{
+		"date_range_start": map[string]any{"type": "string", "description": "Report range start"},
+		"date_range_end":   map[string]any{"type": "string", "description": "Report range end"},
+		"start":            map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		"end":              map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+		"export_type":      map[string]any{"type": "string", "enum": []string{"JSON", "JSON_V1", "PDF", "CSV", "XLSX", "ZIP"}, "description": "Report export type"},
+		"body":             rawBodyField(),
+	}
+	return rt(priority, "POST", name, desc, reportPath, "report", nil, props, nil, []string{"date_range_start", "date_range_end", "start", "end", "export_type"}, true, false, false, "").withReports()
 }
 
 func (r routeTool) withReports() routeTool {

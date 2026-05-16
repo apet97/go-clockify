@@ -44996,22 +44996,35 @@
         "properties": {
           "body": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
+            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
+            "description": "Report range end",
             "type": "string"
           },
           "date_range_start": {
+            "description": "Report range start",
             "type": "string"
           },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "export_type": {
+            "description": "Report export type",
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -45265,22 +45278,35 @@
         "properties": {
           "body": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
+            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
+            "description": "Report range end",
             "type": "string"
           },
           "date_range_start": {
+            "description": "Report range start",
             "type": "string"
           },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "export_type": {
+            "description": "Report export type",
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -45534,22 +45560,35 @@
         "properties": {
           "body": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
+            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
+            "description": "Report range end",
             "type": "string"
           },
           "date_range_start": {
+            "description": "Report range start",
             "type": "string"
           },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "export_type": {
+            "description": "Report export type",
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -45803,22 +45842,35 @@
         "properties": {
           "body": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
+            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
+            "description": "Report range end",
             "type": "string"
           },
           "date_range_start": {
+            "description": "Report range start",
             "type": "string"
           },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "export_type": {
+            "description": "Report export type",
+            "enum": [
+              "JSON",
+              "JSON_V1",
+              "PDF",
+              "CSV",
+              "XLSX",
+              "ZIP"
+            ],
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -46078,18 +46130,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "format": {
+            "description": "Export format, e.g. PDF, CSV, or XLSX",
             "type": "string"
           },
           "invoice_id": {
+            "description": "Invoice ID",
             "type": "string"
           },
           "user_locale": {
+            "description": "Locale for the exported document, e.g. en",
             "type": "string"
           }
         },
@@ -46350,17 +46400,22 @@
         "properties": {
           "body": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
+            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "invoice_id": {
+            "description": "Invoice ID",
             "type": "string"
           },
           "time_entry_group_type": {
+            "description": "How imported entries are grouped on the invoice",
             "type": "string"
           },
           "time_entry_ids": {
-            "items": {},
+            "description": "Time entry IDs to import",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           }
         },
@@ -46617,17 +46672,22 @@
         "properties": {
           "body": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
+            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "expense_ids": {
-            "items": {},
+            "description": "Expense IDs to import",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           },
           "include_expenses": {
+            "description": "Whether to include expenses in the import",
             "type": "boolean"
           },
           "invoice_id": {
+            "description": "Invoice ID",
             "type": "string"
           }
         },
@@ -46879,12 +46939,8 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "invoice_id": {
+            "description": "Invoice ID",
             "type": "string"
           },
           "page": {
@@ -47155,6 +47211,7 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
+            "description": "Payment amount",
             "type": "number"
           },
           "amount_unit": {
@@ -47165,18 +47222,16 @@
             ],
             "type": "string"
           },
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "date": {
+            "description": "Payment date",
             "type": "string"
           },
           "invoice_id": {
+            "description": "Invoice ID",
             "type": "string"
           },
           "note": {
+            "description": "Optional payment note",
             "maxLength": 500,
             "type": "string"
           }
@@ -47690,14 +47745,11 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
+            "description": "True to archive the policy; false to reactivate it",
             "type": "boolean"
           },
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "policy_id": {
+            "description": "Time-off policy ID",
             "type": "string"
           }
         },
@@ -47948,18 +48000,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "user_id": {
+            "description": "User ID",
             "type": "string"
           }
         },
@@ -48212,19 +48262,19 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "user_ids": {
-            "items": {},
+            "description": "Optional user IDs scoping the capacity totals",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           }
         },
@@ -48483,22 +48533,25 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
+            "description": "Approval request ID",
             "type": "string"
           },
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "entry_ids": {
-            "items": {},
+            "description": "Time entry IDs to resubmit",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           },
           "expense_ids": {
-            "items": {},
+            "description": "Expense IDs to resubmit",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           },
           "note": {
+            "description": "Optional resubmission note",
             "maxLength": 500,
             "type": "string"
           }
@@ -48996,33 +49049,39 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with typed fields.",
-            "type": "object"
-          },
           "end_date": {
+            "description": "Holiday end date (YYYY-MM-DD)",
             "type": "string"
           },
           "holiday_id": {
+            "description": "Holiday ID",
             "type": "string"
           },
           "name": {
+            "description": "Holiday name",
             "maxLength": 150,
             "type": "string"
           },
           "occurs_annually": {
+            "description": "Whether the holiday repeats every year",
             "type": "boolean"
           },
           "start_date": {
+            "description": "Holiday start date (YYYY-MM-DD)",
             "type": "string"
           },
           "user_group_ids": {
-            "items": {},
+            "description": "User group IDs the holiday applies to",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           },
           "user_ids": {
-            "items": {},
+            "description": "User IDs the holiday applies to",
+            "items": {
+              "type": "string"
+            },
             "type": "array"
           }
         },
