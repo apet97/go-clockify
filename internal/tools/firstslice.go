@@ -470,6 +470,8 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityObjectDataSchema("id", "policyId", "name", "timeUnit", "archived")
 	case "clockify_time_off_balances":
 		return entityObjectDataSchema("policyId", "userId", "balance", "used", "available")
+	case "clockify_time_off_balances_update":
+		return entityObjectDataSchema("policyId", "userIds", "value", "note")
 	case "clockify_time_off_archive":
 		return entityObjectDataSchema("id", "policyId", "archived")
 	case "clockify_scheduling_assignments_list":
@@ -567,8 +569,16 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityArrayDataSchema("action", "timestamp", "userId", "userEmail", "userName", "content", "previousContent", "workspaceId")
 	case "clockify_entity_changes_list":
 		return entityArrayDataSchema("id", "documentCode", "auditMetadata", "document", "deletedAt")
-	default:
+	case "clockify_api_get", "clockify_api_request":
+		// Raw API fallback tools return whatever the Clockify endpoint
+		// produced, so there is no typed data schema to advertise.
 		return nil
+	default:
+		// Fail loud: a registered tool with no data-schema case is a bug —
+		// it would otherwise ship an undocumented data payload. The panic
+		// fires at registry-build time, so every test that builds the
+		// registry catches a forgotten case.
+		panic(fmt.Sprintf("firstSliceDataOutputSchema: no data output schema for tool %q — add a case", action))
 	}
 }
 

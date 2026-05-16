@@ -898,6 +898,9 @@ func decodeParams(raw any, out any) error {
 //   - Wrong-type name / arguments / _meta fields are rejected instead of
 //     being silently zeroed so malformed tools/call requests surface as
 //     JSON-RPC -32602 invalid params.
+//   - A JSON null arguments or _meta value is treated as absent (the MCP
+//     spec says null arguments behave identically to no arguments),
+//     matching json.Unmarshal which leaves the destination at its zero value.
 //   - Extra keys in m are ignored, matching json.Unmarshal's default.
 //   - Progress token is taken verbatim so clients supplying a string
 //     or number both round-trip untouched.
@@ -915,14 +918,14 @@ func toolCallParamsFromMap(m map[string]any) (ToolCallParams, error) {
 		return p, fmt.Errorf("name must be a non-empty string")
 	}
 	p.Name = name
-	if rawArgs, ok := m["arguments"]; ok {
+	if rawArgs, ok := m["arguments"]; ok && rawArgs != nil {
 		args, ok := rawArgs.(map[string]any)
 		if !ok {
 			return p, fmt.Errorf("arguments must be an object")
 		}
 		p.Arguments = args
 	}
-	if rawMeta, ok := m["_meta"]; ok {
+	if rawMeta, ok := m["_meta"]; ok && rawMeta != nil {
 		meta, ok := rawMeta.(map[string]any)
 		if !ok {
 			return p, fmt.Errorf("_meta must be an object")

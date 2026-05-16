@@ -35980,7 +35980,14 @@
             "type": "object"
           },
           "data": {
-            "description": "Tool-specific payload for clockify_time_off_balances_update"
+            "additionalProperties": true,
+            "properties": {
+              "note": {},
+              "policyId": {},
+              "userIds": {},
+              "value": {}
+            },
+            "type": "object"
           },
           "entity": {
             "type": "string"

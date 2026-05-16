@@ -219,7 +219,11 @@ func circuitBreakerStatus(enabled bool) string {
 
 func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "\nLive checks:\n")
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.ToolTimeout)
+	// Honour Ctrl+C / SIGTERM during the live round-trips, mirroring the
+	// main server path; the tool timeout is layered on top.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, cfg.ToolTimeout)
 	defer cancel()
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 0)
 	client.SetUserAgent("clockify-mcp-one-user/" + effectiveVersion() + " doctor")

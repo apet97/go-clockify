@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -416,6 +417,10 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) {
 		old, ok := sources[oldName]
 		if !ok {
+			// A missing source key means a typo or partial merge dropped a
+			// high-value tool. Surface it loudly instead of vanishing the
+			// tool silently; the registry count test is the hard gate.
+			fmt.Fprintf(os.Stderr, "WARNING: descriptor source %q missing for tool %q — skipping\n", oldName, name)
 			return
 		}
 		out = append(out, nativeDirectDescriptor(priority, name, old, entity, change, handler))
