@@ -85,9 +85,7 @@ func appendSummaryReportViews(data map[string]any, body map[string]any) int {
 	if data == nil {
 		return 0
 	}
-	raw := maps.Clone(data)
 	rollups := summaryRollups(data, summaryGroupsFromBody(body))
-	data["raw"] = raw
 	data["summary_rollups"] = rollups
 	data["group_totals_summary"] = summarizeReportRollups(rollups)
 	data["donut_chart_summary"] = donutChartSummary(data)

@@ -360,8 +360,8 @@ func TestDetailedReportUsesReportsAPI(t *testing.T) {
 	if _, ok := data["timeentries"]; !ok {
 		t.Fatalf("expected upstream timeentries in data, got %#v", data)
 	}
-	if _, ok := data["raw"].(map[string]any); !ok {
-		t.Fatalf("expected raw upstream payload copy in data, got %#v", data["raw"])
+	if _, ok := data["raw"]; ok {
+		t.Fatalf("detailed report should not echo the full upstream payload under raw: %#v", data["raw"])
 	}
 	entries, ok := data["entries"].([]ReportEntryView)
 	if !ok || len(entries) != 1 {
