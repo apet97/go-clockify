@@ -1433,7 +1433,7 @@ func reportHelperSchema() map[string]any {
 		"end":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"project":         map[string]any{"type": "string"},
 		"include_entries": map[string]any{"type": "boolean"},
-		"max_entries":     map[string]any{"type": "integer", "minimum": 0},
+		"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit."},
 		"week_start":      map[string]any{"type": "string", "description": "YYYY-MM-DD or RFC3339 week start."},
 		"timezone":        map[string]any{"type": "string"},
 	}})

@@ -53489,6 +53489,7 @@
             "type": "boolean"
           },
           "max_entries": {
+            "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit.",
             "minimum": 0,
             "type": "integer"
           },
@@ -53791,6 +53792,7 @@
             "type": "boolean"
           },
           "max_entries": {
+            "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit.",
             "minimum": 0,
             "type": "integer"
           },
@@ -54093,6 +54095,7 @@
             "type": "boolean"
           },
           "max_entries": {
+            "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit.",
             "minimum": 0,
             "type": "integer"
           },
