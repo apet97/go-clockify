@@ -146,6 +146,24 @@ jobs:
             exit 1
           fi
 
+  openapi-drift:
+    name: OpenAPI artifact drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check generated OpenAPI artifact is current
+        run: make openapi-drift
+
+  api-parity-matrix-drift:
+    name: API parity matrix drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check API parity matrix matches the catalog and ledger
+        run: make api-parity-matrix-drift
+
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
