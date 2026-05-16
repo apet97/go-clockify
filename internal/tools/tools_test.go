@@ -315,6 +315,11 @@ func TestClockifyLogWorkCreatesFinishedEntry(t *testing.T) {
 	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/workspaces/ws1":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected method: %s", r.Method)
+			}
+			respondJSON(t, w, map[string]any{"workspaceSettings": map[string]any{"forceProjects": false}})
 		case "/workspaces/ws1/time-entries":
 			if r.Method != http.MethodPost {
 				t.Fatalf("unexpected method: %s", r.Method)
@@ -369,6 +374,11 @@ func TestClockifyLogWorkUsesServiceDefaultTimezoneForFlexibleTimes(t *testing.T)
 	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/workspaces/ws1":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected method: %s", r.Method)
+			}
+			respondJSON(t, w, map[string]any{"workspaceSettings": map[string]any{"forceProjects": false}})
 		case "/workspaces/ws1/time-entries":
 			if r.Method != http.MethodPost {
 				t.Fatalf("unexpected method: %s", r.Method)
@@ -407,6 +417,8 @@ func TestClockifyLogWorkAcceptsFlexibleTimesAndScansForOverlap(t *testing.T) {
 	var postBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/workspaces/ws1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"workspaceSettings": map[string]any{"forceProjects": false}})
 		case r.URL.Path == "/user" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
@@ -455,6 +467,8 @@ func TestClockifyLogWorkRejectsOverlapUnlessAllowed(t *testing.T) {
 	var postCount int
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/workspaces/ws1" && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"workspaceSettings": map[string]any{"forceProjects": false}})
 		case r.URL.Path == "/user" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
 		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
