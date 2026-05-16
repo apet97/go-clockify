@@ -40,7 +40,7 @@ func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnv
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_tasks_list", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_tasks_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_tasks_create")), nil
 }
 
 func taskListQuery(args map[string]any, page, pageSize int) map[string]string {

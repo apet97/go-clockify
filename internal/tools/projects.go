@@ -36,7 +36,7 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_projects_list", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_projects_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_projects_create")), nil
 }
 
 func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values, error) {

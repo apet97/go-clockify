@@ -260,13 +260,13 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_requests", timeOffRequestViewsFromRaw(envelope.Requests), map[string]any{
+	return ok("clockify_list_time_off_requests", timeOffRequestViewsFromRaw(envelope.Requests), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Requests),
 		"total":       envelope.Count,
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, "clockify_request_time_off")), nil
 }
 
 func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -619,10 +619,10 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_policies", timeOffPolicyViewsFromRaw(policies), map[string]any{
+	return ok("clockify_list_time_off_policies", timeOffPolicyViewsFromRaw(policies), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(policies),
-	}), nil
+	}, "clockify_time_off_policies_create")), nil
 }
 
 func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

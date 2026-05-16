@@ -160,12 +160,12 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_custom_fields", out, map[string]any{
+	return ok("clockify_list_custom_fields", out, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, "clockify_custom_fields_create")), nil
 }
 
 func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

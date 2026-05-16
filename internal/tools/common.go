@@ -783,6 +783,24 @@ func sanitizeResultMeta(meta map[string]any) map[string]any {
 	return sanitized
 }
 
+// emptyListMeta annotates a list-tool meta map with a nextAction hint when
+// the result was empty, so the model is told what to try next rather than
+// receiving a bare [] (Axiom 11). It reads the integer "count" the list
+// handlers already record; a non-zero or absent count leaves meta untouched.
+// createTool is the tool that creates the missing entity, or "" when the
+// domain has no create companion.
+func emptyListMeta(meta map[string]any, createTool string) map[string]any {
+	if count, ok := meta["count"].(int); !ok || count != 0 {
+		return meta
+	}
+	if createTool != "" {
+		meta["nextAction"] = "No results matched the request. Use " + createTool + " to create one, or retry with broader filters or a wider date range."
+	} else {
+		meta["nextAction"] = "No results matched the request. Retry with broader filters or a wider date range."
+	}
+	return meta
+}
+
 func sanitizeResultValue(value any) any {
 	switch v := value.(type) {
 	case map[string]any:

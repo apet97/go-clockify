@@ -274,12 +274,12 @@ func (s *Service) ListUserGroups(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_user_groups", groups, map[string]any{
+	return ok("clockify_list_user_groups", groups, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(groups),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, "clockify_groups_create")), nil
 }
 
 // CreateUserGroup creates a new user group.

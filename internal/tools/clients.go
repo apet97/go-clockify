@@ -33,7 +33,7 @@ func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultE
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_clients_list", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_clients_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_clients_create")), nil
 }
 
 func clientListQuery(args map[string]any, page, pageSize int) map[string]string {

@@ -36,7 +36,7 @@ func (s *Service) ListTags(ctx context.Context, args map[string]any) (ResultEnve
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_tags_list", out, meta), nil
+	return ok("clockify_tags_list", out, emptyListMeta(meta, "clockify_tags_create")), nil
 }
 
 func tagListQuery(args map[string]any, page, pageSize int) map[string]string {

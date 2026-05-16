@@ -275,7 +275,7 @@ func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any)
 		"workspaceId": wsID,
 		"count":       len(out),
 	}, args, page, pageSize)
-	return ok("clockify_list_project_templates", out, meta), nil
+	return ok("clockify_list_project_templates", out, emptyListMeta(meta, "clockify_projects_templates_create")), nil
 }
 
 func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

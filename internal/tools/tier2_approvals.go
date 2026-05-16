@@ -124,12 +124,12 @@ func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_approval_requests", approvalViewsFromRaw(items), map[string]any{
+	return ok("clockify_list_approval_requests", approvalViewsFromRaw(items), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(items),
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, "clockify_approvals_submit")), nil
 }
 
 func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

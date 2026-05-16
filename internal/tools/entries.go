@@ -65,7 +65,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 			meta["projectFilterResolvedId"] = resolvedProjectID
 		}
 		views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-		return ok("clockify_entries_list", views, withFinancialMeta(meta, financialMeta)), nil
+		return ok("clockify_entries_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_log_work")), nil
 	}
 
 	query := make(map[string]string, len(baseQuery)+2)
@@ -92,7 +92,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-	return ok("clockify_entries_list", views, withFinancialMeta(meta, financialMeta)), nil
+	return ok("clockify_entries_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_log_work")), nil
 }
 
 // GetEntry retrieves a single time entry by ID.

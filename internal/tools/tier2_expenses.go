@@ -199,12 +199,12 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	items := envelope.Expenses.Expenses
-	return ok("clockify_list_expenses", expenseViewsFromRaw(items), map[string]any{
+	return ok("clockify_list_expenses", expenseViewsFromRaw(items), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       envelope.Expenses.Count,
 		"page":        page,
 		"pageSize":    pageSize,
-	}), nil
+	}, "clockify_record_expense")), nil
 }
 
 func (s *Service) getExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -577,10 +577,10 @@ func (s *Service) listExpenseCategories(ctx context.Context, _ map[string]any) (
 	if envelope.Categories == nil {
 		envelope.Categories = []map[string]any{}
 	}
-	return ok("clockify_list_expense_categories", envelope.Categories, map[string]any{
+	return ok("clockify_list_expense_categories", envelope.Categories, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       envelope.Count,
-	}), nil
+	}, "clockify_expenses_categories_create")), nil
 }
 
 func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

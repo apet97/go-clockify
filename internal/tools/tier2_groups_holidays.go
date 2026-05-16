@@ -359,10 +359,10 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_holidays", out, map[string]any{
+	return ok("clockify_list_holidays", out, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
-	}), nil
+	}, "clockify_holidays_create")), nil
 }
 
 func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -423,12 +423,12 @@ func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any)
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_holidays_in_period", out, map[string]any{
+	return ok("clockify_list_holidays_in_period", out, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"assignedTo":  assignedTo,
 		"count":       len(out),
 		"warning":     "Clockify may return a server error for valid-looking but unknown assigned_to users; pass a live user ID from this workspace.",
-	}), nil
+	}, "")), nil
 }
 
 func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

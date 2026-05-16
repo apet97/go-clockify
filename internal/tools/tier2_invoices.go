@@ -313,12 +313,12 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_invoices", invoiceViewsFromRaw(envelope.Invoices), map[string]any{
+	return ok("clockify_list_invoices", invoiceViewsFromRaw(envelope.Invoices), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Invoices),
 		"total":       envelope.Total,
 		"page":        page,
-	}), nil
+	}, "clockify_invoice_client_work")), nil
 }
 
 func (s *Service) getInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -1022,11 +1022,11 @@ func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (Re
 			items = append(items, invoiceItemViews(mapSlice(invoice["items"]), reportValueString(invoice["currency"]))...)
 		}
 	}
-	return ok("clockify_list_invoice_items", items, map[string]any{
+	return ok("clockify_list_invoice_items", items, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"invoiceId":   invoiceID,
 		"count":       len(items),
-	}), nil
+	}, "clockify_invoices_items_add")), nil
 }
 
 // invoiceMinorUnitSchema returns the shared schema for a *_unit input
