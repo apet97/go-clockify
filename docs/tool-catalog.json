@@ -45092,11 +45092,9 @@
     },
     {
       "name": "clockify_reports_attendance",
-      "description": "Run the attendance report.",
+      "description": "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.",
       "category": "domain",
       "handler_kind": "native handler",
-      "method": "POST",
-      "path": "/workspaces/{workspaceId}/reports/attendance",
       "read_only": true,
       "destructive": false,
       "idempotent": true,
@@ -45107,18 +45105,21 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
+          "attendance_filter": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
-            "description": "Report range end",
+            "description": "Report range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "date_range_start": {
-            "description": "Report range start",
+            "description": "Report range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "detailed_filter": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "end": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -45139,6 +45140,10 @@
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "summary_filter": {
+            "additionalProperties": true,
+            "type": "object"
           }
         },
         "type": "object"
@@ -45360,9 +45365,7 @@
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
-        "method": "POST",
         "openWorldHint": true,
-        "path": "/workspaces/{workspaceId}/reports/attendance",
         "priority": 100,
         "readOnlyHint": true,
         "riskClass": [
@@ -45373,11 +45376,9 @@
     },
     {
       "name": "clockify_reports_money",
-      "description": "Run the money summary report.",
+      "description": "Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.",
       "category": "domain",
       "handler_kind": "native handler",
-      "method": "POST",
-      "path": "/workspaces/{workspaceId}/reports/summary",
       "read_only": true,
       "destructive": false,
       "idempotent": true,
@@ -45388,18 +45389,21 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
+          "attendance_filter": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
-            "description": "Report range end",
+            "description": "Report range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "date_range_start": {
-            "description": "Report range start",
+            "description": "Report range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "detailed_filter": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "end": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -45420,6 +45424,10 @@
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "summary_filter": {
+            "additionalProperties": true,
+            "type": "object"
           }
         },
         "type": "object"
@@ -45641,9 +45649,7 @@
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
-        "method": "POST",
         "openWorldHint": true,
-        "path": "/workspaces/{workspaceId}/reports/summary",
         "priority": 101,
         "readOnlyHint": true,
         "riskClass": [
@@ -45654,11 +45660,9 @@
     },
     {
       "name": "clockify_reports_expense",
-      "description": "Run the detailed expense report.",
+      "description": "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.",
       "category": "domain",
       "handler_kind": "native handler",
-      "method": "POST",
-      "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
       "read_only": true,
       "destructive": false,
       "idempotent": true,
@@ -45669,18 +45673,21 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
+          "attendance_filter": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
-            "description": "Report range end",
+            "description": "Report range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "date_range_start": {
-            "description": "Report range start",
+            "description": "Report range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "detailed_filter": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "end": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -45701,6 +45708,10 @@
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "summary_filter": {
+            "additionalProperties": true,
+            "type": "object"
           }
         },
         "type": "object"
@@ -45922,9 +45933,7 @@
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
-        "method": "POST",
         "openWorldHint": true,
-        "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
         "priority": 102,
         "readOnlyHint": true,
         "riskClass": [
@@ -45935,11 +45944,9 @@
     },
     {
       "name": "clockify_reports_export",
-      "description": "Export a report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.",
+      "description": "Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes.",
       "category": "domain",
       "handler_kind": "native handler",
-      "method": "POST",
-      "path": "/workspaces/{workspaceId}/reports/detailed",
       "read_only": true,
       "destructive": false,
       "idempotent": true,
@@ -45950,18 +45957,21 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
+          "attendance_filter": {
             "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
             "type": "object"
           },
           "date_range_end": {
-            "description": "Report range end",
+            "description": "Report range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "date_range_start": {
-            "description": "Report range start",
+            "description": "Report range start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "detailed_filter": {
+            "additionalProperties": true,
+            "type": "object"
           },
           "end": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -45982,6 +45992,10 @@
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "summary_filter": {
+            "additionalProperties": true,
+            "type": "object"
           }
         },
         "type": "object"
@@ -46210,9 +46224,7 @@
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
-        "method": "POST",
         "openWorldHint": true,
-        "path": "/workspaces/{workspaceId}/reports/detailed",
         "priority": 103,
         "readOnlyHint": true,
         "riskClass": [

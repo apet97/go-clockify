@@ -997,10 +997,10 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_scheduling_project_totals":     {"projectId", "totals"},
 		"clockify_scheduling_user_totals":        {"id"},
 		"clockify_scheduling_capacity":           {"id"},
-		"clockify_reports_attendance":            {"id"},
-		"clockify_reports_money":                 {"id"},
-		"clockify_reports_expense":               {"id"},
-		"clockify_reports_export":                {"contentType", "filename", "bytes", "bodyEncoding", "base64Bytes", "truncated"},
+		"clockify_reports_attendance":            {"workspaceId"},
+		"clockify_reports_money":                 {"workspaceId"},
+		"clockify_reports_expense":               {"workspaceId"},
+		"clockify_reports_export":                {"workspaceId"},
 		"clockify_approvals_list":                {"approvalId", "status"},
 		"clockify_approvals_get":                 {"approvalId", "status"},
 		"clockify_approvals_submit":              {"approvalId", "status"},
@@ -2931,6 +2931,10 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return oneUserCoverageID(name + "_id")
 	case "date":
 		return "2026-01-02"
+	case "date_range_start":
+		return "2026-01-02"
+	case "date_range_end":
+		return "2026-01-03"
 	case "start", "start_time":
 		return "2026-01-02T09:00:00Z"
 	case "end", "end_time":

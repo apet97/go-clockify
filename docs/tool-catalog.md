@@ -172,10 +172,10 @@ prefer the documented format on each tool descriptor.
 | `clockify_users_deactivate` | `domain` | no | no | no | yes | `write`, `admin` | Deactivate a workspace user and remove access. Supports dry_run preview. |
 | `clockify_users_role` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Update a user's workspace role. Supports dry_run:true. |
 | `clockify_projects_memberships_list` | `domain` | yes | no | yes | no | `read` | List project memberships. |
-| `clockify_reports_attendance` | `domain` | yes | no | yes | no | `read` | Run the attendance report. |
-| `clockify_reports_money` | `domain` | yes | no | yes | no | `read` | Run the money summary report. |
-| `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. |
-| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a report. JSON returns the decoded object; PDF/CSV/XLSX return the safe binary envelope: contentType, filename, bytes, bodyEncoding:"base64", base64Bytes, truncated:false, and body with the base64 payload. |
+| `clockify_reports_attendance` | `domain` | yes | no | yes | no | `read` | Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
+| `clockify_reports_money` | `domain` | yes | no | yes | no | `read` | Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
+| `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
+| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes. |
 | `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:"base64", base64Bytes, truncated:false, and body with the base64 payload. |
 | `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import time entries into an invoice. |
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import expenses into an invoice. |

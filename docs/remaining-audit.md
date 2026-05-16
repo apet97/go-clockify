@@ -34,8 +34,7 @@ As of this audit handoff, the coverage ledger reports:
 ## Audit priorities
 
 1. Preserve product invariants before expanding coverage: local one-user,
-   stdio-only, pinned workspace, full startup registry, and no hosted control
-   plane.
+   stdio-only, pinned workspace, and full startup registry.
 2. Add only evidence-backed ledger changes. Do not count fake-server coverage,
    unavailable-feature recovery, or bogus-ID recovery as happy-path proof.
 3. Prefer workflow and domain tool fixes over raw API fallback usage unless a
