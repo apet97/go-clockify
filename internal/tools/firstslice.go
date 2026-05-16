@@ -247,6 +247,21 @@ func objectSchema(overrides map[string]any) map[string]any {
 		"properties": map[string]any{},
 	}
 	for k, v := range overrides {
+		if v == nil {
+			continue
+		}
+		if k == "required" {
+			switch s := v.(type) {
+			case []string:
+				if len(s) == 0 {
+					continue
+				}
+			case []any:
+				if len(s) == 0 {
+					continue
+				}
+			}
+		}
 		schema[k] = v
 	}
 	return schema
