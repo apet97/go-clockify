@@ -302,6 +302,13 @@ func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any)
 		}
 	}
 
+	// Clockify's group-create response carries userIds:[] because the create
+	// endpoint does not echo members. Surface the members that were actually
+	// attached so the receipt reflects reality.
+	if out == nil {
+		out = map[string]any{}
+	}
+	out["userIds"] = addedUserIDs
 	meta := map[string]any{
 		"workspaceId":  wsID,
 		"addedUserIds": addedUserIDs,
