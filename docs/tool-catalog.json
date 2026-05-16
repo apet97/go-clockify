@@ -138,136 +138,6 @@
               "featureSubscriptionType": {
                 "type": "string"
               },
-              "pinnedWorkspace": {
-                "additionalProperties": false,
-                "properties": {
-                  "cakeOrganizationId": {
-                    "type": "string"
-                  },
-                  "costRate": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "amount": {
-                        "type": "integer"
-                      },
-                      "currency": {
-                        "type": "string"
-                      },
-                      "inherited": {
-                        "type": "boolean"
-                      }
-                    },
-                    "required": [
-                      "amount"
-                    ],
-                    "type": "object"
-                  },
-                  "currencies": {},
-                  "featureSubscriptionType": {
-                    "type": "string"
-                  },
-                  "features": {
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "hourlyRate": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "amount": {
-                        "type": "integer"
-                      },
-                      "currency": {
-                        "type": "string"
-                      },
-                      "inherited": {
-                        "type": "boolean"
-                      }
-                    },
-                    "required": [
-                      "amount"
-                    ],
-                    "type": "object"
-                  },
-                  "id": {
-                    "type": "string"
-                  },
-                  "imageUrl": {
-                    "type": "string"
-                  },
-                  "memberships": {
-                    "items": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "costRate": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "amount": {
-                              "type": "integer"
-                            },
-                            "currency": {
-                              "type": "string"
-                            },
-                            "inherited": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "amount"
-                          ],
-                          "type": "object"
-                        },
-                        "hourlyRate": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "amount": {
-                              "type": "integer"
-                            },
-                            "currency": {
-                              "type": "string"
-                            },
-                            "inherited": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "amount"
-                          ],
-                          "type": "object"
-                        },
-                        "membershipStatus": {
-                          "type": "string"
-                        },
-                        "membershipType": {
-                          "type": "string"
-                        },
-                        "targetId": {
-                          "type": "string"
-                        },
-                        "userId": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "userId"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "subdomain": {},
-                  "workspaceSettings": {}
-                },
-                "required": [
-                  "id",
-                  "name"
-                ],
-                "type": "object"
-              },
               "recommendedFirstTools": {
                 "items": {
                   "type": "string"
@@ -444,18 +314,11 @@
                   "name"
                 ],
                 "type": "object"
-              },
-              "workspaceFeatures": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
               }
             },
             "required": [
               "user",
               "workspace",
-              "pinnedWorkspace",
               "timezone",
               "featureStatus",
               "recommendedFirstTools"
@@ -26449,7 +26312,7 @@
             "type": "string"
           },
           "item_type": {
-            "description": "Workspace invoice item type name (required by live API; e.g. NEW DEFAULT in the sacrificial workspace)",
+            "description": "Invoice item type name as configured in the workspace's invoice settings (required by the Clockify API).",
             "type": "string"
           },
           "quantity": {
