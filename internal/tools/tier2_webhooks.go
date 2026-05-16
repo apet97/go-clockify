@@ -490,8 +490,7 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
+	page, pageSize := paginationFromArgs(args)
 
 	query := map[string]string{
 		"page":      strconv.Itoa(page),
@@ -512,17 +511,31 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	for _, webhook := range envelope.Webhooks {
+	all := envelope.Webhooks
+	if all == nil {
+		all = []map[string]any{}
+	}
+	items := all
+	if len(all) > pageSize {
+		start := (page - 1) * pageSize
+		end := min(start+pageSize, len(all))
+		items = []map[string]any{}
+		if start < len(all) {
+			items = all[start:end]
+		}
+	}
+	for _, webhook := range items {
 		maskWebhookAuthToken(webhook)
 	}
 
-	return ok("clockify_list_webhooks", envelope.Webhooks, emptyListMeta(map[string]any{
+	return ok("clockify_list_webhooks", items, emptyListMeta(map[string]any{
 		"workspaceId":           wsID,
-		"count":                 len(envelope.Webhooks),
-		"total":                 envelope.WorkspaceWebhookCount,
+		"count":                 len(items),
+		"total":                 max(envelope.WorkspaceWebhookCount, len(all)),
 		"workspaceWebhookCount": envelope.WorkspaceWebhookCount,
 		"page":                  page,
 		"pageSize":              pageSize,
+		"has_more":              len(items) == pageSize,
 	}, "clockify_setup_webhook")), nil
 }
 
