@@ -346,9 +346,10 @@ func TestInvoiceClientWorkImportFailureReturnsRecoverableError(t *testing.T) {
 
 	clientResult := callToolOK(t, server, "clockify_clients_create", map[string]any{"name": "Import Failure Client"})
 	invoiceImport := callToolError(t, server, "clockify_invoice_client_work", map[string]any{
-		"client_id":      clientResult.IDs["clientId"],
-		"number":         "INV-IMPORT-FAIL",
-		"time_entry_ids": []any{"65b382b606de527a7ee2b615"},
+		"client_id": clientResult.IDs["clientId"],
+		"number":    "INV-IMPORT-FAIL",
+		"from":      "not-a-date",
+		"to":        "2026-12-31",
 	})
 	if invoiceImport.Error.Code == "" || invoiceImport.Recovery.Tool != "clockify_invoices_import_time" {
 		t.Fatalf("bad invoice import failure envelope: %+v", invoiceImport)
@@ -2888,6 +2889,9 @@ func oneUserCoverageArgs(tool mcp.Tool) map[string]any {
 		args[name] = oneUserCoverageValue(name, prop)
 	}
 	switch tool.Name {
+	case "clockify_invoice_client_work", "clockify_invoices_import_time", "clockify_invoices_import_expenses":
+		args["from"] = "2026-01-01"
+		args["to"] = "2026-12-31"
 	case "clockify_reports_weekly":
 		delete(args, "start")
 		delete(args, "end")
