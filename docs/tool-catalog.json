@@ -29965,6 +29965,19 @@
       ],
       "input_schema": {
         "additionalProperties": false,
+        "properties": {
+          "page": {
+            "description": "Page number (default 1)",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "output_schema": {

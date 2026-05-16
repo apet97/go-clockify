@@ -331,3 +331,51 @@ func equalAny(a, b any) bool {
 	}
 	return a == b
 }
+
+func TestListCustomFields_PaginationMeta(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/custom-fields" && r.Method == http.MethodGet:
+			respondJSON(t, w, []map[string]any{
+				{"id": "f1", "name": "Field 1"},
+				{"id": "f2", "name": "Field 2"},
+				{"id": "f3", "name": "Field 3"},
+				{"id": "f4", "name": "Field 4"},
+				{"id": "f5", "name": "Field 5"},
+				{"id": "f6", "name": "Field 6"},
+				{"id": "f7", "name": "Field 7"},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	first, err := svc.ListCustomFields(context.Background(), map[string]any{"page_size": 5})
+	if err != nil {
+		t.Fatalf("ListCustomFields page 1: %v", err)
+	}
+	items, ok := first.Data.([]map[string]any)
+	if !ok {
+		t.Fatalf("expected []map[string]any, got %T", first.Data)
+	}
+	if len(items) != 5 {
+		t.Fatalf("page 1 len=%d, want 5", len(items))
+	}
+	if first.Meta["page"] != 1 || first.Meta["pageSize"] != 5 || first.Meta["has_more"] != true {
+		t.Fatalf("unexpected page 1 meta: %#v", first.Meta)
+	}
+
+	second, err := svc.ListCustomFields(context.Background(), map[string]any{"page": 2, "page_size": 5})
+	if err != nil {
+		t.Fatalf("ListCustomFields page 2: %v", err)
+	}
+	secondItems := second.Data.([]map[string]any)
+	if len(secondItems) != 2 {
+		t.Fatalf("page 2 len=%d, want 2", len(secondItems))
+	}
+	if items[0]["id"] == secondItems[0]["id"] {
+		t.Fatalf("page 2 did not advance: page1=%#v page2=%#v", items, secondItems)
+	}
+}
