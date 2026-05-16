@@ -2416,6 +2416,8 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_scheduling_assignments_create",
 		"clockify_webhooks_create",
 		"clockify_users_invite",
+		"clockify_audit_logs_search",
+		"clockify_entity_changes_list",
 	)
 	add("TestLiveOneUserExpensesCRUD", optional,
 		"clockify_expenses_get",
@@ -2593,6 +2595,10 @@ func oneUserNamedLiveHappyPathEvidence() map[string]liveCoverageEvidence {
 		"clockify_expenses_delete",
 		"clockify_expenses_categories_create",
 		"clockify_expenses_categories_update",
+	)
+	add("TestOneUserLiveOptionalDomainContracts", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS"},
+		"clockify_audit_logs_search",
+		"clockify_entity_changes_list",
 	)
 	add("TestLiveOneUserPaidFeatureHappyPaths", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 		"clockify_invoice_client_work",

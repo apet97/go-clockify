@@ -8,8 +8,8 @@ Summary:
 - Domain tools: 135
 - Raw fallback tools: 2
 - Fake-smoke yes: 154
-- Live protocol/recovery tested yes: 150
-- Live happy-path tested yes: 127
+- Live protocol/recovery tested yes: 152
+- Live happy-path tested yes: 129
 
 Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
@@ -171,7 +171,7 @@ Remaining honest gaps:
 | `clockify_reports_detailed` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_summary` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_weekly` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_audit_logs_search` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | verify_live_coverage |
-| `clockify_entity_changes_list` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | verify_live_coverage |
+| `clockify_audit_logs_search` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_entity_changes_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_api_get` | raw | raw fallback | GET caller-supplied path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |
 | `clockify_api_request` | raw | raw fallback | caller-supplied method/path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |

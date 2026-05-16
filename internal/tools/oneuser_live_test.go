@@ -255,6 +255,27 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	if webhook.OK {
 		requireLiveID(t, webhook, "webhookId")
 	}
+
+	// Full API coverage: the audit-log report and the experimental entity
+	// changes feed. Both are read-only and both return a bare JSON array; a
+	// live probe confirmed real success envelopes on the sacrificial
+	// workspace, so a successful read is required here.
+	auditStart := time.Now().AddDate(0, 0, -7).UTC().Format("2006-01-02")
+	auditEnd := time.Now().UTC().Format("2006-01-02")
+	requireLiveOK(t, server, "clockify_audit_logs_search", map[string]any{
+		"actions":    []any{"CREATE_PROJECT", "CREATE_CLIENT", "UPDATE_PROJECT", "CREATE_TIME_PERSONAL_MANUAL"},
+		"author_ids": []any{userID},
+		"start":      auditStart,
+		"end":        auditEnd,
+	})
+	for _, changeType := range []string{"created", "updated", "deleted"} {
+		requireLiveOK(t, server, "clockify_entity_changes_list", map[string]any{
+			"change_type":  changeType,
+			"entity_types": []any{"TIME_ENTRY", "PROJECTS", "CLIENTS"},
+			"start":        auditStart,
+			"end":          auditEnd,
+		})
+	}
 }
 
 func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
