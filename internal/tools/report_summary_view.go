@@ -100,11 +100,9 @@ func appendWeeklyReportViews(data map[string]any, body map[string]any, includeFu
 	if data == nil {
 		return 0
 	}
-	raw := maps.Clone(data)
 	now := reportNowForBody(body)
 	rollups := summaryRollupsFiltered(data, nil, includeFuture, now)
 	dayTotals := weeklyDayTotals(data, includeFuture, now)
-	data["raw"] = raw
 	data["weekly_rollups"] = rollups
 	data["weekly_day_totals"] = dayTotals
 	data["totals_summary"] = summarizeReportTotals(data, nil)
