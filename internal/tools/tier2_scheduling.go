@@ -353,6 +353,62 @@ func schedulingRangeArgs(args map[string]any, loc *time.Location) (string, strin
 	return start.Format(time.RFC3339), end.Format(time.RFC3339), nil
 }
 
+// schedulingPublishSchema is the input schema for clockify_scheduling_publish.
+func schedulingPublishSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"required": []string{"start", "end"},
+		"properties": map[string]any{
+			"start":        map[string]any{"type": "string", "description": "Publish-window start. " + flexibleDatetimeDescription},
+			"end":          map[string]any{"type": "string", "description": "Publish-window end; must be after start. " + flexibleDatetimeDescription},
+			"notify_users": map[string]any{"type": "boolean", "description": "Whether Clockify emails affected users about the published schedule. Default false."},
+			"dry_run":      map[string]any{"type": "boolean", "description": "Preview the publish request without applying it."},
+		},
+	})
+}
+
+// SchedulingPublish backs clockify_scheduling_publish. Scheduling assignment
+// create/update produce drafts; this is the separate step that publishes
+// every draft assignment in the start..end window. The Clockify endpoint
+// returns no body, so the receipt is synthesised from the request (Axiom 8).
+func (s *Service) SchedulingPublish(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	loc, _ := s.locationFromArgs(args)
+	start, end, err := schedulingRangeArgs(args, loc)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	notify := false
+	if v, ok := args["notify_users"].(bool); ok {
+		notify = v
+	}
+	payload := map[string]any{"start": start, "end": end, "notifyUsers": notify}
+
+	if dryrun.Enabled(args) {
+		return ok("clockify_scheduling_publish", dryrunPreviewPayload("clockify_scheduling_publish", payload), map[string]any{
+			"workspaceId": wsID,
+			"start":       start,
+			"end":         end,
+		}), nil
+	}
+
+	path, err := paths.Workspace(wsID, "scheduling", "assignments", "publish")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if err := s.Client.Put(ctx, path, payload, nil); err != nil {
+		return ResultEnvelope{}, err
+	}
+	return ok("clockify_scheduling_publish", map[string]any{
+		"published":   true,
+		"start":       start,
+		"end":         end,
+		"notifyUsers": notify,
+	}, map[string]any{"workspaceId": wsID, "start": start, "end": end}), nil
+}
+
 func (s *Service) createAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

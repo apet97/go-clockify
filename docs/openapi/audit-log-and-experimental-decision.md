@@ -3,7 +3,7 @@
 Original decision date: 2026-05-15. Superseded 2026-05-16, when the maintainer
 opted into full Clockify API coverage.
 
-The one-user MCP now loads 154 tools at startup. Two of them close the last
+The one-user MCP now loads 156 tools at startup. Two of them close the last
 documented OpenAPI coverage gaps: the Audit Log report and the experimental
 Entity Changes feed.
 

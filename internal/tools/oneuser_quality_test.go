@@ -200,8 +200,8 @@ func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 			t.Fatalf("tools/list golden contains old tool %s", forbidden)
 		}
 	}
-	if len(tools) != 154 {
-		t.Fatalf("tools/list returned %d tools, want 154", len(tools))
+	if len(tools) != 156 {
+		t.Fatalf("tools/list returned %d tools, want 156", len(tools))
 	}
 	if tools[0].Name != "clockify_status" {
 		t.Fatalf("first tool=%s, want clockify_status", tools[0].Name)
@@ -1269,6 +1269,8 @@ func TestOneUserCoverageLedgerYesRowsHaveExplicitEvidence(t *testing.T) {
 		"clockify_holidays_update",
 		"clockify_audit_logs_search",
 		"clockify_entity_changes_list",
+		"clockify_invoices_info",
+		"clockify_scheduling_publish",
 		"clockify_api_get",
 		"clockify_api_request",
 	)
@@ -1802,8 +1804,8 @@ func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.
 	initializeServer(t, server)
 
 	descriptors := svc.FullAccessRegistry()
-	if len(descriptors) != 154 {
-		t.Fatalf("FullAccessRegistry returned %d tools, want 154", len(descriptors))
+	if len(descriptors) != 156 {
+		t.Fatalf("FullAccessRegistry returned %d tools, want 156", len(descriptors))
 	}
 	for _, descriptor := range descriptors {
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
@@ -2119,6 +2121,12 @@ func assertGoldenJSON(t *testing.T, name string, got any) {
 	}
 	raw = append(raw, '\n')
 	path := filepath.Join("testdata", name)
+	if os.Getenv("UPDATE_GOLDEN") != "" {
+		if err := os.WriteFile(path, raw, 0o644); err != nil {
+			t.Fatalf("update golden %s: %v", path, err)
+		}
+		return
+	}
 	want, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read golden %s: %v", path, err)
@@ -2874,6 +2882,8 @@ func oneUserCoverageArgs(tool mcp.Tool) map[string]any {
 		args["actions"] = []any{"CREATE_PROJECT"}
 	case "clockify_entity_changes_list":
 		args["entity_types"] = []any{"TIME_ENTRY"}
+	case "clockify_invoices_info":
+		args["statuses"] = []any{"PAID"}
 	}
 	return args
 }

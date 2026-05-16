@@ -211,11 +211,11 @@ func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	first := svc.FullAccessRegistry()
-	if len(first) != 154 {
-		t.Fatalf("registry size=%d, want 154", len(first))
+	if len(first) != 156 {
+		t.Fatalf("registry size=%d, want 156", len(first))
 	}
-	if len(svc.registry) != 154 {
-		t.Fatalf("cached registry size=%d, want 154", len(svc.registry))
+	if len(svc.registry) != 156 {
+		t.Fatalf("cached registry size=%d, want 156", len(svc.registry))
 	}
 	cachedFirstName := svc.registry[0].Tool.Name
 	first[0].Tool.Name = "mutated-by-test"
@@ -224,7 +224,7 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	if second[0].Tool.Name != cachedFirstName {
 		t.Fatalf("cached registry was not defensively cloned: got %s want %s", second[0].Tool.Name, cachedFirstName)
 	}
-	if len(svc.registry) != 154 || svc.registry[0].Tool.Name != cachedFirstName {
+	if len(svc.registry) != 156 || svc.registry[0].Tool.Name != cachedFirstName {
 		t.Fatalf("cached registry changed across calls: len=%d first=%s", len(svc.registry), svc.registry[0].Tool.Name)
 	}
 }
@@ -261,7 +261,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 		},
 		{
 			toolset:   "business",
-			wantCount: 84,
+			wantCount: 85,
 			want: []string{
 				"clockify_invoice_client_work",
 				"clockify_record_expense",
@@ -279,7 +279,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 		},
 		{
 			toolset:   "admin",
-			wantCount: 148,
+			wantCount: 150,
 			want: []string{
 				"clockify_request_time_off",
 				"clockify_schedule_work",
@@ -302,7 +302,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 		},
 		{
 			toolset:   "all",
-			wantCount: 154,
+			wantCount: 156,
 			want: []string{
 				"clockify_demo_seed",
 				"clockify_api_get",
@@ -339,8 +339,8 @@ func BenchmarkFullAccessRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	b.ReportAllocs()
 	for b.Loop() {
-		if got := len(svc.FullAccessRegistry()); got != 154 {
-			b.Fatalf("registry size=%d, want 154", got)
+		if got := len(svc.FullAccessRegistry()); got != 156 {
+			b.Fatalf("registry size=%d, want 156", got)
 		}
 	}
 }
@@ -435,8 +435,8 @@ func BenchmarkOneUserToolsResourceData(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		data := svc.toolsResourceData()
-		if got, _ := data["count"].(int); got != 154 {
-			b.Fatalf("tools resource count=%d, want 154", got)
+		if got, _ := data["count"].(int); got != 156 {
+			b.Fatalf("tools resource count=%d, want 156", got)
 		}
 	}
 }
@@ -455,8 +455,8 @@ func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
 	tools[0].Name = "mutated-by-test"
 
 	second := svc.toolsResourceData()
-	if got, _ := second["count"].(int); got != 154 {
-		t.Fatalf("cached tools resource count=%d, want 154", got)
+	if got, _ := second["count"].(int); got != 156 {
+		t.Fatalf("cached tools resource count=%d, want 156", got)
 	}
 	secondTools, ok := second["tools"].([]mcp.Tool)
 	if !ok || len(secondTools) == 0 {

@@ -45,7 +45,7 @@ func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
 
 // RegistryForToolset returns the one-user startup registry for a narrower
 // owner-mode surface. The default "all" path is intentionally identical to
-// FullAccessRegistry so the canonical 154-tool product contract stays intact.
+// FullAccessRegistry so the canonical 156-tool product contract stays intact.
 func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
 	toolset = strings.ToLower(strings.TrimSpace(toolset))
 	if toolset == "" || toolset == "all" {
@@ -67,7 +67,7 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	out = append(out, s.FirstSliceRegistry()...)
 	out = append(out, s.nativeCoreDescriptors()...)
 	out = append(out, s.nativeHighValueDescriptors()...)
-	out = append(out, s.auditLogDescriptors()...)
+	out = append(out, s.nativeDomainExtras()...)
 	out = append(out, s.timerAndReportDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
 	return normalizeDescriptors(dedupeToolDescriptors(out))

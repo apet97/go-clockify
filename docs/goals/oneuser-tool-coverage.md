@@ -3,11 +3,11 @@
 Coverage ledger for the one-user full-access Clockify MCP. It is derived from `docs/tool-catalog.json` plus the current fake/live test posture. It is intentionally conservative: descriptor-only coverage is not counted as fake smoke, live protocol/recovery coverage means the sacrificial workspace exercises either success or a useful recovery envelope, and live happy-path coverage means a real created/read entity succeeded.
 
 Summary:
-- Total tools: 154
+- Total tools: 156
 - Workflow tools: 17
-- Domain tools: 135
+- Domain tools: 137
 - Raw fallback tools: 2
-- Fake-smoke yes: 154
+- Fake-smoke yes: 156
 - Live protocol/recovery tested yes: 152
 - Live happy-path tested yes: 129
 
@@ -18,6 +18,9 @@ Remaining honest gaps:
 - Every `Live protocol/recovery tested: yes` row is backed by named live-test evidence and required gate metadata in `internal/tools/oneuser_quality_test.go`; happy-path rows are tracked separately and only mark real success paths.
 - Workflow schemas and the first CRUD/native-conversion slice now advertise typed data schemas; remaining generic envelopes are tracked per row.
 - Remaining live protocol/recovery yes + happy-path no rows are classified as intentionally recovery-only when they are destructive, externally noisy, or stateful beyond created test entities; needs-domain-gate when they require a real approval/user-admin lifecycle beyond this campaign; and unavailable-paid-feature when the live API or workspace plan has not exposed a safe success route.
+
+- `clockify_invoices_info` and `clockify_scheduling_publish` are new tools with fake-smoke and unit coverage; their live protocol/recovery and happy-path columns stay `no` until named live-test evidence is added.
+- Three scheduling OpenAPI paths are uncovered by design: `PUT /scheduling/assignments/series/{id}` (the `ALL` series_update_option on update covers the same intent), `POST /scheduling/assignments/{id}/copy` (no clone tool — a recommended future addition), and `POST /scheduling/assignments/user-filter/totals` (overlaps the existing scheduling user-totals tools).
 
 | Tool | Class | Handler | Endpoint / method | Fake smoke | Live protocol/recovery tested | Live happy-path tested | Output schema | Status | Next action |
 |------|-------|---------|-------------------|-------------|--------------------------------|------------------------|---------------|--------|-------------|
@@ -173,5 +176,7 @@ Remaining honest gaps:
 | `clockify_reports_weekly` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_audit_logs_search` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_entity_changes_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_invoices_info` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | add_live_evidence |
+| `clockify_scheduling_publish` | domain | native handler | native handler; endpoint selected in code | yes | no | no | typed | ready | add_live_evidence |
 | `clockify_api_get` | raw | raw fallback | GET caller-supplied path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |
 | `clockify_api_request` | raw | raw fallback | caller-supplied method/path | yes | raw_fallback_only | raw_fallback_only | generic | raw_fallback_only | keep_raw_fallback_last |

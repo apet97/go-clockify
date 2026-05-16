@@ -404,6 +404,62 @@ func (s *Service) invoicePaymentViews(ctx context.Context, wsID, invoiceID strin
 	return invoicePaymentViewsFromRaw(rows), nil
 }
 
+// invoicesInfoSchema is the input schema for clockify_invoices_info.
+func invoicesInfoSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"properties": map[string]any{
+			"page":      map[string]any{"type": "integer", "minimum": 1, "description": "Result page, 1-indexed. Default 1."},
+			"page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 200, "description": "Invoices per page. Default 50, maximum 200."},
+			"statuses": map[string]any{
+				"type":        "array",
+				"items":       map[string]any{"type": "string", "enum": []string{"UNSENT", "SENT", "PARTIALLY_PAID", "PAID", "VOID", "OVERDUE"}},
+				"description": "Invoice statuses to include. Omit to return invoices of every status.",
+			},
+		},
+	})
+}
+
+// InvoicesInfo backs clockify_invoices_info: a bulk, paged invoice query via
+// POST /invoices/info. Unlike clockify_invoices_list it returns the workspace
+// total (filtered by the status filter) so a caller can compute has_more;
+// unlike clockify_invoice_report it returns raw invoice rows, not money
+// aggregates.
+func (s *Service) InvoicesInfo(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	page, pageSize := paginationFromArgs(args)
+	statuses, _, err := strictStringSliceArg(args, "statuses")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "invoices", "info")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body := map[string]any{"page": page, "pageSize": pageSize}
+	if len(statuses) > 0 {
+		body["statuses"] = statuses
+	}
+	var envelope struct {
+		Total    int              `json:"total"`
+		Invoices []map[string]any `json:"invoices"`
+	}
+	if err := s.Client.Post(ctx, path, body, &envelope); err != nil {
+		return ResultEnvelope{}, err
+	}
+	meta := map[string]any{
+		"workspaceId": wsID,
+		"count":       len(envelope.Invoices),
+		"total":       envelope.Total,
+		"page":        page,
+		"pageSize":    pageSize,
+		"has_more":    page*pageSize < envelope.Total,
+	}
+	return ok("clockify_invoices_info", invoiceViewsFromRaw(envelope.Invoices), emptyListMeta(meta, "clockify_invoice_client_work")), nil
+}
+
 func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {

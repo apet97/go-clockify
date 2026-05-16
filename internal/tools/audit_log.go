@@ -34,11 +34,12 @@ var entityChangeTypeEnum = []string{
 	"TIME_ENTRY", "TIME_ENTRY_RATE", "TIME_ENTRY_CUSTOM_FIELD_VALUE",
 }
 
-// auditLogDescriptors exposes the Clockify audit-log report and the
-// experimental entity-changes feed as native domain tools. They slot into
-// the registry after the high-value domain tools and before the timer and
-// report helpers so the raw API fallback stays last.
-func (s *Service) auditLogDescriptors() []mcp.ToolDescriptor {
+// nativeDomainExtras registers native-handler domain tools that slot into the
+// registry after the high-value domain block and before the timer and report
+// helpers, so the raw API fallback stays last: the audit-log report, the
+// experimental entity-changes feed, the bulk invoice query, and the
+// scheduling publish step.
+func (s *Service) nativeDomainExtras() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		nativeDomainTool(1200, toolRO(
 			"clockify_audit_logs_search",
@@ -50,6 +51,16 @@ func (s *Service) auditLogDescriptors() []mcp.ToolDescriptor {
 			"List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type.",
 			entityChangesListSchema(),
 		), "entity_change", "", s.EntityChangesList),
+		nativeDomainTool(1202, toolRO(
+			"clockify_invoices_info",
+			"Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_invoice_report (money aggregates).",
+			invoicesInfoSchema(),
+		), "invoice", "", s.InvoicesInfo),
+		nativeDomainTool(1203, toolRWIdem(
+			"clockify_scheduling_publish",
+			"Publish draft scheduling assignments so they take effect. Assignment create/update produce drafts; this is the required separate publish step for the start..end window. Supports dry_run preview.",
+			schedulingPublishSchema(),
+		), "scheduling", "updated", s.SchedulingPublish),
 	}
 }
 

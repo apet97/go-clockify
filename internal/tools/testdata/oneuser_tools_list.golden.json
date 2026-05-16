@@ -151,6 +151,8 @@
   "clockify_workspace_settings",
   "clockify_audit_logs_search",
   "clockify_entity_changes_list",
+  "clockify_invoices_info",
+  "clockify_scheduling_publish",
   "clockify_api_get",
   "clockify_api_request"
 ]

@@ -50552,6 +50552,557 @@
       }
     },
     {
+      "name": "clockify_invoices_info",
+      "description": "Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_invoice_report (money aggregates).",
+      "category": "domain",
+      "handler_kind": "native handler",
+      "read_only": true,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": false,
+      "risk_class": [
+        "read"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "description": "Result page, 1-indexed. Default 1.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "statuses": {
+            "description": "Invoice statuses to include. Omit to return invoices of every status.",
+            "items": {
+              "enum": [
+                "UNSENT",
+                "SENT",
+                "PARTIALLY_PAID",
+                "PAID",
+                "VOID",
+                "OVERDUE"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_invoices_info",
+            "type": "string"
+          },
+          "changed": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "deleted": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reused": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "updated": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "amount": {},
+                "balance": {},
+                "clientId": {},
+                "clientName": {},
+                "currency": {},
+                "dueDate": {},
+                "id": {},
+                "issuedDate": {},
+                "number": {},
+                "status": {}
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "next": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "args": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tool"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "recovery": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "hint": {
+                "type": "string"
+              },
+              "tool": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hint"
+            ],
+            "type": "object"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "category": "domain",
+        "destructiveHint": false,
+        "dryRun": false,
+        "handlerKind": "native handler",
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "priority": 1202,
+        "readOnlyHint": true,
+        "riskClass": [
+          "read"
+        ],
+        "title": "Invoices Info"
+      }
+    },
+    {
+      "name": "clockify_scheduling_publish",
+      "description": "Publish draft scheduling assignments so they take effect. Assignment create/update produce drafts; this is the required separate publish step for the start..end window. Supports dry_run preview.",
+      "category": "domain",
+      "handler_kind": "native handler",
+      "read_only": false,
+      "destructive": false,
+      "idempotent": true,
+      "dry_run": true,
+      "risk_class": [
+        "write"
+      ],
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
+          "end": {
+            "description": "Publish-window end; must be after start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          },
+          "notify_users": {
+            "description": "Whether Clockify emails affected users about the published schedule. Default false.",
+            "type": "boolean"
+          },
+          "start": {
+            "description": "Publish-window start. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "clockify_scheduling_publish",
+            "type": "string"
+          },
+          "changed": {
+            "additionalProperties": false,
+            "properties": {
+              "created": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "deleted": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "reused": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "updated": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "data": {
+            "additionalProperties": true,
+            "properties": {
+              "end": {
+                "description": "Resolved publish-window end (RFC3339 UTC).",
+                "type": "string"
+              },
+              "notifyUsers": {
+                "description": "Whether affected users were notified.",
+                "type": "boolean"
+              },
+              "published": {
+                "description": "True when the publish call succeeded.",
+                "type": "boolean"
+              },
+              "start": {
+                "description": "Resolved publish-window start (RFC3339 UTC).",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "next": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "args": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "tool"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "recovery": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "hint": {
+                "type": "string"
+              },
+              "tool": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hint"
+            ],
+            "type": "object"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "action"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "category": "domain",
+        "destructiveHint": false,
+        "dryRun": true,
+        "handlerKind": "native handler",
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "priority": 1203,
+        "readOnlyHint": false,
+        "riskClass": [
+          "write"
+        ],
+        "title": "Scheduling Publish"
+      }
+    },
+    {
       "name": "clockify_entries_running",
       "description": "Return the current running timer, if any.",
       "category": "domain",
