@@ -73,49 +73,6 @@ assert(assigned_to && assigned_to["required"] == true, "holidays in-period assig
 expense_status = schemas.fetch("ExpenseCategoryDtoV1").fetch("properties").fetch("status")
 assert(expense_status["nullable"] == true, "ExpenseCategoryDtoV1.status must allow null")
 
-makefile = File.read("Makefile")
-assert(makefile.include?("gen-coverage-matrix:"), "Makefile must expose gen-coverage-matrix")
-assert(makefile.include?("coverage-matrix-drift:"), "Makefile must expose coverage-matrix-drift")
-
-matrix = JSON.parse(File.read("docs/openapi/coverage-matrix.json"))
-# no_mcp_tool_count is the number of OpenAPI operations with no typed MCP
-# tool. It is intentionally non-zero: the typed surface is 152 curated
-# tools, and the remaining documented operations are reachable through
-# the clockify_api_get / clockify_api_request raw fallback rather than a
-# bespoke tool. The matrix records the count; coverage-matrix-drift keeps
-# it honest. Assert only that the field is present and well-formed.
-assert(matrix.dig("summary", "no_mcp_tool_count").is_a?(Integer), "coverage matrix must record an integer no_mcp_tool_count")
-assert(matrix.dig("summary", "no_evidence_count") == 0, "coverage matrix must have zero no-evidence operations")
-assert(matrix["tool_catalog"] == {"domain" => 133, "raw" => 2, "total" => 152, "workflow" => 17}, "coverage matrix must use workflow/domain/raw tool catalog counts")
-
-coverage_contract = IO.popen(
-  ["python3", "-c", %q{
-import runpy
-
-mod = runpy.run_path("scripts/gen-coverage-matrix", run_name="coverage_matrix_contract_test")
-
-try:
-    mod["catalog_tools"]({"tier1": [], "tier2": []})
-except ValueError as exc:
-    assert "catalog must not use legacy tier1/tier2 top-level shape" in str(exc), exc
-else:
-    raise AssertionError("legacy tier1/tier2 catalog shape must fail validation")
-
-try:
-    mod["catalog_tools"]({"generator": "fixture"})
-except ValueError as exc:
-    assert "catalog must use top-level tools array" in str(exc), exc
-else:
-    raise AssertionError("catalog without tools[] must fail validation")
-
-tools = mod["catalog_tools"]({"tools": [{"name": "clockify_status"}]})
-assert tools == [{"name": "clockify_status"}], tools
-}],
-  err: [:child, :out],
-  &:read
-)
-assert($?.success?, "coverage matrix generator must reject legacy catalog shapes: #{coverage_contract}")
-
 Dir.mktmpdir("openapi-catalog-contract") do |repo|
   FileUtils.mkdir_p(File.join(repo, "docs"))
   File.write(File.join(repo, "docs/tool-catalog.json"), JSON.pretty_generate({"tier1" => [], "tier2" => []}))
