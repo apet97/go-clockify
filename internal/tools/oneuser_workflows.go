@@ -515,16 +515,24 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 		standard.IDs = map[string]string{}
 	}
 	standard.IDs["clientId"] = clientID
-	if invoiceID := standard.IDs["invoiceId"]; invoiceID != "" && len(stringSliceArg(invoiceArgs, "time_entry_ids")) > 0 {
+	invoiceID := standard.IDs["invoiceId"]
+	importFrom := strings.TrimSpace(stringArg(invoiceArgs, "from"))
+	importTo := strings.TrimSpace(stringArg(invoiceArgs, "to"))
+	switch {
+	case invoiceID != "" && importFrom != "" && importTo != "":
 		importArgs := map[string]any{
 			"invoice_id":            invoiceID,
-			"time_entry_ids":        stringSliceArg(invoiceArgs, "time_entry_ids"),
+			"from":                  importFrom,
+			"to":                    importTo,
 			"time_entry_group_type": firstNonEmpty([]string{stringArg(invoiceArgs, "time_entry_group_type"), "DETAILED"}),
+		}
+		if projectIDs := stringSliceArg(invoiceArgs, "project_ids"); len(projectIDs) > 0 {
+			importArgs["project_ids"] = projectIDs
 		}
 		imported, importErr := s.importInvoiceTimeOneUser(ctx, importArgs)
 		if importErr != nil {
 			return recoverable("clockify_invoice_client_work", importErr, RecoveryHint{
-				Hint: fmt.Sprintf("Invoice %s was created, but importing the time entries failed, so the invoice total is still 0. Retry the import with clockify_invoices_import_time, or add line items manually with clockify_invoices_items_add.", invoiceID),
+				Hint: fmt.Sprintf("Invoice %s was created, but importing billable time failed, so the invoice total is still 0. Retry with clockify_invoices_import_time, or add line items manually with clockify_invoices_items_add.", invoiceID),
 				Tool: "clockify_invoices_import_time",
 				Args: importArgs,
 			}), nil
@@ -533,6 +541,11 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 			"invoice": standard.Data,
 			"import":  standardizeDomainResult("clockify_invoices_import_time", "invoice_item", "updated", imported, importArgs),
 		}
+	case invoiceID != "":
+		standard.Warnings = append(standard.Warnings, Warning{
+			Code:    "invoice_has_no_items",
+			Message: "Invoice created with no line items and a 0 total. Pass from and to (the billing period) to import billable time, or use clockify_invoices_import_time / clockify_invoices_items_add to add items.",
+		})
 	}
 	standard.Next = []NextAction{
 		{Tool: "clockify_invoices_items_add", Args: map[string]any{"invoice_id": standard.IDs["invoiceId"]}, Reason: "Add manual invoice items if needed."},
@@ -789,7 +802,9 @@ func invoiceClientWorkSchema() map[string]any {
 		"due_date":              map[string]any{"type": "string"},
 		"currency":              map[string]any{"type": "string"},
 		"note":                  map[string]any{"type": "string"},
-		"time_entry_ids":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+		"from":                  map[string]any{"type": "string", "description": "Start of the billing period to import (YYYY-MM-DD or RFC3339). Pass both from and to to import billable time onto the invoice."},
+		"to":                    map[string]any{"type": "string", "description": "End of the billing period to import (YYYY-MM-DD or RFC3339)."},
+		"project_ids":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the imported time to these project IDs."},
 		"time_entry_group_type": map[string]any{"type": "string"},
 		"dry_run":               map[string]any{"type": "boolean"},
 	}})

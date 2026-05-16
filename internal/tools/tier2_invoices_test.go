@@ -857,6 +857,20 @@ func TestInvoiceItemDryRunsDoNotMutate(t *testing.T) {
 	}
 }
 
+func TestBuildInvoiceImportBodyValidatesDateRange(t *testing.T) {
+	client, cleanup := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("buildInvoiceImportBody must not make HTTP calls; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	if _, err := buildInvoiceImportBody(svc, map[string]any{"from": "2026-05-01", "to": "2026-05-01"}, false); err != nil {
+		t.Fatalf("same-day date-only range must be valid (to expands to end of day): %v", err)
+	}
+	if _, err := buildInvoiceImportBody(svc, map[string]any{"from": "2026-05-10", "to": "2026-05-01"}, false); err == nil {
+		t.Fatal("a backward from/to range must be rejected")
+	}
+}
+
 func TestInvoiceImportUsesImportExpensesWireField(t *testing.T) {
 	var bodies []map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -873,24 +887,19 @@ func TestInvoiceImportUsesImportExpensesWireField(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	sharedBody := map[string]any{
-		"from":          "2026-05-01T00:00:00Z",
-		"to":            "2026-05-02T00:00:00Z",
-		"projectFilter": map[string]any{"ids": []any{"p1"}, "contains": "CONTAINS", "status": "ACTIVE"},
-	}
 	res, err := svc.importInvoiceTimeOneUser(context.Background(), map[string]any{
 		"invoice_id":            "inv1",
-		"time_entry_ids":        []any{"te1"},
+		"from":                  "2026-05-01T00:00:00Z",
+		"to":                    "2026-05-02T00:00:00Z",
+		"project_ids":           []any{"p1"},
 		"time_entry_group_type": "DETAILED",
-		"body":                  sharedBody,
 	})
 	mustOK(t, res, err, "clockify_invoices_import_time")
 
 	res, err = svc.importInvoiceExpensesOneUser(context.Background(), map[string]any{
-		"invoice_id":       "inv1",
-		"expense_ids":      []any{"exp1"},
-		"include_expenses": true,
-		"body":             sharedBody,
+		"invoice_id": "inv1",
+		"from":       "2026-05-01T00:00:00Z",
+		"to":         "2026-05-02T00:00:00Z",
 	})
 	mustOK(t, res, err, "clockify_invoices_import_expenses")
 
@@ -907,8 +916,24 @@ func TestInvoiceImportUsesImportExpensesWireField(t *testing.T) {
 		t.Fatalf("expense import must default timeEntryGroupType=DETAILED, got %#v", bodies[1])
 	}
 	for _, body := range bodies {
+		if body["from"] != "2026-05-01T00:00:00Z" || body["to"] != "2026-05-02T00:00:00Z" {
+			t.Fatalf("import request must send from/to, got %#v", body)
+		}
+		projectFilter, ok := body["projectFilter"].(map[string]any)
+		if !ok {
+			t.Fatalf("import request must send projectFilter, got %#v", body)
+		}
+		if projectFilter["contains"] != "CONTAINS" || projectFilter["status"] != "ALL" {
+			t.Fatalf("import projectFilter default mismatch: %#v", projectFilter)
+		}
 		if _, ok := body["includeExpenses"]; ok {
 			t.Fatalf("import request must not send legacy includeExpenses: %#v", body)
+		}
+		if _, ok := body["timeEntryIds"]; ok {
+			t.Fatalf("import request must not send legacy timeEntryIds: %#v", body)
+		}
+		if _, ok := body["expenseIds"]; ok {
+			t.Fatalf("import request must not send legacy expenseIds: %#v", body)
 		}
 	}
 }

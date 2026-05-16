@@ -185,9 +185,7 @@ func appendDetailedReportViews(data map[string]any) int {
 	if data == nil {
 		return 0
 	}
-	raw := maps.Clone(data)
 	views := normalizeDetailedReportPayload(data)
-	data["raw"] = raw
 	data["entries"] = views.Entries
 	data["entry_summary"] = views.EntrySummary
 	data["approval_summary"] = views.ApprovalSummary

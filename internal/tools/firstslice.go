@@ -1606,6 +1606,9 @@ func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockif
 	if err != nil {
 		return clockify.TimeEntry{}, nil, err
 	}
+	if ids["projectId"] == "" && s.workspaceForcesProjects(ctx, s.WorkspaceID) {
+		return clockify.TimeEntry{}, nil, fmt.Errorf("this workspace requires a project on every time entry — create one with clockify_create_work_package, then retry with the returned project_id, or pass an existing project name or ID as project")
+	}
 	path, err := paths.Workspace(s.WorkspaceID, "time-entries")
 	if err != nil {
 		return clockify.TimeEntry{}, nil, err

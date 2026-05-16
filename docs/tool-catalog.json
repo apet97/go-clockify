@@ -6117,6 +6117,10 @@
           "due_date": {
             "type": "string"
           },
+          "from": {
+            "description": "Start of the billing period to import (YYYY-MM-DD or RFC3339). Pass both from and to to import billable time onto the invoice.",
+            "type": "string"
+          },
           "issued_date": {
             "type": "string"
           },
@@ -6127,14 +6131,19 @@
           "number": {
             "type": "string"
           },
-          "time_entry_group_type": {
-            "type": "string"
-          },
-          "time_entry_ids": {
+          "project_ids": {
+            "description": "Optional. Limit the imported time to these project IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
+          },
+          "time_entry_group_type": {
+            "type": "string"
+          },
+          "to": {
+            "description": "End of the billing period to import (YYYY-MM-DD or RFC3339).",
+            "type": "string"
           }
         },
         "type": "object"
@@ -35525,7 +35534,7 @@
     },
     {
       "name": "clockify_time_off_balances",
-      "description": "Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user.",
+      "description": "Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user (page through them with page/page_size).",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -35542,6 +35551,17 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "page": {
+            "description": "Page number when policy_id is omitted (default 1).",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
           "policy_id": {
             "description": "Policy ID. Omit to return all policy balances for the resolved user.",
             "type": "string"
@@ -46363,7 +46383,7 @@
     },
     {
       "name": "clockify_invoices_import_time",
-      "description": "Import time entries into an invoice.",
+      "description": "Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -46376,35 +46396,42 @@
       ],
       "audit_keys": [
         "invoice_id",
-        "time_entry_ids",
+        "from",
+        "to",
+        "project_ids",
         "time_entry_group_type"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
-            "type": "object"
+          "from": {
+            "description": "Start of the billing period (YYYY-MM-DD or RFC3339). All billable time on or after this is imported.",
+            "type": "string"
           },
           "invoice_id": {
-            "description": "Invoice ID",
+            "description": "Invoice ID.",
             "type": "string"
           },
-          "time_entry_group_type": {
-            "description": "How imported entries are grouped on the invoice",
-            "type": "string"
-          },
-          "time_entry_ids": {
-            "description": "Time entry IDs to import",
+          "project_ids": {
+            "description": "Optional. Limit the import to these project IDs; omit to import all of the client's billable time in the range.",
             "items": {
               "type": "string"
             },
             "type": "array"
+          },
+          "time_entry_group_type": {
+            "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default).",
+            "type": "string"
+          },
+          "to": {
+            "description": "End of the billing period (YYYY-MM-DD or RFC3339).",
+            "type": "string"
           }
         },
         "required": [
-          "invoice_id"
+          "invoice_id",
+          "from",
+          "to"
         ],
         "type": "object"
       },
@@ -46635,7 +46662,7 @@
     },
     {
       "name": "clockify_invoices_import_expenses",
-      "description": "Import expenses into an invoice.",
+      "description": "Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -46648,35 +46675,42 @@
       ],
       "audit_keys": [
         "invoice_id",
-        "expense_ids",
-        "include_expenses"
+        "from",
+        "to",
+        "project_ids",
+        "time_entry_group_type"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Optional raw Clockify request body fields merged with the typed fields above.",
-            "type": "object"
+          "from": {
+            "description": "Start of the billing period (YYYY-MM-DD or RFC3339).",
+            "type": "string"
           },
-          "expense_ids": {
-            "description": "Expense IDs to import",
+          "invoice_id": {
+            "description": "Invoice ID.",
+            "type": "string"
+          },
+          "project_ids": {
+            "description": "Optional. Limit the import to these project IDs; omit to import all of the client's billable items in the range.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
-          "include_expenses": {
-            "description": "Whether to include expenses in the import",
-            "type": "boolean"
+          "time_entry_group_type": {
+            "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default).",
+            "type": "string"
           },
-          "invoice_id": {
-            "description": "Invoice ID",
+          "to": {
+            "description": "End of the billing period (YYYY-MM-DD or RFC3339).",
             "type": "string"
           }
         },
         "required": [
-          "invoice_id"
+          "invoice_id",
+          "from",
+          "to"
         ],
         "type": "object"
       },

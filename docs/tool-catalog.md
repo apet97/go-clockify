@@ -137,7 +137,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_policies_get` | `domain` | yes | no | yes | no | `read` | Get a time off policy by ID |
 | `clockify_time_off_policies_create` | `domain` | no | no | no | no | `write`, `admin` | Create a simplified time off policy for the current user. Supports approval and days_per_year accrual basics; use clockify_api_request for advanced Clockify fields such as color, icon, expiration, half days, approval stages, or filters. |
 | `clockify_time_off_policies_update` | `domain` | no | no | no | no | `write`, `admin` | Update a time off policy by merging supplied fields into the current upstream body. Preserves advanced Clockify fields outside this simplified schema; use clockify_api_request for full-surface updates. |
-| `clockify_time_off_balances` | `domain` | yes | no | yes | no | `read` | Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user. |
+| `clockify_time_off_balances` | `domain` | yes | no | yes | no | `read` | Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user (page through them with page/page_size). |
 | `clockify_time_off_balances_update` | `domain` | no | no | no | yes | `write`, `billing`, `admin` | Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview. |
 | `clockify_scheduling_assignments_list` | `domain` | yes | no | yes | no | `read` | List scheduling assignments within a date range |
 | `clockify_scheduling_assignments_get` | `domain` | yes | no | yes | no | `read` | Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward. |
@@ -177,8 +177,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
 | `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes. |
 | `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:"base64", base64Bytes, truncated:false, and body with the base64 payload. |
-| `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import time entries into an invoice. |
-| `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import expenses into an invoice. |
+| `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids. |
+| `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List invoice payments. |
 | `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
 | `clockify_invoices_payments_delete` | `domain` | no | yes | no | no | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
@@ -245,8 +245,8 @@ list also surfaces in `docs/tool-catalog.json`.
 | `clockify_invoices_delete` | `invoice_id` |
 | `clockify_invoices_export` | `invoice_id` |
 | `clockify_invoices_get` | `invoice_id` |
-| `clockify_invoices_import_expenses` | `invoice_id`, `expense_ids`, `include_expenses` |
-| `clockify_invoices_import_time` | `invoice_id`, `time_entry_ids`, `time_entry_group_type` |
+| `clockify_invoices_import_expenses` | `invoice_id`, `from`, `to`, `project_ids`, `time_entry_group_type` |
+| `clockify_invoices_import_time` | `invoice_id`, `from`, `to`, `project_ids`, `time_entry_group_type` |
 | `clockify_invoices_items_add` | `invoice_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_invoices_items_delete` | `invoice_id`, `item_index`, `item_id` |
 | `clockify_invoices_items_list` | `invoice_id` |

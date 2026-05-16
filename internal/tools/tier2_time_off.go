@@ -188,10 +188,12 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 12. clockify_time_off_balance (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_time_off_balance",
-				"Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user.",
+				"Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user (page through them with page/page_size).",
 				map[string]any{"type": "object", "properties": map[string]any{
 					"policy_id": map[string]any{"type": "string", "description": "Policy ID. Omit to return all policy balances for the resolved user."},
 					"user_id":   map[string]any{"type": "string", "description": "User ID or name/email. Default: current user."},
+					"page":      map[string]any{"type": "integer", "description": "Page number when policy_id is omitted (default 1)."},
+					"page_size": map[string]any{"type": "integer", "description": "Balances per page when policy_id is omitted (default 50, max 200)."},
 				}}), envelopeOpenMap("clockify_time_off_balance")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -911,7 +913,11 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	query := map[string]string{"page": "1", "page-size": "200"}
+	page, pageSize := 1, 200
+	if policyID == "" {
+		page, pageSize = paginationFromArgs(args)
+	}
+	query := map[string]string{"page": fmt.Sprintf("%d", page), "page-size": fmt.Sprintf("%d", pageSize)}
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
