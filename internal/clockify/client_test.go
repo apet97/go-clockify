@@ -973,6 +973,53 @@ func TestPostWithBody(t *testing.T) {
 	}
 }
 
+func TestPostAuditLog(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if r.URL.Path != "/workspaces/ws-1/audit-log" {
+			t.Fatalf("path = %s, want /workspaces/ws-1/audit-log", r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if _, ok := body["actions"]; !ok {
+			t.Fatalf("request body missing actions: %v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"response":[{"action":"CREATE_PROJECT"}]}`)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	var out map[string]any
+	if err := c.PostAuditLog(context.Background(), "/workspaces/ws-1/audit-log", map[string]any{"actions": []string{"CREATE_PROJECT"}}, &out); err != nil {
+		t.Fatalf("PostAuditLog: %v", err)
+	}
+	rows, ok := out["response"].([]any)
+	if !ok || len(rows) != 1 {
+		t.Fatalf("response = %v, want one audit-log row", out["response"])
+	}
+}
+
+func TestAuditLogBaseURLResolvesDocumentedHost(t *testing.T) {
+	canonical := NewClient("test-key", DocumentedHostMain, 5*time.Second, 0)
+	if got := canonical.AuditLogBaseURL(); got != DocumentedHostAuditLog {
+		t.Fatalf("AuditLogBaseURL() = %s, want %s", got, DocumentedHostAuditLog)
+	}
+	if got := canonical.DocumentedBaseURL(DocumentedHostAuditLog); got != DocumentedHostAuditLog {
+		t.Fatalf("DocumentedBaseURL(audit-log) = %s, want %s", got, DocumentedHostAuditLog)
+	}
+	// A non-canonical base URL (test stub or proxy) stays pinned so fake
+	// servers do not need per-host wiring.
+	stub := NewClient("test-key", "http://127.0.0.1:1", 5*time.Second, 0)
+	if got := stub.AuditLogBaseURL(); got != "http://127.0.0.1:1" {
+		t.Fatalf("AuditLogBaseURL() for stub = %s, want unchanged base", got)
+	}
+}
+
 func TestClientNoOutputSuccessDrainsResponseBodyBounded(t *testing.T) {
 	body := &countingBody{remaining: responseDrainLimit * 2}
 	c := NewClient("test-key", "http://clockify.test", 5*time.Second, 0)

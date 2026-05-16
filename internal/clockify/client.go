@@ -286,6 +286,13 @@ func (c *Client) DeleteReports(ctx context.Context, path string) error {
 	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodDelete, path, nil, nil, nil)
 }
 
+// PostAuditLog performs a POST against the audit-log host. The Clockify
+// audit-log API lives on a separate host (auditlog-api.api.clockify.me);
+// every other call stays on Post against the primary host.
+func (c *Client) PostAuditLog(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, c.AuditLogBaseURL(), http.MethodPost, path, nil, body, out)
+}
+
 // RawResponse is the binary-aware envelope returned by RequestRawValues and
 // PostReportsRaw — the raw response bytes plus enough header context for
 // callers to recover Content-Type and Content-Disposition (filename). Used by
