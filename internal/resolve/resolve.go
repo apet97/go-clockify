@@ -10,11 +10,10 @@ import (
 )
 
 // maxIDLength caps an entity ID validated for path-segment use. Real
-// Clockify IDs are 24-char hex BSON ObjectIDs; some integration IDs are
-// 36-char UUIDs. 64 leaves generous headroom while still rejecting
-// obvious garbage — pasted tokens, key fragments, fuzz pathological
-// input — at the tool boundary instead of deferring it to a 404.
-const maxIDLength = 64
+// Clockify IDs are usually 24-char hex BSON ObjectIDs; some integration IDs
+// are 36-char UUIDs. Keep the boundary tight so pasted tokens/key fragments
+// fail before path construction.
+const maxIDLength = 36
 
 // maxNameRefLength caps a name-or-ID reference accepted by ValidateNameRef
 // for name-lookup resolution. Names are free-text workspace, project, and

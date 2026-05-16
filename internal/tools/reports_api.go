@@ -124,12 +124,19 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 			}
 		}
 	}
-	// H3: coerce human dates (YYYY-MM-DD etc.) to the format the
-	// Clockify reports API requires. Unparseable values are left as-is
-	// so the API returns its own format error.
+	// H3/L7: validate and coerce human dates (YYYY-MM-DD etc.) to the
+	// format the Clockify reports API requires. Already-ISO values are kept
+	// unchanged for backward compatibility, but malformed date args stop here
+	// with an actionable recovery message.
 	for _, k := range []string{"dateRangeStart", "dateRangeEnd"} {
-		if raw, ok := body[k].(string); ok && raw != "" && !strings.Contains(raw, "T") {
-			if t, perr := parseFlexibleDateTime(raw, time.UTC); perr == nil {
+		if raw, ok := body[k].(string); ok && raw != "" {
+			t, perr := parseFlexibleDateTime(raw, time.UTC)
+			if perr != nil {
+				if _, clockifyErr := time.Parse("2006-01-02T15:04:05.000", raw); clockifyErr != nil {
+					return nil, fmt.Errorf("could not parse date %q — use YYYY-MM-DD or RFC3339", raw)
+				}
+			}
+			if perr == nil && !strings.Contains(raw, "T") {
 				body[k] = t.Format("2006-01-02T15:04:05.000")
 			}
 		}

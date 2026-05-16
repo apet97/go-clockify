@@ -227,8 +227,7 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
+	page, pageSize := paginationFromArgs(args)
 
 	// /time-off/requests is POST-only with a JSON search body. Filters
 	// that were query params before now go inside the body — `statuses`
@@ -622,6 +621,10 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 	return ok("clockify_list_time_off_policies", timeOffPolicyViewsFromRaw(policies), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(policies),
+		"total":       len(policies),
+		"page":        page,
+		"pageSize":    pageSize,
+		"has_more":    len(policies) == pageSize,
 	}, "clockify_time_off_policies_create")), nil
 }
 

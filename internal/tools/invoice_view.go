@@ -72,6 +72,7 @@ func invoiceViewFromRaw(raw map[string]any) InvoiceView {
 	}
 	view["billing"] = map[string]any{
 		"subject":        firstReportString(raw, "subject"),
+		"note":           firstReportString(raw, "note"),
 		"client_address": firstReportString(raw, "clientAddress", "client_address"),
 		"company_id":     firstReportString(raw, "companyId", "company_id"),
 		"bill_from":      firstReportString(raw, "billFrom", "bill_from"),

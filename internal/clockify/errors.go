@@ -92,6 +92,8 @@ func TranslateAPIError(statusCode int, body string) ErrorTranslation {
 		return ErrorTranslation{Message: message, Remediation: "Check that the Clockify API key is valid and has access to the selected workspace.", Refs: []string{"CLOCKIFY_API_KEY", "CLOCKIFY_WORKSPACE_ID"}}
 	case statusCode == 403 || strings.Contains(lower, "permission") || strings.Contains(lower, "forbidden"):
 		return ErrorTranslation{Message: message, Remediation: "Use an account with the required Clockify role or ask a workspace admin to grant the needed permission.", Refs: []string{"Clockify workspace roles"}}
+	case strings.Contains(lower, "doesn't belong to workspace") || strings.Contains(lower, "doesn’t belong to workspace") || strings.Contains(lower, "doesn't belong to project") || strings.Contains(lower, "doesn’t belong to project"):
+		return ErrorTranslation{Message: notFoundWorkspaceMessage(message), Remediation: "Confirm the entity ID belongs to the pinned workspace and was not archived or deleted; list the entity type again and retry with a returned ID.", Refs: []string{"clockify_tools_guide"}}
 	case statusCode == 404:
 		return ErrorTranslation{Message: message, Remediation: "Confirm the workspace/entity ID and whether the entity was archived or deleted.", Refs: []string{"clockify_tools_guide"}}
 	case statusCode == 429 || strings.Contains(lower, "rate"):
@@ -221,4 +223,13 @@ func redactDelimitedSecret(body, field string, sep byte) string {
 		}
 		body = rest[end:]
 	}
+}
+
+func notFoundWorkspaceMessage(message string) string {
+	entity := "entity"
+	fields := strings.Fields(message)
+	if len(fields) > 0 && strings.TrimSpace(fields[0]) != "" {
+		entity = strings.ToLower(fields[0])
+	}
+	return fmt.Sprintf("%s not found in this workspace", entity)
 }

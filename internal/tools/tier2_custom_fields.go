@@ -531,6 +531,9 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 	if status := strings.ToUpper(firstReportString(field, "status")); status != "" && status != "VISIBLE" {
 		return ResultEnvelope{}, fmt.Errorf("custom field %s has status %s; make it VISIBLE before setting values", fieldID, status)
 	}
+	if err := validateCustomFieldTargetScope(field, projectID != "", entryID != ""); err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if projectID != "" {
 		path, err := paths.Workspace(wsID, "projects", projectID, "custom-fields", fieldID)
@@ -604,4 +607,44 @@ func mergeCustomFieldValue(existing any, fieldID string, value any) ([]map[strin
 		out = append(out, map[string]any{"customFieldId": fieldID, "value": value})
 	}
 	return out, nil
+}
+
+func validateCustomFieldTargetScope(field map[string]any, projectTarget, entryTarget bool) error {
+	scopes := customFieldEntityScopes(field)
+	if len(scopes) == 0 {
+		return nil
+	}
+	allowsProject := false
+	allowsEntry := false
+	for _, scope := range scopes {
+		scope = strings.ToUpper(strings.TrimSpace(scope))
+		switch scope {
+		case "PROJECT", "PROJECTS":
+			allowsProject = true
+		case "TIME_ENTRY", "TIMEENTRY", "TIME_ENTRIES", "TIMEENTRY_CUSTOM_FIELD_VALUE":
+			allowsEntry = true
+		}
+	}
+	fieldID := firstReportString(field, "id", "_id", "customFieldId", "custom_field_id")
+	if projectTarget && !allowsProject && allowsEntry {
+		return fmt.Errorf("custom field %s is scoped to TIME_ENTRY entities; pass entry_id instead of project_id", fieldID)
+	}
+	if entryTarget && !allowsEntry && allowsProject {
+		return fmt.Errorf("custom field %s is scoped to PROJECT entities; pass project_id instead of entry_id", fieldID)
+	}
+	return nil
+}
+
+func customFieldEntityScopes(field map[string]any) []string {
+	for _, key := range []string{"entityType", "entity_type", "targetEntityType", "target_entity_type", "resourceType", "resource_type", "documentCode", "document_code"} {
+		if scopes := stringSliceFromAny(field[key]); len(scopes) > 0 {
+			return scopes
+		}
+	}
+	for _, key := range []string{"entityTypes", "entity_types", "targetEntityTypes", "target_entity_types", "appliesTo", "applies_to"} {
+		if scopes := stringSliceFromAny(field[key]); len(scopes) > 0 {
+			return scopes
+		}
+	}
+	return nil
 }
