@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -71,6 +72,13 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 		preview["args"] = maps.Clone(args)
 		return ok(oneUserToolEntriesTimerStart, preview, meta), nil
 	}
+	// C1: never create a timer that cannot later be stopped.
+	if running, _, _, runErr := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"}); runErr == nil && len(running) > 0 && running[0].IsRunning() {
+		return ResultEnvelope{}, fmt.Errorf("a timer is already running (entry %s) — stop it first with clockify_entries_timer_stop", running[0].ID)
+	}
+	if projectID == "" && s.workspaceForcesProjects(ctx, wsID) {
+		return ResultEnvelope{}, fmt.Errorf("this workspace requires a project on every time entry — pass project_id or project")
+	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -123,6 +131,9 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	}
 	var out clockify.TimeEntry
 	if err := s.Client.Patch(ctx, path, payload, &out); err != nil {
+		if strings.Contains(err.Error(), "Project is either required") {
+			return nil, fmt.Errorf("the running timer has no project and this workspace requires one — assign a project with clockify_entries_update, then retry clockify_entries_timer_stop (upstream: %w)", err)
+		}
 		return nil, err
 	}
 	if out.ID == "" {
@@ -168,4 +179,15 @@ func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
 		"entry":   view,
 		"elapsed": elapsedStr,
 	}, meta), nil
+}
+
+// workspaceForcesProjects reports whether the workspace requires a
+// project on every time entry (workspaceSettings.forceProjects). On any
+// fetch error it returns false — never block a write on a settings read.
+func (s *Service) workspaceForcesProjects(ctx context.Context, wsID string) bool {
+	ws, err := s.getWorkspace(ctx, wsID)
+	if err != nil {
+		return false
+	}
+	return boolFromAny(workspaceSettingAny(ws.WorkspaceSettings, "forceProjects", "force_projects"))
 }

@@ -35586,7 +35586,7 @@
     },
     {
       "name": "clockify_time_off_balances",
-      "description": "Get time off balance for a user under a specific policy",
+      "description": "Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -35604,17 +35604,14 @@
         "additionalProperties": false,
         "properties": {
           "policy_id": {
+            "description": "Policy ID. Omit to return all policy balances for the resolved user.",
             "type": "string"
           },
           "user_id": {
-            "description": "User ID or name/email",
+            "description": "User ID or name/email. Default: current user.",
             "type": "string"
           }
         },
-        "required": [
-          "policy_id",
-          "user_id"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -45068,7 +45065,6 @@
             "type": "string"
           }
         },
-        "required": null,
         "type": "object"
       },
       "output_schema": {
@@ -45350,7 +45346,6 @@
             "type": "string"
           }
         },
-        "required": null,
         "type": "object"
       },
       "output_schema": {
@@ -45632,7 +45627,6 @@
             "type": "string"
           }
         },
-        "required": null,
         "type": "object"
       },
       "output_schema": {
@@ -45914,7 +45908,6 @@
             "type": "string"
           }
         },
-        "required": null,
         "type": "object"
       },
       "output_schema": {
@@ -48318,7 +48311,9 @@
             "type": "array"
           }
         },
-        "required": null,
+        "required": [
+          "user_ids"
+        ],
         "type": "object"
       },
       "output_schema": {

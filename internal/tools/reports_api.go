@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -51,13 +52,23 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		"source":      "reports-api",
 		"exportType":  body["exportType"],
 	}
+	meta["amountUnit"] = "cents"
+	if am := reportAmountMeta(data); am != nil {
+		meta["totalAmount"] = am
+	}
 	if defaultsMeta != nil {
 		meta["defaults"] = defaultsMeta
 	}
 	if binary {
 		meta["binary"] = true
 	} else if endpoint.pathName == "detailed" {
-		meta["normalizedEntries"] = appendDetailedReportViews(data)
+		entryCount := appendDetailedReportViews(data)
+		meta["normalizedEntries"] = entryCount
+		meta["truncated"] = entryCount >= reportPageSize
+		meta["rowCount"] = entryCount
+		if entryCount >= reportPageSize {
+			meta["next_hint"] = "result hit the row cap — narrow the date range to see all rows"
+		}
 	} else if endpoint.pathName == "summary" {
 		meta["normalizedRollups"] = appendSummaryReportViews(data, body)
 	} else if endpoint.pathName == "weekly" {
@@ -110,6 +121,16 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 		if _, hasStart := body["dateRangeStart"]; hasStart {
 			if _, hasEnd := body["dateRangeEnd"]; hasEnd {
 				body["dateRangeType"] = "ABSOLUTE"
+			}
+		}
+	}
+	// H3: coerce human dates (YYYY-MM-DD etc.) to the format the
+	// Clockify reports API requires. Unparseable values are left as-is
+	// so the API returns its own format error.
+	for _, k := range []string{"dateRangeStart", "dateRangeEnd"} {
+		if raw, ok := body[k].(string); ok && raw != "" && !strings.Contains(raw, "T") {
+			if t, perr := parseFlexibleDateTime(raw, time.UTC); perr == nil {
+				body[k] = t.Format("2006-01-02T15:04:05.000")
 			}
 		}
 	}
@@ -477,4 +498,48 @@ func snakeReportKeyToCamel(key string) string {
 	default:
 		return key
 	}
+}
+
+// reportAmountMeta pulls per-currency money totals out of a raw reports
+// API body and returns them normalized to MAJOR currency units (raw
+// values are MINOR units / cents). Rounding to 2dp also removes
+// repeating-decimal artifacts. Returns nil when no totals are present.
+func reportAmountMeta(data any) map[string]any {
+	body, ok := data.(map[string]any)
+	if !ok {
+		return nil
+	}
+	totals, ok := body["totals"].([]any)
+	if !ok || len(totals) == 0 {
+		return nil
+	}
+	first, ok := totals[0].(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := map[string]any{}
+	if byCur, ok := first["totalAmountByCurrency"].([]any); ok {
+		list := make([]map[string]any, 0, len(byCur))
+		for _, c := range byCur {
+			m, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			cents, _ := reportNumber(m["amount"])
+			list = append(list, map[string]any{
+				"currency":    m["currency"],
+				"amountCents": cents,
+				"amount":      math.Round(cents) / 100,
+			})
+		}
+		out["byCurrency"] = list
+	}
+	if cents, ok := reportNumber(first["totalAmount"]); ok {
+		out["totalAmountCents"] = cents
+		out["totalAmount"] = math.Round(cents) / 100
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }

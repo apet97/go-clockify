@@ -390,7 +390,7 @@ func validateWeeklyDateRange(body map[string]any, defaultTimezone *time.Location
 	}
 	d := end.Sub(start)
 	if d < 7*24*time.Hour-time.Second || d > 7*24*time.Hour+time.Second {
-		return fmt.Errorf("weekly report date range must cover exactly 7 days; use week_start to derive one automatically")
+		return fmt.Errorf("weekly report needs a range of exactly 7 days; got %s..%s (%.0f days) — omit `end` and pass only `start` (or `week_start`) so the server derives the week", startRaw, endRaw, d.Hours()/24)
 	}
 	return nil
 }

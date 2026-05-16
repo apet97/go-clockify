@@ -530,6 +530,12 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	for _, spec := range specs {
 		out = append(out, s.nativeRouteDescriptor(spec))
 	}
+	out = append(out,
+		nativeDomainTool(100, toolRO("clockify_reports_attendance", "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.AttendanceReport),
+		nativeDomainTool(101, toolRO("clockify_reports_money", "Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.MoneyReport),
+		nativeDomainTool(102, toolRO("clockify_reports_expense", "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.ExpenseReport),
+		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON returns the decoded object; PDF/CSV/XLSX return a safe binary envelope. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.DetailedReport),
+	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
 		"required": []string{"policy_id"},
@@ -606,7 +612,7 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 			},
 		})), "scheduling", "", s.schedulingUserTotalsOneUser),
 		nativeDomainTool(607, toolRO("clockify_scheduling_capacity", "Get workspace capacity totals.", objectSchema(map[string]any{
-			"required": nil,
+			"required": []string{"user_ids"},
 			"properties": map[string]any{
 				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 				"end":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
@@ -1653,4 +1659,19 @@ func rawChange(method string) string {
 	default:
 		return ""
 	}
+}
+
+func reportInputSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"properties": map[string]any{
+			"date_range_start":  map[string]any{"type": "string", "description": "Report range start. " + flexibleDatetimeDescription},
+			"date_range_end":    map[string]any{"type": "string", "description": "Report range end. " + flexibleDatetimeDescription},
+			"start":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"end":               map[string]any{"type": "string", "description": flexibleDatetimeDescription},
+			"export_type":       map[string]any{"type": "string", "enum": []string{"JSON", "JSON_V1", "PDF", "CSV", "XLSX", "ZIP"}, "description": "Report export type"},
+			"summary_filter":    map[string]any{"type": "object", "additionalProperties": true},
+			"detailed_filter":   map[string]any{"type": "object", "additionalProperties": true},
+			"attendance_filter": map[string]any{"type": "object", "additionalProperties": true},
+		},
+	})
 }

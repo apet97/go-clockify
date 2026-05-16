@@ -188,11 +188,11 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 12. clockify_time_off_balance (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_time_off_balance",
-				"Get time off balance for a user under a specific policy",
-				map[string]any{"type": "object", "required": []string{"policy_id", "user_id"}, "properties": map[string]any{
-					"policy_id": map[string]any{"type": "string"},
-					"user_id":   map[string]any{"type": "string", "description": "User ID or name/email"},
-				}}), envelopeSchemaFor[TimeOffBalanceView]("clockify_time_off_balance")),
+				"Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user.",
+				map[string]any{"type": "object", "properties": map[string]any{
+					"policy_id": map[string]any{"type": "string", "description": "Policy ID. Omit to return all policy balances for the resolved user."},
+					"user_id":   map[string]any{"type": "string", "description": "User ID or name/email. Default: current user."},
+				}}), envelopeOpenMap("clockify_time_off_balance")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.timeOffBalance(ctx, args)
@@ -873,13 +873,10 @@ func (s *Service) archiveTimeOffPolicy(ctx context.Context, args map[string]any)
 
 func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	policyID := stringArg(args, "policy_id")
-	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	userRef := stringArg(args, "user_id")
-	if userRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+	if policyID != "" {
+		if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
+			return ResultEnvelope{}, err
+		}
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -887,9 +884,20 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 		return ResultEnvelope{}, err
 	}
 
-	userID, err := s.resolveUserID(ctx, wsID, userRef)
-	if err != nil {
-		return ResultEnvelope{}, err
+	userRef := stringArg(args, "user_id")
+	var userID string
+	if userRef == "" {
+		user, err := s.getCurrentUser(ctx)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		userID = user.ID
+	} else {
+		var err error
+		userID, err = s.resolveUserID(ctx, wsID, userRef)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
 	}
 
 	var envelope struct {
@@ -904,6 +912,23 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	if policyID == "" {
+		views := make([]TimeOffBalanceView, 0, len(envelope.Balances))
+		policyIDs := make([]string, 0, len(envelope.Balances))
+		for _, raw := range envelope.Balances {
+			views = append(views, timeOffBalanceViewFromRaw(raw))
+			if id := timeOffBalancePolicyID(raw); id != "" {
+				policyIDs = append(policyIDs, id)
+			}
+		}
+		return ok("clockify_time_off_balance", views, map[string]any{
+			"workspaceId": wsID,
+			"userId":      userID,
+			"policyIds":   policyIDs,
+			"total":       envelope.Count,
+		}), nil
+	}
+
 	var balance map[string]any
 	for _, candidate := range envelope.Balances {
 		if timeOffBalancePolicyID(candidate) == policyID {
@@ -919,6 +944,7 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 		"workspaceId": wsID,
 		"policyId":    policyID,
 		"userId":      userID,
+		"policyIds":   []string{policyID},
 		"total":       envelope.Count,
 	}), nil
 }
