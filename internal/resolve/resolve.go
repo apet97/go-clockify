@@ -9,11 +9,18 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 )
 
-// maxIDLength caps any ID we'll bother validating. Real Clockify IDs are
-// 24-char hex (BSON ObjectIDs). Anything longer than 128 bytes is either
-// a fuzz pathological input or an attempt to wedge the rune loop, both
-// of which we reject up front.
-const maxIDLength = 128
+// maxIDLength caps an entity ID validated for path-segment use. Real
+// Clockify IDs are 24-char hex BSON ObjectIDs; some integration IDs are
+// 36-char UUIDs. 64 leaves generous headroom while still rejecting
+// obvious garbage — pasted tokens, key fragments, fuzz pathological
+// input — at the tool boundary instead of deferring it to a 404.
+const maxIDLength = 64
+
+// maxNameRefLength caps a name-or-ID reference accepted by ValidateNameRef
+// for name-lookup resolution. Names are free-text workspace, project, and
+// client labels, so this is far more permissive than maxIDLength; it only
+// rejects pathologically long input.
+const maxNameRefLength = 128
 
 func ValidateID(id, name string) error {
 	if len(id) > maxIDLength {
@@ -48,8 +55,8 @@ func ValidateID(id, name string) error {
 // is expected to resolve it via name lookup, then validate the
 // resulting Clockify ID with ValidateID before any path use.
 func ValidateNameRef(ref, kind string) error {
-	if len(ref) > maxIDLength {
-		return fmt.Errorf("%s exceeds %d bytes", kind, maxIDLength)
+	if len(ref) > maxNameRefLength {
+		return fmt.Errorf("%s exceeds %d bytes", kind, maxNameRefLength)
 	}
 	if strings.TrimSpace(ref) == "" {
 		return fmt.Errorf("%s cannot be empty", kind)

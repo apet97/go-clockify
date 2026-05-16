@@ -376,7 +376,7 @@ func TestValidateNameRef(t *testing.T) {
 		{"   ", "whitespace-only"},
 		{"foo\x00bar", "embedded NUL"},
 		{"foo\x1fbar", "embedded control byte"},
-		{strings.Repeat("a", maxIDLength+1), "oversized"},
+		{strings.Repeat("a", maxNameRefLength+1), "oversized"},
 	}
 	for _, c := range bad {
 		if err := ValidateNameRef(c.ref, "project"); err == nil {
