@@ -207,7 +207,8 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 	items := envelope.Expenses.Expenses
 	return ok("clockify_list_expenses", expenseViewsFromRaw(items), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
-		"count":       envelope.Expenses.Count,
+		"count":       len(items),
+		"total":       envelope.Expenses.Count,
 		"page":        page,
 		"pageSize":    pageSize,
 	}, "clockify_record_expense")), nil

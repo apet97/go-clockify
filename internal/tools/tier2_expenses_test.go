@@ -503,7 +503,7 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 			respondJSON(t, w, map[string]any{
 				"expenses": map[string]any{
 					"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
-					"count":    1,
+					"count":    12,
 				},
 			})
 		default:
@@ -522,6 +522,12 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 	mustOK(t, res, err, "clockify_list_expenses")
 	if res.Meta["pageSize"] != 75 {
 		t.Fatalf("expected meta pageSize=75, got %v", res.Meta["pageSize"])
+	}
+	if res.Meta["count"] != 1 {
+		t.Fatalf("expected returned-row count=1, got %v", res.Meta["count"])
+	}
+	if res.Meta["total"] != 12 {
+		t.Fatalf("expected workspace total=12, got %v", res.Meta["total"])
 	}
 }
 
