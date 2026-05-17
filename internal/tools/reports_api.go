@@ -123,7 +123,7 @@ func (s *Service) postReportsAPI(ctx context.Context, path string, body map[stri
 		if err != nil {
 			return nil, false, err
 		}
-		return documentedRawResponse(raw.Header, raw.Body), true, nil
+		return documentedReportRawResponse(raw.Header, raw.Body), true, nil
 	}
 }
 

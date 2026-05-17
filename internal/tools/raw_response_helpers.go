@@ -59,6 +59,14 @@ func inferRawContentType(body []byte) string {
 // formats are written to a local temp file and returned by path; text-ish
 // formats keep the historical base64 envelope.
 func documentedRawResponse(header http.Header, body []byte) map[string]any {
+	return documentedRawResponseWithOptions(header, body, false)
+}
+
+func documentedReportRawResponse(header http.Header, body []byte) map[string]any {
+	return documentedRawResponseWithOptions(header, body, true)
+}
+
+func documentedRawResponseWithOptions(header http.Header, body []byte, storeCSVAsFile bool) map[string]any {
 	contentType := strings.TrimSpace(header.Get("Content-Type"))
 	inferred := inferRawContentType(body)
 	if contentType == "" || (inferred != "" && strings.Contains(strings.ToLower(contentType), "json")) {
@@ -68,7 +76,7 @@ func documentedRawResponse(header http.Header, body []byte) map[string]any {
 	if filename == "" && contentType == "application/pdf" {
 		filename = "document.pdf"
 	}
-	if shouldStoreRawResponseAsFile(contentType) {
+	if shouldStoreRawResponseAsFile(contentType, storeCSVAsFile) {
 		path, err := writeRawResponseTempFile(filename, contentType, body)
 		if err == nil {
 			return map[string]any{
@@ -93,18 +101,18 @@ func documentedRawResponse(header http.Header, body []byte) map[string]any {
 	}
 }
 
-func shouldStoreRawResponseAsFile(contentType string) bool {
+func shouldStoreRawResponseAsFile(contentType string, storeCSVAsFile bool) bool {
 	ct := strings.ToLower(strings.TrimSpace(contentType))
 	if ct == "" {
 		return false
 	}
-	if strings.Contains(ct, "csv") {
+	if strings.Contains(ct, "csv") && storeCSVAsFile {
 		return true
 	}
 	if strings.Contains(ct, "text/") || strings.Contains(ct, "json") {
 		return false
 	}
-	for _, marker := range []string{"csv", "pdf", "zip", "spreadsheet", "excel", "octet-stream"} {
+	for _, marker := range []string{"pdf", "zip", "spreadsheet", "excel", "octet-stream"} {
 		if strings.Contains(ct, marker) {
 			return true
 		}

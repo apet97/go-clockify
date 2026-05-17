@@ -322,6 +322,38 @@ func TestExportInvoiceOneUserDefaultsUserLocale(t *testing.T) {
 	assertRawFileEnvelope(t, data, "document.pdf", []byte("%PDF invoice"))
 }
 
+func TestExportInvoiceCSVKeepsBase64Envelope(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices/inv1/export" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.URL.Query().Get("format"); got != "CSV" {
+			t.Fatalf("format query = %q, want CSV", got)
+		}
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", `attachment; filename="invoice.csv"`)
+		_, _ = w.Write([]byte("invoice,csv\n"))
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
+		"invoice_id": "inv1",
+		"format":     "CSV",
+	})
+	mustOK(t, res, err, "clockify_invoices_export")
+	data, ok := res.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("export data type = %T, want map[string]any", res.Data)
+	}
+	if data["filename"] != "invoice.csv" || data["bodyEncoding"] != "base64" || data["body"] == "" {
+		t.Fatalf("invoice CSV should keep base64 envelope, got %#v", data)
+	}
+	if data["path"] != nil {
+		t.Fatalf("invoice CSV should not return file path: %#v", data)
+	}
+}
+
 // TestTier2_Invoices_ListSendsStatusesNotStatus pins SUMMARY #10:
 // when the caller passes `status`, the handler must emit ?statuses=
 // (plural) upstream and must NOT emit ?status=. Upstream wire name
