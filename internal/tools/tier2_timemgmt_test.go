@@ -1459,7 +1459,7 @@ func TestTimeOffBalanceDefaultsToCurrentUser(t *testing.T) {
 	if _, ok := res.Data.([]TimeOffBalanceView); !ok {
 		t.Fatalf("data type = %T, want []TimeOffBalanceView", res.Data)
 	}
-	if res.Meta["count"] != 2 || res.Meta["total"] != 2 || res.Meta["has_more"] != false {
+	if res.Meta["count"] != 2 || res.Meta["total"] != 956 || res.Meta["has_more"] != true || res.Meta["dropped"] != 954 {
 		t.Fatalf("time_off_balances meta should describe returned collection, got %#v", res.Meta)
 	}
 }
