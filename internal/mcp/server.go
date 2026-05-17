@@ -2,13 +2,16 @@ package mcp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -221,6 +224,7 @@ type Server struct {
 	encoder        *json.Encoder // stored for push notifications
 	encoderMu      sync.Mutex    // protects concurrent encoder writes
 	writer         io.Writer     // raw stdio writer for cached JSON-RPC responses
+	outChan        chan []byte   // serialized stdout responses, drained by one writer goroutine
 	requestSeq     atomic.Int64  // monotonic request ID for log correlation
 
 	hub               notifierHub
@@ -320,11 +324,12 @@ func (s *Server) registerInflight(id any, cancel context.CancelFunc) {
 	if id == nil {
 		return
 	}
+	key := rpcIDKey(id)
 	s.inflightMu.Lock()
 	if s.inflight == nil {
 		s.inflight = make(map[any]context.CancelFunc)
 	}
-	s.inflight[id] = cancel
+	s.inflight[key] = cancel
 	s.inflightMu.Unlock()
 }
 
@@ -333,8 +338,9 @@ func (s *Server) unregisterInflight(id any) {
 	if id == nil {
 		return
 	}
+	key := rpcIDKey(id)
 	s.inflightMu.Lock()
-	delete(s.inflight, id)
+	delete(s.inflight, key)
 	s.inflightMu.Unlock()
 }
 
@@ -344,16 +350,31 @@ func (s *Server) cancelInflight(id any) bool {
 	if id == nil {
 		return false
 	}
+	key := rpcIDKey(id)
 	s.inflightMu.Lock()
-	cancel, ok := s.inflight[id]
+	cancel, ok := s.inflight[key]
 	if ok {
-		delete(s.inflight, id)
+		delete(s.inflight, key)
 	}
 	s.inflightMu.Unlock()
 	if ok {
 		cancel()
 	}
 	return ok
+}
+
+func rpcIDKey(id any) any {
+	switch v := id.(type) {
+	case json.Number:
+		return v.String()
+	case float64:
+		if math.Trunc(v) == v {
+			return strconv.FormatInt(int64(v), 10)
+		}
+		return strconv.FormatFloat(v, 'g', -1, 64)
+	default:
+		return id
+	}
 }
 
 // cancelAllInflight cancels and untracks every in-flight request. It is used
@@ -402,14 +423,31 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	// plus maxMsg = 4 KiB meant the scanner happily consumed 64 KiB lines.
 	initial := min(64*1024, maxMsg)
 	buf := make([]byte, 0, initial)
+	// WARNING: If a client streams a JSON object without newlines exceeding maxMsg,
+	// scanner.ErrTooLong will trigger and crash the process cleanly to prevent OOMs.
 	scanner.Buffer(buf, maxMsg)
 	s.encoderMu.Lock()
 	s.encoder = json.NewEncoder(w)
 	s.writer = w
 	s.encoderMu.Unlock()
+	s.outChan = make(chan []byte, 100)
+	var writerWG sync.WaitGroup
+	writerWG.Add(1)
+	go func() {
+		defer writerWG.Done()
+		for b := range s.outChan {
+			s.encoderMu.Lock()
+			if _, err := s.writer.Write(b); err != nil {
+				slog.Warn("async_response_write_failed", "error", err.Error())
+			}
+			s.encoderMu.Unlock()
+		}
+	}()
+	defer writerWG.Wait()
+	defer close(s.outChan)
 	// Install the stdio notifier so list/resource change notifications flow
 	// back through the same thread-safe encoder the responses use.
-	stdioNotifier := encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
+	stdioNotifier := &encoderNotifier{mu: &s.encoderMu, encoder: &s.encoder}
 	if s.hub.len() == 0 {
 		s.SetNotifier(stdioNotifier)
 	}
@@ -460,7 +498,9 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			}
 
 			var req Request
-			if err := json.Unmarshal(result.line, &req); err != nil {
+			decoder := json.NewDecoder(bytes.NewReader(result.line))
+			decoder.UseNumber()
+			if err := decoder.Decode(&req); err != nil {
 				if err := s.writeResponse(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}}); err != nil {
 					return err
 				}
@@ -522,6 +562,17 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 				continue
 			}
 
+			if dispatchAsyncRequest(req.Method) && req.ID != nil {
+				wg.Add(1)
+				go func(r Request) {
+					defer wg.Done()
+					resp := s.handle(ctx, r)
+					if err := s.writeResponse(resp); err != nil {
+						slog.Warn("async_response_failed", "error", err.Error())
+					}
+				}(req)
+				continue
+			}
 			resp := s.handle(ctx, req)
 			if req.ID == nil {
 				continue
@@ -566,6 +617,21 @@ func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error
 // tool handler. Malformed payloads and unknown IDs are silently ignored
 // per the MCP spec — cancellation is best-effort.
 func (s *Server) handleCancelled(raw any) {
+	if m, ok := raw.(map[string]any); ok {
+		requestID := m["requestId"]
+		if requestID == nil {
+			return
+		}
+		if !s.cancelInflight(requestID) {
+			return
+		}
+		reason, _ := m["reason"].(string)
+		slog.Info("cancellation",
+			"request_id", requestID,
+			"reason", reason,
+		)
+		return
+	}
 	var p struct {
 		RequestID any    `json:"requestId"`
 		Reason    string `json:"reason,omitempty"`
@@ -598,27 +664,47 @@ func toolNameFromRequest(req Request) string {
 	return "unknown"
 }
 
-// writeResponse thread-safely encodes a response to the output encoder.
-func (s *Server) writeResponse(resp Response) error {
-	s.encoderMu.Lock()
-	defer s.encoderMu.Unlock()
-	if s.encoder == nil {
-		return nil
+func dispatchAsyncRequest(method string) bool {
+	switch method {
+	case "resources/list", "resources/read", "resources/templates/list", "prompts/get":
+		return true
+	default:
+		return false
 	}
-	return s.encoder.Encode(resp)
+}
+
+// writeResponse serializes a response and enqueues it for the dedicated stdout writer.
+func (s *Server) writeResponse(resp Response) error {
+	b, err := json.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	return s.enqueueResponseBytes(b)
 }
 
 func (s *Server) writeRawResponse(raw []byte) error {
-	s.encoderMu.Lock()
-	defer s.encoderMu.Unlock()
-	if s.writer == nil {
+	b := append([]byte{}, raw...)
+	b = append(b, '\n')
+	return s.enqueueResponseBytes(b)
+}
+
+func (s *Server) enqueueResponseBytes(b []byte) error {
+	if s.outChan == nil {
+		s.encoderMu.Lock()
+		defer s.encoderMu.Unlock()
+		if s.writer != nil {
+			_, err := s.writer.Write(b)
+			return err
+		}
 		return nil
 	}
-	if _, err := s.writer.Write(raw); err != nil {
-		return err
+	select {
+	case s.outChan <- b:
+	default:
+		slog.Warn("outChan full, dropping response")
 	}
-	_, err := s.writer.Write([]byte("\n"))
-	return err
+	return nil
 }
 
 // HandleWithRecover invokes handle with structured panic recovery.
@@ -1145,7 +1231,7 @@ func validateRequest(req Request) *RPCError {
 	}
 	if req.ID != nil {
 		switch req.ID.(type) {
-		case string, float64:
+		case string, float64, json.Number:
 			// valid per JSON-RPC 2.0 spec
 		default:
 			return &RPCError{Code: -32600, Message: "invalid request: id must be a string or number"}

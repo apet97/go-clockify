@@ -357,8 +357,8 @@ func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any)
 	if name := stringArg(args, "name"); name != "" {
 		body["name"] = name
 	}
-	if userIDs, ok := args["user_ids"].([]any); ok {
-		body["userIds"] = userIDs
+	if args["user_ids"] != nil {
+		body["userIds"] = createGroupUserIDs(args)
 	}
 
 	path, err := paths.Workspace(wsID, "user-groups", groupID)

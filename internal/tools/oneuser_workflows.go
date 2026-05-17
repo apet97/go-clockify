@@ -303,6 +303,13 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 	}
 	resultOut := standardizeDomainResult("clockify_stop_work", "entry", "updated", out, args)
 	if env, ok := out.(ResultEnvelope); ok {
+		if data, ok := env.Data.(map[string]any); ok && !boolFromAny(data["stopped"]) && strings.TrimSpace(reportValueString(data["reason"])) == "no timer running" {
+			resultOut.Changed = ChangeSet{}
+			resultOut.IDs = cleanIDs(map[string]string{
+				"workspaceId": stringFromAny(env.Meta["workspaceId"]),
+				"userId":      stringFromAny(env.Meta["userId"]),
+			})
+		}
 		if entry, ok := env.Data.(clockify.TimeEntry); ok {
 			resultOut.IDs = cleanIDs(map[string]string{
 				"workspaceId": stringFromAny(env.Meta["workspaceId"]),
@@ -1053,12 +1060,21 @@ func (s *Service) resolveTimeOffPolicyID(ctx context.Context, policy string) (st
 	if err := resolve.ValidateID(policy, "policy_id"); err == nil && len(policy) == 24 {
 		return policy, nil
 	}
-	out, err := s.listTimeOffPolicies(ctx, map[string]any{"page_size": float64(200)})
-	if err != nil {
-		return "", err
+	page := 1
+	var allPolicies []map[string]any
+	for {
+		out, err := s.listTimeOffPolicies(ctx, map[string]any{"page_size": float64(200), "page": float64(page)})
+		if err != nil {
+			return "", err
+		}
+		policies, _ := out.Data.([]map[string]any)
+		allPolicies = append(allPolicies, policies...)
+		if !boolFromAny(out.Meta["has_more"]) {
+			break
+		}
+		page++
 	}
-	policies, _ := out.Data.([]map[string]any)
-	return uniqueIDByName(policies, policy, "time off policy", "policy_id")
+	return uniqueIDByName(allPolicies, policy, "time off policy", "policy_id")
 }
 
 func uniqueIDByName(items []map[string]any, name, label, idField string) (string, error) {

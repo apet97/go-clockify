@@ -1820,7 +1820,7 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 			if result.IDs["workspaceId"] == "" {
 				t.Fatalf("domain tool did not return workspaceId: %+v", result)
 			}
-			if !descriptor.ReadOnlyHint && !hasAnyChange(result.Changed) {
+			if !descriptor.ReadOnlyHint && descriptor.Tool.Name != "clockify_entries_timer_stop" && !hasAnyChange(result.Changed) {
 				t.Fatalf("write tool did not report a changed entity: %+v", result.Changed)
 			}
 		})
@@ -1888,7 +1888,7 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_entries_delete", "deleted"},
 		{"clockify_entries_running", ""},
 		{"clockify_entries_timer_start", "created"},
-		{"clockify_entries_timer_stop", "updated"},
+		{"clockify_entries_timer_stop", ""},
 		{"clockify_entries_timer_status", ""},
 		{"clockify_entries_timer_switch", "updated"},
 		{"clockify_reports_detailed", ""},
@@ -2027,7 +2027,7 @@ func TestOneUserProjectMembershipsUpdateKeepsUserIDsCompatibility(t *testing.T) 
 	}
 }
 
-func TestOneUserStopWorkEmptyUpstreamStopReturnsRecovery(t *testing.T) {
+func TestOneUserStopWorkNoRunningTimerReturnsNoop(t *testing.T) {
 	const workspaceID = "65b382b606de527a7ee2b60e"
 	const userID = "65b382b606de527a7ee2b624"
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2039,8 +2039,10 @@ func TestOneUserStopWorkEmptyUpstreamStopReturnsRecovery(t *testing.T) {
 				"activeWorkspace":   workspaceID,
 				"activeWorkspaceId": workspaceID,
 			})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/"+workspaceID+"/user/"+userID+"/time-entries":
+			_ = json.NewEncoder(w).Encode([]any{})
 		case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/"+workspaceID+"/user/"+userID+"/time-entries":
-			_, _ = w.Write([]byte(`{}`))
+			t.Fatalf("idle stop must not patch upstream")
 		default:
 			http.NotFound(w, r)
 		}
@@ -2052,12 +2054,13 @@ func TestOneUserStopWorkEmptyUpstreamStopReturnsRecovery(t *testing.T) {
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
-	failure := callToolError(t, server, "clockify_stop_work", nil)
-	if failure.Error.Code != "error" || !strings.Contains(failure.Error.Message, "no stopped entry") {
-		t.Fatalf("unexpected stop recovery error: %+v", failure.Error)
+	result := callToolOK(t, server, "clockify_stop_work", nil)
+	data, _ := result.Data.(map[string]any)
+	if data["stopped"] != false || data["reason"] != "no timer running" {
+		t.Fatalf("unexpected idle stop result: %+v", result)
 	}
-	if failure.Recovery.Tool == "" || failure.Recovery.Hint == "" {
-		t.Fatalf("missing stop recovery guidance: %+v", failure.Recovery)
+	if hasAnyChange(result.Changed) {
+		t.Fatalf("idle stop must not report a changed entry: %+v", result.Changed)
 	}
 }
 
@@ -3081,11 +3084,11 @@ func newOneUserCoverageUpstream() *httptest.Server {
 			fmt.Fprint(w, `{"content":"ZmFrZQ==","contentType":"application/pdf","headers":{}}`)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(oneUserCoveragePayload(workspaceID, userID, r.Method, r.URL.Path))
+		_ = json.NewEncoder(w).Encode(oneUserCoveragePayload(workspaceID, userID, r.Method, r.URL.Path, r.URL.RawQuery))
 	}))
 }
 
-func oneUserCoveragePayload(workspaceID, userID, method, path string) any {
+func oneUserCoveragePayload(workspaceID, userID, method, path, rawQuery string) any {
 	user := map[string]any{
 		"id":                 userID,
 		"name":               "Coverage User",
@@ -3137,6 +3140,8 @@ func oneUserCoveragePayload(workspaceID, userID, method, path string) any {
 		return entity
 	case method == http.MethodGet && (strings.Contains(path, "/groups") || strings.Contains(path, "/user-groups")):
 		return []any{entity}
+	case method == http.MethodGet && strings.HasSuffix(path, "/projects") && strings.Contains(rawQuery, "clients="):
+		return []any{}
 	case method == http.MethodGet && oneUserCoverageListPath(path):
 		return []any{entity}
 	case strings.Contains(path, "/scheduling/"):
@@ -3168,6 +3173,8 @@ func oneUserCoverageEntity(workspaceID, userID, path string) map[string]any {
 	status := "ACTIVE"
 	if strings.Contains(path, "/custom-fields") {
 		status = "VISIBLE"
+	} else if strings.Contains(path, "/time-off/requests") {
+		status = "PENDING"
 	}
 	return map[string]any{
 		"id":            id,

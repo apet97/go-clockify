@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 // Resource describes a concrete, static MCP resource. Dynamic (parametric)
@@ -187,7 +188,9 @@ func (s *Server) handleResourcesList(ctx context.Context) (any, *RPCError) {
 	if s.ResourceProvider == nil {
 		return nil, &RPCError{Code: -32601, Message: "resources capability disabled"}
 	}
-	items, err := s.ResourceProvider.ListResources(ctx)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	items, err := s.ResourceProvider.ListResources(timeoutCtx)
 	if err != nil {
 		return nil, &RPCError{Code: -32603, Message: fmt.Sprintf("resources/list: %v", err)}
 	}
@@ -201,7 +204,9 @@ func (s *Server) handleResourcesTemplatesList(ctx context.Context) (any, *RPCErr
 	if s.ResourceProvider == nil {
 		return nil, &RPCError{Code: -32601, Message: "resources capability disabled"}
 	}
-	items, err := s.ResourceProvider.ListResourceTemplates(ctx)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	items, err := s.ResourceProvider.ListResourceTemplates(timeoutCtx)
 	if err != nil {
 		return nil, &RPCError{Code: -32603, Message: fmt.Sprintf("resources/templates/list: %v", err)}
 	}
@@ -219,7 +224,9 @@ func (s *Server) handleResourcesRead(ctx context.Context, raw any) (any, *RPCErr
 	if err := decodeParams(raw, &params); err != nil || params.URI == "" {
 		return nil, &RPCError{Code: -32602, Message: "invalid resources/read params: missing uri"}
 	}
-	contents, err := s.ResourceProvider.ReadResource(ctx, params.URI)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	contents, err := s.ResourceProvider.ReadResource(timeoutCtx, params.URI)
 	if err != nil {
 		return nil, &RPCError{Code: -32603, Message: fmt.Sprintf("resources/read: %v", err)}
 	}

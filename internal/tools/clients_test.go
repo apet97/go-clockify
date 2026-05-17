@@ -103,6 +103,8 @@ func TestDeleteClientArchivesActiveClient(t *testing.T) {
 		switch {
 		case r.URL.Path == path && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: false})
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.Project{})
 		case r.URL.Path == path && r.Method == http.MethodPut:
 			if err := json.NewDecoder(r.Body).Decode(&archiveBody); err != nil {
 				t.Fatalf("decode archive body: %v", err)
@@ -161,6 +163,8 @@ func TestDeleteClientSkipsArchiveWhenAlreadyArchived(t *testing.T) {
 		switch {
 		case r.URL.Path == path && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.Project{})
 		case r.URL.Path == path && r.Method == http.MethodPut:
 			putCalls++
 			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: true})
@@ -178,6 +182,29 @@ func TestDeleteClientSkipsArchiveWhenAlreadyArchived(t *testing.T) {
 	}
 	if putCalls != 0 {
 		t.Fatalf("expected no PUT calls on already-archived client, got %d", putCalls)
+	}
+}
+
+func TestDeleteClientRefusesActiveProjects(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		path := "/workspaces/ws1/clients/" + testClientID
+		switch {
+		case r.URL.Path == path && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.ClientEntity{ID: testClientID, Name: "Acme", Archived: false})
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.Project{{ID: testProjectID, Name: "Active", ClientID: testClientID, Archived: false}})
+		case r.URL.Path == path && (r.Method == http.MethodPut || r.Method == http.MethodDelete):
+			t.Fatalf("client with active projects must not be mutated")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.DeleteClient(context.Background(), map[string]any{"client": testClientID})
+	if err == nil || !strings.Contains(err.Error(), "active projects") {
+		t.Fatalf("expected active-project guard, got %v", err)
 	}
 }
 

@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestSubmitForApprovalBodyUsesCamelCaseKeys(t *testing.T) {
@@ -185,7 +182,11 @@ func TestListApprovalRequestsForwardsDocumentedSort(t *testing.T) {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 		gotQuery = r.URL.RawQuery
-		respondJSON(t, w, []map[string]any{{"id": "apr1", "status": "PENDING"}})
+		respondJSON(t, w, []map[string]any{{
+			"id":      "apr1",
+			"status":  "PENDING",
+			"entries": []map[string]any{{"id": "entry-heavy", "duration": 3600}},
+		}})
 	})
 	defer cleanup()
 
@@ -204,6 +205,9 @@ func TestListApprovalRequestsForwardsDocumentedSort(t *testing.T) {
 	items := result.Data.([]ApprovalView)
 	if len(items) != 1 || items[0].ID != "apr1" {
 		t.Fatalf("approval list not decoded: %#v", items)
+	}
+	if items[0].EntrySummary.Count != 0 {
+		t.Fatalf("approval list should strip heavy entries before view normalization, got %#v", items[0].EntrySummary)
 	}
 }
 
@@ -258,16 +262,39 @@ func TestApprovalListSchemaDocumentsCanonicalFilterStates(t *testing.T) {
 	t.Fatal("clockify_list_approval_requests descriptor not found")
 }
 
-func TestResubmitApprovalDoesNotRequireOptionalFields(t *testing.T) {
-	upstream := newOneUserCoverageUpstream()
-	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
-	_, err := svc.resubmitApprovalOneUser(context.Background(), map[string]any{
-		"approval_id": "000000000000000000000001",
-		"entry_ids":   []any{"000000000000000000000002"},
+func TestResubmitApprovalRequiresOnlyDocumentedRequiredFieldsAndMapsPeriodStart(t *testing.T) {
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/approval-requests/resubmit-entries-for-approval" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		respondJSON(t, w, map[string]any{"id": gotBody["approvalId"], "status": "PENDING"})
 	})
-	if err != nil && (strings.Contains(err.Error(), "expense_ids is required") ||
-		strings.Contains(err.Error(), "note is required")) {
-		t.Fatalf("resubmit still gated on optional fields: %v", err)
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.resubmitApprovalOneUser(context.Background(), map[string]any{
+		"approval_id":  "000000000000000000000001",
+		"entry_ids":    []any{"000000000000000000000002"},
+		"period":       "WEEKLY",
+		"period_start": "2026-05-04T00:00:00.000Z",
+	})
+	if err != nil {
+		t.Fatalf("resubmit approval: %v", err)
+	}
+	if gotBody["periodStart"] != "2026-05-04T00:00:00.000Z" {
+		t.Fatalf("period_start must be sent as periodStart, got %#v", gotBody)
+	}
+	if _, ok := gotBody["period_start"]; ok {
+		t.Fatalf("body must not send snake_case period_start: %#v", gotBody)
+	}
+	if _, ok := gotBody["expenseIds"]; ok {
+		t.Fatalf("body should omit optional expenseIds when not provided: %#v", gotBody)
+	}
+	if _, ok := gotBody["note"]; ok {
+		t.Fatalf("body should omit optional note when not provided: %#v", gotBody)
 	}
 }

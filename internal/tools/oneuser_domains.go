@@ -619,12 +619,14 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 			},
 		})), "scheduling", "", s.schedulingCapacityOneUser),
 		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{
-			"required": []string{"approval_id", "entry_ids"},
+			"required": []string{"approval_id", "entry_ids", "period", "period_start"},
 			"properties": map[string]any{
-				"approval_id": map[string]any{"type": "string", "description": "Approval request ID"},
-				"entry_ids":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Time entry IDs to resubmit"},
-				"expense_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Expense IDs to resubmit"},
-				"note":        map[string]any{"type": "string", "description": "Optional resubmission note"},
+				"approval_id":  map[string]any{"type": "string", "description": "Approval request ID"},
+				"entry_ids":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Time entry IDs to resubmit"},
+				"expense_ids":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Expense IDs to resubmit"},
+				"period":       map[string]any{"type": "string", "enum": []string{"WEEKLY", "SEMI_MONTHLY", "MONTHLY"}, "description": "Approval period; must match workspace approval settings"},
+				"period_start": map[string]any{"type": "string", "description": "Period start in RFC3339/millisecond form, e.g. 2026-05-01T00:00:00.000Z"},
+				"note":         map[string]any{"type": "string", "description": "Optional resubmission note"},
 			},
 		})), "approval", "updated", s.resubmitApprovalOneUser),
 		nativeDomainTool(1001, toolRO("clockify_holidays_get", "Get one holiday.", objectSchema(map[string]any{
@@ -680,6 +682,8 @@ func adjustOneUserNativeSchema(name string, schema map[string]any) {
 		return
 	}
 	switch name {
+	case "clockify_groups_update":
+		schema["required"] = []string{"group_id", "name"}
 	case "clockify_projects_memberships_update":
 		props, _ := schema["properties"].(map[string]any)
 		if props == nil {
@@ -1542,6 +1546,17 @@ func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (an
 	out, err := s.StopTimer(ctx, args)
 	if err != nil {
 		return nil, err
+	}
+	if env, ok := out.(ResultEnvelope); ok {
+		if data, ok := env.Data.(map[string]any); ok && !boolFromAny(data["stopped"]) && strings.TrimSpace(reportValueString(data["reason"])) == "no timer running" {
+			ids := map[string]string{}
+			for key, value := range env.Meta {
+				if str, ok := value.(string); ok && str != "" {
+					ids[key] = str
+				}
+			}
+			return result("clockify_entries_timer_stop", "entry", ids, data, ChangeSet{}, nil, nil, env.Meta), nil
+		}
 	}
 	return standardizeDomainResult("clockify_entries_timer_stop", "entry", "updated", out, args), nil
 }

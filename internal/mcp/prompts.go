@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -101,7 +102,15 @@ func applyArgs(p Prompt, args map[string]any) ([]PromptMessage, error) {
 }
 
 func substituteArgs(text string, args map[string]any) string {
-	for k, v := range args {
+	keys := make([]string, 0, len(args))
+	for k := range args {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+	for _, k := range keys {
+		v := args[k]
 		needle := "{{" + k + "}}"
 		if strings.Contains(text, needle) {
 			text = strings.ReplaceAll(text, needle, fmt.Sprintf("%v", v))

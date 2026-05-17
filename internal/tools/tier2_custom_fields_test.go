@@ -159,6 +159,58 @@ func TestSetCustomFieldValueRejectsInactiveField(t *testing.T) {
 	}
 }
 
+func TestValidateCustomFieldSetValueRejectsDropdownValuesOutsideAllowedValues(t *testing.T) {
+	cases := []struct {
+		name    string
+		field   map[string]any
+		value   any
+		wantErr string
+	}{
+		{
+			name:  "single accepts allowed value id",
+			field: map[string]any{"type": "DROPDOWN_SINGLE", "allowedValues": []any{map[string]any{"id": "opt-1", "name": "North"}}},
+			value: "opt-1",
+		},
+		{
+			name:    "single rejects unknown scalar",
+			field:   map[string]any{"type": "DROPDOWN_SINGLE", "allowedValues": []any{"North", "South"}},
+			value:   "East",
+			wantErr: "not in allowedValues",
+		},
+		{
+			name:  "multiple accepts allowed subset",
+			field: map[string]any{"type": "DROPDOWN_MULTIPLE", "allowedValues": []any{"North", "South", "East"}},
+			value: []any{"North", "East"},
+		},
+		{
+			name:    "multiple rejects scalar",
+			field:   map[string]any{"type": "DROPDOWN_MULTIPLE", "allowedValues": []any{"North", "South"}},
+			value:   "North",
+			wantErr: "must be an array",
+		},
+		{
+			name:    "multiple rejects unknown array item",
+			field:   map[string]any{"type": "DROPDOWN_MULTIPLE", "allowedValues": []any{"North", "South"}},
+			value:   []any{"South", "East"},
+			wantErr: "not in allowedValues",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateCustomFieldSetValue(tc.field, tc.value)
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("err = %v, want substring %q", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+		})
+	}
+}
+
 // TestValidateCustomFieldDefaultValueRejectsTypeMismatch is the
 // table-driven contract for validateCustomFieldDefaultValue: every
 // upstream-accepted custom-field type must accept its documented value

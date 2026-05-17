@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -203,7 +204,15 @@ func (s *Server) handleProjects(w http.ResponseWriter, r *http.Request, parts []
 	defer s.mu.Unlock()
 	if len(parts) == 3 && r.Method == http.MethodGet {
 		out := make([]clockify.Project, 0, len(s.projects))
+		clientFilter := r.URL.Query()["clients"]
+		archivedFilter := r.URL.Query().Get("archived")
 		for _, p := range s.projects {
+			if len(clientFilter) > 0 && !slices.Contains(clientFilter, p.ClientID) {
+				continue
+			}
+			if archivedFilter != "" && fmt.Sprint(p.Archived) != archivedFilter {
+				continue
+			}
 			out = append(out, p)
 		}
 		sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -487,9 +496,13 @@ func (s *Server) handleUserEntries(w http.ResponseWriter, r *http.Request, parts
 	defer s.mu.Unlock()
 	if len(parts) == 5 && parts[3] == s.UserID && r.Method == http.MethodGet {
 		projectFilter := r.URL.Query().Get("project")
+		inProgress := r.URL.Query().Get("in-progress")
 		out := make([]clockify.TimeEntry, 0, len(s.entries))
 		for _, e := range s.entries {
 			if projectFilter != "" && e.ProjectID != projectFilter {
+				continue
+			}
+			if inProgress == "true" && e.TimeInterval.End != "" {
 				continue
 			}
 			out = append(out, e)

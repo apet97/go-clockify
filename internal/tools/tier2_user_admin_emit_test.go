@@ -97,6 +97,38 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 	}
 }
 
+func TestUpdateUserRoleAcceptsArrayResponse(t *testing.T) {
+	const userID = "u1"
+	const wsID = "w1"
+
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": "self-admin", "name": "Admin"})
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/users/"+userID+"/roles"):
+			respondJSON(t, w, []map[string]any{{"role": "WORKSPACE_ADMIN", "entityId": wsID}})
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, wsID)
+	res, err := svc.UpdateUserRole(context.Background(), map[string]any{
+		"user_id": userID,
+		"role":    "WORKSPACE_ADMIN",
+	})
+	if err != nil {
+		t.Fatalf("UpdateUserRole: %v", err)
+	}
+	if _, ok := res.Data.([]any); ok {
+		return
+	}
+	if _, ok := res.Data.([]map[string]any); !ok {
+		t.Fatalf("expected array response to survive decoding, got %T %#v", res.Data, res.Data)
+	}
+}
+
 // TestUpdateUserRoleREGULARDeletesExplicitElevatedGrant verifies that
 // role=REGULAR strips elevated grants with Clockify's DELETE-with-body role
 // endpoint instead of treating REGULAR as a direct assignable role.

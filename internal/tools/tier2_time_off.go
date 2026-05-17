@@ -572,6 +572,14 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
+	req, err := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if status := timeOffRequestStatus(req); status != "PENDING" {
+		return ResultEnvelope{}, fmt.Errorf("cannot deny request in %s state, must be PENDING", status)
+	}
+
 	payload := timeOffRequestStatusBody("REJECTED", stringArg(args, "note"))
 
 	var result map[string]any

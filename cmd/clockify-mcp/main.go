@@ -288,7 +288,7 @@ func doctorFeatureStatus(features []string) map[string]string {
 		"invoices":     []string{"INVOICE", "INVOIC"},
 		"expenses":     []string{"EXPENSE"},
 		"timeOff":      []string{"TIME_OFF", "TIMEOFF", "TIME OFF"},
-		"scheduling":   []string{"SCHEDUL"},
+		"scheduling":   []string{"SCHEDULING"},
 		"approvals":    []string{"APPROVAL"},
 		"webhooks":     []string{"WEBHOOK"},
 		"customFields": []string{"CUSTOM_FIELD", "CUSTOMFIELD"},
@@ -308,7 +308,7 @@ func doctorFeatureStatus(features []string) map[string]string {
 		feature := strings.ToUpper(strings.TrimSpace(raw))
 		for key, needles := range signals {
 			for _, needle := range needles {
-				if strings.Contains(feature, needle) {
+				if feature == needle || strings.HasPrefix(feature, needle+"_") {
 					out[key] = "available"
 				}
 			}

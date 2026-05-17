@@ -199,14 +199,30 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	if startErr != nil {
 		return ResultEnvelope{}, fmt.Errorf("start timer: %w", startErr)
 	}
+	startedEntryID := entryIDFromResultData(startResult.Data)
 
 	return ok(oneUserToolSwitchWork, map[string]any{
+		"id":                    startedEntryID,
+		"entryId":               startedEntryID,
 		"stop_outcome":          stopOutcome,
 		"previous_entry_action": stopOutcome,
 		"previous_entry":        stoppedEntry,
 		"stopped":               stoppedEntry,
 		"started":               startResult.Data,
 	}, startResult.Meta), nil
+}
+
+func entryIDFromResultData(data any) string {
+	switch v := data.(type) {
+	case EntryView:
+		return v.ID
+	case clockify.TimeEntry:
+		return v.ID
+	case map[string]any:
+		return oneUserStringFromMap(v, "id", "_id", "entryId", "entry_id", "timeEntryId", "time_entry_id")
+	default:
+		return ""
+	}
 }
 
 func parseFindAndUpdateArgs(args map[string]any, loc *time.Location) (findAndUpdateArgs, error) {

@@ -177,6 +177,16 @@ func TestPromptsGetUnknownPromptRejected(t *testing.T) {
 	}
 }
 
+func TestSubstituteArgsPrefersLongestPlaceholderNames(t *testing.T) {
+	got := substituteArgs("{{a}} / {{a}}b}}", map[string]any{
+		"a":    "SHORT",
+		"a}}b": "LONG",
+	})
+	if got != "SHORT / LONG" {
+		t.Fatalf("substituteArgs overlap = %q", got)
+	}
+}
+
 func TestInitializeAdvertisesPromptsCapability(t *testing.T) {
 	server := NewServer("test", nil)
 	result := server.handleInitialize(map[string]any{})

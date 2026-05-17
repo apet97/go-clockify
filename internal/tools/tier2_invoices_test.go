@@ -1208,6 +1208,31 @@ func TestExportInvoiceRejectsUnknownFormat(t *testing.T) {
 	}
 }
 
+func TestExportInvoiceForwardsUppercaseFormat(t *testing.T) {
+	var gotFormat string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices/000000000000000000000001/export" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotFormat = r.URL.Query().Get("format")
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write([]byte("%PDF"))
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
+		"invoice_id": "000000000000000000000001",
+		"format":     "xlsx",
+	})
+	if err != nil {
+		t.Fatalf("export invoice: %v", err)
+	}
+	if gotFormat != "XLSX" {
+		t.Fatalf("format query = %q, want XLSX", gotFormat)
+	}
+}
+
 func TestCreateInvoicePaymentDoesNotRequireNote(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()

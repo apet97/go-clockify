@@ -124,6 +124,9 @@ func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	for i := range items {
+		delete(items[i], "entries")
+	}
 	return ok("clockify_list_approval_requests", approvalViewsFromRaw(items), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(items),
@@ -176,7 +179,7 @@ func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]a
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	body := nativeBodyFromArgs(args, "approval_id", "entry_ids", "expense_ids", "note")
+	body := nativeBodyFromArgs(args, "approval_id", "entry_ids", "expense_ids", "period", "period_start", "note")
 	var updated any
 	if err := s.Client.Post(ctx, path, body, &updated); err != nil {
 		return ResultEnvelope{}, err

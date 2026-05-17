@@ -561,6 +561,9 @@ func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) 
 	if err := validateCustomFieldTargetScope(field, projectID != "", entryID != ""); err != nil {
 		return ResultEnvelope{}, err
 	}
+	if err := validateCustomFieldSetValue(field, value); err != nil {
+		return ResultEnvelope{}, err
+	}
 
 	if projectID != "" {
 		path, err := paths.Workspace(wsID, "projects", projectID, "custom-fields", fieldID)
@@ -658,6 +661,46 @@ func validateCustomFieldTargetScope(field map[string]any, projectTarget, entryTa
 	}
 	if entryTarget && !allowsEntry && allowsProject {
 		return fmt.Errorf("custom field %s is scoped to PROJECT entities; pass project_id instead of entry_id", fieldID)
+	}
+	return nil
+}
+
+func validateCustomFieldSetValue(field map[string]any, value any) error {
+	fieldType := strings.ToUpper(firstReportString(field, "type", "customFieldType", "fieldType"))
+	if fieldType != "DROPDOWN_SINGLE" && fieldType != "DROPDOWN_MULTIPLE" {
+		return nil
+	}
+	allowed, _ := field["allowedValues"].([]any)
+	if len(allowed) == 0 {
+		return fmt.Errorf("custom field dropdown has no allowedValues")
+	}
+	allowedSet := map[string]struct{}{}
+	for _, a := range allowed {
+		allowedSet[fmt.Sprintf("%v", a)] = struct{}{}
+		if m, ok := a.(map[string]any); ok {
+			if id := firstReportString(m, "id", "_id", "value", "name"); id != "" {
+				allowedSet[id] = struct{}{}
+			}
+		}
+	}
+	values := []any{value}
+	if fieldType == "DROPDOWN_MULTIPLE" {
+		switch v := value.(type) {
+		case []any:
+			values = v
+		case []string:
+			values = make([]any, 0, len(v))
+			for _, item := range v {
+				values = append(values, item)
+			}
+		default:
+			return fmt.Errorf("value for DROPDOWN_MULTIPLE must be an array")
+		}
+	}
+	for _, item := range values {
+		if _, ok := allowedSet[fmt.Sprintf("%v", item)]; !ok {
+			return fmt.Errorf("value %v is not in allowedValues", item)
+		}
 	}
 	return nil
 }
