@@ -198,3 +198,26 @@ func assertMoneyCents(t *testing.T, got *MoneyView, want int64, currency string)
 		t.Fatalf("money = %+v, want cents=%d currency=%s", *got, want, currency)
 	}
 }
+
+func TestEntryViewKeepsPopulatedRawCustomFields(t *testing.T) {
+	// All-null custom fields: customFieldValues is omitted entirely.
+	bare := entryViewFromEntry(clockify.TimeEntry{
+		CustomFieldValues: []any{
+			map[string]any{"customFieldId": "cf1", "value": nil},
+		},
+	})
+	if bare.CustomFieldValues != nil {
+		t.Fatalf("all-null customFieldValues should be omitted, got %#v", bare.CustomFieldValues)
+	}
+	// A populated field survives in the raw customFieldValues echo.
+	populated := entryViewFromEntry(clockify.TimeEntry{
+		CustomFieldValues: []any{
+			map[string]any{"customFieldId": "cf1", "value": nil},
+			map[string]any{"customFieldId": "cf2", "value": "set"},
+		},
+	})
+	rows, ok := populated.CustomFieldValues.([]map[string]any)
+	if !ok || len(rows) != 1 {
+		t.Fatalf("populated customFieldValues should retain non-null fields, got %#v", populated.CustomFieldValues)
+	}
+}
