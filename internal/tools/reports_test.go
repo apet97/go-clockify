@@ -173,6 +173,31 @@ func TestReportTotalsSummaryFinancialDisplayUsesSingleCurrency(t *testing.T) {
 	}
 }
 
+func TestSummaryReportGroupTotalsFinancialsMatchTotals(t *testing.T) {
+	data := map[string]any{
+		"groupOne": []map[string]any{
+			{"name": "A", "totalAmount": 100.4},
+			{"name": "B", "totalAmount": 200.4},
+		},
+		"totals": []map[string]any{{
+			"entriesCount": 2,
+			"totalAmount":  301,
+		}},
+	}
+	appendSummaryReportViews(data, map[string]any{})
+	groupTotals, ok := data["group_totals_summary"].(ReportGroupTotalsSummary)
+	if !ok {
+		t.Fatalf("unexpected group_totals_summary: %T %#v", data["group_totals_summary"], data["group_totals_summary"])
+	}
+	totals, ok := data["totals_summary"].(ReportTotalsSummary)
+	if !ok {
+		t.Fatalf("unexpected totals_summary: %T %#v", data["totals_summary"], data["totals_summary"])
+	}
+	if groupTotals.Financials.Earned.AmountCents != totals.Financials.Earned.AmountCents {
+		t.Fatalf("group earned = %d, totals earned = %d", groupTotals.Financials.Earned.AmountCents, totals.Financials.Earned.AmountCents)
+	}
+}
+
 // TestQuickReport verifies TopProject selection, RunningEntries detection,
 // and the EntriesSample cap (<=5 when include_entries is false).
 func TestQuickReport(t *testing.T) {

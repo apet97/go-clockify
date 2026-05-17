@@ -75,8 +75,15 @@ func appendSummaryReportViews(data map[string]any, body map[string]any) int {
 	}
 	rollups := summaryRollups(data, summaryGroupsFromBody(body))
 	data["summary_rollups"] = rollups
-	data["group_totals_summary"] = summarizeReportRollups(rollups)
-	data["totals_summary"] = summarizeReportTotals(data, nil)
+	groupTotals := summarizeReportRollups(rollups)
+	totals := summarizeReportTotals(data, nil)
+	if totals.Financials.Source == entryFinancialSourceReportsAPI {
+		// The upstream `totals` row is the canonical figure (round-of-sum).
+		// Re-derive the grouped summary's money from it so the two agree.
+		groupTotals.Financials = totals.Financials
+	}
+	data["group_totals_summary"] = groupTotals
+	data["totals_summary"] = totals
 	data["suggestedActions"] = reportDrilldownSuggestions(body)
 	// The normalized views above fully replace the raw upstream arrays; drop
 	// them so the response stays within the MCP transport budget.
