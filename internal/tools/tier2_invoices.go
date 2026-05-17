@@ -1154,6 +1154,10 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 		body["description"] = v
 	}
 	if v, ok := args["quantity"]; ok {
+		quantity, isNumber := numberArg(args, "quantity")
+		if !isNumber || quantity <= 0 {
+			return ResultEnvelope{}, fmt.Errorf("quantity must be a number greater than 0")
+		}
 		body["quantity"] = v
 	}
 	if v, ok := args["unit_price"]; ok {
