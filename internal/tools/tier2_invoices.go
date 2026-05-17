@@ -593,17 +593,25 @@ func buildInvoiceImportBody(s *Service, args map[string]any, importExpenses bool
 	if groupType == "" {
 		groupType = "DETAILED"
 	}
+	primaryGroupBy := strings.TrimSpace(stringArg(args, "time_entry_primary_group_by"))
+	if groupType == "GROUPED" && primaryGroupBy == "" {
+		return nil, fmt.Errorf("time_entry_group_type \"GROUPED\" requires time_entry_primary_group_by (one of USER, PROJECT, DATE)")
+	}
 	projectFilter := map[string]any{"contains": "CONTAINS", "status": "ALL"}
 	if projectIDs := stringSliceArg(args, "project_ids"); len(projectIDs) > 0 {
 		projectFilter["ids"] = projectIDs
 	}
-	return map[string]any{
+	body := map[string]any{
 		"from":               fromTime.UTC().Format(time.RFC3339),
 		"to":                 toTime.UTC().Format(time.RFC3339),
 		"importExpenses":     importExpenses,
 		"timeEntryGroupType": groupType,
 		"projectFilter":      projectFilter,
-	}, nil
+	}
+	if primaryGroupBy != "" {
+		body["timeEntryPrimaryGroupBy"] = primaryGroupBy
+	}
+	return body, nil
 }
 
 func (s *Service) importInvoiceExpensesOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
