@@ -3,6 +3,7 @@ package tools
 import (
 	"maps"
 	"strings"
+	"time"
 )
 
 type ExpenseView map[string]any
@@ -213,9 +214,42 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 		"days":  firstPresent(raw, "days", "durationDays", "balanceDiff"),
 		"hours": firstPresent(raw, "hours", "durationHours"),
 	}
+	if stale := timeOffRequestStale(status, raw); stale != nil {
+		view["stale"] = stale
+	}
 	view["actions"] = timeOffActions(status)
 	view["suggestedActions"] = timeOffSuggestions(requestID, policyID, status)
 	return view
+}
+
+// timeOffRequestStale flags a PENDING time-off request whose period has
+// already elapsed: it can no longer be acted on meaningfully, so an approver
+// should see it as cleanup, not a live request.
+func timeOffRequestStale(status string, raw map[string]any) map[string]any {
+	if status != "PENDING" {
+		return nil
+	}
+	period, ok := firstPresent(raw, "timeOffPeriod", "time_off_period", "period").(map[string]any)
+	if !ok {
+		return nil
+	}
+	inner, ok := period["period"].(map[string]any)
+	if !ok {
+		inner = period
+	}
+	endRaw := firstReportString(inner, "end", "endDate", "end_date")
+	if endRaw == "" {
+		return nil
+	}
+	end, err := parseFlexibleDateTime(endRaw, time.UTC)
+	if err != nil || !end.Before(time.Now().UTC()) {
+		return nil
+	}
+	return map[string]any{
+		"reason":    "pending_period_in_past",
+		"periodEnd": endRaw,
+		"hint":      "This PENDING request's period has already elapsed; deny or delete it.",
+	}
 }
 
 func timeOffRequestStatus(raw map[string]any) string {

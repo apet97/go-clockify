@@ -559,6 +559,40 @@ func TestGetTimeOffRequestUsesBareRequestEndpointAndNormalizesStructuredStatus(t
 	}
 }
 
+func TestTimeOffRequestViewFlagsPastPendingPeriodAsStale(t *testing.T) {
+	view := timeOffRequestViewFromRaw(map[string]any{
+		"id":     "req1",
+		"status": "PENDING",
+		"period": map[string]any{
+			"period": map[string]any{
+				"end": "2020-01-01T00:00:00Z",
+			},
+		},
+	})
+	stale, ok := view["stale"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected stale marker, got %#v", view["stale"])
+	}
+	if stale["reason"] != "pending_period_in_past" {
+		t.Fatalf("unexpected stale reason: %#v", stale["reason"])
+	}
+}
+
+func TestTimeOffRequestViewDoesNotFlagFuturePendingPeriodAsStale(t *testing.T) {
+	view := timeOffRequestViewFromRaw(map[string]any{
+		"id":     "req1",
+		"status": "PENDING",
+		"period": map[string]any{
+			"period": map[string]any{
+				"end": "2999-01-01T00:00:00Z",
+			},
+		},
+	})
+	if _, ok := view["stale"]; ok {
+		t.Fatalf("did not expect stale marker: %#v", view["stale"])
+	}
+}
+
 func TestListTimeOffRequestsForwardsRejectedStatus(t *testing.T) {
 	cases := []struct {
 		name     string
