@@ -22,12 +22,25 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 		"clockify_entries_timer_stop": "idempotent no-op when the fake server reports no running timer",
 		"clockify_demo_cleanup":       "idempotent cleanup has no matching fake demo resources to delete",
 	}
+	recoverableWrites := map[string]string{
+		"clockify_invoices_send":         "clockify_invoices_get",
+		"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
+		"clockify_webhooks_test":         "clockify_webhooks_get",
+		"clockify_invoices_items_update": "clockify_invoices_items_delete",
+	}
 
 	for _, descriptor := range svc.FullAccessRegistry() {
 		if descriptor.ReadOnlyHint {
 			continue
 		}
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
+			if wantRecovery, ok := recoverableWrites[descriptor.Tool.Name]; ok {
+				result := callToolError(t, server, descriptor.Tool.Name, writeContractArgs(descriptor.Tool))
+				if result.Recovery.Tool != wantRecovery {
+					t.Fatalf("recovery tool = %q, want %q: %+v", result.Recovery.Tool, wantRecovery, result)
+				}
+				return
+			}
 			result := callToolOK(t, server, descriptor.Tool.Name, writeContractArgs(descriptor.Tool))
 			if len(result.IDs) == 0 {
 				t.Fatalf("write result returned no ids: %+v", result)

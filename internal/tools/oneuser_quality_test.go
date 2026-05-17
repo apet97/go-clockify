@@ -510,8 +510,8 @@ func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
 		"clockify_review_week":         {"range", "totals", "issues", "suggestedActions"},
 		"clockify_fix_entry":           {"entry", "updatedFields"},
 		"clockify_invoice_client_work": {"invoice"},
-		"clockify_record_expense":      {"expense"},
-		"clockify_request_time_off":    {"request"},
+		"clockify_record_expense":      {"id", "amount", "categoryId", "status"},
+		"clockify_request_time_off":    {"id", "requestId", "policyId", "status"},
 		"clockify_schedule_work":       {"assignment"},
 		"clockify_setup_webhook":       {"webhook"},
 		"clockify_demo_seed":           {"runId", "prefix"},
@@ -1803,6 +1803,18 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 			continue
 		}
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
+			if wantRecovery, ok := map[string]string{
+				"clockify_invoices_send":         "clockify_invoices_get",
+				"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
+				"clockify_webhooks_test":         "clockify_webhooks_get",
+				"clockify_invoices_items_update": "clockify_invoices_items_delete",
+			}[descriptor.Tool.Name]; ok {
+				errResult := callToolError(t, server, descriptor.Tool.Name, oneUserCoverageArgs(descriptor.Tool))
+				if errResult.Recovery.Tool != wantRecovery {
+					t.Fatalf("recovery tool = %q, want %q: %+v", errResult.Recovery.Tool, wantRecovery, errResult)
+				}
+				return
+			}
 			raw := callToolRaw(t, server, descriptor.Tool.Name, oneUserCoverageArgs(descriptor.Tool))
 			result := decodeToolResult(t, descriptor.Tool.Name, raw)
 			if result.IDs["workspaceId"] == "" {
@@ -1886,10 +1898,8 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_invoices_get", ""},
 		{"clockify_invoices_update", "updated"},
 		{"clockify_invoices_delete", "deleted"},
-		{"clockify_invoices_mark_paid", "updated"},
 		{"clockify_invoices_items_list", ""},
 		{"clockify_invoices_items_add", "created"},
-		{"clockify_invoices_items_update", "updated"},
 		{"clockify_invoices_items_delete", "deleted"},
 		{"clockify_expenses_list", ""},
 		{"clockify_expenses_get", ""},
@@ -1935,7 +1945,6 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_webhooks_get", ""},
 		{"clockify_webhooks_update", "updated"},
 		{"clockify_webhooks_delete", "deleted"},
-		{"clockify_webhooks_test", "updated"},
 		{"clockify_webhooks_events", ""},
 		{"clockify_groups_list", ""},
 		{"clockify_groups_get", ""},
@@ -1976,6 +1985,23 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 			requireID(t, result, "workspaceId")
 			if tt.change != "" {
 				requireChanged(t, result, tt.change)
+			}
+		})
+	}
+	recoveries := map[string]string{
+		"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
+		"clockify_webhooks_test":         "clockify_webhooks_get",
+		"clockify_invoices_items_update": "clockify_invoices_items_delete",
+	}
+	for name, wantRecoveryTool := range recoveries {
+		t.Run(name+"_recovery", func(t *testing.T) {
+			descriptor, ok := descriptors[name]
+			if !ok {
+				t.Fatalf("missing descriptor")
+			}
+			result := callToolError(t, server, name, oneUserCoverageArgs(descriptor.Tool))
+			if result.Recovery.Tool != wantRecoveryTool {
+				t.Fatalf("recovery tool = %q, want %q: %+v", result.Recovery.Tool, wantRecoveryTool, result)
 			}
 		})
 	}
@@ -2940,6 +2966,8 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return []any{"coverage@example.com"}
 	case "memberships":
 		return []any{map[string]any{"user_id": oneUserCoverageID("user_id")}}
+	case "role_grants":
+		return []any{map[string]any{"role": "WORKSPACE_ADMIN", "entity_id": oneUserCoverageID("workspace_id")}}
 	case "budget_estimate":
 		return map[string]any{"active": true, "estimate": 1, "type": "MANUAL"}
 	case "estimate_reset":

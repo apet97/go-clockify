@@ -102,8 +102,9 @@ real entity; a useful recovery envelope is protocol/recovery evidence only.
 `Service.FullAccessRegistry()` composes the registry in order:
 `workflowDescriptors` → `FirstSliceRegistry` → `nativeCoreDescriptors` →
 `nativeHighValueDescriptors` → `nativeDomainExtras` → `timerAndReportDescriptors`
-→ `rawAPIDescriptors`. `routeTool` still backs route-based native descriptors —
-do not delete it.
+→ `rawAPIDescriptors`. `routeTool` and its route helpers are currently unused
+(the registry is fully native) and retained as `//nolint:unused` scaffolding;
+removing them also means deleting the route tests in `oneuser_domains_test.go`.
 
 `docs/tool-catalog.{md,json}` are generated from the registry. After any
 descriptor, schema, or order change, run `make gen-tool-catalog` then
@@ -126,6 +127,16 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   change; keep the ledger honest when the API rejects direct mutation.
 - Holiday get/update behavior differs from list/create/delete; do not mark
   happy-path without live evidence.
+- `clockify_holidays_get` / `clockify_holidays_update` resolve the holiday by
+  scanning the holiday list (no get-one endpoint); `clockify_projects_memberships_list`
+  reads the hydrated project record.
+- No Clockify endpoint exists for `clockify_invoices_send`,
+  `clockify_webhooks_test`, or `clockify_invoices_items_update`; these tools
+  return a clean `unsupported` error with recovery guidance instead of calling
+  upstream.
+- Tool results are capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES` (default 50000):
+  oversized list results truncate with `meta.truncated`/`size_capped`, and
+  PDF/XLSX/ZIP exports return `bodyEncoding:"file"` with a temp-file `path`.
 
 ## Testing Discipline
 

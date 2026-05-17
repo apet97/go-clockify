@@ -82,7 +82,6 @@ type ClientView struct {
 	InvoiceSummary  ClientInvoiceSummary  `json:"invoice_summary"`
 	ApprovalSummary ClientApprovalSummary `json:"approval_summary"`
 	Warnings        []string              `json:"warnings,omitempty"`
-	Raw             map[string]any        `json:"raw,omitempty"`
 }
 
 type clientReportTotals struct {
@@ -130,39 +129,8 @@ func clientViewFromClient(client clockify.ClientEntity) ClientView {
 			Source: entryFinancialSourceUnavailable,
 			Reason: "approval enrichment requires detailed report rows",
 		},
-		Raw: clientRawMap(client),
 	}
 	return view
-}
-
-func clientRawMap(client clockify.ClientEntity) map[string]any {
-	raw := map[string]any{
-		"id":       client.ID,
-		"name":     client.Name,
-		"archived": client.Archived,
-	}
-	if client.Address != "" {
-		raw["address"] = client.Address
-	}
-	if client.CCEmails != nil {
-		raw["ccEmails"] = client.CCEmails
-	}
-	if client.CurrencyCode != "" {
-		raw["currencyCode"] = client.CurrencyCode
-	}
-	if client.CurrencyID != "" {
-		raw["currencyId"] = client.CurrencyID
-	}
-	if client.Email != "" {
-		raw["email"] = client.Email
-	}
-	if client.Note != "" {
-		raw["note"] = client.Note
-	}
-	if client.WorkspaceID != "" {
-		raw["workspaceId"] = client.WorkspaceID
-	}
-	return raw
 }
 
 func (s *Service) enrichClientView(ctx context.Context, wsID string, client clockify.ClientEntity, args map[string]any, deep bool) (ClientView, map[string]any) {

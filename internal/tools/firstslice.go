@@ -541,9 +541,9 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_invoice_client_work":
 		return dataKeysSchema("billing", "client", "clientId", "discount", "financials", "id", "import", "invoice", "number", "payment_summary", "raw", "status", "suggestedActions", "taxes")
 	case "clockify_record_expense":
-		return dataKeysSchema("amount", "approval", "category", "categoryId", "date", "entities", "expense", "id", "invoicing", "notes", "projectId", "raw", "receipt", "status", "taskId", "tax", "userId")
+		return dataKeysSchema("amount", "approval", "category", "categoryId", "currency", "date", "entities", "has_file", "id", "invoicing", "notes", "projectId", "receipt", "status", "taskId", "tax", "userId")
 	case "clockify_request_time_off":
-		return dataKeysSchema("actions", "audit", "day_period", "duration", "id", "note", "period", "policy", "policyId", "raw", "request", "status", "suggestedActions", "user", "userId")
+		return dataKeysSchema("actions", "audit", "day_period", "duration", "id", "note", "period", "policy", "policyId", "requestId", "status", "suggestedActions", "user", "userId")
 	case "clockify_schedule_work":
 		return objectDataSchema(map[string]any{"id": map[string]any{"type": "string"}, "assignment": map[string]any{"type": "object"}})
 	case "clockify_setup_webhook":
@@ -654,7 +654,7 @@ func entityArrayDataSchema(fields ...string) map[string]any {
 }
 
 func binaryExportDataSchema(extraFields ...string) map[string]any {
-	fields := []string{"contentType", "filename", "bytes", "bodyEncoding", "base64Bytes", "truncated", "body"}
+	fields := []string{"contentType", "filename", "bytes", "bodyEncoding", "base64Bytes", "truncated", "body", "path"}
 	fields = append(fields, extraFields...)
 	return entityObjectDataSchema(fields...)
 }
@@ -742,6 +742,8 @@ func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 		}
 	} else if strings.Contains(strings.ToLower(message), "not found") {
 		code = "not_found"
+	} else if strings.Contains(strings.ToLower(message), "unsupported:") || strings.Contains(strings.ToLower(message), "does not expose") {
+		code = "unsupported"
 	}
 	if recovery.Hint == "" {
 		recovery = defaultRecovery(action, nil)
@@ -778,6 +780,14 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		return RecoveryHint{Hint: "Check the entry, project, task, tag, and time fields; use returned IDs or exact names.", Tool: "clockify_review_day"}
 	case strings.Contains(action, "reports_"), strings.Contains(action, "_report"):
 		return RecoveryHint{Hint: "Reports need an explicit date range. Pass date_range_start and date_range_end as YYYY-MM-DD (the money and summary reports also accept an optional summary_filter object). The weekly report needs start and end exactly 7 days apart.", Tool: "clockify_reports_summary"}
+	case action == "clockify_invoices_mark_paid":
+		return RecoveryHint{Hint: "Clockify records paid invoices through payments. Create a payment with invoice_id, amount, and date, then reload the invoice.", Tool: "clockify_invoices_payments_create"}
+	case action == "clockify_invoices_send":
+		return RecoveryHint{Hint: "Clockify does not expose invoice email sending in this API surface. Use the Clockify UI for email delivery, or inspect the invoice with the get tool.", Tool: "clockify_invoices_get"}
+	case action == "clockify_webhooks_test":
+		return RecoveryHint{Hint: "Clockify does not expose a webhook test-send endpoint. Trigger a real event or inspect delivery logs in the Clockify UI.", Tool: "clockify_webhooks_get"}
+	case action == "clockify_invoices_items_update":
+		return RecoveryHint{Hint: "Clockify has no update endpoint for invoice line items. Delete the line with clockify_invoices_items_delete, then re-add it with clockify_invoices_items_add.", Tool: "clockify_invoices_items_delete"}
 	case strings.Contains(action, "invoice"):
 		return RecoveryHint{Hint: "If invoicing is unavailable, report that and continue. Otherwise list clients or invoices, then retry with returned IDs.", Tool: "clockify_invoices_list"}
 	case strings.Contains(action, "expense"):
@@ -1896,6 +1906,15 @@ func (s *Service) deleteDemoTask(ctx context.Context, projectID string, task clo
 	}
 	path, err := paths.Workspace(s.WorkspaceID, "projects", projectID, "tasks", task.ID)
 	if err == nil {
+		if !strings.EqualFold(task.Status, "DONE") {
+			task.Status = "DONE"
+			var updated clockify.Task
+			if putErr := s.Client.Put(ctx, path, taskPutPayload(task), &updated); putErr != nil {
+				err = fmt.Errorf("mark task DONE before delete: %w", putErr)
+			}
+		}
+	}
+	if err == nil {
 		err = s.Client.Delete(ctx, path)
 	}
 	if err != nil {
@@ -1919,8 +1938,28 @@ func (s *Service) deleteDemo(ctx context.Context, entity, id, name string, chang
 		path, err = paths.Workspace(s.WorkspaceID, "tags", id)
 	case "project":
 		path, err = paths.Workspace(s.WorkspaceID, "projects", id)
+		if err == nil {
+			var existing clockify.Project
+			if getErr := s.Client.Get(ctx, path, nil, &existing); getErr != nil {
+				err = getErr
+			} else if !existing.Archived {
+				if putErr := s.Client.Put(ctx, path, map[string]any{"name": existing.Name, "archived": true}, &existing); putErr != nil {
+					err = fmt.Errorf("archive project before delete: %w", putErr)
+				}
+			}
+		}
 	case "client":
 		path, err = paths.Workspace(s.WorkspaceID, "clients", id)
+		if err == nil {
+			var existing clockify.ClientEntity
+			if getErr := s.Client.Get(ctx, path, nil, &existing); getErr != nil {
+				err = getErr
+			} else if !existing.Archived {
+				if putErr := s.Client.Put(ctx, path, map[string]any{"name": existing.Name, "archived": true}, &existing); putErr != nil {
+					err = fmt.Errorf("archive client before delete: %w", putErr)
+				}
+			}
+		}
 	default:
 		err = fmt.Errorf("unknown cleanup entity %q", entity)
 	}

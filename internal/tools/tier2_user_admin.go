@@ -129,6 +129,15 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 						"description": "Role to assign: WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, or REGULAR",
 						"enum":        []string{"WORKSPACE_ADMIN", "PROJECT_MANAGER", "TEAM_MANAGER", "REGULAR"},
 					},
+					"entity_id":   map[string]any{"type": "string", "description": "Role entityId. Defaults to workspace ID for WORKSPACE_ADMIN and user_id for TEAM_MANAGER; required for PROJECT_MANAGER."},
+					"project_id":  map[string]any{"type": "string", "description": "Project ID used as entityId when role is PROJECT_MANAGER."},
+					"source_type": map[string]any{"type": "string", "enum": []string{"USER_GROUP"}, "description": "Optional role sourceType for user-group backed manager roles."},
+					"remove_role": map[string]any{"type": "string", "enum": []string{"WORKSPACE_ADMIN", "PROJECT_MANAGER", "TEAM_MANAGER"}, "description": "For role=REGULAR, remove this specific elevated role instead of discovering current grants."},
+					"role_grants": map[string]any{
+						"type":        "array",
+						"description": "For role=REGULAR, explicit elevated grants to remove. Each item needs role and entity_id/entityId.",
+						"items":       map[string]any{"type": "object", "additionalProperties": true},
+					},
 					"dry_run": map[string]any{"type": "boolean", "description": "Preview the role change without applying it"},
 				},
 			}),
@@ -491,7 +500,7 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
-	role := stringArg(args, "role")
+	role := strings.ToUpper(strings.TrimSpace(stringArg(args, "role")))
 	validRoles := map[string]bool{
 		"WORKSPACE_ADMIN": true,
 		"PROJECT_MANAGER": true,
@@ -501,31 +510,24 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	if !validRoles[role] {
 		return ResultEnvelope{}, fmt.Errorf("role must be one of WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, REGULAR; got %q", role)
 	}
-	if role == "REGULAR" {
-		return ResultEnvelope{}, fmt.Errorf(
-			"setting role to REGULAR strips the user's elevated grants " +
-				"(WORKSPACE_ADMIN/PROJECT_MANAGER/TEAM_MANAGER) while keeping them " +
-				"in the workspace as an active member; " +
-				"the MCP does not yet expose a role-strip helper because the live API " +
-				"requires DELETE on /v1/workspaces/{ws}/users/{userId}/roles with a " +
-				"JSON body, which the internal Clockify client's Delete method does not " +
-				"support today — manage this via the Clockify web UI or a direct API call; " +
-				"clockify_deactivate_user is NOT a substitute: it removes the user from " +
-				"the workspace entirely",
-		)
-	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	// The live Clockify API rejects PUT on this path with code 3000
-	// ("Request method 'PUT' is not supported"). The contract is POST
-	// with a body containing both entityId (the workspace ID) and role.
-	// The REGULAR case is handled by the early-return guard above
-	// (DELETE-with-body wire contract; see ADR 0020).
-	payload := map[string]any{"entityId": wsID, "role": role}
+	if role == "REGULAR" {
+		return s.stripUserRoles(ctx, args, wsID, userID)
+	}
+
+	entityID, err := roleEntityID(role, args, wsID, userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	payload := map[string]any{"entityId": entityID, "role": role}
+	if sourceType := strings.TrimSpace(stringArg(args, "source_type")); sourceType != "" {
+		payload["sourceType"] = sourceType
+	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_update_user_role", dryrunPreviewPayload("clockify_update_user_role", payload), map[string]any{
 			"workspaceId": wsID,
@@ -563,6 +565,216 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 		"userId":      userID,
 		"role":        role,
 	}), nil
+}
+
+type userRoleGrant struct {
+	Role       string `json:"role"`
+	EntityID   string `json:"entityId"`
+	SourceType string `json:"sourceType,omitempty"`
+}
+
+func roleEntityID(role string, args map[string]any, wsID, userID string) (string, error) {
+	if entityID := firstNonEmptyString(strings.TrimSpace(stringArg(args, "entity_id")), strings.TrimSpace(stringArg(args, "entityId"))); entityID != "" {
+		return entityID, nil
+	}
+	switch role {
+	case "WORKSPACE_ADMIN":
+		return wsID, nil
+	case "TEAM_MANAGER":
+		return userID, nil
+	case "PROJECT_MANAGER":
+		if projectID := strings.TrimSpace(stringArg(args, "project_id")); projectID != "" {
+			return projectID, nil
+		}
+		return "", fmt.Errorf("entity_id or project_id is required when role is PROJECT_MANAGER")
+	default:
+		return "", fmt.Errorf("unsupported manager role %q", role)
+	}
+}
+
+func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID, userID string) (ResultEnvelope, error) {
+	if dryrun.Enabled(args) {
+		grants, _, err := roleStripGrantsFromArgs(args, wsID, userID)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+		preview := map[string]any{
+			"user_id": userID,
+			"role":    "REGULAR",
+		}
+		if len(grants) > 0 {
+			preview["role_grants"] = grants
+		} else {
+			preview["note"] = "The real run will fetch current elevated role grants, then issue one DELETE-with-body request per grant."
+		}
+		return ok("clockify_update_user_role", dryrunPreviewPayload("clockify_update_user_role", preview), map[string]any{
+			"workspaceId": wsID,
+			"userId":      userID,
+			"role":        "REGULAR",
+		}), nil
+	}
+	if self, lookupErr := s.getCurrentUser(ctx); lookupErr == nil && self.ID != "" && self.ID == userID {
+		return ResultEnvelope{}, fmt.Errorf(
+			"refusing to change the API key owner's own workspace role at " +
+				"the MCP layer; use the Clockify web UI if this is intentional " +
+				"(self-modification can strip the operator's ability to undo)",
+		)
+	}
+
+	grants, explicit, err := roleStripGrantsFromArgs(args, wsID, userID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !explicit {
+		grants, err = s.currentUserRoleGrants(ctx, wsID, userID)
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
+	}
+	if len(grants) == 0 {
+		return ok("clockify_update_user_role", map[string]any{
+			"id":             userID,
+			"userId":         userID,
+			"role":           "REGULAR",
+			"alreadyRegular": true,
+			"removedRoles":   []userRoleGrant{},
+		}, map[string]any{"workspaceId": wsID, "userId": userID, "role": "REGULAR"}), nil
+	}
+
+	path, err := paths.Workspace(wsID, "users", userID, "roles")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	for _, grant := range grants {
+		body := map[string]any{"entityId": grant.EntityID, "role": grant.Role}
+		if grant.SourceType != "" {
+			body["sourceType"] = grant.SourceType
+		}
+		if err := s.Client.DeleteWithBody(ctx, path, body, nil); err != nil {
+			return ResultEnvelope{}, err
+		}
+	}
+	result := map[string]any{
+		"id":           userID,
+		"userId":       userID,
+		"role":         "REGULAR",
+		"removedRoles": grants,
+	}
+	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
+	return ok("clockify_update_user_role", result, map[string]any{"workspaceId": wsID, "userId": userID, "role": "REGULAR"}), nil
+}
+
+func roleStripGrantsFromArgs(args map[string]any, wsID, userID string) ([]userRoleGrant, bool, error) {
+	rows := mapSlice(args["role_grants"])
+	if len(rows) > 0 {
+		grants := make([]userRoleGrant, 0, len(rows))
+		for _, row := range rows {
+			grant, err := roleGrantFromMap(row, wsID, userID)
+			if err != nil {
+				return nil, true, err
+			}
+			grants = append(grants, grant)
+		}
+		return grants, true, nil
+	}
+	removeRole := strings.ToUpper(strings.TrimSpace(stringArg(args, "remove_role")))
+	if removeRole == "" {
+		return nil, false, nil
+	}
+	row := map[string]any{
+		"role":       removeRole,
+		"entity_id":  firstNonEmptyString(stringArg(args, "entity_id"), stringArg(args, "project_id")),
+		"sourceType": stringArg(args, "source_type"),
+	}
+	grant, err := roleGrantFromMap(row, wsID, userID)
+	return []userRoleGrant{grant}, true, err
+}
+
+func roleGrantFromMap(row map[string]any, wsID, userID string) (userRoleGrant, error) {
+	role := normalizeManagerRoleName(firstReportString(row, "role", "name"))
+	if role == "" {
+		if nested, ok := row["role"].(map[string]any); ok {
+			role = normalizeManagerRoleName(firstReportString(nested, "role", "name"))
+		}
+	}
+	if role == "" {
+		return userRoleGrant{}, fmt.Errorf("role_grants item is missing a supported role")
+	}
+	args := map[string]any{
+		"entity_id":   firstReportString(row, "entityId", "entity_id", "projectId", "project_id"),
+		"source_type": firstReportString(row, "sourceType", "source_type"),
+	}
+	if source, ok := row["source"].(map[string]any); ok {
+		if args["entity_id"] == "" {
+			args["entity_id"] = firstReportString(source, "id")
+		}
+		if args["source_type"] == "" {
+			args["source_type"] = firstReportString(source, "type")
+		}
+	}
+	entityID, err := roleEntityID(role, args, wsID, userID)
+	if err != nil {
+		return userRoleGrant{}, err
+	}
+	return userRoleGrant{Role: role, EntityID: entityID, SourceType: strings.TrimSpace(fmt.Sprint(args["source_type"]))}, nil
+}
+
+func (s *Service) currentUserRoleGrants(ctx context.Context, wsID, userID string) ([]userRoleGrant, error) {
+	path, err := paths.Workspace(wsID, "users", "info")
+	if err != nil {
+		return nil, err
+	}
+	for page := 1; page <= 20; page++ {
+		body := map[string]any{
+			"page":         page,
+			"pageSize":     200,
+			"includeRoles": true,
+			"memberships":  "NONE",
+			"status":       "ALL",
+		}
+		var users []map[string]any
+		if err := s.Client.Post(ctx, path, body, &users); err != nil {
+			return nil, err
+		}
+		for _, user := range users {
+			if firstReportString(user, "id", "userId", "user_id") != userID {
+				continue
+			}
+			return roleGrantsFromRaw(user, wsID, userID), nil
+		}
+		if len(users) < 200 {
+			break
+		}
+	}
+	return nil, fmt.Errorf("user %s not found while fetching current roles; pass role_grants with explicit role/entity_id values or retry with a live user ID", userID)
+}
+
+func roleGrantsFromRaw(user map[string]any, wsID, userID string) []userRoleGrant {
+	rows := mapSlice(user["roles"])
+	out := make([]userRoleGrant, 0, len(rows))
+	for _, row := range rows {
+		grant, err := roleGrantFromMap(row, wsID, userID)
+		if err == nil {
+			out = append(out, grant)
+		}
+	}
+	return out
+}
+
+func normalizeManagerRoleName(raw string) string {
+	role := strings.ToUpper(strings.TrimSpace(raw))
+	switch {
+	case role == "WORKSPACE_ADMIN" || role == "PROJECT_MANAGER" || role == "TEAM_MANAGER":
+		return role
+	case strings.Contains(role, "ADMIN"):
+		return "WORKSPACE_ADMIN"
+	case strings.Contains(role, "PROJECT"):
+		return "PROJECT_MANAGER"
+	case strings.Contains(role, "TEAM"):
+		return "TEAM_MANAGER"
+	default:
+		return ""
+	}
 }
 
 // DeactivateUser deactivates a user. Supports dry-run (confirm pattern).

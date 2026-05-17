@@ -62,16 +62,10 @@ func compactExpenseViewsFromRaw(items []map[string]any) []CompactExpenseView {
 func expenseViewFromRaw(raw map[string]any) ExpenseView {
 	view := ExpenseView(maps.Clone(raw))
 	currency := reportCurrency(raw)
-	view["expense"] = map[string]any{
-		"id":       firstReportString(raw, "id", "_id", "expenseId", "expense_id"),
-		"date":     firstReportString(raw, "date"),
-		"notes":    firstReportString(raw, "notes", "note"),
-		"billable": firstPresent(raw, "billable", "isBillable"),
-		"status":   strings.ToUpper(firstReportString(raw, "status", "approvalStatus", "invoicingState")),
-		"amount":   moneyFromAny(firstPresent(raw, "amount", "billableAmount", "total"), currency),
-		"currency": currency,
-		"has_file": hasAnyKey(raw, "file", "fileId", "file_id", "receipt", "receiptId"),
-	}
+	view["amount"] = moneyFromAny(firstPresent(raw, "amount", "billableAmount", "total"), currency)
+	view["currency"] = currency
+	view["status"] = strings.ToUpper(firstReportString(raw, "status", "approvalStatus", "invoicingState"))
+	view["has_file"] = hasAnyKey(raw, "file", "fileId", "file_id", "receipt", "receiptId")
 	category := map[string]any{
 		"id":             firstReportString(raw, "categoryId", "category_id"),
 		"price_in_cents": firstPresent(raw, "categoryPriceInCents", "priceInCents", "price_in_cents"),
@@ -127,7 +121,6 @@ func expenseViewFromRaw(raw map[string]any) ExpenseView {
 		"invoice_number": firstReportString(raw, "invoiceNumber", "invoice_number"),
 		"source":         "expense_api",
 	}
-	view["raw"] = maps.Clone(raw)
 	return view
 }
 
@@ -182,22 +175,22 @@ func timeOffPolicyViewFromRaw(raw map[string]any) TimeOffPolicyView {
 		"days_per_year": firstPresent(raw, "daysPerYear", "days_per_year"),
 		"hours_per_year": firstPresent(raw,
 			"hoursPerYear", "hours_per_year"),
-		"raw": firstPresent(raw, "balance", "balanceRules", "balance_rules"),
 	}
-	view["raw"] = maps.Clone(raw)
 	return view
 }
 
 func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
-	view := TimeOffRequestView(maps.Clone(raw))
 	status := timeOffRequestStatus(raw)
 	requestID := firstReportString(raw, "id", "_id", "requestId", "request_id")
-	view["request"] = map[string]any{
+	policyID := firstReportString(raw, "policyId", "policy_id")
+	userID := firstReportString(raw, "userId", "user_id")
+	view := TimeOffRequestView{
 		"id":        requestID,
+		"requestId": requestID,
 		"status":    status,
 		"note":      firstReportString(raw, "note", "reason"),
-		"policy_id": firstReportString(raw, "policyId", "policy_id"),
-		"user_id":   firstReportString(raw, "userId", "user_id"),
+		"policyId":  policyID,
+		"userId":    userID,
 	}
 	view["audit"] = map[string]any{
 		"created_at": firstReportString(raw, "createdAt", "created_at"),
@@ -206,12 +199,12 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 		"source":     "time_off_api",
 	}
 	view["user"] = map[string]any{
-		"id":    firstReportString(raw, "userId", "user_id"),
+		"id":    userID,
 		"name":  firstReportString(raw, "userName", "user_name"),
 		"email": firstReportString(raw, "userEmail", "user_email"),
 	}
 	view["policy"] = map[string]any{
-		"id":   firstReportString(raw, "policyId", "policy_id"),
+		"id":   policyID,
 		"name": firstReportString(raw, "policyName", "policy_name"),
 	}
 	view["period"] = firstPresent(raw, "timeOffPeriod", "time_off_period", "period")
@@ -219,11 +212,9 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 	view["duration"] = map[string]any{
 		"days":  firstPresent(raw, "days", "durationDays", "balanceDiff"),
 		"hours": firstPresent(raw, "hours", "durationHours"),
-		"raw":   firstPresent(raw, "duration"),
 	}
 	view["actions"] = timeOffActions(status)
-	view["suggestedActions"] = timeOffSuggestions(requestID, firstReportString(raw, "policyId", "policy_id"), status)
-	view["raw"] = maps.Clone(raw)
+	view["suggestedActions"] = timeOffSuggestions(requestID, policyID, status)
 	return view
 }
 

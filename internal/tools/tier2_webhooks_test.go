@@ -838,74 +838,36 @@ func TestDeleteWebhookDryRunAvoidsDeleteAndMasksAuthToken(t *testing.T) {
 func TestTestWebhookDryRunAvoidsPostAndMasksAuthToken(t *testing.T) {
 	var postCalled bool
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/workspaces/ws1/webhooks/wh1" && r.Method == http.MethodGet:
-			respondJSON(t, w, map[string]any{
-				"id":           "wh1",
-				"authToken":    "test-dry-run-secret-1234",
-				"webhookEvent": "NEW_TIME_ENTRY",
-			})
-		case r.URL.Path == "/workspaces/ws1/webhooks/wh1/test" && r.Method == http.MethodPost:
+		if r.URL.Path == "/workspaces/ws1/webhooks/wh1/test" && r.Method == http.MethodPost {
 			postCalled = true
-			t.Fatal("dry-run must not POST webhook test delivery")
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
+		t.Fatalf("unsupported webhook test-send must not call upstream; got %s %s", r.Method, r.URL.Path)
 	})
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.TestWebhook(context.Background(), map[string]any{
+	_, err := svc.TestWebhook(context.Background(), map[string]any{
 		"webhook_id": "wh1",
 		"dry_run":    true,
 	})
-	if err != nil {
-		t.Fatalf("TestWebhook dry run failed: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "does not expose") {
+		t.Fatalf("expected unsupported endpoint guidance, got %v", err)
 	}
 	if postCalled {
 		t.Fatal("POST should not be called during dry run")
 	}
-	raw, err := json.Marshal(result)
-	if err != nil {
-		t.Fatalf("marshal result: %v", err)
-	}
-	if strings.Contains(string(raw), "test-dry-run-secret-1234") || strings.Contains(string(raw), `"authToken"`) {
-		t.Fatalf("dry-run test leaked webhook auth token: %s", raw)
-	}
-	if !strings.Contains(string(raw), "1234") {
-		t.Fatalf("expected masked suffix in dry-run test result: %s", raw)
-	}
 }
 
-func TestTestWebhookMasksAuthToken(t *testing.T) {
+func TestTestWebhookUnsupportedAvoidsPost(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/workspaces/ws1/webhooks/wh1/test" && r.Method == http.MethodPost:
-			respondJSON(t, w, map[string]any{
-				"id":           "wh1",
-				"authToken":    "test-secret-9876",
-				"webhookEvent": "NEW_TIME_ENTRY",
-			})
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
+		t.Fatalf("unsupported webhook test-send must not call upstream; got %s %s", r.Method, r.URL.Path)
 	})
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	result, err := svc.TestWebhook(context.Background(), map[string]any{"webhook_id": "wh1"})
-	if err != nil {
-		t.Fatalf("TestWebhook failed: %v", err)
-	}
-	raw, err := json.Marshal(result)
-	if err != nil {
-		t.Fatalf("marshal result: %v", err)
-	}
-	if strings.Contains(string(raw), "test-secret-9876") || strings.Contains(string(raw), `"authToken"`) {
-		t.Fatalf("test webhook leaked webhook auth token: %s", raw)
-	}
-	if !strings.Contains(string(raw), "9876") {
-		t.Fatalf("expected masked suffix in test result: %s", raw)
+	_, err := svc.TestWebhook(context.Background(), map[string]any{"webhook_id": "wh1"})
+	if err == nil || !strings.Contains(err.Error(), "does not expose") {
+		t.Fatalf("expected unsupported endpoint guidance, got %v", err)
 	}
 }
 

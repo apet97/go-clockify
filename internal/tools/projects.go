@@ -101,6 +101,46 @@ func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEn
 	return ok("clockify_projects_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
+func (s *Service) ListProjectMemberships(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+	projectID := strings.TrimSpace(stringArg(args, "project_id"))
+	if projectID == "" {
+		projectID = strings.TrimSpace(stringArg(args, "project"))
+	}
+	if projectID == "" {
+		return ResultEnvelope{}, fmt.Errorf("project_id is required")
+	}
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	projectID, err = s.resolveProjectID(ctx, wsID, projectID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	path, err := paths.Workspace(wsID, "projects", projectID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var project map[string]any
+	if err := s.Client.Get(ctx, path, map[string]string{"hydrated": "true"}, &project); err != nil {
+		return ResultEnvelope{}, err
+	}
+	memberships := mapSlice(project["memberships"])
+	data := map[string]any{
+		"id":          projectID,
+		"projectId":   projectID,
+		"memberships": memberships,
+	}
+	if groups := firstPresent(project, "userGroups", "user_groups"); groups != nil {
+		data["userGroups"] = groups
+	}
+	return ok("clockify_projects_memberships_list", data, map[string]any{
+		"workspaceId": wsID,
+		"projectId":   projectID,
+		"count":       len(memberships),
+	}), nil
+}
+
 func (s *Service) CreateProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {

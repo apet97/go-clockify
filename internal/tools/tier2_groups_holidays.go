@@ -440,25 +440,14 @@ func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ResultEn
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	path, err := paths.Workspace(wsID, "holidays", holidayID)
+	out, scanned, err := s.findHolidayByID(ctx, wsID, holidayID)
 	if err != nil {
 		return ResultEnvelope{}, err
-	}
-	var raw any
-	if err := s.Client.Get(ctx, path, nil, &raw); err != nil {
-		return ResultEnvelope{}, err
-	}
-	out, isMap := raw.(map[string]any)
-	if !isMap {
-		if rows := mapSlice(raw); len(rows) > 0 {
-			out = rows[0]
-		} else {
-			out = map[string]any{"raw": raw}
-		}
 	}
 	return ok("clockify_holidays_get", out, map[string]any{
 		"workspaceId": wsID,
 		"holidayId":   holidayID,
+		"scanned":     scanned,
 	}), nil
 }
 
@@ -467,8 +456,8 @@ func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any)
 	if assignedTo == "" {
 		return ResultEnvelope{}, fmt.Errorf("assigned_to is required")
 	}
-	start := strings.TrimSpace(stringArg(args, "start"))
-	end := strings.TrimSpace(stringArg(args, "end"))
+	start := normalizeHolidayPeriodStart(strings.TrimSpace(stringArg(args, "start")))
+	end := normalizeHolidayPeriodEnd(strings.TrimSpace(stringArg(args, "end")))
 	if start == "" || end == "" {
 		return ResultEnvelope{}, fmt.Errorf("start and end are required")
 	}
@@ -573,10 +562,11 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 
-	body := nativeBodyFromArgs(args)
-	if body == nil {
-		body = map[string]any{}
+	existing, _, err := s.findHolidayByID(ctx, wsID, holidayID)
+	if err != nil {
+		return ResultEnvelope{}, err
 	}
+	body := holidayUpdateBodyFromExisting(existing)
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name != "" {
 		body["name"] = name
@@ -584,6 +574,13 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 	startDate := strings.TrimSpace(stringArg(args, "start_date"))
 	endDate := strings.TrimSpace(stringArg(args, "end_date"))
 	if startDate != "" || endDate != "" {
+		currentPeriod, _ := body["datePeriod"].(map[string]any)
+		if startDate == "" {
+			startDate = firstReportString(currentPeriod, "startDate", "start_date")
+		}
+		if endDate == "" {
+			endDate = firstReportString(currentPeriod, "endDate", "end_date")
+		}
 		body["datePeriod"] = map[string]any{
 			"startDate": startDate,
 			"endDate":   firstNonEmptyString(endDate, startDate),
@@ -619,11 +616,78 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.Put(ctx, path, body, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
-	out["date_period"] = holidayDatePeriodSnake(out, startDate, firstNonEmptyString(endDate, startDate))
+	fallbackPeriod, _ := body["datePeriod"].(map[string]any)
+	out["date_period"] = holidayDatePeriodSnake(out, firstReportString(fallbackPeriod, "startDate"), firstReportString(fallbackPeriod, "endDate"))
 	return ok("clockify_holidays_update", out, map[string]any{
 		"workspaceId": wsID,
 		"holidayId":   holidayID,
 	}), nil
+}
+
+func (s *Service) findHolidayByID(ctx context.Context, wsID, holidayID string) (map[string]any, int, error) {
+	path, err := paths.Workspace(wsID, "holidays")
+	if err != nil {
+		return nil, 0, err
+	}
+	var rows []map[string]any
+	if err := s.Client.Get(ctx, path, nil, &rows); err != nil {
+		return nil, 0, err
+	}
+	for _, row := range rows {
+		if firstReportString(row, "id", "_id", "holidayId", "holiday_id") == holidayID {
+			return row, len(rows), nil
+		}
+	}
+	return nil, len(rows), fmt.Errorf("holiday %s not found in workspace holiday list; call clockify_holidays_list and retry with a returned holiday_id", holidayID)
+}
+
+func holidayUpdateBodyFromExisting(existing map[string]any) map[string]any {
+	body := map[string]any{}
+	if name := firstReportString(existing, "name"); name != "" {
+		body["name"] = name
+	}
+	if period, ok := firstPresent(existing, "datePeriod", "date_period").(map[string]any); ok {
+		body["datePeriod"] = map[string]any{
+			"startDate": firstReportString(period, "startDate", "start_date"),
+			"endDate":   firstReportString(period, "endDate", "end_date"),
+		}
+	} else {
+		start := firstReportString(existing, "startDate", "start_date", "start")
+		end := firstReportString(existing, "endDate", "end_date", "end")
+		if start != "" || end != "" {
+			body["datePeriod"] = map[string]any{"startDate": start, "endDate": firstNonEmptyString(end, start)}
+		}
+	}
+	if occurs, ok := optionalBoolArg(existing, "occursAnnually"); ok {
+		body["occursAnnually"] = occurs
+	} else if occurs, ok := optionalBoolArg(existing, "occurs_annually"); ok {
+		body["occursAnnually"] = occurs
+	}
+	if users, ok := firstPresent(existing, "users").(map[string]any); ok {
+		body["users"] = users
+	} else if ids := anyStringSlice(firstPresent(existing, "userIds", "user_ids")); len(ids) > 0 {
+		body["users"] = map[string]any{"contains": "CONTAINS", "ids": ids, "status": "ACTIVE"}
+	}
+	if groups, ok := firstPresent(existing, "userGroups", "user_groups").(map[string]any); ok {
+		body["userGroups"] = groups
+	} else if ids := anyStringSlice(firstPresent(existing, "userGroupIds", "user_group_ids")); len(ids) > 0 {
+		body["userGroups"] = map[string]any{"contains": "CONTAINS", "ids": ids, "status": "ALL"}
+	}
+	return body
+}
+
+func normalizeHolidayPeriodStart(raw string) string {
+	if raw == "" || strings.Contains(raw, "T") {
+		return raw
+	}
+	return raw + "T00:00:00Z"
+}
+
+func normalizeHolidayPeriodEnd(raw string) string {
+	if raw == "" || strings.Contains(raw, "T") {
+		return raw
+	}
+	return raw + "T23:59:59.999Z"
 }
 
 func holidayDatePeriodSnake(out map[string]any, fallbackStart, fallbackEnd string) map[string]any {

@@ -163,14 +163,13 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 				return s.ListWebhookEvents(ctx, args)
 			},
 		},
-		// 8. Test webhook (RW)
+		// 8. Test webhook (unsupported by Clockify API)
 		{
-			Tool: toolRW("clockify_test_webhook", "Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending.", map[string]any{
+			Tool: toolRW("clockify_test_webhook", "Explain that Clockify does not expose a webhook test delivery/test-send endpoint; no external side effect occurs, so trigger a real event or inspect delivery logs in the Clockify UI.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{
 					"webhook_id": map[string]any{"type": "string", "description": "Webhook ID to test"},
-					"dry_run":    map[string]any{"type": "boolean", "description": "Preview only; returns the webhook record without sending the test delivery"},
 				},
 			}),
 			ReadOnlyHint: false,
@@ -925,51 +924,12 @@ func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (Resu
 	}), nil
 }
 
-// TestWebhook sends a test delivery to a webhook.
+// TestWebhook reports the absence of a Clockify webhook test-send endpoint.
 func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
 
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	if dryrun.Enabled(args) {
-		previewPath, err := paths.Workspace(wsID, "webhooks", webhookID)
-		if err != nil {
-			return ResultEnvelope{}, err
-		}
-		var webhook map[string]any
-		if err := s.Client.Get(ctx, previewPath, nil, &webhook); err != nil {
-			return ResultEnvelope{}, err
-		}
-		maskWebhookAuthToken(webhook)
-		return ResultEnvelope{
-			OK:     true,
-			Action: "clockify_test_webhook",
-			Data:   dryrun.WrapResult(webhook, "clockify_test_webhook"),
-			Meta: map[string]any{
-				"workspaceId": wsID,
-				"webhookId":   webhookID,
-			},
-		}, nil
-	}
-
-	testPath, err := paths.Workspace(wsID, "webhooks", webhookID, "test")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var result map[string]any
-	if err := s.Client.Post(ctx, testPath, nil, &result); err != nil {
-		return ResultEnvelope{}, err
-	}
-	maskWebhookAuthToken(result)
-
-	return ok("clockify_test_webhook", result, map[string]any{
-		"workspaceId": wsID,
-		"webhookId":   webhookID,
-	}), nil
+	return ResultEnvelope{}, fmt.Errorf("unsupported: Clockify does not expose a webhook test-send endpoint; trigger a real event or inspect delivery in the Clockify UI")
 }

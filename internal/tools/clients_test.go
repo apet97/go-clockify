@@ -467,8 +467,8 @@ func TestClientViewPreservesClientFields(t *testing.T) {
 	if view.Contact.Address != "123 Foo St" || view.Contact.Note != "preferred net30" {
 		t.Fatalf("contact block not mapped: %#v", view.Contact)
 	}
-	if view.Raw["id"] != testClientID || view.Raw["currencyCode"] != "USD" {
-		t.Fatalf("raw client payload not preserved: %#v", view.Raw)
+	if view.WorkspaceID != "ws1" || view.CurrencyCode != "USD" || view.CurrencyID != "cur1" {
+		t.Fatalf("canonical client fields not preserved: %#v", view)
 	}
 }
 

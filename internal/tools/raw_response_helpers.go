@@ -4,7 +4,10 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // parseExportFilename extracts the filename from a Content-Disposition
@@ -51,14 +54,10 @@ func inferRawContentType(body []byte) string {
 	return http.DetectContentType(body)
 }
 
-// documentedRawResponse packages a raw HTTP response (header + body) into
-// the agent-facing envelope shape that export-style tools share. It keeps
-// the body as base64-encoded bytes alongside size and content-type metadata
-// so downstream callers can decide whether to forward, surface, or save.
-//
-// Used by report-export and invoice-export tools that receive binary
-// payloads (PDF, CSV, images) from Clockify and need to hand them back
-// through the MCP wire safely.
+// documentedRawResponse packages a raw HTTP response (header + body) into the
+// agent-facing envelope shape that export-style tools share. Large binary
+// formats are written to a local temp file and returned by path; text-ish
+// formats keep the historical base64 envelope.
 func documentedRawResponse(header http.Header, body []byte) map[string]any {
 	contentType := strings.TrimSpace(header.Get("Content-Type"))
 	inferred := inferRawContentType(body)
@@ -69,6 +68,19 @@ func documentedRawResponse(header http.Header, body []byte) map[string]any {
 	if filename == "" && contentType == "application/pdf" {
 		filename = "document.pdf"
 	}
+	if shouldStoreRawResponseAsFile(contentType) {
+		path, err := writeRawResponseTempFile(filename, contentType, body)
+		if err == nil {
+			return map[string]any{
+				"contentType":  contentType,
+				"filename":     filename,
+				"bytes":        len(body),
+				"bodyEncoding": "file",
+				"truncated":    false,
+				"path":         path,
+			}
+		}
+	}
 	encoded := base64.StdEncoding.EncodeToString(body)
 	return map[string]any{
 		"contentType":  contentType,
@@ -78,5 +90,66 @@ func documentedRawResponse(header http.Header, body []byte) map[string]any {
 		"base64Bytes":  len(encoded),
 		"truncated":    false,
 		"body":         encoded,
+	}
+}
+
+func shouldStoreRawResponseAsFile(contentType string) bool {
+	ct := strings.ToLower(strings.TrimSpace(contentType))
+	if ct == "" {
+		return false
+	}
+	if strings.Contains(ct, "text/") || strings.Contains(ct, "json") || strings.Contains(ct, "csv") {
+		return false
+	}
+	for _, marker := range []string{"pdf", "zip", "spreadsheet", "excel", "octet-stream"} {
+		if strings.Contains(ct, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func writeRawResponseTempFile(filename, contentType string, body []byte) (string, error) {
+	pruneStaleExports()
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext == "" {
+		switch {
+		case strings.Contains(contentType, "pdf"):
+			ext = ".pdf"
+		case strings.Contains(contentType, "zip"):
+			ext = ".zip"
+		case strings.Contains(contentType, "spreadsheet"), strings.Contains(contentType, "excel"):
+			ext = ".xlsx"
+		default:
+			ext = ".bin"
+		}
+	}
+	file, err := os.CreateTemp("", "clockify-export-*"+ext)
+	if err != nil {
+		return "", err
+	}
+	if _, err := file.Write(body); err != nil {
+		_ = os.Remove(file.Name())
+		return "", err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(file.Name())
+		return "", err
+	}
+	return file.Name(), nil
+}
+
+// pruneStaleExports best-effort removes clockify export temp files older than
+// one hour so binary-export results do not accumulate in the temp directory.
+func pruneStaleExports() {
+	matches, err := filepath.Glob(filepath.Join(os.TempDir(), "clockify-export-*"))
+	if err != nil {
+		return
+	}
+	cutoff := time.Now().Add(-time.Hour)
+	for _, name := range matches {
+		if info, statErr := os.Stat(name); statErr == nil && !info.IsDir() && info.ModTime().Before(cutoff) {
+			_ = os.Remove(name)
+		}
 	}
 }

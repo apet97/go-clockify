@@ -151,8 +151,8 @@ func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
 	if got, _ := env.Meta["count"].(int); got != 1 {
 		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
 	}
-	if _, ok := env.Meta["has_more_hint"]; !ok {
-		t.Fatalf("meta missing has_more_hint: %+v", env.Meta)
+	if _, ok := env.Meta["has_more"]; !ok {
+		t.Fatalf("meta missing has_more: %+v", env.Meta)
 	}
 	if env.Meta["page"] == nil || env.Meta["limit"] == nil {
 		t.Fatalf("meta missing page/limit pagination signal: %+v", env.Meta)
