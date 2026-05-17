@@ -225,7 +225,11 @@ type Server struct {
 	encoderMu      sync.Mutex    // protects concurrent encoder writes
 	writer         io.Writer     // raw stdio writer for cached JSON-RPC responses
 	outChan        chan []byte   // serialized stdout responses, drained by one writer goroutine
-	requestSeq     atomic.Int64  // monotonic request ID for log correlation
+	outCtx         context.Context
+	outDone        chan struct{}
+	outErrMu       sync.Mutex
+	outErr         error
+	requestSeq     atomic.Int64 // monotonic request ID for log correlation
 
 	hub               notifierHub
 	setNotifierRemove func() // cleanup from previous SetNotifier call
@@ -406,10 +410,12 @@ func (s *Server) InflightCount() int {
 // Run processes JSON-RPC requests from r and writes responses to w.
 // It respects ctx cancellation for graceful shutdown — when ctx is
 // cancelled, the loop exits even if stdin is blocking.
-func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
+func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr error) {
 	if s.MaxInFlightToolCalls > 0 && s.toolCallSem == nil {
 		s.toolCallSem = make(chan struct{}, s.MaxInFlightToolCalls)
 	}
+	stdioCtx, cancelStdio := context.WithCancel(ctx)
+	defer cancelStdio()
 
 	scanner := bufio.NewScanner(r)
 	maxMsg := int(s.MaxMessageSize)
@@ -431,14 +437,27 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.writer = w
 	s.encoderMu.Unlock()
 	s.outChan = make(chan []byte, 100)
+	s.outCtx = stdioCtx
+	s.outDone = make(chan struct{})
+	s.setOutputErr(nil)
+	defer func() {
+		if retErr == nil {
+			retErr = s.outputErr()
+		}
+	}()
 	var writerWG sync.WaitGroup
 	writerWG.Add(1)
 	go func() {
 		defer writerWG.Done()
+		defer close(s.outDone)
 		for b := range s.outChan {
 			s.encoderMu.Lock()
 			if _, err := s.writer.Write(b); err != nil {
+				s.encoderMu.Unlock()
+				s.setOutputErr(err)
+				cancelStdio()
 				slog.Warn("async_response_write_failed", "error", err.Error())
+				return
 			}
 			s.encoderMu.Unlock()
 		}
@@ -454,7 +473,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.advertiseListChanged.Store(!s.StaticToolList)
 	// Thread the stdio peer's Notifier into every dispatched request so
 	// resources/subscribe records subscriptions against this peer.
-	ctx = WithNotifier(ctx, stdioNotifier)
+	ctx = WithNotifier(stdioCtx, stdioNotifier)
 
 	// Channel-based approach: scan lines in a goroutine so we can
 	// select on ctx.Done() in the main loop.
@@ -471,14 +490,14 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 			copy(cpy, scanner.Bytes())
 			select {
 			case lines <- scanResult{line: cpy, ok: true}:
-			case <-ctx.Done():
+			case <-stdioCtx.Done():
 				return
 			}
 		}
 		// Signal EOF.
 		select {
 		case lines <- scanResult{ok: false}:
-		case <-ctx.Done():
+		case <-stdioCtx.Done():
 		}
 	}()
 
@@ -487,7 +506,10 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) error {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-stdioCtx.Done():
+			if err := s.outputErr(); err != nil {
+				return err
+			}
 			return nil
 		case result, chanOpen := <-lines:
 			if !chanOpen || !result.ok {
@@ -699,12 +721,35 @@ func (s *Server) enqueueResponseBytes(b []byte) error {
 		}
 		return nil
 	}
+	if err := s.outputErr(); err != nil {
+		return err
+	}
 	select {
 	case s.outChan <- b:
-	default:
-		slog.Warn("outChan full, dropping response")
+		return nil
+	case <-s.outDone:
+		if err := s.outputErr(); err != nil {
+			return err
+		}
+		return io.ErrClosedPipe
+	case <-s.outCtx.Done():
+		if err := s.outputErr(); err != nil {
+			return err
+		}
+		return s.outCtx.Err()
 	}
-	return nil
+}
+
+func (s *Server) setOutputErr(err error) {
+	s.outErrMu.Lock()
+	defer s.outErrMu.Unlock()
+	s.outErr = err
+}
+
+func (s *Server) outputErr() error {
+	s.outErrMu.Lock()
+	defer s.outErrMu.Unlock()
+	return s.outErr
 }
 
 // HandleWithRecover invokes handle with structured panic recovery.
