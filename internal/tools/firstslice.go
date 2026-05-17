@@ -747,7 +747,12 @@ func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 	} else if strings.Contains(strings.ToLower(message), "unsupported:") || strings.Contains(strings.ToLower(message), "does not expose") {
 		code = "unsupported"
 	}
-	if recovery.Hint == "" {
+	if strings.Contains(rawMessage, "requires a project on every time entry") {
+		recovery = RecoveryHint{
+			Hint: "This workspace requires a project on every time entry. List projects, then retry with project_id or project.",
+			Tool: "clockify_projects_list",
+		}
+	} else if recovery.Hint == "" {
 		recovery = defaultRecovery(action, nil)
 	}
 	return ToolError{
