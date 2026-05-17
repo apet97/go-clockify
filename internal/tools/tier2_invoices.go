@@ -196,21 +196,12 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 			return s.addInvoiceItem(ctx, args)
 		}},
 
-		// 13. Update invoice item
-		{Tool: toolRW("clockify_update_invoice_item", "Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:\"major\".", map[string]any{
+		// 13. Update invoice item (unsupported by Clockify API)
+		{Tool: toolRW("clockify_update_invoice_item", "Explain that Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add.", map[string]any{
 			"type":     "object",
-			"required": []string{"invoice_id", "item_type"},
+			"required": []string{"invoice_id"},
 			"properties": map[string]any{
-				"invoice_id":      map[string]any{"type": "string"},
-				"item_index":      map[string]any{"type": "string", "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items"},
-				"item_id":         map[string]any{"type": "string", "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id"},
-				"description":     map[string]any{"type": "string"},
-				"quantity":        map[string]any{"type": "number"},
-				"unit_price":      map[string]any{"type": "number", "description": "Unit price. Defaults to minor units/cents; pass unit_price_unit:\"major\" to send major currency units instead."},
-				"unit_price_unit": invoiceMinorUnitSchema("unit_price"),
-				"apply_taxes":     map[string]any{"type": "string", "enum": []string{"TAX1", "TAX2", "TAX1TAX2", "NONE"}, "description": "Tax application enum; defaults to NONE"},
-				"item_type":       map[string]any{"type": "string", "description": "Workspace invoice item type name (required by live API)"},
-				"dry_run":         map[string]any{"type": "boolean", "description": "Preview the invoice item update without making changes"},
+				"invoice_id": map[string]any{"type": "string"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.updateInvoiceItem(ctx, args)
@@ -1213,67 +1204,16 @@ func invoiceItemIndexArg(args map[string]any) (string, error) {
 	return "", fmt.Errorf("item_index is required (legacy item_id is also accepted)")
 }
 
+// updateInvoiceItem reports the absence of a Clockify update endpoint for
+// invoice line items. The live API rejects PUT on the items path with code
+// 3000 ("Request method 'PUT' is not supported"); there is no PATCH route
+// either. Callers replace a line by deleting and re-adding it.
 func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
-	itemIndex, err := invoiceItemIndexArg(args)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	body := map[string]any{}
-	if v := stringArg(args, "description"); v != "" {
-		body["description"] = v
-	}
-	if v, ok := args["quantity"]; ok {
-		body["quantity"] = v
-	}
-	if v, ok := args["unit_price"]; ok {
-		converted, err := convertToInvoiceMinorUnits(v, stringArg(args, "unit_price_unit"))
-		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("unit_price: %w", err)
-		}
-		body["unitPrice"] = converted
-	}
-	if v := stringArg(args, "apply_taxes"); v != "" {
-		body["applyTaxes"] = v
-	} else {
-		body["applyTaxes"] = "NONE"
-	}
-	itemType := stringArg(args, "item_type")
-	if itemType == "" {
-		return ResultEnvelope{}, fmt.Errorf("item_type is required")
-	}
-	body["itemType"] = itemType
-
-	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemIndex)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if dryrun.Enabled(args) {
-		return ok("clockify_update_invoice_item", dryrunPreviewPayload("clockify_update_invoice_item", body), map[string]any{
-			"workspaceId": wsID,
-			"invoiceId":   invoiceID,
-			"itemIndex":   itemIndex,
-			"itemId":      itemIndex,
-		}), nil
-	}
-	var updated map[string]any
-	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
-		return ResultEnvelope{}, err
-	}
-	return ok("clockify_update_invoice_item", invoiceItemViewFromRaw(updated, ""), map[string]any{
-		"workspaceId": wsID,
-		"invoiceId":   invoiceID,
-		"itemIndex":   itemIndex,
-		"itemId":      itemIndex,
-	}), nil
+	return ResultEnvelope{}, fmt.Errorf("unsupported: Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add")
 }
 
 func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

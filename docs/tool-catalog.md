@@ -105,7 +105,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_mark_paid` | `domain` | no | no | no | yes | `write`, `billing` | Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create. |
 | `clockify_invoices_items_list` | `domain` | yes | no | yes | no | `read` | List items for an invoice |
 | `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:"major" to enter the value in major currency units and let the MCP multiply by 100 before the POST. |
-| `clockify_invoices_items_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:"major". |
+| `clockify_invoices_items_update` | `domain` | no | no | no | no | `write`, `billing` | Explain that Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add. |
 | `clockify_invoices_items_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice item by line index. Billing impact; destructive; supports dry_run preview. |
 | `clockify_projects_templates_list` | `domain` | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_projects_templates_create` | `domain` | no | no | no | no | `write` | Create a new project template |

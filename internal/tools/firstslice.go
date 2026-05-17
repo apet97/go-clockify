@@ -786,6 +786,8 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		return RecoveryHint{Hint: "Clockify does not expose invoice email sending in this API surface. Use the Clockify UI for email delivery, or inspect the invoice with the get tool.", Tool: "clockify_invoices_get"}
 	case action == "clockify_webhooks_test":
 		return RecoveryHint{Hint: "Clockify does not expose a webhook test-send endpoint. Trigger a real event or inspect delivery logs in the Clockify UI.", Tool: "clockify_webhooks_get"}
+	case action == "clockify_invoices_items_update":
+		return RecoveryHint{Hint: "Clockify has no update endpoint for invoice line items. Delete the line with clockify_invoices_items_delete, then re-add it with clockify_invoices_items_add.", Tool: "clockify_invoices_items_delete"}
 	case strings.Contains(action, "invoice"):
 		return RecoveryHint{Hint: "If invoicing is unavailable, report that and continue. Otherwise list clients or invoices, then retry with returned IDs.", Tool: "clockify_invoices_list"}
 	case strings.Contains(action, "expense"):

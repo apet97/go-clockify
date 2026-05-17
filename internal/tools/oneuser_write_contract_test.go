@@ -23,9 +23,10 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 		"clockify_demo_cleanup":       "idempotent cleanup has no matching fake demo resources to delete",
 	}
 	recoverableWrites := map[string]string{
-		"clockify_invoices_send":      "clockify_invoices_get",
-		"clockify_invoices_mark_paid": "clockify_invoices_payments_create",
-		"clockify_webhooks_test":      "clockify_webhooks_get",
+		"clockify_invoices_send":         "clockify_invoices_get",
+		"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
+		"clockify_webhooks_test":         "clockify_webhooks_get",
+		"clockify_invoices_items_update": "clockify_invoices_items_delete",
 	}
 
 	for _, descriptor := range svc.FullAccessRegistry() {

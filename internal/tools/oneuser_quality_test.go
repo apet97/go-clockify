@@ -1804,9 +1804,10 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 		}
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
 			if wantRecovery, ok := map[string]string{
-				"clockify_invoices_send":      "clockify_invoices_get",
-				"clockify_invoices_mark_paid": "clockify_invoices_payments_create",
-				"clockify_webhooks_test":      "clockify_webhooks_get",
+				"clockify_invoices_send":         "clockify_invoices_get",
+				"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
+				"clockify_webhooks_test":         "clockify_webhooks_get",
+				"clockify_invoices_items_update": "clockify_invoices_items_delete",
 			}[descriptor.Tool.Name]; ok {
 				errResult := callToolError(t, server, descriptor.Tool.Name, oneUserCoverageArgs(descriptor.Tool))
 				if errResult.Recovery.Tool != wantRecovery {
@@ -1899,7 +1900,6 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		{"clockify_invoices_delete", "deleted"},
 		{"clockify_invoices_items_list", ""},
 		{"clockify_invoices_items_add", "created"},
-		{"clockify_invoices_items_update", "updated"},
 		{"clockify_invoices_items_delete", "deleted"},
 		{"clockify_expenses_list", ""},
 		{"clockify_expenses_get", ""},
@@ -1989,8 +1989,9 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 		})
 	}
 	recoveries := map[string]string{
-		"clockify_invoices_mark_paid": "clockify_invoices_payments_create",
-		"clockify_webhooks_test":      "clockify_webhooks_get",
+		"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
+		"clockify_webhooks_test":         "clockify_webhooks_get",
+		"clockify_invoices_items_update": "clockify_invoices_items_delete",
 	}
 	for name, wantRecoveryTool := range recoveries {
 		t.Run(name+"_recovery", func(t *testing.T) {

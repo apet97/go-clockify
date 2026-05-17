@@ -236,20 +236,9 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
 
-	// 10. updateInvoiceItem
-	res, err = svc.updateInvoiceItem(ctx, map[string]any{
-		"invoice_id":  "inv1",
-		"item_id":     "item1",
-		"description": "Updated description",
-		"quantity":    10,
-		"unit_price":  175,
-		"item_type":   "NEW DEFAULT",
-	})
-	mustOK(t, res, err, "clockify_update_invoice_item")
-
-	// 10b. updateInvoiceItem validation — missing item_index/item_id
-	if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "inv1", "item_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty item_index/item_id")
+	// 10. updateInvoiceItem — Clockify exposes no item-update endpoint; the tool errors with recovery guidance.
+	if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("expected unsupported-endpoint error from updateInvoiceItem, got %v", err)
 	}
 	// 10c. validation — missing invoice_id
 	if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
@@ -275,10 +264,11 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
 
-	// Sanity: at least 15 upstream requests (deleteInvoiceItem dry-run uses
-	// MinimalResult and does not hit the network).
-	if len(requests) < 15 {
-		t.Fatalf("expected at least 15 upstream requests, got %d: %+v", len(requests), requests)
+	// Sanity: at least 14 upstream requests (deleteInvoiceItem dry-run uses
+	// MinimalResult and does not hit the network; updateInvoiceItem reports an
+	// unsupported endpoint without an upstream call).
+	if len(requests) < 14 {
+		t.Fatalf("expected at least 14 upstream requests, got %d: %+v", len(requests), requests)
 	}
 }
 
@@ -711,7 +701,7 @@ func TestExportInvoiceDefaultsUserLocale(t *testing.T) {
 }
 
 func TestInvoiceItemBodiesUseCamelCaseAndApplyTaxesDefault(t *testing.T) {
-	var addBody, updateBody map[string]any
+	var addBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/invoices/inv1/items":
@@ -719,11 +709,6 @@ func TestInvoiceItemBodiesUseCamelCaseAndApplyTaxesDefault(t *testing.T) {
 				t.Fatalf("decode add body: %v", err)
 			}
 			respondJSON(t, w, map[string]any{"id": "item-new"})
-		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/invoices/inv1/items/item1":
-			if err := json.NewDecoder(r.Body).Decode(&updateBody); err != nil {
-				t.Fatalf("decode update body: %v", err)
-			}
-			respondJSON(t, w, map[string]any{"id": "item1"})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -748,32 +733,9 @@ func TestInvoiceItemBodiesUseCamelCaseAndApplyTaxesDefault(t *testing.T) {
 	if addBody["unitPrice"] != float64(150) {
 		t.Fatalf("expected add body unitPrice=150, got %#v", addBody)
 	}
-
-	res, err = svc.updateInvoiceItem(context.Background(), map[string]any{
-		"invoice_id":  "inv1",
-		"item_id":     "item1",
-		"description": "Updated description",
-		"quantity":    10,
-		"unit_price":  175,
-		"item_type":   "NEW DEFAULT",
-		"apply_taxes": "TAX1",
-	})
-	mustOK(t, res, err, "clockify_update_invoice_item")
-	if updateBody["itemType"] != "NEW DEFAULT" {
-		t.Fatalf("expected update body itemType, got %#v", updateBody)
-	}
-	if updateBody["applyTaxes"] != "TAX1" {
-		t.Fatalf("expected update body explicit applyTaxes=TAX1, got %#v", updateBody)
-	}
-	if updateBody["unitPrice"] != float64(175) {
-		t.Fatalf("expected update body unitPrice=175, got %#v", updateBody)
-	}
-
-	for _, body := range []map[string]any{addBody, updateBody} {
-		for _, legacy := range []string{"item_type", "apply_taxes", "unit_price"} {
-			if _, ok := body[legacy]; ok {
-				t.Fatalf("invoice item body must not include legacy key %q: %#v", legacy, body)
-			}
+	for _, legacy := range []string{"item_type", "apply_taxes", "unit_price"} {
+		if _, ok := addBody[legacy]; ok {
+			t.Fatalf("invoice item body must not include legacy key %q: %#v", legacy, addBody)
 		}
 	}
 }
@@ -836,21 +798,6 @@ func TestInvoiceItemDryRunsDoNotMutate(t *testing.T) {
 		t.Fatalf("expected add dry-run data, got %#v", res.Data)
 	}
 
-	res, err = svc.updateInvoiceItem(context.Background(), map[string]any{
-		"invoice_id":  "inv1",
-		"item_index":  "2",
-		"description": "Updated",
-		"item_type":   "NEW DEFAULT",
-		"dry_run":     true,
-	})
-	mustOK(t, res, err, "clockify_update_invoice_item")
-	updateData, ok := res.Data.(map[string]any)
-	if !ok || updateData["dry_run"] != true {
-		t.Fatalf("expected update dry-run data, got %#v", res.Data)
-	}
-	if res.Meta["itemIndex"] != "2" || res.Meta["itemId"] != "2" {
-		t.Fatalf("expected item index aliases in meta, got %#v", res.Meta)
-	}
 }
 
 func TestBuildInvoiceImportBodyValidatesDateRange(t *testing.T) {
@@ -981,12 +928,8 @@ func TestInvoiceItemIndexPrimaryFieldAndLegacyItemIDAlias(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		seen[r.Method+" "+r.URL.Path] = true
 		switch {
-		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/invoices/inv1/items/2":
-			respondJSON(t, w, map[string]any{"id": "line-2"})
 		case r.Method == http.MethodDelete && r.URL.Path == "/workspaces/ws1/invoices/inv1/items/3":
 			w.WriteHeader(http.StatusNoContent)
-		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/invoices/inv1/items/legacy-4":
-			respondJSON(t, w, map[string]any{"id": "legacy-4"})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -994,18 +937,7 @@ func TestInvoiceItemIndexPrimaryFieldAndLegacyItemIDAlias(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	res, err := svc.updateInvoiceItem(context.Background(), map[string]any{
-		"invoice_id":  "inv1",
-		"item_index":  "2",
-		"description": "Updated description",
-		"item_type":   "NEW DEFAULT",
-	})
-	mustOK(t, res, err, "clockify_update_invoice_item")
-	if res.Meta["itemIndex"] != "2" || res.Meta["itemId"] != "2" {
-		t.Fatalf("expected itemIndex/itemId meta aliases for line 2, got %#v", res.Meta)
-	}
-
-	res, err = svc.deleteInvoiceItem(context.Background(), map[string]any{
+	res, err := svc.deleteInvoiceItem(context.Background(), map[string]any{
 		"invoice_id": "inv1",
 		"item_index": "3",
 	})
@@ -1017,23 +949,8 @@ func TestInvoiceItemIndexPrimaryFieldAndLegacyItemIDAlias(t *testing.T) {
 	if data["itemIndex"] != "3" || data["itemId"] != "3" {
 		t.Fatalf("expected itemIndex/itemId data aliases for line 3, got %#v", data)
 	}
-
-	res, err = svc.updateInvoiceItem(context.Background(), map[string]any{
-		"invoice_id":  "inv1",
-		"item_id":     "legacy-4",
-		"description": "Legacy alias",
-		"item_type":   "NEW DEFAULT",
-	})
-	mustOK(t, res, err, "clockify_update_invoice_item")
-
-	for _, want := range []string{
-		"PUT /workspaces/ws1/invoices/inv1/items/2",
-		"DELETE /workspaces/ws1/invoices/inv1/items/3",
-		"PUT /workspaces/ws1/invoices/inv1/items/legacy-4",
-	} {
-		if !seen[want] {
-			t.Fatalf("expected request %s, saw %#v", want, seen)
-		}
+	if !seen["DELETE /workspaces/ws1/invoices/inv1/items/3"] {
+		t.Fatalf("expected delete request, saw %#v", seen)
 	}
 }
 

@@ -25820,13 +25820,13 @@
     },
     {
       "name": "clockify_invoices_items_update",
-      "description": "Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:\"major\".",
+      "description": "Explain that Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": true,
+      "dry_run": false,
       "risk_class": [
         "write",
         "billing"
@@ -25843,58 +25843,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "apply_taxes": {
-            "description": "Tax application enum; defaults to NONE",
-            "enum": [
-              "TAX1",
-              "TAX2",
-              "TAX1TAX2",
-              "NONE"
-            ],
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 2000,
-            "type": "string"
-          },
-          "dry_run": {
-            "description": "Preview the resolved request without making changes.",
-            "type": "boolean"
-          },
           "invoice_id": {
-            "type": "string"
-          },
-          "item_id": {
-            "description": "Deprecated alias for item_index; accepts invoice line order, not a Mongo-style id",
-            "type": "string"
-          },
-          "item_index": {
-            "description": "Invoice line order (live API path parameter), not a Mongo-style id from list_invoice_items",
-            "type": "string"
-          },
-          "item_type": {
-            "description": "Workspace invoice item type name (required by live API)",
-            "type": "string"
-          },
-          "quantity": {
-            "type": "number"
-          },
-          "unit_price": {
-            "description": "Unit price. Defaults to minor units/cents; pass unit_price_unit:\"major\" to send major currency units instead.",
-            "type": "number"
-          },
-          "unit_price_unit": {
-            "description": "Unit for unit_price. minor (default) sends the value verbatim, which is the live API expectation; major multiplies by 100 before the request so callers can supply major currency units.",
-            "enum": [
-              "minor",
-              "major"
-            ],
             "type": "string"
           }
         },
         "required": [
-          "invoice_id",
-          "item_type"
+          "invoice_id"
         ],
         "type": "object"
       },
@@ -26111,7 +26065,7 @@
       "annotations": {
         "category": "domain",
         "destructiveHint": false,
-        "dryRun": true,
+        "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,

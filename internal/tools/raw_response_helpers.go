@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // parseExportFilename extracts the filename from a Content-Disposition
@@ -109,6 +110,7 @@ func shouldStoreRawResponseAsFile(contentType string) bool {
 }
 
 func writeRawResponseTempFile(filename, contentType string, body []byte) (string, error) {
+	pruneStaleExports()
 	ext := strings.ToLower(filepath.Ext(filename))
 	if ext == "" {
 		switch {
@@ -135,4 +137,19 @@ func writeRawResponseTempFile(filename, contentType string, body []byte) (string
 		return "", err
 	}
 	return file.Name(), nil
+}
+
+// pruneStaleExports best-effort removes clockify export temp files older than
+// one hour so binary-export results do not accumulate in the temp directory.
+func pruneStaleExports() {
+	matches, err := filepath.Glob(filepath.Join(os.TempDir(), "clockify-export-*"))
+	if err != nil {
+		return
+	}
+	cutoff := time.Now().Add(-time.Hour)
+	for _, name := range matches {
+		if info, statErr := os.Stat(name); statErr == nil && !info.IsDir() && info.ModTime().Before(cutoff) {
+			_ = os.Remove(name)
+		}
+	}
 }
