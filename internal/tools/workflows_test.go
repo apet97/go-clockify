@@ -2,13 +2,68 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 )
+
+func TestClockifyReviewWeekWarnsWhenIssuesAreTruncated(t *testing.T) {
+	start := time.Date(2026, 4, 6, 9, 0, 0, 0, time.UTC)
+	entries := make([]map[string]any, 4)
+	for i := range entries {
+		entryStart := start.Add(time.Duration(i) * time.Hour)
+		entries[i] = reviewEntryPayload(
+			fmt.Sprintf("e%d", i+1),
+			"",
+			fmt.Sprintf("p%d", i+1),
+			fmt.Sprintf("Project %d", i+1),
+			entryStart.Format(time.RFC3339),
+			entryStart.Add(30*time.Minute).Format(time.RFC3339),
+		)
+	}
+
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			respondJSON(t, w, entries)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.ClockifyReviewWeek(context.Background(), map[string]any{
+		"week_start":      "2026-04-06",
+		"timezone":        "UTC",
+		"include_entries": true,
+		"min_gap_minutes": 0,
+		"max_rows":        2,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyReviewWeek: %v", err)
+	}
+	standard, ok := result.(ToolResult)
+	if !ok {
+		t.Fatalf("unexpected result type: %T", result)
+	}
+	if len(standard.Warnings) != 1 {
+		t.Fatalf("expected one warning, got %#v", standard.Warnings)
+	}
+	if got := standard.Warnings[0].Code; got != "issues_truncated" {
+		t.Fatalf("warning code=%q, want issues_truncated", got)
+	}
+	if !strings.Contains(standard.Warnings[0].Message, "Only 2 of 4 issues are shown") {
+		t.Fatalf("unexpected warning message: %q", standard.Warnings[0].Message)
+	}
+}
 
 // TestFindAndUpdateEntryByIDRejectsOtherUserEntry pins the ownership
 // contract on `clockify_find_and_update_entry`'s entry_id branch. The

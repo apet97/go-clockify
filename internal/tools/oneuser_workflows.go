@@ -461,6 +461,19 @@ func (s *Service) reviewWorkflow(ctx context.Context, action string, args map[st
 		"workspaceId": stringFromAny(out.Meta["workspaceId"]),
 		"userId":      stringFromAny(out.Meta["userId"]),
 	})
+	if truncated, _ := out.Meta["truncated"].(bool); truncated {
+		total, _ := out.Meta["issuesTotal"].(int)
+		shown := total
+		if r, ok := out.Meta["issuesReturned"].(int); ok {
+			shown = r
+		}
+		if total > shown {
+			standard.Warnings = append(standard.Warnings, Warning{
+				Code:    "issues_truncated",
+				Message: fmt.Sprintf("Only %d of %d issues are shown; raise max_rows or narrow the date range to see the rest.", shown, total),
+			})
+		}
+	}
 	standard.Next = nextFromReviewData(out.Data)
 	if len(standard.Next) == 0 {
 		standard.Next = []NextAction{{Tool: "clockify_log_work", Reason: "Log confirmed missing work if the review found gaps."}}
