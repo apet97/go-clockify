@@ -102,5 +102,5 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_users_list", userViewsFromUsers(users), emptyListMeta(meta, "clockify_users_invite")), nil
+	return ok("clockify_users_list", compactUserViewsFromUsers(users), emptyListMeta(meta, "clockify_users_invite")), nil
 }

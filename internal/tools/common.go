@@ -870,7 +870,10 @@ func parseFlexibleDateTime(raw string, loc *time.Location) (time.Time, error) {
 	if ts, err := time.Parse(time.RFC3339, raw); err == nil {
 		return ts.In(loc), nil
 	}
-	if d, err := time.ParseInLocation("2006-01-02", raw, loc); err == nil {
+	// A bare YYYY-MM-DD is a calendar date, not an instant; anchor it at
+	// 00:00:00Z so callers that reformat as UTC keep the same calendar date
+	// instead of shifting it back by the local UTC offset.
+	if d, err := time.ParseInLocation("2006-01-02", raw, time.UTC); err == nil {
 		return d, nil
 	}
 	return time.Time{}, fmt.Errorf("expected RFC3339 or YYYY-MM-DD date, got %q", raw)

@@ -23036,127 +23036,18 @@
                 "activeWorkspace": {
                   "type": "string"
                 },
-                "customFields": {},
-                "custom_fields_normalized": {
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "custom_field_id": {
-                        "type": "string"
-                      },
-                      "definition": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "entity_type": {
-                            "type": "string"
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
-                          },
-                          "source": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "entity_type": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "raw": {
-                        "additionalProperties": {},
-                        "type": "object"
-                      },
-                      "source": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      },
-                      "value": {}
-                    },
-                    "required": [
-                      "source"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
                 "defaultWorkspace": {
                   "type": "string"
                 },
                 "email": {
                   "type": "string"
                 },
-                "feature_flags": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "approval": {
-                      "type": "boolean"
-                    },
-                    "pto": {
-                      "type": "boolean"
-                    },
-                    "scheduling": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                },
                 "id": {
                   "type": "string"
                 },
-                "memberships": {},
                 "name": {
                   "type": "string"
                 },
-                "profilePicture": {
-                  "type": "string"
-                },
-                "report_defaults": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "date_format": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    },
-                    "summary_report_settings": {},
-                    "time_format": {
-                      "type": "string"
-                    },
-                    "timezone": {
-                      "type": "string"
-                    },
-                    "week_start": {
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                },
-                "settings": {},
                 "status": {
                   "type": "string"
                 }
@@ -23164,9 +23055,7 @@
               "required": [
                 "id",
                 "name",
-                "email",
-                "report_defaults",
-                "feature_flags"
+                "email"
               ],
               "type": "object"
             },
@@ -45020,6 +44909,11 @@
             ],
             "type": "string"
           },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
@@ -45303,6 +45197,11 @@
               "ZIP"
             ],
             "type": "string"
+          },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -45588,6 +45487,11 @@
             ],
             "type": "string"
           },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
@@ -45871,6 +45775,11 @@
               "ZIP"
             ],
             "type": "string"
+          },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -53527,6 +53436,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "max_rollups": {
+            "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "project": {
             "type": "string"
           },
@@ -53830,6 +53744,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "max_rollups": {
+            "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "project": {
             "type": "string"
           },
@@ -54130,6 +54049,11 @@
           },
           "max_entries": {
             "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_rollups": {
+            "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
             "minimum": 0,
             "type": "integer"
           },

@@ -1436,6 +1436,7 @@ func reportHelperSchema() map[string]any {
 		"project":         map[string]any{"type": "string"},
 		"include_entries": map[string]any{"type": "boolean"},
 		"max_entries":     map[string]any{"type": "integer", "minimum": 0, "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit."},
+		"max_rollups":     map[string]any{"type": "integer", "minimum": 0, "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list."},
 		"week_start":      map[string]any{"type": "string", "description": "YYYY-MM-DD or RFC3339 week start."},
 		"timezone":        map[string]any{"type": "string"},
 	}})
@@ -1667,6 +1668,7 @@ func reportInputSchema() map[string]any {
 			"start":             map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":               map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"export_type":       map[string]any{"type": "string", "enum": []string{"JSON", "JSON_V1", "PDF", "CSV", "XLSX", "ZIP"}, "description": "Report export type"},
+			"max_rollups":       map[string]any{"type": "integer", "minimum": 0, "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list."},
 			"summary_filter":    map[string]any{"type": "object", "additionalProperties": true},
 			"detailed_filter":   map[string]any{"type": "object", "additionalProperties": true},
 			"attendance_filter": map[string]any{"type": "object", "additionalProperties": true},

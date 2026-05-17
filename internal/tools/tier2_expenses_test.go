@@ -110,7 +110,11 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	client, cleanup := newTestClient(t, mux.ServeHTTP)
 	defer cleanup()
 	svc := New(client, "ws1")
-	svc.DefaultTimezone = time.UTC
+	loc, err := time.LoadLocation("Europe/Belgrade")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	svc.DefaultTimezone = loc
 	ctx := context.Background()
 
 	// listExpenses
@@ -499,7 +503,7 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 			respondJSON(t, w, map[string]any{
 				"expenses": map[string]any{
 					"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
-					"count":    1,
+					"count":    12,
 				},
 			})
 		default:
@@ -518,6 +522,12 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 	mustOK(t, res, err, "clockify_list_expenses")
 	if res.Meta["pageSize"] != 75 {
 		t.Fatalf("expected meta pageSize=75, got %v", res.Meta["pageSize"])
+	}
+	if res.Meta["count"] != 1 {
+		t.Fatalf("expected returned-row count=1, got %v", res.Meta["count"])
+	}
+	if res.Meta["total"] != 12 {
+		t.Fatalf("expected workspace total=12, got %v", res.Meta["total"])
 	}
 }
 
