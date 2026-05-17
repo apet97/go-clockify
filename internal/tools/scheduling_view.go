@@ -512,6 +512,7 @@ func (s *Service) schedulingCapacityOneUser(ctx context.Context, args map[string
 		views = append(views, scheduleTotalView(total, "USER"))
 	}
 	return ok("clockify_scheduling_capacity", views, map[string]any{
+		"note":        "total_hours_by_day shows scheduled hours per calendar day; capacity_by_day is populated only when the workspace has work-pattern capacity data configured.",
 		"workspaceId": wsID,
 		"userIds":     userIDs,
 		"count":       len(totals),

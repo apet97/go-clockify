@@ -193,6 +193,7 @@ func (s *Service) timerAndReportDescriptors() []mcp.ToolDescriptor {
 			"project_id":  map[string]any{"type": "string"},
 			"project":     map[string]any{"type": "string"},
 			"description": map[string]any{"type": "string"},
+			"billable":    map[string]any{"type": "boolean", "description": "Override the project's billable default. Omit to inherit the project setting."},
 		}})), s.EntriesTimerStart),
 		firstSliceDescriptor(68, toolRWIdem("clockify_entries_timer_stop", "Stop the current timer.", objectSchema(map[string]any{"properties": map[string]any{
 			"end": map[string]any{"type": "string", "description": flexibleDatetimeDescription},
@@ -206,7 +207,7 @@ func (s *Service) timerAndReportDescriptors() []mcp.ToolDescriptor {
 		}})), s.EntriesTimerSwitch),
 		firstSliceDescriptor(104, toolRO("clockify_reports_detailed", "Run the local detailed time report helper.", reportHelperSchema()), aliasHandler("clockify_reports_detailed", "report", "", s.DetailedReport)),
 		firstSliceDescriptor(105, toolRO("clockify_reports_summary", "Run the local summary report helper.", reportHelperSchema()), aliasHandler("clockify_reports_summary", "report", "", s.SummaryReport)),
-		firstSliceDescriptor(106, toolRO("clockify_reports_weekly", "Run the local weekly report helper.", reportHelperSchema()), aliasHandler("clockify_reports_weekly", "report", "", s.WeeklySummary)),
+		firstSliceDescriptor(106, toolRO("clockify_reports_weekly", "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end.", reportHelperSchema()), aliasHandler("clockify_reports_weekly", "report", "", s.WeeklySummary)),
 	)
 	return out
 }
@@ -527,9 +528,9 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	}
 	out = append(out,
 		nativeDomainTool(100, toolRO("clockify_reports_attendance", "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.AttendanceReport),
-		nativeDomainTool(101, toolRO("clockify_reports_money", "Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.MoneyReport),
+		nativeDomainTool(101, toolRO("clockify_reports_money", "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals.", reportInputSchema()), "report", "", s.MoneyReport),
 		nativeDomainTool(102, toolRO("clockify_reports_expense", "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.ExpenseReport),
-		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON/CSV return contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.", reportInputSchema()), "report", "", s.DetailedReport),
+		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.", reportInputSchema()), "report", "", s.DetailedReport),
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
@@ -1535,7 +1536,7 @@ func (s *Service) EntriesRunning(ctx context.Context, _ map[string]any) (any, er
 }
 
 func (s *Service) EntriesTimerStart(ctx context.Context, args map[string]any) (any, error) {
-	out, err := s.StartTimer(ctx, stringArg(args, "project_id"), stringArg(args, "project"), stringArg(args, "description"))
+	out, err := s.StartTimerArgs(ctx, args)
 	if err != nil {
 		return nil, err
 	}

@@ -682,7 +682,12 @@ func TestEntriesCreate(t *testing.T) {
 func TestEntriesCreatePassesType(t *testing.T) {
 	var gotType any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/ws1/time-entries" || r.Method != http.MethodPost {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/projects/p1" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Project{ID: "p1", Billable: true})
+			return
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+		default:
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
 		var body map[string]any
@@ -1196,6 +1201,8 @@ func TestEntriesCreateDryRunWarnsOnFutureEntry(t *testing.T) {
 func TestClockifyLogWorkWarnsOnFutureFinishedEntry(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.URL.Path == "/workspaces/ws1/projects/abc123def456789012345678" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Project{ID: "abc123def456789012345678", Billable: true})
 		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
 			respondJSON(t, w, clockify.TimeEntry{
 				ID:          "future-entry",

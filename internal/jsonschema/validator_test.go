@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -20,8 +21,10 @@ func TestValidateTypeSuccess(t *testing.T) {
 	}{
 		{"string", map[string]any{"type": "string"}, "hello"},
 		{"integer_float", map[string]any{"type": "integer"}, float64(42)},
+		{"integer_json_number", map[string]any{"type": "integer"}, json.Number("42")},
 		{"integer_int", map[string]any{"type": "integer"}, 42},
 		{"number", map[string]any{"type": "number"}, 3.14},
+		{"number_json_number", map[string]any{"type": "number"}, json.Number("3.14")},
 		{"boolean_true", map[string]any{"type": "boolean"}, true},
 		{"boolean_false", map[string]any{"type": "boolean"}, false},
 		{"array", map[string]any{"type": "array"}, []any{1, 2}},

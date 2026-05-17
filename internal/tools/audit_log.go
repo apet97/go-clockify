@@ -85,9 +85,10 @@ func auditLogsSearchSchema() map[string]any {
 				"enum":        []string{"CONTAINS", "DOES_NOT_CONTAIN"},
 				"description": "Treat author_ids as an include (CONTAINS) or exclude (DOES_NOT_CONTAIN) filter. Default CONTAINS.",
 			},
-			"start": map[string]any{"type": "string", "description": flexibleDatetimeDescription + " The start-to-end window must not exceed 31 days; split longer periods into separate calls."},
-			"end":   map[string]any{"type": "string", "description": flexibleDatetimeDescription + " The start-to-end window must not exceed 31 days; split longer periods into separate calls."},
-			"page":  map[string]any{"type": "integer", "minimum": 1, "description": "Result page, 1-indexed (Clockify audit-log default 1)."},
+			"start":     map[string]any{"type": "string", "description": flexibleDatetimeDescription + " The start-to-end window must not exceed 31 days; split longer periods into separate calls."},
+			"end":       map[string]any{"type": "string", "description": flexibleDatetimeDescription + " The start-to-end window must not exceed 31 days; split longer periods into separate calls."},
+			"page":      map[string]any{"type": "integer", "minimum": 1, "description": "Result page, 1-indexed (Clockify audit-log default 1)."},
+			"page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 200, "description": "Results per page (default 50)."},
 		},
 	})
 }
@@ -162,11 +163,13 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	pageSize := intArg(args, "page_size", 50)
 	body := map[string]any{
-		"actions": actions,
-		"authors": map[string]any{"authorIds": authorIDs, "contains": contains},
-		"start":   timeparse.FormatISO(startTime),
-		"end":     timeparse.FormatISO(endTime),
+		"actions":  actions,
+		"authors":  map[string]any{"authorIds": authorIDs, "contains": contains},
+		"start":    timeparse.FormatISO(startTime),
+		"end":      timeparse.FormatISO(endTime),
+		"pageSize": pageSize,
 	}
 	if _, present := args["page"]; present {
 		body["page"] = intArg(args, "page", 1)
@@ -181,8 +184,8 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 		"count":       len(entries),
 		"total":       len(entries),
 		"page":        page,
-		"pageSize":    len(entries),
-		"has_more":    false,
+		"pageSize":    pageSize,
+		"has_more":    len(entries) >= pageSize,
 	}), nil
 }
 

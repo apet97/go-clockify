@@ -481,6 +481,7 @@ func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any)
 
 	return ok("clockify_delete_time_off_request", map[string]any{
 		"deleted":   true,
+		"id":        requestID,
 		"requestId": requestID,
 		"policyId":  policyID,
 	}, map[string]any{"workspaceId": wsID}), nil

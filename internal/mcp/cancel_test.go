@@ -7,10 +7,33 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+type responseSignalWriter struct {
+	mu     sync.Mutex
+	buf    bytes.Buffer
+	id42Ch chan struct{}
+	once   sync.Once
+}
+
+func (w *responseSignalWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if strings.Contains(string(p), `"id":42`) {
+		w.once.Do(func() { close(w.id42Ch) })
+	}
+	return w.buf.Write(p)
+}
+
+func (w *responseSignalWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.buf.String()
+}
 
 // TestCancellation_AbortsInflightHandler verifies that a notifications/cancelled
 // message with a matching requestId aborts a slow tool handler via context
@@ -47,12 +70,12 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 	pr, pw := io.Pipe()
 	defer pw.Close()
 
-	var output bytes.Buffer
+	output := &responseSignalWriter{id42Ch: make(chan struct{})}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	done := make(chan error, 1)
-	go func() { done <- srv.Run(ctx, pr, syncWriter{&output}) }()
+	go func() { done <- srv.Run(ctx, pr, output) }()
 
 	// Initialize, then submit a slow tools/call with id=42.
 	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`+"\n")
@@ -81,6 +104,15 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 		t.Fatal("slow handler did not exit within 2s of cancellation")
 	}
 
+	// The tools/call response is written by the async stdout writer; wait for
+	// it before closing stdin/cancelling the server context, otherwise the test
+	// can race shutdown and drop the cancellation envelope.
+	select {
+	case <-output.id42Ch:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("expected response for id=42 in output, got: %s", output.String())
+	}
+
 	// Drain Run by closing the pipe and ctx.
 	_ = pw.Close()
 	cancel()
@@ -97,9 +129,6 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 
 	// The cancelled response should be an MCP isError envelope (tool returned err).
 	out := output.String()
-	if !strings.Contains(out, `"id":42`) {
-		t.Fatalf("expected response for id=42 in output, got: %s", out)
-	}
 	if !strings.Contains(out, `"isError":true`) {
 		t.Fatalf("expected isError:true in cancellation response, got: %s", out)
 	}

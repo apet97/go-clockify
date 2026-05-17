@@ -859,6 +859,7 @@ func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, er
 	if err != nil {
 		return nil, err
 	}
+	workspace.Memberships = nil
 	warnings := []Warning{}
 	currentTimer, err := s.currentTimer(ctx)
 	if err != nil {
@@ -1658,6 +1659,13 @@ func (s *Service) buildEntryPayload(ctx context.Context, args map[string]any) (m
 	}
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
+	} else if projectID != "" && !dryrun.Enabled(args) {
+		if projPath, perr := paths.Workspace(s.WorkspaceID, "projects", projectID); perr == nil {
+			var proj clockify.Project
+			if gerr := s.Client.Get(ctx, projPath, nil, &proj); gerr == nil {
+				payload["billable"] = proj.Billable
+			}
+		}
 	}
 	ids := map[string]string{
 		"workspaceId": s.WorkspaceID,

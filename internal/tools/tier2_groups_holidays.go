@@ -422,6 +422,9 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
+	for _, h := range out {
+		delete(h, "userGroupIds")
+	}
 	return ok("clockify_list_holidays", out, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
@@ -553,6 +556,7 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, err
 	}
 	out["date_period"] = holidayDatePeriodSnake(out, startDate, endDate)
+	delete(out, "datePeriod")
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
 }
 
@@ -622,6 +626,7 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 	}
 	fallbackPeriod, _ := body["datePeriod"].(map[string]any)
 	out["date_period"] = holidayDatePeriodSnake(out, firstReportString(fallbackPeriod, "startDate"), firstReportString(fallbackPeriod, "endDate"))
+	delete(out, "datePeriod")
 	return ok("clockify_holidays_update", out, map[string]any{
 		"workspaceId": wsID,
 		"holidayId":   holidayID,
