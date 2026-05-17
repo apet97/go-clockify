@@ -335,6 +335,21 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 	return resultOut, nil
 }
 
+func summarizeToolResult(r any) map[string]any {
+	if r == nil {
+		return nil
+	}
+	tr, ok := r.(ToolResult)
+	if !ok {
+		return map[string]any{"raw": r}
+	}
+	return map[string]any{
+		"ok":     tr.OK,
+		"action": tr.Action,
+		"ids":    tr.IDs,
+	}
+}
+
 func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (any, error) {
 	warnings := []Warning{}
 	startArgs, startDefaulted, err := s.prepareStartWorkArgs(ctx, args)
@@ -375,8 +390,8 @@ func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (
 	}
 	return result("clockify_switch_work", "entry", ids, map[string]any{
 		"status":  "ok",
-		"stopped": stopped,
-		"started": started,
+		"stopped": summarizeToolResult(stopped),
+		"started": summarizeToolResult(started),
 	}, ChangeSet{Created: startResult.Changed.Created, Updated: refsFromToolResult(stopped)}, warnings, []NextAction{
 		{Tool: "clockify_stop_work", Reason: "Stop the newly started timer when finished."},
 	}, meta), nil
@@ -650,6 +665,10 @@ func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]an
 		return nil, err
 	}
 	standard := standardizeDomainResult("clockify_request_time_off", "time_off_request", "created", out, reqArgs)
+	if standard.Meta == nil {
+		standard.Meta = map[string]any{}
+	}
+	standard.Meta["timezone_note"] = "Clockify stores time-off boundaries in UTC; the displayed start/end times may differ from the input dates when the workspace timezone is not UTC."
 	standard.Next = []NextAction{{Tool: "clockify_time_off_requests_list", Reason: "Check the request status after submitting."}}
 	return standard, nil
 }

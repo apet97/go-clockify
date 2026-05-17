@@ -89,6 +89,8 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 	} else if endpoint.pathName == "weekly" {
 		meta["normalizedRollups"] = appendWeeklyReportViews(data, body, boolArg(args, "include_future"))
 		capReportRollups(data, "weekly_rollups", args, meta)
+	} else if endpoint.pathName == "expenses/detailed" {
+		normalizeExpenseCurrencyIDs(data)
 	}
 	return ok(endpoint.toolName, data, meta), nil
 }
@@ -150,6 +152,28 @@ func capReportRollups(data map[string]any, key string, args map[string]any, meta
 	meta["rollupsTotal"] = full
 	meta["rollupsReturned"] = limit
 	meta["next_hint"] = fmt.Sprintf("%s was capped at the %d largest of %d rows by tracked time; group_totals_summary and totals_summary still describe all %d rows. Pass a higher max_rollups (or max_rollups:0 for the full list), or narrow the date range.", key, limit, full, full)
+}
+
+func normalizeExpenseCurrencyIDs(data map[string]any) {
+	totals, ok := data["totals"].(map[string]any)
+	if !ok {
+		return
+	}
+	currencies, ok := totals["workspaceCurrencies"].([]any)
+	if !ok {
+		return
+	}
+	for _, c := range currencies {
+		cur, ok := c.(map[string]any)
+		if !ok {
+			continue
+		}
+		if raw, exists := cur["_id"]; exists {
+			if _, alreadyString := raw.(string); !alreadyString {
+				cur["_id"] = fmt.Sprintf("%v", raw)
+			}
+		}
+	}
 }
 
 func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRange bool, defaultTimezone *time.Location) (map[string]any, error) {

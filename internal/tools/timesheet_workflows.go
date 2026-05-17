@@ -151,7 +151,7 @@ func capTimesheetReviewDetails(data *TimesheetReviewData, maxRows int) map[strin
 	}
 	if len(meta) > 0 {
 		meta["truncated"] = true
-		meta["next_hint"] = "Review details were capped by max_rows; lower the date range or raise max_rows to inspect more rows."
+		meta["next_hint"] = "Review details were capped by max_rows; narrow the start/end window or raise max_rows to inspect more rows."
 	}
 	return meta
 }

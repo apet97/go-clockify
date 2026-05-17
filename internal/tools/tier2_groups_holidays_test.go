@@ -144,6 +144,9 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	if datePeriod["start_date"] != "2026-05-25" || datePeriod["end_date"] != "2026-05-25" {
 		t.Fatalf("create holiday missing snake_case date_period: %#v", holiday)
 	}
+	if _, has := holiday["datePeriod"]; has {
+		t.Fatalf("create holiday should omit camelCase datePeriod when date_period is present: %#v", holiday)
+	}
 	if _, err := svc.CreateHoliday(ctx, map[string]any{"name": "", "start_date": "2026-05-25", "user_ids": []any{"u1"}}); err == nil {
 		t.Fatal("expected validation error for missing name")
 	}

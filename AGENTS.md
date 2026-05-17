@@ -136,7 +136,13 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   upstream.
 - Tool results are capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES` (default 50000):
   oversized list results truncate with `meta.truncated`/`size_capped`, and
-  PDF/XLSX/ZIP exports return `bodyEncoding:"file"` with a temp-file `path`.
+  CSV/PDF/XLSX/ZIP exports return `bodyEncoding:"file"` with a temp-file
+  `path`.
+- JSON-RPC params are decoded with `UseNumber`; schema validation must accept
+  `json.Number` for integer/number inputs.
+- Project-backed `clockify_entries_create` and `clockify_entries_timer_start`
+  inherit the project's billable default when `billable` is omitted; explicit
+  timer `billable` overrides report `meta.billable_source`.
 - `clockify_holidays_update` is a partial update: only `holiday_id` is required,
   and unspecified fields are merged from the existing holiday record.
 - Recoverable `error.message` carries the cleaned upstream message — the HTTP
@@ -149,6 +155,8 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   `total_min` + `total_is_lower_bound` on a full page instead of an
   authoritative `total`; `clockify_time_off_balances` paginates with honest
   `has_more`/`dropped`.
+- `clockify_audit_logs_search` defaults to `page_size:50` and sends
+  `pageSize` upstream; keep its max range at 31 days.
 
 ## Testing Discipline
 

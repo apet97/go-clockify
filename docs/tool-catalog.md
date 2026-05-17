@@ -173,9 +173,9 @@ prefer the documented format on each tool descriptor.
 | `clockify_users_role` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Update a user's workspace role. Supports dry_run:true. |
 | `clockify_projects_memberships_list` | `domain` | yes | no | yes | no | `read` | List project memberships from the hydrated project record. |
 | `clockify_reports_attendance` | `domain` | yes | no | yes | no | `read` | Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
-| `clockify_reports_money` | `domain` | yes | no | yes | no | `read` | Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
+| `clockify_reports_money` | `domain` | yes | no | yes | no | `read` | Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals. |
 | `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
-| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON/CSV return contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:"file" and path. Amounts are minor units. |
+| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:"file" and path. Amounts are minor units. |
 | `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice. CSV returns contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:"file" and path. |
 | `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids. |
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses. |
@@ -201,7 +201,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_entries_timer_switch` | `domain` | no | no | no | no | `write` | Switch the running timer to another project. |
 | `clockify_reports_detailed` | `domain` | yes | no | yes | no | `read` | Run the local detailed time report helper. |
 | `clockify_reports_summary` | `domain` | yes | no | yes | no | `read` | Run the local summary report helper. |
-| `clockify_reports_weekly` | `domain` | yes | no | yes | no | `read` | Run the local weekly report helper. |
+| `clockify_reports_weekly` | `domain` | yes | no | yes | no | `read` | Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. |
 | `clockify_api_get` | `raw` | yes | no | yes | no | `read` | Raw GET fallback within the pinned workspace or Clockify API path. |
 | `clockify_api_request` | `raw` | no | no | no | no | `write` | Raw method fallback within the pinned workspace or Clockify API path. |
 

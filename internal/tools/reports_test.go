@@ -805,12 +805,10 @@ func TestDetailedReportBinaryExportDoesNotNormalizePayload(t *testing.T) {
 		t.Fatalf("detailed report CSV failed: %v", err)
 	}
 	data := result.Data.(map[string]any)
-	if data["filename"] != "detailed.csv" || data["body"] == "" {
+	if data["filename"] != "detailed.csv" {
 		t.Fatalf("unexpected binary envelope: %#v", data)
 	}
-	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != 12 || data["truncated"] != false {
-		t.Fatalf("binary export metadata missing safe content sizing: %#v", data)
-	}
+	assertRawFileEnvelope(t, data, "detailed.csv", []byte("csv-bytes"))
 	if _, has := data["entries"]; has {
 		t.Fatalf("binary detailed export must not append normalized entries: %#v", data)
 	}

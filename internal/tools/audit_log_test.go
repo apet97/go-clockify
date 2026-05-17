@@ -93,13 +93,16 @@ func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
 	if gotBody["start"] != "2026-05-01T00:00:00Z" {
 		t.Fatalf("start = %v, want RFC3339 UTC", gotBody["start"])
 	}
+	if gotBody["pageSize"] != float64(50) {
+		t.Fatalf("pageSize body = %v, want 50", gotBody["pageSize"])
+	}
 	if !env.OK || env.Action != "clockify_audit_logs_search" {
 		t.Fatalf("envelope = %+v", env)
 	}
 	if got, _ := env.Meta["count"].(int); got != 1 {
 		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
 	}
-	if env.Meta["total"] != 1 || env.Meta["page"] != 1 || env.Meta["pageSize"] != 1 || env.Meta["has_more"] != false {
+	if env.Meta["total"] != 1 || env.Meta["page"] != 1 || env.Meta["pageSize"] != 50 || env.Meta["has_more"] != false {
 		t.Fatalf("audit log meta should include count/total/page/pageSize/has_more, got %+v", env.Meta)
 	}
 }

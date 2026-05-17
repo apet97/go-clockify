@@ -110,7 +110,7 @@ type TimeEntry struct {
 	ProjectName       string       `json:"projectName,omitempty"`
 	TaskID            string       `json:"taskId,omitempty"`
 	TagIDs            []string     `json:"tagIds,omitempty"`
-	Billable          bool         `json:"billable,omitempty"`
+	Billable          bool         `json:"billable"`
 	BillablePresent   bool         `json:"-"`
 	CostRate          *Rate        `json:"costRate,omitempty"`
 	CustomFieldValues any          `json:"customFieldValues,omitempty"`

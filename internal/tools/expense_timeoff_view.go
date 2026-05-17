@@ -162,20 +162,9 @@ func arrayLikeLen(value any) int {
 
 func timeOffPolicyViewFromRaw(raw map[string]any) TimeOffPolicyView {
 	view := TimeOffPolicyView(maps.Clone(raw))
-	view["policy"] = map[string]any{
-		"id":                firstReportString(raw, "id", "_id", "policyId", "policy_id"),
-		"name":              firstReportString(raw, "name"),
-		"status":            strings.ToUpper(firstReportString(raw, "status")),
-		"time_unit":         firstReportString(raw, "timeUnit", "time_unit"),
-		"accrual":           firstPresent(raw, "accrual"),
-		"auto_approve":      firstPresent(raw, "autoApprove", "auto_approve"),
-		"requires_approval": firstPresent(raw, "requiresApproval", "requires_approval"),
-		"negative_balance":  firstPresent(raw, "negativeBalance", "negative_balance"),
-	}
 	view["balance_rules"] = map[string]any{
-		"days_per_year": firstPresent(raw, "daysPerYear", "days_per_year"),
-		"hours_per_year": firstPresent(raw,
-			"hoursPerYear", "hours_per_year"),
+		"days_per_year":  firstPresent(raw, "daysPerYear", "days_per_year"),
+		"hours_per_year": firstPresent(raw, "hoursPerYear", "hours_per_year"),
 	}
 	return view
 }

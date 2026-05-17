@@ -1316,6 +1316,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "timeInterval"
             ],
             "type": "object"
@@ -1701,6 +1702,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "timeInterval"
             ],
             "type": "object"
@@ -10606,6 +10608,7 @@
                     "id",
                     "description",
                     "projectId",
+                    "billable",
                     "timeInterval"
                   ],
                   "type": "object"
@@ -11011,6 +11014,7 @@
               "id",
               "description",
               "projectId",
+              "billable",
               "timeInterval"
             ],
             "type": "object"
@@ -44035,7 +44039,7 @@
     },
     {
       "name": "clockify_reports_money",
-      "description": "Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.",
+      "description": "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44613,7 +44617,7 @@
     },
     {
       "name": "clockify_reports_export",
-      "description": "Export a detailed report. JSON/CSV return contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.",
+      "description": "Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -48812,6 +48816,12 @@
             "minimum": 1,
             "type": "integer"
           },
+          "page_size": {
+            "description": "Items per page. Default 50, maximum 200.",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now') The start-to-end window must not exceed 31 days; split longer periods into separate calls.",
             "type": "string"
@@ -50234,6 +50244,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "billable": {
+            "description": "Override the project's billable default. Omit to inherit the project setting.",
+            "type": "boolean"
+          },
           "description": {
             "maxLength": 2000,
             "type": "string"
@@ -52415,7 +52429,7 @@
     },
     {
       "name": "clockify_reports_weekly",
-      "description": "Run the local weekly report helper.",
+      "description": "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,

@@ -48,6 +48,7 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	if projectID != "" {
 		meta["projectId"] = projectID
 	}
+	billableSource := "default"
 	if dryrun.Enabled(args) {
 		running, _, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
 		if err != nil {
@@ -87,9 +88,15 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 			var proj clockify.Project
 			if gerr := s.Client.Get(ctx, projPath, nil, &proj); gerr == nil {
 				payload["billable"] = proj.Billable
+				billableSource = "project_default"
 			}
 		}
 	}
+	if billable, ok := args["billable"].(bool); ok {
+		payload["billable"] = billable
+		billableSource = "caller_provided"
+	}
+	meta["billable_source"] = billableSource
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
 		return ResultEnvelope{}, err

@@ -98,10 +98,13 @@ func shouldStoreRawResponseAsFile(contentType string) bool {
 	if ct == "" {
 		return false
 	}
-	if strings.Contains(ct, "text/") || strings.Contains(ct, "json") || strings.Contains(ct, "csv") {
+	if strings.Contains(ct, "csv") {
+		return true
+	}
+	if strings.Contains(ct, "text/") || strings.Contains(ct, "json") {
 		return false
 	}
-	for _, marker := range []string{"pdf", "zip", "spreadsheet", "excel", "octet-stream"} {
+	for _, marker := range []string{"csv", "pdf", "zip", "spreadsheet", "excel", "octet-stream"} {
 		if strings.Contains(ct, marker) {
 			return true
 		}
@@ -120,6 +123,8 @@ func writeRawResponseTempFile(filename, contentType string, body []byte) (string
 			ext = ".zip"
 		case strings.Contains(contentType, "spreadsheet"), strings.Contains(contentType, "excel"):
 			ext = ".xlsx"
+		case strings.Contains(contentType, "csv"):
+			ext = ".csv"
 		default:
 			ext = ".bin"
 		}
