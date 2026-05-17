@@ -524,7 +524,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_users_invite":
 		return entityObjectDataSchema("id", "email", "status")
 	case "clockify_users_list":
-		return schemaFor[[]UserView]()
+		return schemaFor[[]CompactUserView]()
 	case "clockify_users_profile":
 		return schemaFor[UserView]()
 	case "clockify_users_deactivate", "clockify_users_role":

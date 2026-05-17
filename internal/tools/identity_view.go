@@ -111,10 +111,30 @@ func userViewFromUser(user clockify.User) UserView {
 	return view
 }
 
-func userViewsFromUsers(users []clockify.User) []UserView {
-	out := make([]UserView, 0, len(users))
+// CompactUserView is the per-user shape emitted by clockify_users_list. It omits
+// the heavy memberships, settings, and custom-field payloads that made the full
+// list overflow the transport budget. clockify_users_profile still returns the
+// full UserView for a single user.
+type CompactUserView struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Email            string `json:"email"`
+	Status           string `json:"status,omitempty"`
+	ActiveWorkspace  string `json:"activeWorkspace,omitempty"`
+	DefaultWorkspace string `json:"defaultWorkspace,omitempty"`
+}
+
+func compactUserViewsFromUsers(users []clockify.User) []CompactUserView {
+	out := make([]CompactUserView, 0, len(users))
 	for _, user := range users {
-		out = append(out, userViewFromUser(user))
+		out = append(out, CompactUserView{
+			ID:               user.ID,
+			Name:             user.Name,
+			Email:            user.Email,
+			Status:           user.Status,
+			ActiveWorkspace:  user.ActiveWorkspace,
+			DefaultWorkspace: user.DefaultWorkspace,
+		})
 	}
 	return out
 }

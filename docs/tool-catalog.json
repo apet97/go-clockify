@@ -23036,127 +23036,18 @@
                 "activeWorkspace": {
                   "type": "string"
                 },
-                "customFields": {},
-                "custom_fields_normalized": {
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "custom_field_id": {
-                        "type": "string"
-                      },
-                      "definition": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "entity_type": {
-                            "type": "string"
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
-                          },
-                          "source": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "entity_type": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "raw": {
-                        "additionalProperties": {},
-                        "type": "object"
-                      },
-                      "source": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      },
-                      "value": {}
-                    },
-                    "required": [
-                      "source"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
                 "defaultWorkspace": {
                   "type": "string"
                 },
                 "email": {
                   "type": "string"
                 },
-                "feature_flags": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "approval": {
-                      "type": "boolean"
-                    },
-                    "pto": {
-                      "type": "boolean"
-                    },
-                    "scheduling": {
-                      "type": "boolean"
-                    }
-                  },
-                  "type": "object"
-                },
                 "id": {
                   "type": "string"
                 },
-                "memberships": {},
                 "name": {
                   "type": "string"
                 },
-                "profilePicture": {
-                  "type": "string"
-                },
-                "report_defaults": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "date_format": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    },
-                    "summary_report_settings": {},
-                    "time_format": {
-                      "type": "string"
-                    },
-                    "timezone": {
-                      "type": "string"
-                    },
-                    "week_start": {
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                },
-                "settings": {},
                 "status": {
                   "type": "string"
                 }
@@ -23164,9 +23055,7 @@
               "required": [
                 "id",
                 "name",
-                "email",
-                "report_defaults",
-                "feature_flags"
+                "email"
               ],
               "type": "object"
             },
