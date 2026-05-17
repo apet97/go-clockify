@@ -28,15 +28,6 @@ type ReportGroupTotalsSummary struct {
 	ByGroupType map[string]int    `json:"by_group_type,omitempty"`
 }
 
-type DonutChartSegmentView struct {
-	ID              string                `json:"id,omitempty"`
-	Name            string                `json:"name,omitempty"`
-	Percent         *float64              `json:"percent,omitempty"`
-	Duration        *EntryDurationView    `json:"duration,omitempty"`
-	Financials      EntryFinancials       `json:"financials"`
-	MoneyByCurrency []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
-}
-
 type WeeklyDayTotalView struct {
 	Date            string                `json:"date,omitempty"`
 	IsFuture        bool                  `json:"is_future,omitempty"`
@@ -85,7 +76,6 @@ func appendSummaryReportViews(data map[string]any, body map[string]any) int {
 	rollups := summaryRollups(data, summaryGroupsFromBody(body))
 	data["summary_rollups"] = rollups
 	data["group_totals_summary"] = summarizeReportRollups(rollups)
-	data["donut_chart_summary"] = donutChartSummary(data)
 	data["totals_summary"] = summarizeReportTotals(data, nil)
 	data["suggestedActions"] = reportDrilldownSuggestions(body)
 	// The normalized views above fully replace the raw upstream arrays; drop
@@ -253,36 +243,6 @@ func mergeEntryFinancials(existing reportEntryMoney, fin EntryFinancials) report
 	existing.cost = moneySum(existing.cost, fin.Cost)
 	existing.profit = moneySum(existing.profit, fin.Profit)
 	return existing
-}
-
-func donutChartSummary(data map[string]any) []DonutChartSegmentView {
-	rows := firstReportRows(data, "donutChart", "donut_chart")
-	out := make([]DonutChartSegmentView, 0, len(rows))
-	for _, row := range rows {
-		money := reportMoneyFromRow(row)
-		fin := EntryFinancials{Source: entryFinancialSourceUnavailable, Reason: "no report money fields were present for this chart segment"}
-		if money.hasMoney() {
-			fin = money.financials()
-		}
-		var duration *EntryDurationView
-		if seconds, ok := reportDurationSeconds(row); ok {
-			d := entryDurationView(seconds, "reports_api")
-			duration = &d
-		}
-		var percent *float64
-		if n, ok := reportNumber(firstPresent(row, "percent", "percentage", "value")); ok {
-			percent = &n
-		}
-		out = append(out, DonutChartSegmentView{
-			ID:              cleanReportID(firstPresent(row, "id", "_id")),
-			Name:            firstReportString(row, "name", "label", "title"),
-			Percent:         percent,
-			Duration:        duration,
-			Financials:      fin,
-			MoneyByCurrency: reportMoneyByCurrency(row),
-		})
-	}
-	return out
 }
 
 func weeklyDayTotals(data map[string]any, includeFuture bool, now time.Time) []WeeklyDayTotalView {
