@@ -205,13 +205,20 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	items := envelope.Expenses.Expenses
+	// has_more from the known total; the page-full heuristic is only a
+	// fallback for when the API does not report a usable count, otherwise an
+	// exact final page (count == page*pageSize) would falsely report more.
+	hasMore := len(items) == pageSize
+	if envelope.Expenses.Count > 0 {
+		hasMore = page*pageSize < envelope.Expenses.Count
+	}
 	return ok("clockify_list_expenses", compactExpenseViewsFromRaw(items), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(items),
 		"total":       envelope.Expenses.Count,
 		"page":        page,
 		"pageSize":    pageSize,
-		"has_more":    page*pageSize < envelope.Expenses.Count || len(items) == pageSize,
+		"has_more":    hasMore,
 	}, "clockify_record_expense")), nil
 }
 

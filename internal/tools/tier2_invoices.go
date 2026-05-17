@@ -314,13 +314,20 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
+	// has_more from the known total; the page-full heuristic is only a
+	// fallback for when the API does not report a usable total, otherwise an
+	// exact final page (total == page*pageSize) would falsely report more.
+	hasMore := len(envelope.Invoices) == pageSize
+	if envelope.Total > 0 {
+		hasMore = page*pageSize < envelope.Total
+	}
 	return ok("clockify_list_invoices", compactInvoiceViewsFromRaw(envelope.Invoices), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Invoices),
 		"total":       envelope.Total,
 		"page":        page,
 		"pageSize":    pageSize,
-		"has_more":    page*pageSize < envelope.Total || len(envelope.Invoices) == pageSize,
+		"has_more":    hasMore,
 	}, "clockify_invoice_client_work")), nil
 }
 
