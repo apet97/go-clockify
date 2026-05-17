@@ -138,8 +138,10 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   oversized list results truncate with `meta.truncated`/`size_capped`, and
   CSV/PDF/XLSX/ZIP exports return `bodyEncoding:"file"` with a temp-file
   `path`.
-- JSON-RPC params are decoded with `UseNumber`; schema validation must accept
-  `json.Number` for integer/number inputs.
+- JSON-RPC params are decoded with `UseNumber`, so numeric tool arguments
+  arrive as `json.Number`. Schema validation and numeric arg extraction must
+  accept it — extract via `numberFromAny` (`intArg` / `numberArg` / `int64Arg`
+  / `numberFromMap`), never a bare `.(float64)` assertion.
 - Project-backed `clockify_entries_create` and `clockify_entries_timer_start`
   inherit the project's billable default when `billable` is omitted; explicit
   timer `billable` overrides report `meta.billable_source`.
@@ -157,6 +159,13 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   `has_more`/`dropped`.
 - `clockify_audit_logs_search` defaults to `page_size:50` and sends
   `pageSize` upstream; keep its max range at 31 days.
+- `clockify_entries_list` and `clockify_reports_detailed` accept a same-day
+  range; a bare `YYYY-MM-DD` `end` is coerced to end-of-day so `start == end`
+  is a full one-day window, not a zero-width one.
+- `clockify_approvals_list` and `clockify_approvals_get` strip heavy `entries`
+  payloads; `clockify_invoices_payments_delete` supports a `dry_run` preview;
+  `clockify_approvals_resubmit` preflights approval state for a precise
+  recovery hint.
 
 ## Testing Discipline
 

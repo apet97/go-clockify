@@ -13,6 +13,7 @@ Summary:
 
 Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
+- Numeric tool arguments are extracted through `numberFromAny`, which handles the `json.Number` values the stdio transport produces; a wire-path test in `internal/tools` decodes args with `UseNumber()` before extraction so numeric handling is gated independently of the fake server's native Go values.
 - No alias wrappers remain in the one-user surface; former read/list/get wrappers now use native one-user handlers.
 - Live protocol/recovery coverage is intentionally broader than live happy-path coverage. Optional paid-feature domains may still return recovery when the workspace plan or permissions do not allow the operation.
 - Every `Live protocol/recovery tested: yes` row is backed by named live-test evidence and required gate metadata in `internal/tools/oneuser_quality_test.go`; happy-path rows are tracked separately and only mark real success paths.
