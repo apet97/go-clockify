@@ -3,11 +3,30 @@ package tools
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 )
+
+// TestScheduleWorkRequiresUserUpfront proves clockify_schedule_work rejects a
+// missing user with one clear error before any upstream call — the schema
+// lists only start/end/hours_per_day as required, so the handler must own the
+// user/project requirement.
+func TestScheduleWorkRequiresUserUpfront(t *testing.T) {
+	client, cleanup := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected upstream call before validation: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	_, err := svc.ClockifyScheduleWork(context.Background(), map[string]any{
+		"start": "2026-05-18", "end": "2026-05-22", "hours_per_day": 6.0,
+	})
+	if err == nil || !strings.Contains(err.Error(), "needs a user") {
+		t.Fatalf("err = %v, want a 'needs a user' message", err)
+	}
+}
 
 // TestApprovalHandlersCount verifies that the approvals group produces the
 // documented list/create/resubmit/PATCH approval surface.

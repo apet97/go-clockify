@@ -563,7 +563,7 @@ func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any
 			return ResultEnvelope{}, err
 		}
 		m := map[string]any{"userId": uid}
-		if rate, rateOk := args["hourly_rate"].(float64); rateOk {
+		if rate, rateOk := numberArg(args, "hourly_rate"); rateOk {
 			m["hourlyRate"] = map[string]any{"amount": rate}
 		}
 		memberships = append(memberships, m)

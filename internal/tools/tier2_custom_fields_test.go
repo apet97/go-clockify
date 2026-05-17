@@ -232,6 +232,7 @@ func TestValidateCustomFieldDefaultValueRejectsTypeMismatch(t *testing.T) {
 		{name: "NUMBER accepts float", fieldType: "NUMBER", raw: 3.5, want: 3.5},
 		{name: "NUMBER accepts int", fieldType: "NUMBER", raw: 5, want: 5.0},
 		{name: "NUMBER rejects string", fieldType: "NUMBER", raw: "5", wantErr: "number for NUMBER"},
+		{name: "NUMBER accepts json.Number", fieldType: "NUMBER", raw: json.Number("42"), want: 42.0},
 		{name: "CHECKBOX accepts true", fieldType: "CHECKBOX", raw: true, want: true},
 		{name: "CHECKBOX accepts false", fieldType: "CHECKBOX", raw: false, want: false},
 		{name: "CHECKBOX rejects string", fieldType: "CHECKBOX", raw: "true", wantErr: "boolean for CHECKBOX"},

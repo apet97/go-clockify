@@ -595,8 +595,12 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 			},
 		})), "payment", "created", s.createInvoicePaymentOneUser),
 		nativeDomainTool(215, toolDestructive("clockify_invoices_payments_delete", "Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview.", objectSchema(map[string]any{
-			"required":   []string{"invoice_id", "payment_id"},
-			"properties": map[string]any{"invoice_id": map[string]any{"type": "string"}, "payment_id": map[string]any{"type": "string"}},
+			"required": []string{"invoice_id", "payment_id"},
+			"properties": map[string]any{
+				"invoice_id": map[string]any{"type": "string"},
+				"payment_id": map[string]any{"type": "string"},
+				"dry_run":    map[string]any{"type": "boolean", "description": "If true, preview the deletion without executing it."},
+			},
 		})), "payment", "deleted", s.deleteInvoicePaymentOneUser),
 	}
 }

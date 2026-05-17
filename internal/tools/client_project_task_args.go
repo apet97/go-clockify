@@ -17,18 +17,7 @@ func numberArg(args map[string]any, key string) (float64, bool) {
 	if !ok {
 		return 0, false
 	}
-	switch x := v.(type) {
-	case int:
-		return float64(x), true
-	case int32:
-		return float64(x), true
-	case int64:
-		return float64(x), true
-	case float64:
-		return x, true
-	default:
-		return 0, false
-	}
+	return numberFromAny(v)
 }
 
 func int64Arg(args map[string]any, key string) (int64, bool) {
@@ -36,18 +25,11 @@ func int64Arg(args map[string]any, key string) (int64, bool) {
 	if !ok {
 		return 0, false
 	}
-	switch x := v.(type) {
-	case int:
-		return int64(x), true
-	case int32:
-		return int64(x), true
-	case int64:
-		return x, true
-	case float64:
-		return int64(x), true
-	default:
+	f, ok := numberFromAny(v)
+	if !ok {
 		return 0, false
 	}
+	return int64(f), true
 }
 
 func strictStringSliceArg(args map[string]any, key string) ([]string, bool, error) {
@@ -389,18 +371,7 @@ func numberFromMap(raw map[string]any, key string) (float64, bool) {
 	if !ok {
 		return 0, false
 	}
-	switch x := v.(type) {
-	case int:
-		return float64(x), true
-	case int32:
-		return float64(x), true
-	case int64:
-		return float64(x), true
-	case float64:
-		return x, true
-	default:
-		return 0, false
-	}
+	return numberFromAny(v)
 }
 
 func intFromMap(raw map[string]any, key string) (int64, bool) {

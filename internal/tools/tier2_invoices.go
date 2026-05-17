@@ -746,6 +746,17 @@ func (s *Service) deleteInvoicePaymentOneUser(ctx context.Context, args map[stri
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	if dryrun.Enabled(args) {
+		return ResultEnvelope{
+			OK:     true,
+			Action: "clockify_invoices_payments_delete",
+			Data: dryrun.MinimalResult("clockify_invoices_payments_delete", map[string]any{
+				"invoice_id": invoiceID,
+				"payment_id": paymentID,
+			}),
+			Meta: map[string]any{"workspaceId": wsID, "invoiceId": invoiceID, "paymentId": paymentID},
+		}, nil
+	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "payments", paymentID)
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -1116,20 +1127,9 @@ func convertToInvoiceMinorUnits(value any, unit string) (int64, error) {
 	if value == nil {
 		return 0, fmt.Errorf("value is required")
 	}
-	var asFloat float64
-	switch v := value.(type) {
-	case float64:
-		asFloat = v
-	case float32:
-		asFloat = float64(v)
-	case int:
-		asFloat = float64(v)
-	case int32:
-		asFloat = float64(v)
-	case int64:
-		asFloat = float64(v)
-	default:
-		return 0, fmt.Errorf("value must be a number, got %T", value)
+	asFloat, ok := numberFromAny(value)
+	if !ok {
+		return 0, fmt.Errorf("value must be a number, got %s", jsonTypeName(value))
 	}
 	unit = strings.ToLower(strings.TrimSpace(unit))
 	switch unit {
@@ -1166,12 +1166,12 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	if v := stringArg(args, "description"); v != "" {
 		body["description"] = v
 	}
-	if v, ok := args["quantity"]; ok {
+	if _, ok := args["quantity"]; ok {
 		quantity, isNumber := numberArg(args, "quantity")
 		if !isNumber || quantity <= 0 {
 			return ResultEnvelope{}, fmt.Errorf("quantity must be a number greater than 0")
 		}
-		body["quantity"] = v
+		body["quantity"] = quantity
 	}
 	if v, ok := args["unit_price"]; ok {
 		converted, err := convertToInvoiceMinorUnits(v, stringArg(args, "unit_price_unit"))

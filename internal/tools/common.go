@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -772,26 +773,79 @@ func addPaginationMeta(meta map[string]any, args map[string]any, page, pageSize 
 	return meta
 }
 
+// numberFromAny coerces any JSON-decoded numeric value to float64. It is the
+// single numeric-coercion point for tool arguments: the MCP server decodes
+// JSON-RPC with json.Decoder.UseNumber(), so numbers arrive over stdio as
+// json.Number, never float64 — every numeric extractor routes through here so
+// that wire values and direct-constructed test values behave identically.
+func numberFromAny(v any) (float64, bool) {
+	switch x := v.(type) {
+	case json.Number:
+		f, err := x.Float64()
+		return f, err == nil
+	case float64:
+		return x, true
+	case float32:
+		return float64(x), true
+	case int:
+		return float64(x), true
+	case int8:
+		return float64(x), true
+	case int16:
+		return float64(x), true
+	case int32:
+		return float64(x), true
+	case int64:
+		return float64(x), true
+	case uint:
+		return float64(x), true
+	case uint8:
+		return float64(x), true
+	case uint16:
+		return float64(x), true
+	case uint32:
+		return float64(x), true
+	case uint64:
+		return float64(x), true
+	default:
+		return 0, false
+	}
+}
+
+// jsonTypeName names the JSON wire type of a decoded value ("number",
+// "string", ...) so validation errors stay agent-readable instead of leaking
+// a Go type like "json.Number" or "[]interface {}".
+func jsonTypeName(v any) string {
+	switch v.(type) {
+	case nil:
+		return "null"
+	case bool:
+		return "boolean"
+	case string:
+		return "string"
+	case json.Number, float64, float32,
+		int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64:
+		return "number"
+	case map[string]any:
+		return "object"
+	case []any, []string:
+		return "array"
+	default:
+		return "value"
+	}
+}
+
 func intArg(args map[string]any, key string, fallback int) int {
 	v, ok := args[key]
 	if !ok {
 		return fallback
 	}
-	switch x := v.(type) {
-	case int:
-		return x
-	case int32:
-		return int(x)
-	case int64:
-		return int(x)
-	case float64:
-		if math.IsNaN(x) || math.IsInf(x, 0) || x < math.MinInt || x > math.MaxInt {
-			return fallback
-		}
-		return int(x)
-	default:
+	f, ok := numberFromAny(v)
+	if !ok || math.IsNaN(f) || math.IsInf(f, 0) || f < math.MinInt || f > math.MaxInt {
 		return fallback
 	}
+	return int(f)
 }
 
 func ok(action string, data any, meta map[string]any) ResultEnvelope {

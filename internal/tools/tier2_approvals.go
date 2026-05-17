@@ -148,7 +148,24 @@ func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_approval_request", approvalViewFromRaw(approval), map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned}), nil
+	// The raw approval embeds every time entry in the period, which can push
+	// the response past 600 KB on a busy approval. Strip it the same way
+	// listApprovalRequests does and point the caller at the report tools for
+	// entry-level detail.
+	entryCount := 0
+	switch e := approval["entries"].(type) {
+	case []any:
+		entryCount = len(e)
+	case []map[string]any:
+		entryCount = len(e)
+	}
+	delete(approval, "entries")
+	meta := map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned}
+	if entryCount > 0 {
+		meta["entriesOmitted"] = entryCount
+		meta["entriesHint"] = "Time entries are omitted to keep the response small; use clockify_reports_detailed for entry-level detail."
+	}
+	return ok("clockify_get_approval_request", approvalViewFromRaw(approval), meta), nil
 }
 
 func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -175,6 +192,17 @@ func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]a
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	// Preflight: look up the approval's current state so a failed resubmit
+	// names the actual status and points at the right recovery, instead of
+	// surfacing the upstream "no active approval request for period" with no
+	// context. Best-effort — a lookup failure must not block the resubmit.
+	status := ""
+	if approval, _, _, ferr := s.findApprovalRequest(ctx, wsID, approvalID, args); ferr == nil {
+		status = strings.ToUpper(strings.TrimSpace(firstReportString(approval, "status", "state")))
+	}
+	if status == "APPROVED" {
+		return ResultEnvelope{}, fmt.Errorf("approval %s is already APPROVED; there is nothing to resubmit", approvalID)
+	}
 	path, err := paths.Workspace(wsID, "approval-requests", "resubmit-entries-for-approval")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -182,6 +210,9 @@ func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]a
 	body := nativeBodyFromArgs(args, "approval_id", "entry_ids", "expense_ids", "period", "period_start", "note")
 	var updated any
 	if err := s.Client.Post(ctx, path, body, &updated); err != nil {
+		if status == "REJECTED" || strings.HasPrefix(status, "WITHDRAWN") {
+			return ResultEnvelope{}, fmt.Errorf("approval %s is %s: the resubmit endpoint re-submits entries for an active approval period; submit a fresh request for this period with clockify_approvals_submit", approvalID, status)
+		}
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_approvals_resubmit", approvalDataView(updated), map[string]any{

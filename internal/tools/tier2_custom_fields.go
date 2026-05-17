@@ -263,32 +263,25 @@ func validateCustomFieldDefaultValue(fieldType string, raw any, allowedValues []
 	case "TXT", "LINK":
 		s, ok := raw.(string)
 		if !ok {
-			return nil, fmt.Errorf("workspace_default_value must be a string for %s, got %T", fieldType, raw)
+			return nil, fmt.Errorf("workspace_default_value must be a string for %s, got %s", fieldType, jsonTypeName(raw))
 		}
 		return s, nil
 	case "NUMBER":
-		switch v := raw.(type) {
-		case float64:
-			return v, nil
-		case int:
-			return float64(v), nil
-		case int64:
-			return float64(v), nil
-		case int32:
-			return float64(v), nil
-		default:
-			return nil, fmt.Errorf("workspace_default_value must be a number for NUMBER, got %T", raw)
+		f, ok := numberFromAny(raw)
+		if !ok {
+			return nil, fmt.Errorf("workspace_default_value must be a number for NUMBER, got %s", jsonTypeName(raw))
 		}
+		return f, nil
 	case "CHECKBOX":
 		b, ok := raw.(bool)
 		if !ok {
-			return nil, fmt.Errorf("workspace_default_value must be a boolean for CHECKBOX, got %T", raw)
+			return nil, fmt.Errorf("workspace_default_value must be a boolean for CHECKBOX, got %s", jsonTypeName(raw))
 		}
 		return b, nil
 	case "DROPDOWN_SINGLE":
 		s, ok := raw.(string)
 		if !ok {
-			return nil, fmt.Errorf("workspace_default_value must be a string for DROPDOWN_SINGLE, got %T", raw)
+			return nil, fmt.Errorf("workspace_default_value must be a string for DROPDOWN_SINGLE, got %s", jsonTypeName(raw))
 		}
 		if len(allowedValues) > 0 && !slices.Contains(allowedValues, s) {
 			return nil, fmt.Errorf("workspace_default_value %q must be one of allowed_values %v", s, allowedValues)
@@ -303,12 +296,12 @@ func validateCustomFieldDefaultValue(fieldType string, raw any, allowedValues []
 			for _, x := range v {
 				s, ok := x.(string)
 				if !ok {
-					return nil, fmt.Errorf("workspace_default_value items must be strings for DROPDOWN_MULTIPLE, got %T in list", x)
+					return nil, fmt.Errorf("workspace_default_value items must be strings for DROPDOWN_MULTIPLE, got %s in list", jsonTypeName(x))
 				}
 				items = append(items, s)
 			}
 		default:
-			return nil, fmt.Errorf("workspace_default_value must be an array of strings for DROPDOWN_MULTIPLE, got %T", raw)
+			return nil, fmt.Errorf("workspace_default_value must be an array of strings for DROPDOWN_MULTIPLE, got %s", jsonTypeName(raw))
 		}
 		if len(allowedValues) > 0 {
 			for _, item := range items {

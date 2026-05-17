@@ -22,6 +22,45 @@ func readBody(t *testing.T, r *http.Request) string {
 	return string(body)
 }
 
+// TestCreateExpenseAcceptsWireJSONNumberAmount drives createExpense with
+// arguments decoded the way the stdio transport delivers them — amount as a
+// json.Number — and asserts the value reaches the upstream multipart form
+// uncorrupted. End-to-end guard for the bare-assertion → numberArg fix.
+func TestCreateExpenseAcceptsWireJSONNumberAmount(t *testing.T) {
+	var gotAmount string
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "t@example.com"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"id": "ws1", "currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
+				t.Fatalf("parse multipart: %v", err)
+			}
+			gotAmount = r.FormValue("amount")
+			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 4275})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	client, cleanup := newTestClient(t, mux.ServeHTTP)
+	defer cleanup()
+	svc := New(client, "ws1")
+
+	args := wireArgs(t, map[string]any{
+		"amount":      42.75,
+		"date":        "2026-05-17",
+		"category_id": "cat1",
+	})
+	res, err := svc.createExpense(context.Background(), args)
+	mustOK(t, res, err, "clockify_create_expense")
+	if gotAmount != "42.75" {
+		t.Fatalf("upstream amount = %q, want 42.75", gotAmount)
+	}
+}
+
 // TestTier2_Expenses_FullSweep covers the complete expenses domain
 // surface — expense CRUD plus expense-category CRUD — through a mocked
 // Clockify HTTP server. Mirrors the invoices sweep so coverage stays

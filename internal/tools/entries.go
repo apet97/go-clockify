@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -40,6 +41,13 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		t, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
 			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
+		}
+		// A bare YYYY-MM-DD end means "through the end of that day"; without
+		// this a same-day start==end range is a zero-width window that
+		// matches nothing. ParseDatetime treats a 10-char input as date-only.
+		if len(strings.TrimSpace(endRaw)) == 10 {
+			local := t.In(loc)
+			t = time.Date(local.Year(), local.Month(), local.Day(), 23, 59, 59, int(999*time.Millisecond), loc)
 		}
 		baseQuery["end"] = timeparse.FormatISO(t)
 	}

@@ -281,7 +281,7 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	// Required: amount, date (RFC3339), category_id. user_id defaults
 	// to the calling user via /user — the upstream rejects multipart
 	// POSTs that omit userId with a 400.
-	amount, hasAmount := args["amount"].(float64)
+	amount, hasAmount := numberArg(args, "amount")
 	if !hasAmount {
 		return ResultEnvelope{}, fmt.Errorf("amount is required")
 	}
@@ -481,7 +481,7 @@ func validateUpdateExpenseChangedValues(changeFields []string, args map[string]a
 				return fmt.Errorf("change_fields includes NOTES but notes is required")
 			}
 		case "AMOUNT":
-			if _, ok := args["amount"].(float64); !ok {
+			if _, ok := numberArg(args, "amount"); !ok {
 				return fmt.Errorf("change_fields includes AMOUNT but amount is required")
 			}
 		case "BILLABLE":
@@ -543,7 +543,7 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	for _, token := range changeFields {
 		form.Add("changeFields", token)
 	}
-	if v, ok := args["amount"].(float64); ok {
+	if v, ok := numberArg(args, "amount"); ok {
 		normalized, err := expenseAmountForClockify(args, v)
 		if err != nil {
 			return ResultEnvelope{}, err
@@ -722,10 +722,8 @@ func expenseCategoryBody(args map[string]any) map[string]any {
 	if v, ok := args["has_unit_price"].(bool); ok {
 		body["hasUnitPrice"] = v
 	}
-	if v, ok := args["price_in_cents"].(float64); ok {
-		body["priceInCents"] = int(v)
-	} else if v, ok := args["price_in_cents"].(int); ok {
-		body["priceInCents"] = v
+	if v, ok := numberArg(args, "price_in_cents"); ok {
+		body["priceInCents"] = int64(v)
 	}
 	if v := stringArg(args, "unit"); v != "" {
 		body["unit"] = v

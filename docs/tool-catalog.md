@@ -181,7 +181,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List invoice payments. |
 | `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
-| `clockify_invoices_payments_delete` | `domain` | no | yes | no | no | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
+| `clockify_invoices_payments_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
 | `clockify_time_off_archive` | `domain` | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | `domain` | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | `domain` | yes | no | yes | no | `read` | Get workspace capacity totals. |

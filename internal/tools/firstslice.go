@@ -1512,6 +1512,13 @@ func (s *Service) listCurrentUserEntries(ctx context.Context, args map[string]an
 		if err != nil {
 			return nil, "", 0, 0, fmt.Errorf("invalid end: %w", err)
 		}
+		// A bare YYYY-MM-DD end means "through the end of that day"; without
+		// this a same-day start==end range is a zero-width window that
+		// matches nothing. ParseDatetime treats a 10-char input as date-only.
+		if len(end) == 10 {
+			local := t.In(loc)
+			t = time.Date(local.Year(), local.Month(), local.Day(), 23, 59, 59, int(999*time.Millisecond), loc)
+		}
 		query["end"] = timeparse.FormatISO(t)
 	}
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))

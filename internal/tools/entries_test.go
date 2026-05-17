@@ -7,9 +7,44 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 )
+
+// TestListEntriesSameDayPlainDateCoversFullDay proves a bare same-day
+// start==end range becomes a full-day window instead of a zero-width one that
+// matches nothing.
+func TestListEntriesSameDayPlainDateCoversFullDay(t *testing.T) {
+	var gotQuery url.Values
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "user-SELF", Name: "Self"})
+		case r.URL.Path == "/workspaces/ws1/user/user-SELF/time-entries" && r.Method == http.MethodGet:
+			gotQuery = r.URL.Query()
+			respondJSON(t, w, []clockify.TimeEntry{})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.DefaultTimezone = time.UTC
+	if _, err := svc.ListEntries(context.Background(), map[string]any{
+		"start": "2026-05-17",
+		"end":   "2026-05-17",
+	}); err != nil {
+		t.Fatalf("ListEntries: %v", err)
+	}
+	if got := gotQuery.Get("start"); got != "2026-05-17T00:00:00Z" {
+		t.Fatalf("start = %q, want 2026-05-17T00:00:00Z", got)
+	}
+	if got := gotQuery.Get("end"); got != "2026-05-17T23:59:59Z" {
+		t.Fatalf("end = %q, want end-of-day 2026-05-17T23:59:59Z", got)
+	}
+}
 
 // otherUserEntryID is a 24-char hex value the resolver treats as a
 // valid Clockify ObjectID so the handler reaches the ownership guard

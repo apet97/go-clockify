@@ -1074,6 +1074,11 @@ func TestConvertToInvoiceMinorUnits(t *testing.T) {
 		{name: "bad unit", value: 1, unit: "USD", wantErr: "unit must be minor or major"},
 		{name: "non-numeric rejected", value: "5.00", unit: "minor", wantErr: "value must be a number"},
 		{name: "nil rejected", value: nil, unit: "minor", wantErr: "value is required"},
+		// json.Number is the type every numeric arg has after the stdio
+		// transport decodes it; these gate the live wire path.
+		{name: "minor json.Number passes through", value: json.Number("12500"), unit: "minor", want: 12500},
+		{name: "major json.Number converts", value: json.Number("125"), unit: "major", want: 12500},
+		{name: "json.Number fractional minor rejected", value: json.Number("12500.5"), unit: "minor", wantErr: "minor-unit value"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1175,6 +1180,22 @@ func TestInvoicePaymentCreateAcceptsMajorUnit(t *testing.T) {
 }
 
 // mustOK is a small assertion helper for ResultEnvelope happy-paths.
+// TestDeleteInvoicePaymentDryRun proves the dry_run path previews the deletion
+// without issuing the upstream DELETE.
+func TestDeleteInvoicePaymentDryRun(t *testing.T) {
+	client, cleanup := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry_run must not call upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+	svc := New(client, "ws1")
+	res, err := svc.deleteInvoicePaymentOneUser(context.Background(), map[string]any{
+		"invoice_id": "65b382b606de527a7ee2b60e",
+		"payment_id": "65b382b606de527a7ee2b60d",
+		"dry_run":    true,
+	})
+	mustOK(t, res, err, "clockify_invoices_payments_delete")
+}
+
 func mustOK(t *testing.T, res ResultEnvelope, err error, wantAction string) {
 	t.Helper()
 	if err != nil {

@@ -641,7 +641,7 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 
 	webhookEvent := webhookEventArg(args)
 	if webhookEvent == "" {
-		return ResultEnvelope{}, fmt.Errorf("webhook_event is required")
+		return ResultEnvelope{}, fmt.Errorf("webhook_event is required (the webhook event type, e.g. NEW_TIME_ENTRY)")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)

@@ -12,6 +12,48 @@ import (
 	"github.com/apet97/go-clockify/internal/jsonschema"
 )
 
+// TestTimeOffRequestViewOmitsEmptyNames proves the time-off view omits
+// user.name/user.email/policy.name when the upstream approve/deny/update
+// response does not include them, instead of emitting empty strings.
+func TestTimeOffRequestViewOmitsEmptyNames(t *testing.T) {
+	view := timeOffRequestViewFromRaw(map[string]any{
+		"id": "req1", "status": "APPROVED", "userId": "u1", "policyId": "p1",
+	})
+	user, ok := view["user"].(map[string]any)
+	if !ok {
+		t.Fatalf("user = %T, want map", view["user"])
+	}
+	if _, has := user["name"]; has {
+		t.Errorf("user.name should be omitted when empty, got %v", user["name"])
+	}
+	if _, has := user["email"]; has {
+		t.Errorf("user.email should be omitted when empty, got %v", user["email"])
+	}
+	if user["id"] != "u1" {
+		t.Errorf("user.id = %v, want u1", user["id"])
+	}
+	policy, ok := view["policy"].(map[string]any)
+	if !ok {
+		t.Fatalf("policy = %T, want map", view["policy"])
+	}
+	if _, has := policy["name"]; has {
+		t.Errorf("policy.name should be omitted when empty, got %v", policy["name"])
+	}
+
+	// When the upstream does return names, they pass through unchanged.
+	full := timeOffRequestViewFromRaw(map[string]any{
+		"id": "req2", "status": "APPROVED", "userId": "u2", "policyId": "p2",
+		"userName": "Ada", "userEmail": "ada@example.com", "policyName": "PTO",
+	})
+	fu := full["user"].(map[string]any)
+	if fu["name"] != "Ada" || fu["email"] != "ada@example.com" {
+		t.Errorf("populated user = %#v, want name/email present", fu)
+	}
+	if full["policy"].(map[string]any)["name"] != "PTO" {
+		t.Errorf("populated policy.name missing: %#v", full["policy"])
+	}
+}
+
 func TestSchedulingHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := schedulingHandlers(svc)

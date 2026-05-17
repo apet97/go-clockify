@@ -175,6 +175,41 @@ func TestApprovalViewNormalizesDurationsMoneyExpensesAndClients(t *testing.T) {
 	}
 }
 
+// TestGetApprovalRequestStripsHeavyEntries proves clockify_approvals_get drops
+// the embedded time-entry array (the ~656 KB bloat) and reports the omitted
+// count in meta, mirroring clockify_approvals_list.
+func TestGetApprovalRequestStripsHeavyEntries(t *testing.T) {
+	heavyEntries := make([]map[string]any, 50)
+	for i := range heavyEntries {
+		heavyEntries[i] = map[string]any{"id": "e", "duration": 3600}
+	}
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/approval-requests" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, []map[string]any{{
+			"id":      "apr1",
+			"status":  "PENDING",
+			"entries": heavyEntries,
+		}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.getApprovalRequest(context.Background(), map[string]any{"approval_id": "apr1"})
+	mustOK(t, res, err, "clockify_get_approval_request")
+	view, ok := res.Data.(ApprovalView)
+	if !ok {
+		t.Fatalf("data type = %T, want ApprovalView", res.Data)
+	}
+	if view.EntrySummary.Count != 0 {
+		t.Fatalf("entries should be stripped, got EntrySummary.Count = %d", view.EntrySummary.Count)
+	}
+	if got, _ := res.Meta["entriesOmitted"].(int); got != 50 {
+		t.Fatalf("meta.entriesOmitted = %v, want 50", res.Meta["entriesOmitted"])
+	}
+}
+
 func TestListApprovalRequestsForwardsDocumentedSort(t *testing.T) {
 	var gotQuery string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -262,16 +297,70 @@ func TestApprovalListSchemaDocumentsCanonicalFilterStates(t *testing.T) {
 	t.Fatal("clockify_list_approval_requests descriptor not found")
 }
 
+// TestResubmitApprovalPreflightGuidesIneligibleStates proves the resubmit
+// state preflight blocks an already-APPROVED approval up front and turns a
+// failed resubmit of a REJECTED approval into an actionable recovery hint.
+func TestResubmitApprovalPreflightGuidesIneligibleStates(t *testing.T) {
+	const approvalID = "000000000000000000000001"
+
+	t.Run("approved is blocked before any POST", func(t *testing.T) {
+		client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/approval-requests" {
+				respondJSON(t, w, []map[string]any{{"id": approvalID, "status": "APPROVED"}})
+				return
+			}
+			t.Fatalf("resubmit must not POST for an APPROVED approval: %s %s", r.Method, r.URL.Path)
+		})
+		defer cleanup()
+		svc := New(client, "ws1")
+		_, err := svc.resubmitApprovalOneUser(context.Background(), map[string]any{
+			"approval_id": approvalID,
+			"entry_ids":   []any{"000000000000000000000002"},
+		})
+		if err == nil || !strings.Contains(err.Error(), "already APPROVED") {
+			t.Fatalf("err = %v, want 'already APPROVED'", err)
+		}
+	})
+
+	t.Run("rejected failure yields submit-fresh recovery hint", func(t *testing.T) {
+		client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/approval-requests":
+				respondJSON(t, w, []map[string]any{{"id": approvalID, "status": "REJECTED"}})
+			case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/approval-requests/resubmit-entries-for-approval":
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"message":"no active approval request for period"}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			}
+		})
+		defer cleanup()
+		svc := New(client, "ws1")
+		_, err := svc.resubmitApprovalOneUser(context.Background(), map[string]any{
+			"approval_id": approvalID,
+			"entry_ids":   []any{"000000000000000000000002"},
+		})
+		if err == nil || !strings.Contains(err.Error(), "REJECTED") || !strings.Contains(err.Error(), "clockify_approvals_submit") {
+			t.Fatalf("err = %v, want a REJECTED + clockify_approvals_submit recovery hint", err)
+		}
+	})
+}
+
 func TestResubmitApprovalRequiresOnlyDocumentedRequiredFieldsAndMapsPeriodStart(t *testing.T) {
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/approval-requests/resubmit-entries-for-approval" {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/approval-requests":
+			// resubmit preflight; PENDING keeps it on the happy path
+			respondJSON(t, w, []map[string]any{{"id": "000000000000000000000001", "status": "PENDING"}})
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/approval-requests/resubmit-entries-for-approval":
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": gotBody["approvalId"], "status": "PENDING"})
+		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
-			t.Fatalf("decode body: %v", err)
-		}
-		respondJSON(t, w, map[string]any{"id": gotBody["approvalId"], "status": "PENDING"})
 	})
 	defer cleanup()
 

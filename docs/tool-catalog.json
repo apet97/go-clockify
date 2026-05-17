@@ -5783,9 +5783,11 @@
             "type": "boolean"
           },
           "category": {
+            "description": "Expense category name. Provide either category or category_id (one is required).",
             "type": "string"
           },
           "category_id": {
+            "description": "Expense category ID. Provide either category or category_id (one is required).",
             "type": "string"
           },
           "date": {
@@ -6380,10 +6382,11 @@
             "type": "string"
           },
           "project": {
-            "description": "Project name or ID.",
+            "description": "Project name or ID. Provide either project or project_id (one is required).",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID. Provide either project or project_id (one is required).",
             "type": "string"
           },
           "repeat": {
@@ -6400,10 +6403,11 @@
             "type": "string"
           },
           "user": {
-            "description": "User name, email, or ID.",
+            "description": "User name, email, or ID. Provide either user or user_id (one is required).",
             "type": "string"
           },
           "user_id": {
+            "description": "User ID. Provide either user or user_id (one is required).",
             "type": "string"
           },
           "weeks": {
@@ -6675,7 +6679,7 @@
             "type": "boolean"
           },
           "event": {
-            "description": "Alias for webhook_event.",
+            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Alias for webhook_event; provide either event or webhook_event (one is required).",
             "type": "string"
           },
           "name": {
@@ -6696,6 +6700,7 @@
             "type": "string"
           },
           "webhook_event": {
+            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Provide either webhook_event or event (one is required).",
             "type": "string"
           }
         },
@@ -46325,7 +46330,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "billing",
         "destructive"
@@ -46337,6 +46342,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "invoice_id": {
             "type": "string"
           },
@@ -46561,7 +46570,7 @@
       "annotations": {
         "category": "domain",
         "destructiveHint": true,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,

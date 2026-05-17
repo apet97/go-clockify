@@ -711,6 +711,12 @@ func (s *Service) ClockifyScheduleWork(ctx context.Context, args map[string]any)
 		scheduleArgs["project_id"] = resolved
 		delete(scheduleArgs, "project")
 	}
+	if strings.TrimSpace(stringArg(scheduleArgs, "user_id")) == "" {
+		return nil, fmt.Errorf("schedule_work needs a user: pass user_id (an ID) or user (a name, email, or ID)")
+	}
+	if projectID == "" {
+		return nil, fmt.Errorf("schedule_work needs a project: pass project_id (an ID) or project (a name or ID)")
+	}
 	if task := strings.TrimSpace(stringArg(scheduleArgs, "task")); task != "" && strings.TrimSpace(stringArg(scheduleArgs, "task_id")) == "" {
 		if projectID == "" {
 			return nil, fmt.Errorf("project_id or project is required when resolving task by name")
@@ -881,8 +887,8 @@ func recordExpenseSchema() map[string]any {
 	return objectSchema(map[string]any{"required": []string{"amount"}, "properties": map[string]any{
 		"amount":      map[string]any{"type": "number"},
 		"date":        map[string]any{"type": "string", "description": "Default: now."},
-		"category":    map[string]any{"type": "string"},
-		"category_id": map[string]any{"type": "string"},
+		"category":    map[string]any{"type": "string", "description": "Expense category name. Provide either category or category_id (one is required)."},
+		"category_id": map[string]any{"type": "string", "description": "Expense category ID. Provide either category or category_id (one is required)."},
 		"project":     map[string]any{"type": "string"},
 		"project_id":  map[string]any{"type": "string"},
 		"task_id":     map[string]any{"type": "string"},
@@ -905,10 +911,10 @@ func requestTimeOffSchema() map[string]any {
 
 func scheduleWorkSchema() map[string]any {
 	return objectSchema(map[string]any{"required": []string{"start", "end", "hours_per_day"}, "properties": map[string]any{
-		"user":                     map[string]any{"type": "string", "description": "User name, email, or ID."},
-		"user_id":                  map[string]any{"type": "string"},
-		"project":                  map[string]any{"type": "string", "description": "Project name or ID."},
-		"project_id":               map[string]any{"type": "string"},
+		"user":                     map[string]any{"type": "string", "description": "User name, email, or ID. Provide either user or user_id (one is required)."},
+		"user_id":                  map[string]any{"type": "string", "description": "User ID. Provide either user or user_id (one is required)."},
+		"project":                  map[string]any{"type": "string", "description": "Project name or ID. Provide either project or project_id (one is required)."},
+		"project_id":               map[string]any{"type": "string", "description": "Project ID. Provide either project or project_id (one is required)."},
 		"start":                    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"end":                      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"hours_per_day":            map[string]any{"type": "number", "minimum": 0.5, "maximum": 24, "description": "Work hours per day (0.5-24)."},
@@ -926,8 +932,8 @@ func setupWebhookSchema() map[string]any {
 	return objectSchema(map[string]any{"required": []string{"name", "url"}, "properties": map[string]any{
 		"name":                map[string]any{"type": "string"},
 		"url":                 map[string]any{"type": "string"},
-		"event":               map[string]any{"type": "string", "description": "Alias for webhook_event."},
-		"webhook_event":       map[string]any{"type": "string"},
+		"event":               map[string]any{"type": "string", "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Alias for webhook_event; provide either event or webhook_event (one is required)."},
+		"webhook_event":       map[string]any{"type": "string", "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Provide either webhook_event or event (one is required)."},
 		"trigger_source_type": map[string]any{"type": "string"},
 		"trigger_source":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 		"dry_run":             map[string]any{"type": "boolean"},

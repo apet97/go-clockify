@@ -188,15 +188,22 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 		"updated_by": firstReportString(raw, "updatedBy", "updated_by"),
 		"source":     "time_off_api",
 	}
-	view["user"] = map[string]any{
-		"id":    userID,
-		"name":  firstReportString(raw, "userName", "user_name"),
-		"email": firstReportString(raw, "userEmail", "user_email"),
+	// The time-off approve/deny PATCH responses omit user and policy names;
+	// emit only the fields the upstream actually returned so the receipt
+	// carries no empty-string noise.
+	user := map[string]any{"id": userID}
+	if name := firstReportString(raw, "userName", "user_name"); name != "" {
+		user["name"] = name
 	}
-	view["policy"] = map[string]any{
-		"id":   policyID,
-		"name": firstReportString(raw, "policyName", "policy_name"),
+	if email := firstReportString(raw, "userEmail", "user_email"); email != "" {
+		user["email"] = email
 	}
+	view["user"] = user
+	policy := map[string]any{"id": policyID}
+	if name := firstReportString(raw, "policyName", "policy_name"); name != "" {
+		policy["name"] = name
+	}
+	view["policy"] = policy
 	view["period"] = firstPresent(raw, "timeOffPeriod", "time_off_period", "period")
 	view["day_period"] = firstPresent(raw, "dayPeriod", "day_period", "halfDay", "half_day")
 	view["duration"] = map[string]any{
