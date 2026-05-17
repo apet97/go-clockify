@@ -96,9 +96,8 @@ func TestInvoicePaymentsAndItemLinkage(t *testing.T) {
 		"timeEntryIds": []any{"te1", "te2"},
 		"expenseIds":   []any{"ex1"},
 	}, "USD")
-	block := item["item"].(map[string]any)
-	if got := block["time_entry_ids"].([]string); len(got) != 2 || got[0] != "te1" {
-		t.Fatalf("time entry ids not normalized: %#v", block)
+	if got := item["time_entry_ids"].([]string); len(got) != 2 || got[0] != "te1" {
+		t.Fatalf("time entry ids not normalized: %#v", item)
 	}
 	payments := invoicePaymentViewsFromRaw([]map[string]any{{"id": "pay1", "amount": 5000, "currency": "USD", "author": map[string]any{"id": "u1", "name": "Alice"}}})
 	summary := invoicePaymentSummary(payments, "USD")

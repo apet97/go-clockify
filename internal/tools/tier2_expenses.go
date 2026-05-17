@@ -517,8 +517,12 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 			return ResultEnvelope{}, err
 		}
 		form.Set("amount", strconv.FormatFloat(normalized, 'f', -1, 64))
-	} else if v, ok := existing["amount"].(float64); ok {
+	} else if v, ok := reportNumber(firstPresent(existing, "amount")); ok {
 		form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
+	} else if amount, ok := existing["amount"].(map[string]any); ok {
+		if v, ok := reportNumber(firstPresent(amount, "amount", "value", "total")); ok {
+			form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
+		}
 	}
 	if v := stringArg(args, "date"); v != "" {
 		form.Set("date", v)
@@ -527,27 +531,40 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	}
 	if v := stringArg(args, "category_id"); v != "" {
 		form.Set("categoryId", v)
-	} else if v, _ := existing["categoryId"].(string); v != "" {
+	} else if v := firstReportString(existing, "categoryId", "category_id"); v != "" {
 		form.Set("categoryId", v)
+	} else if category, ok := existing["category"].(map[string]any); ok {
+		if v := firstReportString(category, "id", "_id", "categoryId", "category_id"); v != "" {
+			form.Set("categoryId", v)
+		}
 	}
 	if v := stringArg(args, "project_id"); v != "" {
+		form.Set("projectId", v)
+	} else if v := firstReportString(existing, "projectId", "project_id"); v != "" {
 		form.Set("projectId", v)
 	}
 	if v := stringArg(args, "task_id"); v != "" {
 		form.Set("taskId", v)
+	} else if v := firstReportString(existing, "taskId", "task_id"); v != "" {
+		form.Set("taskId", v)
 	}
 	userID := stringArg(args, "user_id")
 	if userID == "" {
-		current, err := s.getCurrentUser(ctx)
-		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+		userID = firstReportString(existing, "userId", "user_id")
+		if userID == "" {
+			current, err := s.getCurrentUser(ctx)
+			if err != nil {
+				return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+			}
+			userID = current.ID
 		}
-		userID = current.ID
 	}
 	if userID != "" {
 		form.Set("userId", userID)
 	}
 	if v, ok := args["notes"].(string); ok {
+		form.Set("notes", v)
+	} else if v := firstReportString(existing, "notes", "note"); v != "" {
 		form.Set("notes", v)
 	}
 	if v, ok := args["billable"].(bool); ok {
@@ -775,9 +792,19 @@ func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any
 			Action: "clockify_delete_expense_category",
 			Data: dryrun.MinimalResult("clockify_delete_expense_category", map[string]any{
 				"category_id": catID,
+				"preflight":   "archive_then_delete",
 			}),
 			Meta: map[string]any{"workspaceId": wsID},
 		}, nil
+	}
+
+	statusPath, err := paths.Workspace(wsID, "expenses", "categories", catID, "status")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	var archived map[string]any
+	if err := s.Client.Patch(ctx, statusPath, map[string]any{"archived": true}, &archived); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("archive expense category before delete failed: %w", err)
 	}
 
 	path, err := paths.Workspace(wsID, "expenses", "categories", catID)
@@ -790,5 +817,6 @@ func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any
 	return ok("clockify_delete_expense_category", map[string]any{
 		"deleted":    true,
 		"categoryId": catID,
+		"archived":   true,
 	}, map[string]any{"workspaceId": wsID}), nil
 }

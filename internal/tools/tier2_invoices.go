@@ -37,7 +37,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 3. Export invoice
-		{Tool: toolRO("clockify_export_invoice", "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload. Defaults user_locale to en-US.", map[string]any{
+		{Tool: toolRO("clockify_export_invoice", "Export an invoice. CSV keeps the safe base64 envelope; PDF/XLSX/ZIP return contentType, filename, bytes, bodyEncoding:\"file\", and a local path. Defaults user_locale to en-US.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
@@ -120,24 +120,23 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 7. Send invoice
-		{Tool: toolRW("clockify_send_invoice", "Send the invoice email to the client. External side effect; dry_run previews without sending.", map[string]any{
+		{Tool: toolRW("clockify_send_invoice", "Explain that this Clockify API surface does not expose an invoice send-email endpoint; no external side effect occurs and the Clockify UI must send email delivery.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id": map[string]any{"type": "string"},
-				"dry_run":    map[string]any{"type": "boolean"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.sendInvoice(ctx, args)
 		}},
 
 		// 8. Mark invoice paid
-		{Tool: toolRW("clockify_mark_invoice_paid", "Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated.", map[string]any{
+		{Tool: toolRW("clockify_mark_invoice_paid", "Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id": map[string]any{"type": "string"},
-				"dry_run":    map[string]any{"type": "boolean", "description": "Preview only; returns the current invoice without updating status"},
+				"dry_run":    map[string]any{"type": "boolean", "description": "Preview only; returns the current invoice without creating a payment"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.markInvoicePaid(ctx, args)
@@ -664,7 +663,7 @@ func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[stri
 		}
 		body["amount"] = converted
 	}
-	body["paymentDate"] = args["date"]
+	body["paymentDate"] = normalizeInvoicePaymentDate(strings.TrimSpace(stringArg(args, "date")))
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
 		return ResultEnvelope{}, err
@@ -1000,37 +999,7 @@ func (s *Service) sendInvoice(ctx context.Context, args map[string]any) (ResultE
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
 		return ResultEnvelope{}, err
 	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	if dryrun.Enabled(args) {
-		path, err := paths.Workspace(wsID, "invoices", invoiceID)
-		if err != nil {
-			return ResultEnvelope{}, err
-		}
-		var invoice map[string]any
-		if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
-			return ResultEnvelope{}, err
-		}
-		return ResultEnvelope{
-			OK:     true,
-			Action: "clockify_send_invoice",
-			Data:   dryrun.WrapResult(invoice, "clockify_send_invoice"),
-			Meta:   map[string]any{"workspaceId": wsID},
-		}, nil
-	}
-
-	path, err := paths.Workspace(wsID, "invoices", invoiceID, "send")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var result map[string]any
-	if err := s.Client.Post(ctx, path, nil, &result); err != nil {
-		return ResultEnvelope{}, err
-	}
-	return ok("clockify_send_invoice", result, map[string]any{"workspaceId": wsID}), nil
+	return ResultEnvelope{}, fmt.Errorf("unsupported: Clockify does not expose an invoice send-email endpoint in this API surface; send invoice email from the Clockify UI")
 }
 
 func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -1065,11 +1034,18 @@ func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (Res
 	if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := s.patchInvoiceStatus(ctx, wsID, invoiceID, "PAID"); err != nil {
-		return ResultEnvelope{}, err
+	status := strings.ToUpper(firstReportString(invoice, "status", "invoiceStatus", "invoice_status"))
+	if status == "PAID" {
+		return ok("clockify_mark_invoice_paid", invoiceViewFromRaw(invoice), map[string]any{"workspaceId": wsID, "invoiceId": invoiceID}), nil
 	}
-	invoice["status"] = "PAID"
-	return ok("clockify_mark_invoice_paid", invoiceViewFromRaw(invoice), map[string]any{"workspaceId": wsID}), nil
+	return ResultEnvelope{}, fmt.Errorf("invoice %s is not paid yet; create a payment with clockify_invoices_payments_create using invoice_id, amount, and date, then reload the invoice", invoiceID)
+}
+
+func normalizeInvoicePaymentDate(raw string) string {
+	if raw == "" || strings.Contains(raw, "T") {
+		return raw
+	}
+	return raw + "T00:00:00Z"
 }
 
 func (s *Service) patchInvoiceStatus(ctx context.Context, wsID, invoiceID, status string) error {

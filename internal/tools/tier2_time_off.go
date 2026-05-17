@@ -63,11 +63,10 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 4. clockify_update_time_off_request (RW)
 		{
 			Tool: toolRW("clockify_update_time_off_request",
-				"Update an existing time off request, including approval status when supplied.",
+				"Update an existing time off request approval status.",
 				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
-					"note":       map[string]any{"type": "string"},
 					"status": map[string]any{
 						"type":        "string",
 						"description": "Status to set via Clockify's PATCH route",
@@ -261,13 +260,17 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_requests", timeOffRequestViewsFromRaw(envelope.Requests), emptyListMeta(map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Requests),
 		"total":       envelope.Count,
 		"page":        page,
 		"pageSize":    pageSize,
-	}, "clockify_request_time_off")), nil
+	}, args, page, pageSize)
+	if envelope.Count > 0 {
+		meta["has_more"] = page*pageSize < envelope.Count
+	}
+	return ok("clockify_list_time_off_requests", timeOffRequestViewsFromRaw(envelope.Requests), emptyListMeta(meta, "clockify_request_time_off")), nil
 }
 
 func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -407,16 +410,12 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 	}
 
 	body := map[string]any{}
-	changed := make([]string, 0, 2)
-	note := stringArg(args, "note")
-	if note != "" {
-		changed = append(changed, "note")
-	}
+	changed := make([]string, 0, 1)
 	if status := stringArg(args, "status"); status != "" {
 		if status != "APPROVED" && status != "REJECTED" {
 			return ResultEnvelope{}, fmt.Errorf("status must be APPROVED or REJECTED; got %q", status)
 		}
-		body = timeOffRequestStatusBody(status, note)
+		body = timeOffRequestStatusBody(status, "")
 		changed = append(changed, "status")
 	}
 	if _, ok := body["status"]; !ok {
@@ -592,10 +591,11 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 }
 
 func timeOffRequestStatusBody(status, note string) map[string]any {
-	return map[string]any{
-		"status": status,
-		"note":   note,
+	body := map[string]any{"status": status}
+	if strings.TrimSpace(note) != "" {
+		body["note"] = note
 	}
+	return body
 }
 
 func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -620,14 +620,13 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_policies", compactTimeOffPolicyViewsFromRaw(policies), emptyListMeta(map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(policies),
-		"total":       len(policies),
 		"page":        page,
 		"pageSize":    pageSize,
-		"has_more":    len(policies) == pageSize,
-	}, "clockify_time_off_policies_create")), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_time_off_policies", compactTimeOffPolicyViewsFromRaw(policies), emptyListMeta(meta, "clockify_time_off_policies_create")), nil
 }
 
 func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

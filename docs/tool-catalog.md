@@ -101,8 +101,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_create` | `domain` | no | no | no | yes | `write`, `billing` | Create a new invoice for a client. Supports dry_run:true. |
 | `clockify_invoices_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true. |
 | `clockify_invoices_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an invoice permanently by ID. Supports dry_run preview. |
-| `clockify_invoices_send` | `domain` | no | no | no | yes | `write`, `billing`, `external_side_effect` | Send the invoice email to the client. External side effect; dry_run previews without sending. |
-| `clockify_invoices_mark_paid` | `domain` | no | no | no | yes | `write`, `billing` | Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated. |
+| `clockify_invoices_send` | `domain` | no | no | no | no | `write`, `billing`, `external_side_effect` | Explain that this Clockify API surface does not expose an invoice send-email endpoint; no external side effect occurs and the Clockify UI must send email delivery. |
+| `clockify_invoices_mark_paid` | `domain` | no | no | no | yes | `write`, `billing` | Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create. |
 | `clockify_invoices_items_list` | `domain` | yes | no | yes | no | `read` | List items for an invoice |
 | `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:"major" to enter the value in major currency units and let the MCP multiply by 100 before the POST. |
 | `clockify_invoices_items_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an invoice item by line index. unit_price uses the same unit convention as add_invoice_item: minor units by default, opt into major units via unit_price_unit:"major". |
@@ -129,7 +129,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_time_off_requests_list` | `domain` | yes | no | yes | no | `read` | List time off requests with optional status filter |
 | `clockify_time_off_requests_get` | `domain` | yes | no | yes | no | `read` | Get a time off request by policy ID and request ID |
 | `clockify_time_off_requests_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a time off request under a policy. Changes leave balances/approval workflow. |
-| `clockify_time_off_requests_update` | `domain` | no | no | no | yes | `write`, `admin` | Update an existing time off request, including approval status when supplied. |
+| `clockify_time_off_requests_update` | `domain` | no | no | no | yes | `write`, `admin` | Update an existing time off request approval status. |
 | `clockify_time_off_requests_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview. |
 | `clockify_time_off_approve` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request and update its approval state. |
 | `clockify_time_off_deny` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request and update its approval state. |
@@ -156,7 +156,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_webhooks_create` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook subscription that delivers Clockify events to an external URL. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
 | `clockify_webhooks_update` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Update an existing webhook subscription. Changes affect every future outbound delivery to the configured URL. Supports dry_run:true. |
 | `clockify_webhooks_delete` | `domain` | no | yes | no | yes | `external_side_effect`, `destructive` | Permanently delete a webhook subscription. Destructive: stops all future outbound deliveries to the configured URL. Supports dry_run preview. |
-| `clockify_webhooks_test` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending. |
+| `clockify_webhooks_test` | `domain` | no | no | no | no | `write`, `external_side_effect` | Explain that Clockify does not expose a webhook test delivery/test-send endpoint; no external side effect occurs, so trigger a real event or inspect delivery logs in the Clockify UI. |
 | `clockify_webhooks_events` | `domain` | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | `domain` | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
 | `clockify_groups_get` | `domain` | yes | no | yes | no | `read` | Get a user group by ID |
@@ -171,12 +171,12 @@ prefer the documented format on each tool descriptor.
 | `clockify_holidays_delete` | `domain` | no | yes | no | yes | `destructive` | Delete a holiday by ID (supports dry_run preview) |
 | `clockify_users_deactivate` | `domain` | no | no | no | yes | `write`, `admin` | Deactivate a workspace user and remove access. Supports dry_run preview. |
 | `clockify_users_role` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Update a user's workspace role. Supports dry_run:true. |
-| `clockify_projects_memberships_list` | `domain` | yes | no | yes | no | `read` | List project memberships. |
+| `clockify_projects_memberships_list` | `domain` | yes | no | yes | no | `read` | List project memberships from the hydrated project record. |
 | `clockify_reports_attendance` | `domain` | yes | no | yes | no | `read` | Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
 | `clockify_reports_money` | `domain` | yes | no | yes | no | `read` | Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
 | `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. |
-| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes. |
-| `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:"base64", base64Bytes, truncated:false, and body with the base64 payload. |
+| `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON/CSV return contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:"file" and path. Amounts are minor units. |
+| `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export an invoice. CSV returns contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:"file" and path. |
 | `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids. |
 | `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List invoice payments. |

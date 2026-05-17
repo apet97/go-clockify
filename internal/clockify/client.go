@@ -192,6 +192,10 @@ func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[str
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, nil)
 }
 
+func (c *Client) DeleteWithBody(ctx context.Context, path string, body any, out any) error {
+	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, body, out)
+}
+
 // RequestRawValues runs a request against a documented host and returns the
 // raw response bytes and headers instead of unmarshalling JSON.
 func (c *Client) RequestRawValues(ctx context.Context, reportsHost bool, method, path string, query url.Values, body any) (*RawResponse, error) {

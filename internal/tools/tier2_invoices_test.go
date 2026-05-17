@@ -2,10 +2,10 @@ package tools
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -101,9 +101,10 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	res, err = svc.exportInvoice(ctx, map[string]any{"invoice_id": "inv1"})
 	mustOK(t, res, err, "clockify_export_invoice")
 	raw, ok := res.Data.(map[string]any)
-	if !ok || raw["body"] != base64.StdEncoding.EncodeToString([]byte("%PDF invoice")) {
+	if !ok {
 		t.Fatalf("exportInvoice data = %#v", res.Data)
 	}
+	assertRawFileEnvelope(t, raw, "document.pdf", []byte("%PDF invoice"))
 	if raw["contentType"] != "application/pdf" || raw["filename"] != "document.pdf" {
 		t.Fatalf("exportInvoice MIME inference failed: %#v", raw)
 	}
@@ -167,13 +168,16 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		t.Fatal("expected validation error for empty invoice_id")
 	}
 
-	// 6a. sendInvoice dry-run
-	res, err = svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true})
-	mustOK(t, res, err, "clockify_send_invoice")
+	// 6a. sendInvoice dry-run — API surface is unsupported, so even a preview
+	// returns recovery guidance instead of pretending a send endpoint exists.
+	if _, err = svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true}); err == nil || !strings.Contains(err.Error(), "does not expose") {
+		t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
+	}
 
 	// 6b. sendInvoice executed
-	res, err = svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_send_invoice")
+	if _, err = svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "does not expose") {
+		t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
+	}
 
 	// 6c. sendInvoice validation
 	if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
@@ -190,9 +194,11 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 		}
 	}
 
-	// 7b. markInvoicePaid executed
-	res, err = svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_mark_invoice_paid")
+	// 7b. markInvoicePaid executed — direct status mutation is not the
+	// documented paid path; guide callers to creating a payment instead.
+	if _, err = svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "clockify_invoices_payments_create") {
+		t.Fatalf("expected payment-create recovery guidance, got %v", err)
+	}
 
 	// 7c. markInvoicePaid validation
 	if _, err := svc.markInvoicePaid(ctx, map[string]any{"invoice_id": ""}); err == nil {
@@ -320,9 +326,7 @@ func TestExportInvoiceOneUserDefaultsUserLocale(t *testing.T) {
 	if !ok {
 		t.Fatalf("export data type = %T, want map[string]any", res.Data)
 	}
-	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != 16 || data["truncated"] != false {
-		t.Fatalf("binary invoice export metadata missing safe content sizing: %#v", data)
-	}
+	assertRawFileEnvelope(t, data, "document.pdf", []byte("%PDF invoice"))
 }
 
 // TestTier2_Invoices_ListSendsStatusesNotStatus pins SUMMARY #10:
@@ -359,8 +363,7 @@ func TestTier2_Invoices_ListSendsStatusesNotStatus(t *testing.T) {
 	}
 }
 
-func TestMarkInvoicePaidUsesStatusPatchBody(t *testing.T) {
-	var gotPatchBody map[string]any
+func TestMarkInvoicePaidReturnsPaymentGuidanceWhenUnpaid(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/invoices/inv1":
@@ -375,10 +378,7 @@ func TestMarkInvoicePaidUsesStatusPatchBody(t *testing.T) {
 				"status":     "SENT",
 			})
 		case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/ws1/invoices/inv1/status":
-			if err := json.NewDecoder(r.Body).Decode(&gotPatchBody); err != nil {
-				t.Fatalf("decode body: %v", err)
-			}
-			respondJSON(t, w, map[string]any{"ok": true})
+			t.Fatalf("markInvoicePaid must guide through payments, not PATCH status")
 		case r.Method == http.MethodPut:
 			t.Fatalf("markInvoicePaid must use PATCH status route, not PUT")
 		default:
@@ -388,14 +388,9 @@ func TestMarkInvoicePaidUsesStatusPatchBody(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	res, err := svc.markInvoicePaid(context.Background(), map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_mark_invoice_paid")
-
-	if gotPatchBody["invoiceStatus"] != "PAID" {
-		t.Fatalf("expected invoiceStatus=PAID patch body, got %#v", gotPatchBody)
-	}
-	if _, ok := gotPatchBody["status"]; ok {
-		t.Fatalf("status patch body must not use legacy status key: %#v", gotPatchBody)
+	_, err := svc.markInvoicePaid(context.Background(), map[string]any{"invoice_id": "inv1"})
+	if err == nil || !strings.Contains(err.Error(), "clockify_invoices_payments_create") {
+		t.Fatalf("expected payment-create recovery guidance, got %v", err)
 	}
 }
 
@@ -709,9 +704,10 @@ func TestExportInvoiceDefaultsUserLocale(t *testing.T) {
 		t.Fatalf("expected default userLocale=en-US, got %q", got)
 	}
 	data, ok := res.Data.(map[string]any)
-	if !ok || data["body"] != base64.StdEncoding.EncodeToString([]byte("%PDF default locale")) {
-		t.Fatalf("expected base64 raw export envelope, got %#v", res.Data)
+	if !ok {
+		t.Fatalf("expected raw export envelope, got %#v", res.Data)
 	}
+	assertRawFileEnvelope(t, data, "document.pdf", []byte("%PDF default locale"))
 }
 
 func TestInvoiceItemBodiesUseCamelCaseAndApplyTaxesDefault(t *testing.T) {
@@ -1213,5 +1209,30 @@ func mustOK(t *testing.T, res ResultEnvelope, err error, wantAction string) {
 	}
 	if res.Action != wantAction {
 		t.Fatalf("%s wrong action: got %s", wantAction, res.Action)
+	}
+}
+
+func assertRawFileEnvelope(t *testing.T, data map[string]any, wantFilename string, wantBody []byte) {
+	t.Helper()
+	if data["bodyEncoding"] != "file" || data["truncated"] != false {
+		t.Fatalf("expected file raw export envelope, got %#v", data)
+	}
+	if data["filename"] != wantFilename {
+		t.Fatalf("filename = %v, want %s: %#v", data["filename"], wantFilename, data)
+	}
+	if gotBytes, ok := reportInt(data["bytes"]); !ok || gotBytes != len(wantBody) {
+		t.Fatalf("bytes = %v, want %d: %#v", data["bytes"], len(wantBody), data)
+	}
+	path, ok := data["path"].(string)
+	if !ok || path == "" {
+		t.Fatalf("missing file path in raw export envelope: %#v", data)
+	}
+	t.Cleanup(func() { _ = os.Remove(path) })
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read raw export path %q: %v", path, err)
+	}
+	if string(got) != string(wantBody) {
+		t.Fatalf("file body = %q, want %q", got, wantBody)
 	}
 }

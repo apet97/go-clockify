@@ -403,27 +403,28 @@ func approvalSuggestedActions(view ApprovalView) []ToolSuggestion {
 		switch action {
 		case "approve":
 			suggestions = append(suggestions, ToolSuggestion{
-				Tool:      "clockify_approve_timesheet",
+				Tool:      "clockify_approvals_approve",
 				Reason:    "Approve this pending approval request.",
 				Arguments: map[string]any{"approval_id": view.ID},
 			})
 		case "reject":
 			suggestions = append(suggestions, ToolSuggestion{
-				Tool:      "clockify_reject_timesheet",
+				Tool:      "clockify_approvals_reject",
 				Reason:    "Reject this pending approval request with a note.",
 				Arguments: map[string]any{"approval_id": view.ID},
 			})
 		case "withdraw":
 			suggestions = append(suggestions, ToolSuggestion{
-				Tool:      "clockify_withdraw_approval",
+				Tool:      "clockify_approvals_withdraw",
 				Reason:    "Withdraw this approval request if it should not remain submitted.",
 				Arguments: map[string]any{"approval_id": view.ID},
 			})
 		case "resubmit":
 			suggestions = append(suggestions, ToolSuggestion{
-				Tool:        "clockify_resubmit_for_approval",
+				Tool:        "clockify_approvals_resubmit",
 				Reason:      "Resubmit the relevant period after fixing rejected or withdrawn entries.",
-				MissingArgs: []string{"period", "period_start"},
+				Arguments:   map[string]any{"approval_id": view.ID},
+				MissingArgs: []string{"entry_ids"},
 			})
 		}
 	}

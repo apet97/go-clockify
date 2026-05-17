@@ -554,9 +554,8 @@ func TestGetTimeOffRequestUsesBareRequestEndpointAndNormalizesStructuredStatus(t
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
-	request, ok := data["request"].(map[string]any)
-	if !ok || request["status"] != "PENDING" {
-		t.Fatalf("expected normalized request status PENDING, got %#v", data["request"])
+	if data["status"] != "PENDING" {
+		t.Fatalf("expected normalized request status PENDING, got %#v", data["status"])
 	}
 }
 
@@ -643,9 +642,8 @@ func TestGetTimeOffRequestSearchesApprovedRequestsWhenBareEndpointMisses(t *test
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
-	request, ok := data["request"].(map[string]any)
-	if !ok || request["status"] != "APPROVED" {
-		t.Fatalf("expected fallback-approved request, got %#v", data["request"])
+	if data["status"] != "APPROVED" {
+		t.Fatalf("expected fallback-approved request, got %#v", data["status"])
 	}
 }
 
@@ -1197,8 +1195,8 @@ func TestUpdateTimeOffRequestPatchesBareRequestPath(t *testing.T) {
 	if gotBody["status"] != "APPROVED" {
 		t.Fatalf("expected status APPROVED in body, got %#v", gotBody)
 	}
-	if gotBody["note"] != "Approved after manager review" {
-		t.Fatalf("expected note in body, got %#v", gotBody)
+	if _, ok := gotBody["note"]; ok {
+		t.Fatalf("time-off status patch body must not include removed note field, got %#v", gotBody)
 	}
 }
 
@@ -1229,8 +1227,8 @@ func TestUpdateTimeOffRequestIncludesEmptyNoteForStatusPatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update time off request failed: %v", err)
 	}
-	if gotBody["note"] != "" {
-		t.Fatalf("status patch body must include canonical required note field, got %#v", gotBody)
+	if _, ok := gotBody["note"]; ok {
+		t.Fatalf("status patch body must omit removed note field, got %#v", gotBody)
 	}
 }
 
@@ -1355,8 +1353,8 @@ func TestApproveTimeOffIncludesEmptyNoteForCanonicalStatusBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("approve time off failed: %v", err)
 	}
-	if gotBody["note"] != "" {
-		t.Fatalf("status patch body must include canonical required note field, got %#v", gotBody)
+	if _, ok := gotBody["note"]; ok {
+		t.Fatalf("status patch body must omit removed note field, got %#v", gotBody)
 	}
 }
 

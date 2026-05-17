@@ -170,7 +170,7 @@ func TestApprovalViewNormalizesDurationsMoneyExpensesAndClients(t *testing.T) {
 	if view.EntrySummary.Count != 1 || len(view.ClientSummary) != 1 || view.ClientSummary[0].Client.ID != "c1" {
 		t.Fatalf("entry/client summaries not normalized: entries=%#v clients=%#v", view.EntrySummary, view.ClientSummary)
 	}
-	if len(view.SuggestedActions) == 0 || view.SuggestedActions[0].Tool != "clockify_approve_timesheet" {
+	if len(view.SuggestedActions) == 0 || view.SuggestedActions[0].Tool != "clockify_approvals_approve" {
 		t.Fatalf("suggested actions not populated: %#v", view.SuggestedActions)
 	}
 }

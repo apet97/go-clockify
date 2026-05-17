@@ -17,8 +17,8 @@ func TestOneUserToolDescriptionsCallOutOperationalSideEffects(t *testing.T) {
 	}
 
 	cases := map[string][]string{
-		"clockify_invoices_send":            {"send", "email", "external side effect", "dry_run"},
-		"clockify_webhooks_test":            {"test delivery", "external side effect", "dry_run"},
+		"clockify_invoices_send":            {"does not expose", "email", "external side effect", "clockify ui"},
+		"clockify_webhooks_test":            {"test delivery", "does not expose", "external side effect", "real event"},
 		"clockify_users_invite":             {"invite", "email", "external side effect", "dry_run"},
 		"clockify_invoices_delete":          {"delete", "dry_run"},
 		"clockify_webhooks_delete":          {"delete", "destructive", "dry_run"},
@@ -63,7 +63,7 @@ func TestOneUserBinaryExportToolDescriptionsNameSafeEnvelope(t *testing.T) {
 			t.Fatalf("missing tool %s", name)
 		}
 		desc := strings.ToLower(tool.Description)
-		for _, term := range []string{"contenttype", "filename", "bytes", "bodyencoding", "base64bytes", "truncated:false", "body", "base64 payload"} {
+		for _, term := range []string{"contenttype", "filename", "bytes", "bodyencoding", "base64bytes", "truncated:false", "body", "base64 payload", "path"} {
 			if !strings.Contains(desc, term) {
 				t.Fatalf("%s description %q missing safe envelope term %q", name, tool.Description, term)
 			}
@@ -83,6 +83,27 @@ func TestOneUserWorkflowAnnotationsGiveActionableRoutingHints(t *testing.T) {
 		}
 		if _, ok := descriptor.Tool.Annotations["preferOver"].([]string); !ok {
 			t.Fatalf("%s missing preferOver annotation: %+v", descriptor.Tool.Name, descriptor.Tool.Annotations)
+		}
+	}
+}
+
+func TestOneUserSuggestedActionsReferenceRegisteredTools(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	registered := map[string]bool{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		registered[descriptor.Tool.Name] = true
+	}
+
+	suggestions := approvalSuggestedActions(ApprovalView{
+		ID:      "65b382b606de527a7ee2b610",
+		Actions: []string{"approve", "reject", "withdraw", "resubmit"},
+	})
+	if len(suggestions) != 4 {
+		t.Fatalf("suggestions = %d, want 4: %+v", len(suggestions), suggestions)
+	}
+	for _, suggestion := range suggestions {
+		if !registered[suggestion.Tool] {
+			t.Fatalf("suggested action references unregistered tool %q: %+v", suggestion.Tool, suggestion)
 		}
 	}
 }

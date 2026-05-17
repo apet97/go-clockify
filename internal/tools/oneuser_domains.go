@@ -519,18 +519,17 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 }
 
 func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
-	specs := []routeTool{
-		rt(39, "GET", "clockify_projects_memberships_list", "List project memberships.", "projects/{project_id}/memberships", "membership", []string{"project_id"}, nil, nil, nil, true, false, false, ""),
-	}
-	out := make([]mcp.ToolDescriptor, 0, len(specs))
-	for _, spec := range specs {
-		out = append(out, s.nativeRouteDescriptor(spec))
+	out := []mcp.ToolDescriptor{
+		nativeDomainTool(39, toolRO("clockify_projects_memberships_list", "List project memberships from the hydrated project record.", objectSchema(map[string]any{
+			"required":   []string{"project_id"},
+			"properties": map[string]any{"project_id": map[string]any{"type": "string", "description": "Project ID"}},
+		})), "membership", "", s.ListProjectMemberships),
 	}
 	out = append(out,
 		nativeDomainTool(100, toolRO("clockify_reports_attendance", "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.AttendanceReport),
 		nativeDomainTool(101, toolRO("clockify_reports_money", "Run the money summary report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.MoneyReport),
 		nativeDomainTool(102, toolRO("clockify_reports_expense", "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.ExpenseReport),
-		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes.", reportInputSchema()), "report", "", s.DetailedReport),
+		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON/CSV return contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.", reportInputSchema()), "report", "", s.DetailedReport),
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
@@ -546,7 +545,7 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 
 func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.", objectSchema(map[string]any{
+		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice. CSV returns contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path.", objectSchema(map[string]any{
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string", "description": "Invoice ID"},
@@ -618,7 +617,7 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 			},
 		})), "scheduling", "", s.schedulingCapacityOneUser),
 		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{
-			"required": []string{"approval_id"},
+			"required": []string{"approval_id", "entry_ids"},
 			"properties": map[string]any{
 				"approval_id": map[string]any{"type": "string", "description": "Approval request ID"},
 				"entry_ids":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Time entry IDs to resubmit"},
@@ -645,6 +644,7 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 	}
 }
 
+//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
 func (s *Service) nativeRouteDescriptor(spec routeTool) mcp.ToolDescriptor {
 	descriptor := s.routeDescriptor(spec)
 	descriptor.Tool.Annotations["handlerKind"] = "native handler"
@@ -772,6 +772,7 @@ func aliasHandler(action, entity, change string, handler func(context.Context, m
 	}
 }
 
+//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
 func (s *Service) routeDescriptor(spec routeTool) mcp.ToolDescriptor {
 	schema := objectSchema(map[string]any{
 		"required":   spec.Required,
@@ -799,6 +800,7 @@ func (s *Service) routeDescriptor(spec routeTool) mcp.ToolDescriptor {
 	})
 }
 
+//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
 func (s *Service) callRouteTool(ctx context.Context, spec routeTool, args map[string]any) (any, error) {
 	for _, key := range spec.Required {
 		if _, ok := args[key]; !ok {
@@ -938,6 +940,7 @@ func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultE
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
+//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
 func routePath(workspaceID string, spec routeTool, args map[string]any) (string, map[string]string, error) {
 	ids := map[string]string{"workspaceId": workspaceID}
 	segments := strings.Split(strings.Trim(spec.Path, "/"), "/")
@@ -958,6 +961,7 @@ func routePath(workspaceID string, spec routeTool, args map[string]any) (string,
 	return path, ids, err
 }
 
+//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
 func resolveRouteSegment(segment string, args map[string]any) (string, map[string]string, error) {
 	ids := map[string]string{}
 	for {
@@ -1209,6 +1213,17 @@ func idsFromData(data any, entity string) map[string]string {
 		addEntityIDFromMap(out, entity, map[string]any(m))
 	case AssignmentView:
 		addEntityIDFromMap(out, entity, map[string]any(m))
+	case ApprovalView:
+		if m.ID != "" {
+			out["approvalId"] = m.ID
+		}
+	case []ApprovalView:
+		for _, item := range m {
+			if item.ID != "" {
+				out["approvalId"] = item.ID
+				break
+			}
+		}
 	case WebhookLogView:
 		addEntityIDFromMap(out, entity, map[string]any(m))
 	case []map[string]any:

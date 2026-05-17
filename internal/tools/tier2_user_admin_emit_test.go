@@ -60,12 +60,12 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 			if body["entityId"] != wsID {
 				t.Fatalf("role POST body missing entityId=%q, got %#v", wsID, body)
 			}
-			if body["role"] != "PROJECT_MANAGER" {
-				t.Fatalf("role POST body role=%v, want PROJECT_MANAGER", body["role"])
+			if body["role"] != "WORKSPACE_ADMIN" {
+				t.Fatalf("role POST body role=%v, want WORKSPACE_ADMIN", body["role"])
 			}
-			respondJSON(t, w, map[string]any{"id": userID, "role": "PROJECT_MANAGER"})
+			respondJSON(t, w, map[string]any{"id": userID, "role": "WORKSPACE_ADMIN"})
 		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/users/"+userID):
-			respondJSON(t, w, map[string]any{"id": userID, "role": "PROJECT_MANAGER", "status": "ACTIVE"})
+			respondJSON(t, w, map[string]any{"id": userID, "role": "WORKSPACE_ADMIN", "status": "ACTIVE"})
 		default:
 			http.NotFound(w, r)
 		}
@@ -78,7 +78,7 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 
 	_, err := svc.UpdateUserRole(context.Background(), map[string]any{
 		"user_id": userID,
-		"role":    "PROJECT_MANAGER",
+		"role":    "WORKSPACE_ADMIN",
 	})
 	if err != nil {
 		t.Fatalf("UpdateUserRole: %v", err)
@@ -97,51 +97,51 @@ func TestUpdateUserRoleEmitsUserURI(t *testing.T) {
 	}
 }
 
-// TestUpdateUserRoleREGULARReturnsAccurateError verifies that calling
-// UpdateUserRole with role=REGULAR returns a clear error explaining that
-// REGULAR strips elevated grants (not removes the user), why the MCP cannot
-// do it yet, and that clockify_deactivate_user is NOT a substitute.
-// No HTTP call should be made.
-func TestUpdateUserRoleREGULARReturnsAccurateError(t *testing.T) {
+// TestUpdateUserRoleREGULARDeletesExplicitElevatedGrant verifies that
+// role=REGULAR strips elevated grants with Clockify's DELETE-with-body role
+// endpoint instead of treating REGULAR as a direct assignable role.
+func TestUpdateUserRoleREGULARDeletesExplicitElevatedGrant(t *testing.T) {
 	const userID = "u1"
 	const wsID = "w1"
 
-	called := false
+	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		called = true
-		http.Error(w, "should not be called", http.StatusInternalServerError)
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			respondJSON(t, w, map[string]any{"id": "self-admin", "name": "Admin"})
+		case r.Method == http.MethodDelete && strings.HasSuffix(r.URL.Path, "/users/"+userID+"/roles"):
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode role DELETE body: %v", err)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
 	})
 	defer cleanup()
 
 	svc := New(client, wsID)
 
-	_, err := svc.UpdateUserRole(context.Background(), map[string]any{
+	res, err := svc.UpdateUserRole(context.Background(), map[string]any{
 		"user_id": userID,
 		"role":    "REGULAR",
+		"role_grants": []any{map[string]any{
+			"role":      "WORKSPACE_ADMIN",
+			"entity_id": wsID,
+		}},
 	})
-	if err == nil {
-		t.Fatal("expected an error for role=REGULAR, got nil")
+	if err != nil {
+		t.Fatalf("UpdateUserRole REGULAR: %v", err)
 	}
-	msg := err.Error()
-
-	// Must describe what REGULAR actually does (strips elevated grants).
-	if !strings.Contains(msg, "strips") && !strings.Contains(msg, "elevated") {
-		t.Errorf("error message must mention 'strips' or 'elevated'; got: %q", msg)
+	if !res.OK {
+		t.Fatalf("expected ok result: %+v", res)
 	}
-
-	// Must explicitly state clockify_deactivate_user is NOT a substitute.
-	if !strings.Contains(msg, "NOT a substitute") {
-		t.Errorf("error message must contain 'NOT a substitute'; got: %q", msg)
+	if gotBody["role"] != "WORKSPACE_ADMIN" || gotBody["entityId"] != wsID {
+		t.Fatalf("DELETE role body = %#v, want WORKSPACE_ADMIN/%s", gotBody, wsID)
 	}
-
-	// Must NOT recommend clockify_deactivate_user as the right tool.
-	if strings.Contains(msg, "use clockify_deactivate_user") {
-		t.Errorf("error message must not recommend 'use clockify_deactivate_user'; got: %q", msg)
-	}
-
-	// No HTTP call should have been made.
-	if called {
-		t.Error("no upstream HTTP call should be made for role=REGULAR")
+	data, ok := res.Data.(map[string]any)
+	if !ok || data["role"] != "REGULAR" {
+		t.Fatalf("unexpected REGULAR response data: %#v", res.Data)
 	}
 }
 

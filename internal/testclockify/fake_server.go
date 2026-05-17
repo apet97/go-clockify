@@ -165,6 +165,27 @@ func (s *Server) handleClients(w http.ResponseWriter, r *http.Request, parts []s
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	if len(parts) == 4 && r.Method == http.MethodPut {
+		client, ok := s.clients[parts[3]]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid client body"}`, http.StatusBadRequest)
+			return
+		}
+		if name, ok := body["name"].(string); ok && strings.TrimSpace(name) != "" {
+			client.Name = name
+		}
+		if archived, ok := body["archived"].(bool); ok {
+			client.Archived = archived
+		}
+		s.clients[client.ID] = client
+		writeJSON(w, client)
+		return
+	}
 	if len(parts) == 4 && r.Method == http.MethodGet {
 		client, ok := s.clients[parts[3]]
 		if !ok {
@@ -211,6 +232,27 @@ func (s *Server) handleProjects(w http.ResponseWriter, r *http.Request, parts []
 		delete(s.projects, parts[3])
 		delete(s.tasks, parts[3])
 		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if len(parts) == 4 && r.Method == http.MethodPut {
+		project, ok := s.projects[parts[3]]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid project body"}`, http.StatusBadRequest)
+			return
+		}
+		if name, ok := body["name"].(string); ok && strings.TrimSpace(name) != "" {
+			project.Name = name
+		}
+		if archived, ok := body["archived"].(bool); ok {
+			project.Archived = archived
+		}
+		s.projects[project.ID] = project
+		writeJSON(w, project)
 		return
 	}
 	if len(parts) == 4 && r.Method == http.MethodGet {
@@ -265,6 +307,30 @@ func (s *Server) handleTasksLocked(w http.ResponseWriter, r *http.Request, parts
 	if len(parts) == 6 && r.Method == http.MethodDelete {
 		delete(s.tasks[projectID], parts[5])
 		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if len(parts) == 6 && r.Method == http.MethodPut {
+		task, ok := s.tasks[projectID][parts[5]]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		var body map[string]any
+		if err := decode(r, &body); err != nil {
+			http.Error(w, `{"message":"invalid task body"}`, http.StatusBadRequest)
+			return
+		}
+		if name, ok := body["name"].(string); ok && strings.TrimSpace(name) != "" {
+			task.Name = name
+		}
+		if billable, ok := body["billable"].(bool); ok {
+			task.Billable = billable
+		}
+		if status, ok := body["status"].(string); ok {
+			task.Status = status
+		}
+		s.tasks[projectID][task.ID] = task
+		writeJSON(w, task)
 		return
 	}
 	if len(parts) == 6 && r.Method == http.MethodGet {

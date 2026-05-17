@@ -161,6 +161,13 @@ func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]a
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
+	entryIDs, found, err := strictStringSliceArg(args, "entry_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if !found || len(entryIDs) == 0 {
+		return ResultEnvelope{}, fmt.Errorf("entry_ids is required and must contain at least one time entry ID")
+	}
 	if err := requirePresentArgs(args, "entry_ids", "expense_ids", "note"); err != nil {
 		return ResultEnvelope{}, err
 	}

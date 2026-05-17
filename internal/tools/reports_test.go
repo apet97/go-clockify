@@ -707,12 +707,10 @@ func TestReportsAPIBinaryExportEnvelope(t *testing.T) {
 		t.Fatalf("exportType = %v, want PDF", gotBody["exportType"])
 	}
 	data := result.Data.(map[string]any)
-	if data["filename"] != "summary.pdf" || data["bytes"] != float64(len("pdf-bytes")) && data["bytes"] != len("pdf-bytes") {
+	if data["filename"] != "summary.pdf" {
 		t.Fatalf("unexpected binary envelope: %#v", data)
 	}
-	if data["bodyEncoding"] != "base64" || data["base64Bytes"] != 12 || data["truncated"] != false {
-		t.Fatalf("binary export metadata missing safe content sizing: %#v", data)
-	}
+	assertRawFileEnvelope(t, data, "summary.pdf", []byte("pdf-bytes"))
 	if result.Meta["binary"] != true || result.Meta["source"] != "reports-api" {
 		t.Fatalf("unexpected binary meta: %#v", result.Meta)
 	}

@@ -6442,14 +6442,14 @@
               "approval": {},
               "category": {},
               "categoryId": {},
+              "currency": {},
               "date": {},
               "entities": {},
-              "expense": {},
+              "has_file": {},
               "id": {},
               "invoicing": {},
               "notes": {},
               "projectId": {},
-              "raw": {},
               "receipt": {},
               "status": {},
               "taskId": {},
@@ -6735,8 +6735,7 @@
               "period": {},
               "policy": {},
               "policyId": {},
-              "raw": {},
-              "request": {},
+              "requestId": {},
               "status": {},
               "suggestedActions": {},
               "user": {},
@@ -12125,10 +12124,6 @@
                 ],
                 "type": "object"
               },
-              "raw": {
-                "additionalProperties": {},
-                "type": "object"
-              },
               "time_summary": {
                 "additionalProperties": false,
                 "properties": {
@@ -12791,10 +12786,6 @@
                 "required": [
                   "count"
                 ],
-                "type": "object"
-              },
-              "raw": {
-                "additionalProperties": {},
                 "type": "object"
               },
               "time_summary": {
@@ -24765,13 +24756,13 @@
     },
     {
       "name": "clockify_invoices_send",
-      "description": "Send the invoice email to the client. External side effect; dry_run previews without sending.",
+      "description": "Explain that this Clockify API surface does not expose an invoice send-email endpoint; no external side effect occurs and the Clockify UI must send email delivery.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": true,
+      "dry_run": false,
       "risk_class": [
         "write",
         "billing",
@@ -24783,10 +24774,6 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "dry_run": {
-            "description": "Preview the resolved request without making changes.",
-            "type": "boolean"
-          },
           "invoice_id": {
             "type": "string"
           }
@@ -25008,7 +24995,7 @@
       "annotations": {
         "category": "domain",
         "destructiveHint": false,
-        "dryRun": true,
+        "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -25024,7 +25011,7 @@
     },
     {
       "name": "clockify_invoices_mark_paid",
-      "description": "Mark an invoice as paid using the live PATCH status route. Supports dry_run:true to preview the invoice that would be updated.",
+      "description": "Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -32705,7 +32692,7 @@
     },
     {
       "name": "clockify_time_off_requests_update",
-      "description": "Update an existing time off request, including approval status when supplied.",
+      "description": "Update an existing time off request approval status.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -32729,10 +32716,6 @@
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
-          },
-          "note": {
-            "maxLength": 500,
-            "type": "string"
           },
           "policy_id": {
             "type": "string"
@@ -40133,13 +40116,13 @@
     },
     {
       "name": "clockify_webhooks_test",
-      "description": "Send a test delivery to a webhook. The /test POST is an external side effect (the configured target receives the test payload), so dry_run:true is supported and returns the current webhook record without sending.",
+      "description": "Explain that Clockify does not expose a webhook test delivery/test-send endpoint; no external side effect occurs, so trigger a real event or inspect delivery logs in the Clockify UI.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": true,
+      "dry_run": false,
       "risk_class": [
         "write",
         "external_side_effect"
@@ -40150,10 +40133,6 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "dry_run": {
-            "description": "Preview the resolved request without making changes.",
-            "type": "boolean"
-          },
           "webhook_id": {
             "description": "Webhook ID to test",
             "type": "string"
@@ -40375,7 +40354,7 @@
       "annotations": {
         "category": "domain",
         "destructiveHint": false,
-        "dryRun": true,
+        "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -43800,6 +43779,23 @@
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
           },
+          "entity_id": {
+            "description": "Role entityId. Defaults to workspace ID for WORKSPACE_ADMIN and user_id for TEAM_MANAGER; required for PROJECT_MANAGER.",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "Project ID used as entityId when role is PROJECT_MANAGER.",
+            "type": "string"
+          },
+          "remove_role": {
+            "description": "For role=REGULAR, remove this specific elevated role instead of discovering current grants.",
+            "enum": [
+              "WORKSPACE_ADMIN",
+              "PROJECT_MANAGER",
+              "TEAM_MANAGER"
+            ],
+            "type": "string"
+          },
           "role": {
             "description": "Role to assign: WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, or REGULAR",
             "enum": [
@@ -43807,6 +43803,21 @@
               "PROJECT_MANAGER",
               "TEAM_MANAGER",
               "REGULAR"
+            ],
+            "type": "string"
+          },
+          "role_grants": {
+            "description": "For role=REGULAR, explicit elevated grants to remove. Each item needs role and entity_id/entityId.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "source_type": {
+            "description": "Optional role sourceType for user-group backed manager roles.",
+            "enum": [
+              "USER_GROUP"
             ],
             "type": "string"
           },
@@ -44049,11 +44060,9 @@
     },
     {
       "name": "clockify_projects_memberships_list",
-      "description": "List project memberships.",
+      "description": "List project memberships from the hydrated project record.",
       "category": "domain",
       "handler_kind": "native handler",
-      "method": "GET",
-      "path": "/workspaces/{workspaceId}/projects/{project_id}/memberships",
       "read_only": true,
       "destructive": false,
       "idempotent": true,
@@ -44068,6 +44077,7 @@
         "additionalProperties": false,
         "properties": {
           "project_id": {
+            "description": "Project ID",
             "type": "string"
           }
         },
@@ -44292,9 +44302,7 @@
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
-        "method": "GET",
         "openWorldHint": true,
-        "path": "/workspaces/{workspaceId}/projects/{project_id}/memberships",
         "priority": 39,
         "readOnlyHint": true,
         "riskClass": [
@@ -45173,7 +45181,7 @@
     },
     {
       "name": "clockify_reports_export",
-      "description": "Export a detailed report. JSON decodes; PDF/CSV/XLSX return safe binary envelope: contentType, filename, bytes, bodyEncoding, base64Bytes, truncated:false, body with base64 payload. Amounts are minor units; meta.totalAmount normalizes.",
+      "description": "Export a detailed report. JSON/CSV return contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -45347,6 +45355,7 @@
               "entries": {},
               "filename": {},
               "id": {},
+              "path": {},
               "timeentries": {},
               "totals": {},
               "truncated": {},
@@ -45469,7 +45478,7 @@
     },
     {
       "name": "clockify_invoices_export",
-      "description": "Export an invoice and return the safe binary envelope: contentType, filename, bytes, bodyEncoding:\"base64\", base64Bytes, truncated:false, and body with the base64 payload.",
+      "description": "Export an invoice. CSV returns contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -45614,6 +45623,7 @@
               "content": {},
               "contentType": {},
               "filename": {},
+              "path": {},
               "truncated": {}
             },
             "type": "object"
@@ -47928,7 +47938,8 @@
           }
         },
         "required": [
-          "approval_id"
+          "approval_id",
+          "entry_ids"
         ],
         "type": "object"
       },

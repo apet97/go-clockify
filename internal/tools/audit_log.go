@@ -238,11 +238,11 @@ func (s *Service) EntityChangesList(ctx context.Context, args map[string]any) (R
 		return ResultEnvelope{}, err
 	}
 	return ok("clockify_entity_changes_list", changes, map[string]any{
-		"workspaceId":   wsID,
-		"changeType":    changeType,
-		"count":         len(changes),
-		"page":          page,
-		"limit":         limit,
-		"has_more_hint": len(changes) == limit,
+		"workspaceId": wsID,
+		"changeType":  changeType,
+		"count":       len(changes),
+		"page":        page,
+		"limit":       limit,
+		"has_more":    len(changes) == limit,
 	}), nil
 }

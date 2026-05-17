@@ -148,24 +148,22 @@ func invoiceViewsFromRaw(items []map[string]any) []InvoiceView {
 func invoiceItemViewFromRaw(raw map[string]any, fallbackCurrency string) InvoiceItemView {
 	view := InvoiceItemView(maps.Clone(raw))
 	currency := firstNonEmptyString(reportCurrency(raw), fallbackCurrency)
-	view["item"] = map[string]any{
-		"id":             firstReportString(raw, "id", "_id", "itemId", "item_id"),
-		"order":          firstPresent(raw, "order", "index", "itemIndex"),
-		"type":           firstReportString(raw, "itemType", "item_type", "type"),
-		"import_type":    firstReportString(raw, "importType", "import_type"),
-		"description":    firstReportString(raw, "description", "name"),
-		"quantity":       firstPresent(raw, "quantity"),
-		"unit_price":     moneyFromAny(firstPresent(raw, "unitPrice", "unit_price"), currency),
-		"amount":         moneyFromAny(firstPresent(raw, "amount", "total"), currency),
-		"time_entry_ids": stringSliceFromAny(firstPresent(raw, "timeEntryIds", "time_entry_ids")),
-		"expense_ids":    stringSliceFromAny(firstPresent(raw, "expenseIds", "expense_ids")),
-	}
+	view["id"] = firstReportString(raw, "id", "_id", "itemId", "item_id")
+	view["invoiceItemId"] = firstReportString(raw, "id", "_id", "itemId", "item_id")
+	view["order"] = firstPresent(raw, "order", "index", "itemIndex")
+	view["type"] = firstReportString(raw, "itemType", "item_type", "type")
+	view["import_type"] = firstReportString(raw, "importType", "import_type")
+	view["description"] = firstReportString(raw, "description", "name")
+	view["quantity"] = firstPresent(raw, "quantity")
+	view["unit_price"] = moneyFromAny(firstPresent(raw, "unitPrice", "unit_price"), currency)
+	view["amount"] = moneyFromAny(firstPresent(raw, "amount", "total"), currency)
+	view["time_entry_ids"] = stringSliceFromAny(firstPresent(raw, "timeEntryIds", "time_entry_ids"))
+	view["expense_ids"] = stringSliceFromAny(firstPresent(raw, "expenseIds", "expense_ids"))
 	view["taxes"] = map[string]any{
 		"apply_taxes": firstReportString(raw, "applyTaxes", "apply_taxes"),
 		"tax":         firstPresent(raw, "tax"),
 		"tax2":        firstPresent(raw, "tax2"),
 	}
-	view["raw"] = maps.Clone(raw)
 	return view
 }
 
@@ -230,13 +228,11 @@ func invoiceItemSummary(items []InvoiceItemView) map[string]any {
 	var amount *MoneyView
 	types := map[string]int{}
 	for _, item := range items {
-		if block, ok := item["item"].(map[string]any); ok {
-			if money, ok := block["amount"].(*MoneyView); ok {
-				amount = moneySum(amount, money)
-			}
-			if typ := strings.ToUpper(reportValueString(block["type"])); typ != "" {
-				types[typ]++
-			}
+		if money, ok := item["amount"].(*MoneyView); ok {
+			amount = moneySum(amount, money)
+		}
+		if typ := strings.ToUpper(reportValueString(item["type"])); typ != "" {
+			types[typ]++
 		}
 	}
 	return map[string]any{"count": len(items), "amount": amount, "types": types}
