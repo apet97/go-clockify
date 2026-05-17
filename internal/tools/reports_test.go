@@ -154,6 +154,25 @@ func TestReportsDetailedAcceptsSameDayRange(t *testing.T) {
 	}
 }
 
+func TestReportTotalsSummaryFinancialDisplayUsesSingleCurrency(t *testing.T) {
+	summary := summarizeReportTotals(map[string]any{
+		"totals": []map[string]any{{
+			"entriesCount": 1,
+			"totalAmount":  32151,
+			"totalAmountByCurrency": []map[string]any{{
+				"currency": "USD",
+				"amount":   32151,
+			}},
+		}},
+	}, nil)
+	if summary.Financials.Earned == nil {
+		t.Fatalf("missing totals earned financials: %#v", summary.Financials)
+	}
+	if !strings.Contains(summary.Financials.Earned.Display, "USD") {
+		t.Fatalf("earned display = %q, want currency label", summary.Financials.Earned.Display)
+	}
+}
+
 // TestQuickReport verifies TopProject selection, RunningEntries detection,
 // and the EntriesSample cap (<=5 when include_entries is false).
 func TestQuickReport(t *testing.T) {

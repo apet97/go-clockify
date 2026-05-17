@@ -404,7 +404,44 @@ func summarizeReportTotals(data map[string]any, entries []ReportEntryView) Repor
 			summary.MoneyByCurrency = append(summary.MoneyByCurrency, reportMoneyByCurrency(row)...)
 		}
 	}
+	if cur := soleCurrency(summary.MoneyByCurrency); cur != "" {
+		summary.Financials = summary.Financials.withCurrency(cur)
+	}
 	return summary
+}
+
+// soleCurrency returns the single currency present across byCurrency, or ""
+// when there are zero or multiple distinct currencies (a single MoneyView
+// cannot represent more than one currency).
+func soleCurrency(byCurrency []MoneyByCurrencyView) string {
+	c := ""
+	for _, v := range byCurrency {
+		if v.Currency == "" {
+			continue
+		}
+		if c == "" {
+			c = v.Currency
+		} else if c != v.Currency {
+			return ""
+		}
+	}
+	return c
+}
+
+// withCurrency restamps each present money view with currency so display
+// strings carry it. Used when a report row's currency is only known from a
+// sibling money_by_currency breakdown.
+func (f EntryFinancials) withCurrency(currency string) EntryFinancials {
+	restamp := func(m *MoneyView) {
+		if m == nil {
+			return
+		}
+		*m = MoneyFromCents(m.AmountCents, currency)
+	}
+	restamp(f.Earned)
+	restamp(f.Cost)
+	restamp(f.Profit)
+	return f
 }
 
 func summarizeReportEntities(entries []ReportEntryView) ReportEntitySummary {
