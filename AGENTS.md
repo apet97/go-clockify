@@ -158,7 +158,9 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   authoritative `total`; `clockify_time_off_balances` paginates with honest
   `has_more`/`dropped`.
 - `clockify_audit_logs_search` defaults to `page_size:50` and sends
-  `pageSize` upstream; keep its max range at 31 days.
+  `pageSize` upstream, but Clockify caps/ignores it; metadata reports
+  `requested_page_size`, a lower-bound total, and the limitation note. Keep its
+  max range at 31 days.
 - `clockify_entries_list` and `clockify_reports_detailed` accept a same-day
   range; a bare `YYYY-MM-DD` `end` is coerced to end-of-day so `start == end`
   is a full one-day window, not a zero-width one.

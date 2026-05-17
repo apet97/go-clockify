@@ -507,10 +507,10 @@ func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any)
 	query := url.Values{}
 	if format := strings.TrimSpace(stringArg(args, "format")); format != "" {
 		switch strings.ToUpper(format) {
-		case "PDF", "CSV", "XLSX":
+		case "PDF":
 			query.Set("format", strings.ToUpper(format))
 		default:
-			return ResultEnvelope{}, fmt.Errorf("format must be one of PDF, CSV, XLSX (got %q)", format)
+			return ResultEnvelope{}, fmt.Errorf("format must be PDF; Clockify's invoice export endpoint does not produce CSV/XLSX (got %q)", format)
 		}
 	}
 	userLocale := firstNonEmpty([]string{stringArg(args, "user_locale"), "en-US"})

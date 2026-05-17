@@ -750,6 +750,11 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 	if len(body) == 0 {
 		return ResultEnvelope{}, fmt.Errorf("at least one of name, has_unit_price, price_in_cents, unit, or archived is required")
 	}
+	existing, err := s.findExpenseCategory(ctx, wsID, catID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	body = expenseCategoryUpdateBody(existing, args)
 	if dryrun.Enabled(args) {
 		return ok("clockify_update_expense_category", dryrun.Preview("clockify_update_expense_category", map[string]any{
 			"category_id": catID,
@@ -769,6 +774,35 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 		"workspaceId": wsID,
 		"categoryId":  catID,
 	}), nil
+}
+
+func (s *Service) findExpenseCategory(ctx context.Context, wsID, catID string) (map[string]any, error) {
+	path, err := paths.Workspace(wsID, "expenses", "categories")
+	if err != nil {
+		return nil, err
+	}
+	var envelope struct {
+		Categories []map[string]any `json:"categories"`
+	}
+	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
+		return nil, err
+	}
+	for _, category := range envelope.Categories {
+		if firstReportString(category, "id", "_id") == catID {
+			return category, nil
+		}
+	}
+	return nil, fmt.Errorf("expense category %q not found", catID)
+}
+
+func expenseCategoryUpdateBody(existing map[string]any, args map[string]any) map[string]any {
+	body := expenseCategoryBody(args)
+	if _, set := body["name"]; !set {
+		if name := firstReportString(existing, "name"); name != "" {
+			body["name"] = name
+		}
+	}
+	return body
 }
 
 func (s *Service) archiveExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

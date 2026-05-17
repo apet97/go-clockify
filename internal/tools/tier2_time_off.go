@@ -64,7 +64,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		{
 			Tool: toolRW("clockify_update_time_off_request",
 				"Update an existing time off request approval status.",
-				map[string]any{"type": "object", "required": []string{"policy_id", "request_id"}, "properties": map[string]any{
+				map[string]any{"type": "object", "required": []string{"policy_id", "request_id", "status"}, "properties": map[string]any{
 					"policy_id":  map[string]any{"type": "string"},
 					"request_id": map[string]any{"type": "string"},
 					"status": map[string]any{
@@ -311,7 +311,7 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, fmt.Errorf("start and end are required")
 	}
 	note := stringArg(args, "note")
-	if note == "" {
+	if note == "" && !boolFromAny(args["__allow_empty_note"]) {
 		return ResultEnvelope{}, fmt.Errorf("note is required")
 	}
 	loc, err := s.locationFromArgs(args)
@@ -330,7 +330,6 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 
 	halfDay, _ := args["half_day"].(bool)
 	payload := map[string]any{
-		"note": note,
 		"timeOffPeriod": map[string]any{
 			"period": map[string]any{
 				"start": startRaw,
@@ -341,6 +340,9 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 			"halfDayPeriod":        "NOT_DEFINED",
 			"timeOffHalfDayPeriod": "NOT_DEFINED",
 		},
+	}
+	if note != "" {
+		payload["note"] = note
 	}
 
 	var result map[string]any
@@ -542,20 +544,7 @@ func (s *Service) approveTimeOff(ctx context.Context, args map[string]any) (Resu
 
 	payload := timeOffRequestStatusBody("APPROVED", stringArg(args, "note"))
 
-	var result map[string]any
-	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Patch(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	return ok("clockify_approve_time_off", timeOffRequestViewFromRaw(result), map[string]any{
-		"workspaceId": wsID,
-		"policyId":    policyID,
-		"requestId":   requestID,
-	}), nil
+	return s.patchTimeOffStatusAndHydrate(ctx, wsID, policyID, requestID, payload, "clockify_approve_time_off")
 }
 
 func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -583,6 +572,10 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 
 	payload := timeOffRequestStatusBody("REJECTED", stringArg(args, "note"))
 
+	return s.patchTimeOffStatusAndHydrate(ctx, wsID, policyID, requestID, payload, "clockify_deny_time_off")
+}
+
+func (s *Service) patchTimeOffStatusAndHydrate(ctx context.Context, wsID, policyID, requestID string, payload map[string]any, action string) (ResultEnvelope, error) {
 	var result map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
 	if err != nil {
@@ -592,11 +585,19 @@ func (s *Service) denyTimeOff(ctx context.Context, args map[string]any) (ResultE
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_deny_time_off", timeOffRequestViewFromRaw(result), map[string]any{
+	meta := map[string]any{
 		"workspaceId": wsID,
 		"policyId":    policyID,
 		"requestId":   requestID,
-	}), nil
+	}
+	hydrated, fetchErr := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID)
+	if fetchErr == nil {
+		result = hydrated
+	} else {
+		meta["hydration"] = "unavailable"
+	}
+
+	return ok(action, timeOffRequestViewFromRaw(result), meta), nil
 }
 
 func timeOffRequestStatusBody(status, note string) map[string]any {
@@ -613,19 +614,8 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 50)
-	query := map[string]string{
-		"page":      fmt.Sprintf("%d", page),
-		"page-size": fmt.Sprintf("%d", pageSize),
-	}
-
-	var policies []map[string]any
-	path, err := paths.Workspace(wsID, "time-off", "policies")
+	policies, page, pageSize, err := s.fetchTimeOffPolicies(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := s.Client.Get(ctx, path, query, &policies); err != nil {
 		return ResultEnvelope{}, err
 	}
 
@@ -636,6 +626,25 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	return ok("clockify_list_time_off_policies", compactTimeOffPolicyViewsFromRaw(policies), emptyListMeta(meta, "clockify_time_off_policies_create")), nil
+}
+
+func (s *Service) fetchTimeOffPolicies(ctx context.Context, wsID string, args map[string]any) ([]map[string]any, int, int, error) {
+	page := intArg(args, "page", 1)
+	pageSize := intArg(args, "page_size", 50)
+	query := map[string]string{
+		"page":      fmt.Sprintf("%d", page),
+		"page-size": fmt.Sprintf("%d", pageSize),
+	}
+
+	var policies []map[string]any
+	path, err := paths.Workspace(wsID, "time-off", "policies")
+	if err != nil {
+		return nil, page, pageSize, err
+	}
+	if err := s.Client.Get(ctx, path, query, &policies); err != nil {
+		return nil, page, pageSize, err
+	}
+	return policies, page, pageSize, nil
 }
 
 func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

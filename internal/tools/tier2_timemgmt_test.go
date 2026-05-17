@@ -1415,6 +1415,88 @@ func TestApproveTimeOffPatchesBareRequestPathWithStatusApproved(t *testing.T) {
 	}
 }
 
+func TestApproveTimeOffHydratesSparsePatchResponse(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+		wantPath  = "/workspaces/ws1/time-off/policies/" + policyID + "/requests/" + requestID
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPatch && r.URL.Path == wantPath:
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "userId": "user1", "status": "APPROVED"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID:
+			respondJSON(t, w, map[string]any{
+				"id":         requestID,
+				"policyId":   policyID,
+				"policyName": "PTO",
+				"userId":     "user1",
+				"userName":   "Ada",
+				"userEmail":  "ada@example.com",
+				"status":     "APPROVED",
+				"updatedAt":  "2026-05-18T10:00:00Z",
+				"updatedBy":  "manager1",
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.approveTimeOff(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+	})
+	mustOK(t, result, err, "clockify_approve_time_off")
+	view := result.Data.(TimeOffRequestView)
+	if view["policy"].(map[string]any)["name"] != "PTO" {
+		t.Fatalf("policy not hydrated: %#v", view["policy"])
+	}
+	user := view["user"].(map[string]any)
+	if user["name"] != "Ada" || user["email"] != "ada@example.com" {
+		t.Fatalf("user not hydrated: %#v", user)
+	}
+	if view["suggestedActions"] == nil {
+		t.Fatalf("suggestedActions should be hydrated, got %#v", view)
+	}
+}
+
+func TestApproveTimeOffKeepsSparsePatchWhenHydrationFails(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+		wantPath  = "/workspaces/ws1/time-off/policies/" + policyID + "/requests/" + requestID
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPatch && r.URL.Path == wantPath:
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "userId": "user1", "status": "APPROVED"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID:
+			http.Error(w, "not found", http.StatusNotFound)
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/time-off/requests":
+			http.Error(w, "search unavailable", http.StatusInternalServerError)
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.approveTimeOff(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+	})
+	mustOK(t, result, err, "clockify_approve_time_off")
+	if result.Meta["hydration"] != "unavailable" {
+		t.Fatalf("hydration meta = %#v, want unavailable", result.Meta)
+	}
+	view := result.Data.(TimeOffRequestView)
+	if view["status"] != "APPROVED" {
+		t.Fatalf("sparse patch status not preserved: %#v", view)
+	}
+}
+
 func TestApproveTimeOffIncludesEmptyNoteForCanonicalStatusBody(t *testing.T) {
 	const (
 		policyID  = "abc123def456789012345678"
@@ -1626,6 +1708,79 @@ func TestTimeOffPoliciesListPaginationMeta(t *testing.T) {
 	if len(policies) != 1 || policies[0].ID != "pol2" || policies[0].TimeUnit != "DAYS" || policies[0].UserCount != 2 || policies[0].UserGroupCount != 1 {
 		t.Fatalf("compact policy not preserved: %+v", policies)
 	}
+}
+
+func TestRequestTimeOffWorkflowResolvesPolicyNameAndAllowsMissingNote(t *testing.T) {
+	const policyID = "abc123def456789012345678"
+	var posted map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/policies":
+			respondJSON(t, w, []map[string]any{{"id": policyID, "name": "PTO"}})
+		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/time-off/policies/"+policyID+"/requests":
+			if err := json.NewDecoder(r.Body).Decode(&posted); err != nil {
+				t.Fatalf("decode request body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": "req1", "policyId": policyID, "status": "PENDING"})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.ClockifyRequestTimeOff(context.Background(), map[string]any{
+		"policy": "PTO",
+		"start":  "2026-05-18",
+		"end":    "2026-05-19",
+	})
+	if err != nil {
+		t.Fatalf("ClockifyRequestTimeOff: %v", err)
+	}
+	if out == nil {
+		t.Fatal("expected standardized workflow result")
+	}
+	if _, exists := posted["note"]; exists {
+		t.Fatalf("workflow should omit absent note, got body %#v", posted)
+	}
+}
+
+func TestRequestTimeOffSchemaNoteOptionalAndPolicyOneOfDocumented(t *testing.T) {
+	schema := requestTimeOffSchema()
+	required := schema["required"].([]string)
+	for _, field := range required {
+		if field == "note" {
+			t.Fatalf("note must not be required for workflow schema: %#v", required)
+		}
+	}
+	props := schema["properties"].(map[string]any)
+	for _, field := range []string{"policy", "policy_id"} {
+		desc, _ := props[field].(map[string]any)["description"].(string)
+		if !strings.Contains(desc, "Provide either policy or policy_id") {
+			t.Fatalf("%s description does not document one-of rule: %q", field, desc)
+		}
+	}
+}
+
+func TestUpdateTimeOffRequestSchemaRequiresStatus(t *testing.T) {
+	svc := New(nil, "ws1")
+	handlers, ok := tier2Handlers(svc, "time_off")
+	if !ok {
+		t.Fatal("time_off group not registered")
+	}
+	for _, descriptor := range handlers {
+		if descriptor.Tool.Name != "clockify_update_time_off_request" {
+			continue
+		}
+		required := descriptor.Tool.InputSchema["required"].([]string)
+		for _, field := range required {
+			if field == "status" {
+				return
+			}
+		}
+		t.Fatalf("required = %#v, want status", required)
+	}
+	t.Fatal("clockify_update_time_off_request descriptor not found")
 }
 
 func TestCreateAssignment_RejectsGarbageDate(t *testing.T) {

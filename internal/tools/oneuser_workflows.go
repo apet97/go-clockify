@@ -660,6 +660,7 @@ func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]an
 		}
 		reqArgs["policy_id"] = policyID
 	}
+	reqArgs["__allow_empty_note"] = true
 	out, err := s.createTimeOffRequest(ctx, reqArgs)
 	if err != nil {
 		return nil, err
@@ -899,9 +900,9 @@ func recordExpenseSchema() map[string]any {
 }
 
 func requestTimeOffSchema() map[string]any {
-	return objectSchema(map[string]any{"required": []string{"start", "end", "note"}, "properties": map[string]any{
-		"policy":    map[string]any{"type": "string"},
-		"policy_id": map[string]any{"type": "string"},
+	return objectSchema(map[string]any{"required": []string{"start", "end"}, "properties": map[string]any{
+		"policy":    map[string]any{"type": "string", "description": "Time-off policy name. Provide either policy or policy_id (one is required)."},
+		"policy_id": map[string]any{"type": "string", "description": "Time-off policy ID. Provide either policy or policy_id (one is required)."},
 		"start":     map[string]any{"type": "string"},
 		"end":       map[string]any{"type": "string"},
 		"note":      map[string]any{"type": "string"},
@@ -1087,14 +1088,18 @@ func (s *Service) resolveTimeOffPolicyID(ctx context.Context, policy string) (st
 	}
 	page := 1
 	var allPolicies []map[string]any
+	wsID, err := s.ResolveWorkspaceID(ctx)
+	if err != nil {
+		return "", err
+	}
 	for {
-		out, err := s.listTimeOffPolicies(ctx, map[string]any{"page_size": float64(200), "page": float64(page)})
+		args := map[string]any{"page_size": float64(200), "page": float64(page)}
+		policies, _, _, err := s.fetchTimeOffPolicies(ctx, wsID, args)
 		if err != nil {
 			return "", err
 		}
-		policies, _ := out.Data.([]map[string]any)
 		allPolicies = append(allPolicies, policies...)
-		if !boolFromAny(out.Meta["has_more"]) {
+		if !boolFromAny(addPaginationMeta(map[string]any{"count": len(policies)}, args, page, 200)["has_more"]) {
 			break
 		}
 		page++
