@@ -260,7 +260,18 @@ func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any)
 		return err
 	}
 	if len(overlaps) > 0 {
-		return fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
+		details := make([]string, 0, len(overlaps))
+		for _, o := range overlaps {
+			proj := o.ProjectName
+			if proj == "" {
+				proj = o.ProjectID
+			}
+			if proj == "" {
+				proj = "no project"
+			}
+			details = append(details, fmt.Sprintf("entry %s [%s..%s, %s]", o.ID, o.Start, o.End, proj))
+		}
+		return fmt.Errorf("requested entry overlaps %d existing entr%s (%s); pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)), strings.Join(details, "; "))
 	}
 	return nil
 }
