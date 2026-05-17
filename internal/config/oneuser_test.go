@@ -48,6 +48,9 @@ func TestLoadOneUserMinimalConfig(t *testing.T) {
 	if cfg.MaxMessageSize != DefaultMaxMessageSize {
 		t.Fatalf("MaxMessageSize = %d", cfg.MaxMessageSize)
 	}
+	if cfg.MaxToolResultBytes != DefaultMaxToolResultBytes {
+		t.Fatalf("MaxToolResultBytes = %d", cfg.MaxToolResultBytes)
+	}
 	if cfg.Toolset != DefaultToolset {
 		t.Fatalf("Toolset = %q, want %q", cfg.Toolset, DefaultToolset)
 	}
@@ -77,6 +80,7 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", "8")
 	t.Setenv("CLOCKIFY_TOOL_TIMEOUT", "2m")
 	t.Setenv("CLOCKIFY_MAX_MESSAGE_SIZE", "8388608")
+	t.Setenv("CLOCKIFY_MAX_TOOL_RESULT_BYTES", "12345")
 	t.Setenv("CLOCKIFY_TOOLSET", "business")
 	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "true")
 	t.Setenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", "hooks.example.com, .trusted.test, , api.example.com ")
@@ -97,6 +101,9 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	}
 	if cfg.MaxMessageSize != 8388608 {
 		t.Fatalf("MaxMessageSize = %d", cfg.MaxMessageSize)
+	}
+	if cfg.MaxToolResultBytes != 12345 {
+		t.Fatalf("MaxToolResultBytes = %d", cfg.MaxToolResultBytes)
 	}
 	if cfg.Toolset != "business" {
 		t.Fatalf("Toolset = %q", cfg.Toolset)
@@ -128,6 +135,7 @@ func TestLoadOneUserOptionalRuntimeConfigOnlyRequiresKeyAndWorkspace(t *testing.
 	t.Setenv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", "")
 	t.Setenv("CLOCKIFY_TOOL_TIMEOUT", "")
 	t.Setenv("CLOCKIFY_MAX_MESSAGE_SIZE", "")
+	t.Setenv("CLOCKIFY_MAX_TOOL_RESULT_BYTES", "")
 	t.Setenv("CLOCKIFY_TOOLSET", "")
 	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "")
 	t.Setenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", "")
@@ -144,6 +152,9 @@ func TestLoadOneUserOptionalRuntimeConfigOnlyRequiresKeyAndWorkspace(t *testing.
 	}
 	if cfg.MaxMessageSize != DefaultMaxMessageSize {
 		t.Fatalf("MaxMessageSize = %d", cfg.MaxMessageSize)
+	}
+	if cfg.MaxToolResultBytes != DefaultMaxToolResultBytes {
+		t.Fatalf("MaxToolResultBytes = %d", cfg.MaxToolResultBytes)
 	}
 	if cfg.Toolset != DefaultToolset {
 		t.Fatalf("Toolset = %q, want %q", cfg.Toolset, DefaultToolset)
@@ -299,6 +310,22 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 		},
 		"too large message size": {
 			envName: "CLOCKIFY_MAX_MESSAGE_SIZE",
+			value:   "104857601",
+		},
+		"zero tool result bytes": {
+			envName: "CLOCKIFY_MAX_TOOL_RESULT_BYTES",
+			value:   "0",
+		},
+		"negative tool result bytes": {
+			envName: "CLOCKIFY_MAX_TOOL_RESULT_BYTES",
+			value:   "-1",
+		},
+		"bad tool result bytes": {
+			envName: "CLOCKIFY_MAX_TOOL_RESULT_BYTES",
+			value:   "large",
+		},
+		"too large tool result bytes": {
+			envName: "CLOCKIFY_MAX_TOOL_RESULT_BYTES",
 			value:   "104857601",
 		},
 		"bad raw writes": {

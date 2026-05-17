@@ -39,6 +39,7 @@ the binary as a stdio subprocess with the environment above.
 | `CLOCKIFY_TIMEZONE` | system local |
 | `CLOCKIFY_TOOLSET` | `all` |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` |
+| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` |
 | `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` | (none) |
 | `CLOCKIFY_CIRCUIT_BREAKER` | `enabled` |

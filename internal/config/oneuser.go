@@ -21,6 +21,7 @@ const (
 	MinToolTimeout                        = 5 * time.Second
 	MaxToolTimeout                        = 10 * time.Minute
 	DefaultMaxMessageSize                 = 4 * 1024 * 1024
+	DefaultMaxToolResultBytes             = 50_000
 	MaxMessageSize                        = 100 * 1024 * 1024
 	DefaultToolset                        = "all"
 	DefaultCircuitBreakerFailureThreshold = 5
@@ -39,6 +40,7 @@ type OneUserConfig struct {
 	MaxInFlightToolCalls  int
 	ToolTimeout           time.Duration
 	MaxMessageSize        int64
+	MaxToolResultBytes    int
 	Toolset               string
 	EnableRawWrites       bool
 	WebhookAllowedDomains []string
@@ -58,6 +60,7 @@ func LoadOneUser() (OneUserConfig, error) {
 		MaxInFlightToolCalls:  DefaultMaxInFlightToolCalls,
 		ToolTimeout:           DefaultToolTimeout,
 		MaxMessageSize:        DefaultMaxMessageSize,
+		MaxToolResultBytes:    DefaultMaxToolResultBytes,
 		Toolset:               DefaultToolset,
 		WebhookAllowedDomains: parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
 		CircuitBreaker: clockify.CircuitBreakerConfig{
@@ -107,6 +110,11 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.MaxMessageSize = maxMessageSize
+	maxToolResultBytes, err := parseBoundedPositiveInt64Env("CLOCKIFY_MAX_TOOL_RESULT_BYTES", DefaultMaxToolResultBytes, MaxMessageSize)
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.MaxToolResultBytes = int(maxToolResultBytes)
 	toolset, err := parseToolsetEnv()
 	if err != nil {
 		return OneUserConfig{}, err
