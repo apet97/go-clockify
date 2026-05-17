@@ -105,12 +105,8 @@ func TestSummaryReportUsesReportsAPI(t *testing.T) {
 		t.Fatalf("summary report failed: %v", err)
 	}
 
-	data, ok := result.Data.(map[string]any)
-	if !ok {
+	if _, ok := result.Data.(map[string]any); !ok {
 		t.Fatalf("unexpected summary data type: %T", result.Data)
-	}
-	if _, ok := data["totals"]; !ok {
-		t.Fatalf("expected upstream totals in data, got %#v", data)
 	}
 	if gotBody["dateRangeStart"] != "2026-04-01T00:00:00Z" || gotBody["dateRangeEnd"] != "2026-04-08T00:00:00Z" {
 		t.Fatalf("date aliases not forwarded as dateRangeStart/dateRangeEnd: %#v", gotBody)

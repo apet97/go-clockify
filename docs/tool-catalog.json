@@ -6102,12 +6102,15 @@
         "additionalProperties": false,
         "properties": {
           "client": {
+            "description": "Client name or ID (this or client_id is required).",
             "type": "string"
           },
           "client_id": {
+            "description": "Client ID (this or client is required).",
             "type": "string"
           },
           "currency": {
+            "description": "Currency code, e.g. USD or EUR (required).",
             "type": "string"
           },
           "dry_run": {
@@ -6115,6 +6118,7 @@
             "type": "boolean"
           },
           "due_date": {
+            "description": "Invoice due date (YYYY-MM-DD or RFC3339). Defaults to 14 days out.",
             "type": "string"
           },
           "from": {
@@ -6122,6 +6126,7 @@
             "type": "string"
           },
           "issued_date": {
+            "description": "Invoice issued date (YYYY-MM-DD or RFC3339). Defaults to today.",
             "type": "string"
           },
           "note": {
@@ -6146,6 +6151,9 @@
             "type": "string"
           }
         },
+        "required": [
+          "currency"
+        ],
         "type": "object"
       },
       "output_schema": {
@@ -23126,10 +23134,6 @@
                 "profilePicture": {
                   "type": "string"
                 },
-                "raw": {
-                  "additionalProperties": {},
-                  "type": "object"
-                },
                 "report_defaults": {
                   "additionalProperties": false,
                   "properties": {
@@ -23506,10 +23510,6 @@
               },
               "profilePicture": {
                 "type": "string"
-              },
-              "raw": {
-                "additionalProperties": {},
-                "type": "object"
               },
               "report_defaults": {
                 "additionalProperties": false,

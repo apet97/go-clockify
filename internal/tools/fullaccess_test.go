@@ -707,7 +707,7 @@ func TestInvoiceClientWorkFeatureUnavailableEnvelope(t *testing.T) {
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_invoice_client_work","arguments":{"client_id":"65b382b606de527a7ee2b60e"}}}`))
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_invoice_client_work","arguments":{"client_id":"65b382b606de527a7ee2b60e","currency":"USD"}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}

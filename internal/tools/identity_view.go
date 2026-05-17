@@ -24,7 +24,6 @@ type UserView struct {
 	Status                 string                 `json:"status,omitempty"`
 	ReportDefaults         ReportDefaults         `json:"report_defaults"`
 	FeatureFlags           UserFeatureFlags       `json:"feature_flags"`
-	Raw                    map[string]any         `json:"raw,omitempty"`
 }
 
 type ReportDefaults struct {
@@ -108,18 +107,6 @@ func userViewFromUser(user clockify.User) UserView {
 		Status:                 user.Status,
 		ReportDefaults:         reportDefaultsFromSettings(settings),
 		FeatureFlags:           userFeatureFlagsFromSettings(settings),
-		Raw: map[string]any{
-			"id":               user.ID,
-			"name":             user.Name,
-			"email":            user.Email,
-			"activeWorkspace":  user.ActiveWorkspace,
-			"customFields":     user.CustomFields,
-			"defaultWorkspace": user.DefaultWorkspace,
-			"memberships":      user.Memberships,
-			"profilePicture":   user.ProfilePicture,
-			"settings":         user.Settings,
-			"status":           user.Status,
-		},
 	}
 	return view
 }

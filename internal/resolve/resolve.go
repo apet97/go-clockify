@@ -184,7 +184,10 @@ func resolveByNameOrID(ctx context.Context, client *clockify.Client, path, ref, 
 
 	matches := exactMatches(items, ref, "name")
 	if len(matches) == 0 {
-		return "", fmt.Errorf("%s '%s' not found. Use clockify_list_%ss to see available %ss", kind, ref, kind, kind)
+		if kind == "project" {
+			return "", fmt.Errorf("project '%s' not found. List existing projects with clockify_projects_list, or create one with clockify_create_work_package and retry with the returned project_id", ref)
+		}
+		return "", fmt.Errorf("%s '%s' not found. Use clockify_%ss_list to see available %ss", kind, ref, kind, kind)
 	}
 	if len(matches) > 1 {
 		return "", fmt.Errorf("multiple %ss match '%s' (%d found). Use the full %s ID instead", kind, ref, len(matches), kind)

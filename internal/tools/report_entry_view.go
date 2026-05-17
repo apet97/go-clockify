@@ -96,7 +96,6 @@ type ReportEntryView struct {
 	Financials        EntryFinancials          `json:"financials"`
 	RateBreakdown     *ReportRateBreakdownView `json:"rate_breakdown,omitempty"`
 	MoneyByCurrency   []MoneyByCurrencyView    `json:"money_by_currency,omitempty"`
-	Raw               map[string]any           `json:"raw,omitempty"`
 }
 
 type ReportEntrySummary struct {
@@ -127,7 +126,6 @@ type ReportTotalsSummary struct {
 	TotalBillableTime *EntryDurationView    `json:"total_billable_time,omitempty"`
 	Financials        EntryFinancials       `json:"financials"`
 	MoneyByCurrency   []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
-	Raw               any                   `json:"raw,omitempty"`
 }
 
 type ReportEntityRollup struct {
@@ -193,6 +191,9 @@ func appendDetailedReportViews(data map[string]any) int {
 	data["entity_summary"] = views.EntitySummary
 	data["client_summary"] = views.ClientSummary
 	data["suggestedActions"] = views.SuggestedActions
+	delete(data, "timeEntries")
+	delete(data, "timeentries")
+	delete(data, "totals")
 	return len(views.Entries)
 }
 
@@ -205,7 +206,6 @@ func reportEntryViewFromRow(row map[string]any) ReportEntryView {
 			Source: entryFinancialSourceUnavailable,
 			Reason: "no report money fields were present for this entry row",
 		},
-		Raw: maps.Clone(row),
 	}
 	if state, ok := billableStateFromRaw(firstPresent(row, "billable", "isBillable")); ok {
 		view.BillableState = state
@@ -353,7 +353,6 @@ func summarizeReportTotals(data map[string]any, entries []ReportEntryView) Repor
 			Source: entryFinancialSourceUnavailable,
 			Reason: "report totals did not include money fields",
 		},
-		Raw: totals,
 	}
 	var totalTime int64
 	var totalBillable int64

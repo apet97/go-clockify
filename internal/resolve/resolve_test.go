@@ -242,8 +242,8 @@ func TestImprovedErrorNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for not found project")
 	}
-	if !strings.Contains(err.Error(), "Use clockify_list_projects") {
-		t.Fatalf("error should suggest listing projects, got: %v", err)
+	if !strings.Contains(err.Error(), "clockify_projects_list") || !strings.Contains(err.Error(), "clockify_create_work_package") {
+		t.Fatalf("error should suggest listing or creating projects, got: %v", err)
 	}
 }
 

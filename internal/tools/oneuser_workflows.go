@@ -496,15 +496,27 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 		clientID = resolved
 		invoiceArgs["client_id"] = clientID
 	}
+	if strings.TrimSpace(stringArg(invoiceArgs, "currency")) == "" {
+		return nil, fmt.Errorf("currency is required — pass a currency code such as USD or EUR")
+	}
 	if strings.TrimSpace(stringArg(invoiceArgs, "number")) == "" {
 		invoiceArgs["number"] = fmt.Sprintf("MCP-%s-%s", time.Now().UTC().Format("20060102"), shortID(clientID))
 	}
 	now := time.Now().UTC()
-	if strings.TrimSpace(stringArg(invoiceArgs, "issued_date")) == "" {
+	loc := s.location()
+	if raw := strings.TrimSpace(stringArg(invoiceArgs, "issued_date")); raw == "" {
 		invoiceArgs["issued_date"] = now.Format(time.RFC3339)
+	} else if t, err := timeparse.ParseDatetime(raw, loc); err == nil {
+		invoiceArgs["issued_date"] = t.UTC().Format(time.RFC3339)
+	} else {
+		return nil, fmt.Errorf("could not parse issued_date %q — use YYYY-MM-DD or RFC3339", raw)
 	}
-	if strings.TrimSpace(stringArg(invoiceArgs, "due_date")) == "" {
+	if raw := strings.TrimSpace(stringArg(invoiceArgs, "due_date")); raw == "" {
 		invoiceArgs["due_date"] = now.AddDate(0, 0, 14).Format(time.RFC3339)
+	} else if t, err := timeparse.ParseDatetime(raw, loc); err == nil {
+		invoiceArgs["due_date"] = t.UTC().Format(time.RFC3339)
+	} else {
+		return nil, fmt.Errorf("could not parse due_date %q — use YYYY-MM-DD or RFC3339", raw)
 	}
 	out, err := s.createInvoice(ctx, invoiceArgs)
 	if err != nil {
@@ -794,20 +806,23 @@ func fixEntrySchema() map[string]any {
 }
 
 func invoiceClientWorkSchema() map[string]any {
-	return objectSchema(map[string]any{"properties": map[string]any{
-		"client":                map[string]any{"type": "string"},
-		"client_id":             map[string]any{"type": "string"},
-		"number":                map[string]any{"type": "string"},
-		"issued_date":           map[string]any{"type": "string"},
-		"due_date":              map[string]any{"type": "string"},
-		"currency":              map[string]any{"type": "string"},
-		"note":                  map[string]any{"type": "string"},
-		"from":                  map[string]any{"type": "string", "description": "Start of the billing period to import (YYYY-MM-DD or RFC3339). Pass both from and to to import billable time onto the invoice."},
-		"to":                    map[string]any{"type": "string", "description": "End of the billing period to import (YYYY-MM-DD or RFC3339)."},
-		"project_ids":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the imported time to these project IDs."},
-		"time_entry_group_type": map[string]any{"type": "string"},
-		"dry_run":               map[string]any{"type": "boolean"},
-	}})
+	return objectSchema(map[string]any{
+		"required": []string{"currency"},
+		"properties": map[string]any{
+			"client":                map[string]any{"type": "string", "description": "Client name or ID (this or client_id is required)."},
+			"client_id":             map[string]any{"type": "string", "description": "Client ID (this or client is required)."},
+			"number":                map[string]any{"type": "string"},
+			"issued_date":           map[string]any{"type": "string", "description": "Invoice issued date (YYYY-MM-DD or RFC3339). Defaults to today."},
+			"due_date":              map[string]any{"type": "string", "description": "Invoice due date (YYYY-MM-DD or RFC3339). Defaults to 14 days out."},
+			"currency":              map[string]any{"type": "string", "description": "Currency code, e.g. USD or EUR (required)."},
+			"note":                  map[string]any{"type": "string"},
+			"from":                  map[string]any{"type": "string", "description": "Start of the billing period to import (YYYY-MM-DD or RFC3339). Pass both from and to to import billable time onto the invoice."},
+			"to":                    map[string]any{"type": "string", "description": "End of the billing period to import (YYYY-MM-DD or RFC3339)."},
+			"project_ids":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the imported time to these project IDs."},
+			"time_entry_group_type": map[string]any{"type": "string"},
+			"dry_run":               map[string]any{"type": "boolean"},
+		},
+	})
 }
 
 func recordExpenseSchema() map[string]any {

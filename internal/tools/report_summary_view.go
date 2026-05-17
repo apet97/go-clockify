@@ -19,7 +19,6 @@ type ReportRollupView struct {
 	MoneyByCurrency    []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
 	WeeklyDayBreakdown []WeeklyDayTotalView  `json:"weekly_day_breakdown,omitempty"`
 	Children           []ReportRollupView    `json:"children,omitempty"`
-	Raw                map[string]any        `json:"raw,omitempty"`
 }
 
 type ReportGroupTotalsSummary struct {
@@ -36,7 +35,6 @@ type DonutChartSegmentView struct {
 	Duration        *EntryDurationView    `json:"duration,omitempty"`
 	Financials      EntryFinancials       `json:"financials"`
 	MoneyByCurrency []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
-	Raw             map[string]any        `json:"raw,omitempty"`
 }
 
 type WeeklyDayTotalView struct {
@@ -45,7 +43,6 @@ type WeeklyDayTotalView struct {
 	Duration        EntryDurationView     `json:"duration"`
 	Financials      EntryFinancials       `json:"financials"`
 	MoneyByCurrency []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
-	Raw             map[string]any        `json:"raw,omitempty"`
 }
 
 func (s *Service) argsWithUserReportDefaults(ctx context.Context, args map[string]any) (map[string]any, map[string]any) {
@@ -91,6 +88,12 @@ func appendSummaryReportViews(data map[string]any, body map[string]any) int {
 	data["donut_chart_summary"] = donutChartSummary(data)
 	data["totals_summary"] = summarizeReportTotals(data, nil)
 	data["suggestedActions"] = reportDrilldownSuggestions(body)
+	// The normalized views above fully replace the raw upstream arrays; drop
+	// them so the response stays within the MCP transport budget.
+	delete(data, "groupOne")
+	delete(data, "groupTotals")
+	delete(data, "donutChart")
+	delete(data, "totals")
 	return len(rollups)
 }
 
@@ -105,6 +108,9 @@ func appendWeeklyReportViews(data map[string]any, body map[string]any, includeFu
 	data["weekly_day_totals"] = dayTotals
 	data["totals_summary"] = summarizeReportTotals(data, nil)
 	data["suggestedActions"] = reportDrilldownSuggestions(body)
+	delete(data, "groupOne")
+	delete(data, "totalsByDay")
+	delete(data, "totals")
 	return len(rollups)
 }
 
@@ -177,7 +183,6 @@ func reportRollupFromRowFiltered(row map[string]any, groups []string, level int,
 		MoneyByCurrency:    reportMoneyByCurrency(row),
 		WeeklyDayBreakdown: weeklyDayRows(row, includeFuture, now),
 		Children:           children,
-		Raw:                maps.Clone(row),
 	}
 }
 
@@ -275,7 +280,6 @@ func donutChartSummary(data map[string]any) []DonutChartSegmentView {
 			Duration:        duration,
 			Financials:      fin,
 			MoneyByCurrency: reportMoneyByCurrency(row),
-			Raw:             maps.Clone(row),
 		})
 	}
 	return out
@@ -306,7 +310,6 @@ func weeklyDayRows(data map[string]any, includeFuture bool, now time.Time) []Wee
 			Duration:        entryDurationView(seconds, "reports_api"),
 			Financials:      fin,
 			MoneyByCurrency: reportMoneyByCurrency(row),
-			Raw:             maps.Clone(row),
 		})
 	}
 	return out
