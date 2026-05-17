@@ -46,6 +46,25 @@ func TestBuildReportsAPIBody_CoercesPlainDate(t *testing.T) {
 	}
 }
 
+func TestReportAmountMetaRoundsToIntegerCents(t *testing.T) {
+	meta := reportAmountMeta(map[string]any{
+		"totals": []any{map[string]any{
+			"totalAmount": 69466.66666666667,
+			"totalAmountByCurrency": []any{map[string]any{
+				"currency": "USD",
+				"amount":   69466.66666666667,
+			}},
+		}},
+	})
+	if meta["totalAmountCents"] != int64(69467) {
+		t.Fatalf("totalAmountCents = %#v, want int64 cents", meta["totalAmountCents"])
+	}
+	byCurrency := meta["byCurrency"].([]map[string]any)
+	if byCurrency[0]["amountCents"] != int64(69467) {
+		t.Fatalf("byCurrency amountCents = %#v, want int64 cents", byCurrency[0]["amountCents"])
+	}
+}
+
 func TestBuildReportsAPIBody_RejectsGarbageDate(t *testing.T) {
 	_, err := buildReportsAPIBody(map[string]any{
 		"date_range_start": "not-a-date",

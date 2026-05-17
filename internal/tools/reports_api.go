@@ -3,11 +3,11 @@ package tools
 import (
 	"context"
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
@@ -596,17 +596,19 @@ func reportAmountMeta(data any) map[string]any {
 				continue
 			}
 			cents, _ := reportNumber(m["amount"])
+			centsInt := clockify.CentsFromReportNumber(cents)
 			list = append(list, map[string]any{
 				"currency":    m["currency"],
-				"amountCents": cents,
-				"amount":      math.Round(cents) / 100,
+				"amountCents": centsInt,
+				"amount":      float64(centsInt) / 100,
 			})
 		}
 		out["byCurrency"] = list
 	}
 	if cents, ok := reportNumber(first["totalAmount"]); ok {
-		out["totalAmountCents"] = cents
-		out["totalAmount"] = math.Round(cents) / 100
+		centsInt := clockify.CentsFromReportNumber(cents)
+		out["totalAmountCents"] = centsInt
+		out["totalAmount"] = float64(centsInt) / 100
 	}
 	if len(out) == 0 {
 		return nil
