@@ -232,8 +232,7 @@ func reportEntryViewFromRow(row map[string]any) ReportEntryView {
 		}
 	}
 	if custom := firstPresent(row, "customFieldValues", "customFields", "custom_field_values"); custom != nil {
-		view.CustomFieldValues = custom
-		view.CustomFields = customFieldValuesFromRaw(custom)
+		view.CustomFields = nonNullCustomFields(custom)
 	}
 	entities := reportEntryEntities(row)
 	if !entryEntitiesEmpty(entities) {

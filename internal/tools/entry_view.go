@@ -57,28 +57,45 @@ type EntryFinancials struct {
 	Rate   *EntryRateView `json:"rate,omitempty"`
 }
 
+// nonNullCustomFields returns the normalized custom-field views for raw,
+// dropping every field whose value is null/empty. A time entry carries a slot
+// for every workspace custom field, most unset; emitting the unset ones is
+// pure noise, so they never reach an entry view.
+func nonNullCustomFields(raw any) []CustomFieldValueView {
+	all := customFieldValuesFromRaw(raw)
+	filtered := all[:0]
+	for _, f := range all {
+		if f.Value != nil {
+			filtered = append(filtered, f)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return filtered
+}
+
 func entryViewFromEntry(entry clockify.TimeEntry) EntryView {
 	billablePresent := entry.BillablePresent || entry.Billable
 	return EntryView{
-		ID:                entry.ID,
-		Description:       entry.Description,
-		ProjectID:         entry.ProjectID,
-		ProjectName:       entry.ProjectName,
-		TaskID:            entry.TaskID,
-		TagIDs:            entry.TagIDs,
-		Billable:          entry.Billable,
-		BillableState:     billableStateFromPresence(entry.Billable, billablePresent),
-		BillablePresent:   billablePresent,
-		CostRate:          entry.CostRate,
-		CustomFieldValues: entry.CustomFieldValues,
-		CustomFields:      customFieldValuesFromRaw(entry.CustomFieldValues),
-		HourlyRate:        entry.HourlyRate,
-		IsLocked:          entry.IsLocked,
-		KioskID:           entry.KioskID,
-		Type:              entry.Type,
-		UserID:            entry.UserID,
-		WorkspaceID:       entry.WorkspaceID,
-		TimeInterval:      entry.TimeInterval,
+		ID:              entry.ID,
+		Description:     entry.Description,
+		ProjectID:       entry.ProjectID,
+		ProjectName:     entry.ProjectName,
+		TaskID:          entry.TaskID,
+		TagIDs:          entry.TagIDs,
+		Billable:        entry.Billable,
+		BillableState:   billableStateFromPresence(entry.Billable, billablePresent),
+		BillablePresent: billablePresent,
+		CostRate:        entry.CostRate,
+		CustomFields:    nonNullCustomFields(entry.CustomFieldValues),
+		HourlyRate:      entry.HourlyRate,
+		IsLocked:        entry.IsLocked,
+		KioskID:         entry.KioskID,
+		Type:            entry.Type,
+		UserID:          entry.UserID,
+		WorkspaceID:     entry.WorkspaceID,
+		TimeInterval:    entry.TimeInterval,
 		Financials: EntryFinancials{
 			Source: entryFinancialSourceUnavailable,
 			Reason: "financial enrichment was not available",
