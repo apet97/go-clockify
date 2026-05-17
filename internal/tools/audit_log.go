@@ -175,9 +175,14 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 	if err := s.Client.PostAuditLog(ctx, path, body, &entries); err != nil {
 		return ResultEnvelope{}, err
 	}
+	page := intArg(args, "page", 1)
 	return ok("clockify_audit_logs_search", entries, map[string]any{
 		"workspaceId": wsID,
 		"count":       len(entries),
+		"total":       len(entries),
+		"page":        page,
+		"pageSize":    len(entries),
+		"has_more":    false,
 	}), nil
 }
 

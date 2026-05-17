@@ -21,7 +21,9 @@ const (
 	MinToolTimeout                        = 5 * time.Second
 	MaxToolTimeout                        = 10 * time.Minute
 	DefaultMaxMessageSize                 = 4 * 1024 * 1024
+	DefaultMaxToolResultBytes             = 50_000
 	MaxMessageSize                        = 100 * 1024 * 1024
+	MaxToolResultBytes                    = 100 * 1024 * 1024
 	DefaultToolset                        = "all"
 	DefaultCircuitBreakerFailureThreshold = 5
 	DefaultCircuitBreakerOpenDuration     = 45 * time.Second
@@ -39,6 +41,7 @@ type OneUserConfig struct {
 	MaxInFlightToolCalls  int
 	ToolTimeout           time.Duration
 	MaxMessageSize        int64
+	MaxToolResultBytes    int
 	Toolset               string
 	EnableRawWrites       bool
 	WebhookAllowedDomains []string
@@ -58,6 +61,7 @@ func LoadOneUser() (OneUserConfig, error) {
 		MaxInFlightToolCalls:  DefaultMaxInFlightToolCalls,
 		ToolTimeout:           DefaultToolTimeout,
 		MaxMessageSize:        DefaultMaxMessageSize,
+		MaxToolResultBytes:    DefaultMaxToolResultBytes,
 		Toolset:               DefaultToolset,
 		WebhookAllowedDomains: parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
 		CircuitBreaker: clockify.CircuitBreakerConfig{
@@ -107,6 +111,11 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.MaxMessageSize = maxMessageSize
+	maxToolResultBytes, err := parseBoundedPositiveIntEnv("CLOCKIFY_MAX_TOOL_RESULT_BYTES", DefaultMaxToolResultBytes, MaxToolResultBytes)
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.MaxToolResultBytes = maxToolResultBytes
 	toolset, err := parseToolsetEnv()
 	if err != nil {
 		return OneUserConfig{}, err
@@ -155,6 +164,17 @@ func parsePositiveIntEnv(name string, fallback int) (int, error) {
 	v, err := strconv.Atoi(raw)
 	if err != nil || v <= 0 {
 		return 0, fmt.Errorf("%s must be a positive integer", name)
+	}
+	return v, nil
+}
+
+func parseBoundedPositiveIntEnv(name string, fallback, maxValue int) (int, error) {
+	v, err := parsePositiveIntEnv(name, fallback)
+	if err != nil {
+		return 0, err
+	}
+	if v > maxValue {
+		return 0, fmt.Errorf("%s must be between 1 and %d", name, maxValue)
 	}
 	return v, nil
 }

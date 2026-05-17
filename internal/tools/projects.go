@@ -29,14 +29,13 @@ func (s *Service) ListProjects(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
 		return ResultEnvelope{}, err
 	}
-	views, financialMeta := s.enrichProjectViews(ctx, wsID, projects, args)
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(projects),
 		"page":        page,
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
-	return ok("clockify_projects_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_projects_create")), nil
+	return ok("clockify_projects_list", compactProjectViewsFromProjects(projects), emptyListMeta(meta, "clockify_projects_create")), nil
 }
 
 func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values, error) {
@@ -52,15 +51,9 @@ func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values
 	addBoolQuery(query, args, "is_template", "is-template")
 	addStringQuery(query, args, "sort_column", "sort-column")
 	addStringQuery(query, args, "sort_order", "sort-order")
-	// hydrated defaults to true so the enriched clockify_projects_list
-	// view keeps memberships/rates, but a caller (or an internal
-	// find-by-name lookup) can pass hydrated:false to skip the
-	// expensive per-project hydration. Previously this was force-set to
-	// true, which silently ignored the schema's hydrated argument and
-	// made every project scan pay the hydration cost.
 	addBoolQuery(query, args, "hydrated", "hydrated")
 	if _, ok := query["hydrated"]; !ok {
-		query["hydrated"] = "true"
+		query["hydrated"] = "false"
 	}
 	addStringQuery(query, args, "access", "access")
 	addIntQuery(query, args, "expense_limit", "expense-limit")

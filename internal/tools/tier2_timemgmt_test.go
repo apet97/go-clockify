@@ -1440,7 +1440,10 @@ func TestTimeOffBalanceDefaultsToCurrentUser(t *testing.T) {
 		case r.URL.Path == "/user" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.User{ID: "u-current", Name: "Tester"})
 		case r.URL.Path == "/workspaces/ws1/time-off/balance/user/u-current" && r.Method == http.MethodGet:
-			respondJSON(t, w, map[string]any{"count": 1, "balances": []map[string]any{{"policyId": "pol1", "policyName": "PTO", "userId": "u-current", "balance": 3, "policyTimeUnit": "DAYS"}}})
+			respondJSON(t, w, map[string]any{"count": 956, "balances": []map[string]any{
+				{"policyId": "pol1", "policyName": "PTO", "userId": "u-current", "balance": 3, "policyTimeUnit": "DAYS"},
+				{"policyId": "pol2", "policyName": "Sick", "userId": "u-current", "balance": 1, "policyTimeUnit": "DAYS"},
+			}})
 		default:
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1458,6 +1461,9 @@ func TestTimeOffBalanceDefaultsToCurrentUser(t *testing.T) {
 	if _, ok := res.Data.([]TimeOffBalanceView); !ok {
 		t.Fatalf("data type = %T, want []TimeOffBalanceView", res.Data)
 	}
+	if res.Meta["count"] != 2 || res.Meta["total"] != 2 || res.Meta["has_more"] != false {
+		t.Fatalf("time_off_balances meta should describe returned collection, got %#v", res.Meta)
+	}
 }
 
 func TestTimeOffPoliciesListPaginationMeta(t *testing.T) {
@@ -1467,7 +1473,13 @@ func TestTimeOffPoliciesListPaginationMeta(t *testing.T) {
 			if r.URL.Query().Get("page") != "2" || r.URL.Query().Get("page-size") != "1" {
 				t.Fatalf("unexpected pagination query: %s", r.URL.RawQuery)
 			}
-			respondJSON(t, w, []map[string]any{{"id": "pol2", "name": "Second"}})
+			respondJSON(t, w, []map[string]any{{
+				"id":           "pol2",
+				"name":         "Second",
+				"timeUnit":     "DAYS",
+				"userIds":      []string{"u1", "u2"},
+				"userGroupIds": []string{"g1"},
+			}})
 		default:
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1481,6 +1493,13 @@ func TestTimeOffPoliciesListPaginationMeta(t *testing.T) {
 	}
 	if res.Meta["page"] != 2 || res.Meta["pageSize"] != 1 || res.Meta["has_more"] != true {
 		t.Fatalf("unexpected pagination meta: %#v", res.Meta)
+	}
+	policies, ok := res.Data.([]CompactTimeOffPolicyView)
+	if !ok {
+		t.Fatalf("data type = %T, want []CompactTimeOffPolicyView", res.Data)
+	}
+	if len(policies) != 1 || policies[0].ID != "pol2" || policies[0].TimeUnit != "DAYS" || policies[0].UserCount != 2 || policies[0].UserGroupCount != 1 {
+		t.Fatalf("compact policy not preserved: %+v", policies)
 	}
 }
 

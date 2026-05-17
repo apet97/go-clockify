@@ -142,15 +142,19 @@ func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
 // and the EntriesSample cap (<=5 when include_entries is false).
 func TestQuickReport(t *testing.T) {
 	// Build 7 entries, one of which is currently running (End="").
+	base := time.Now().UTC().AddDate(0, 0, -7)
+	entryTime := func(dayOffset int, hour int) string {
+		return base.AddDate(0, 0, dayOffset).Add(time.Duration(hour) * time.Hour).Format(time.RFC3339)
+	}
 	entries := []clockify.TimeEntry{
-		{ID: "e1", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-01T09:00:00Z", End: "2026-04-01T11:00:00Z"}},
-		{ID: "e2", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-02T09:00:00Z", End: "2026-04-02T11:00:00Z"}},
-		{ID: "e3", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-03T09:00:00Z", End: "2026-04-03T11:00:00Z"}},
-		{ID: "e4", ProjectID: "p2", ProjectName: "Second Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-04T09:00:00Z", End: "2026-04-04T10:00:00Z"}},
-		{ID: "e5", ProjectID: "p2", ProjectName: "Second Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-05T09:00:00Z", End: "2026-04-05T09:30:00Z"}},
-		{ID: "e6", ProjectID: "p3", ProjectName: "Third Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-06T09:00:00Z", End: "2026-04-06T09:15:00Z"}},
+		{ID: "e1", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: entryTime(0, 9), End: entryTime(0, 11)}},
+		{ID: "e2", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: entryTime(1, 9), End: entryTime(1, 11)}},
+		{ID: "e3", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: entryTime(2, 9), End: entryTime(2, 11)}},
+		{ID: "e4", ProjectID: "p2", ProjectName: "Second Project", TimeInterval: clockify.TimeInterval{Start: entryTime(3, 9), End: entryTime(3, 10)}},
+		{ID: "e5", ProjectID: "p2", ProjectName: "Second Project", TimeInterval: clockify.TimeInterval{Start: entryTime(4, 9), End: entryTime(4, 9)}},
+		{ID: "e6", ProjectID: "p3", ProjectName: "Third Project", TimeInterval: clockify.TimeInterval{Start: entryTime(5, 9), End: entryTime(5, 9)}},
 		// Running entry (no end)
-		{ID: "e7", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: "2026-04-07T09:00:00Z", End: ""}},
+		{ID: "e7", ProjectID: "p1", ProjectName: "Top Project", TimeInterval: clockify.TimeInterval{Start: entryTime(6, 9), End: ""}},
 	}
 
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -542,6 +546,32 @@ func TestReportFilterValidation(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "PROJECT or USER") {
 		t.Fatalf("expected invalid weekly group error, got %v", err)
+	}
+}
+
+func TestSummaryAndMoneyReportsRejectReversedDateRangeLocally(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("reversed report range must not call Clockify; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	for name, handler := range map[string]func(context.Context, map[string]any) (ResultEnvelope, error){
+		"summary": svc.SummaryReport,
+		"money":   svc.MoneyReport,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := handler(context.Background(), map[string]any{
+				"date_range_start": "2026-05-31",
+				"date_range_end":   "2026-05-01",
+			})
+			if err == nil {
+				t.Fatal("expected reversed date range error")
+			}
+			if !strings.Contains(err.Error(), "date_range_end") || strings.Contains(err.Error(), "clockify POST failed") {
+				t.Fatalf("expected local range error, got %v", err)
+			}
+		})
 	}
 }
 

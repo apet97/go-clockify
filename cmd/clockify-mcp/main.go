@@ -129,6 +129,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
 	server.ToolTimeout = cfg.ToolTimeout
 	server.MaxMessageSize = cfg.MaxMessageSize
+	server.MaxToolResultBytes = cfg.MaxToolResultBytes
 	server.ResourceProvider = service
 	service.EmitResourceUpdate = server.NotifyResourceUpdated
 	service.SubscriptionGate = server.HasResourceSubscription
@@ -194,6 +195,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOL_TIMEOUT  %s\n", cfg.ToolTimeout)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  %d\n", cfg.MaxInFlightToolCalls)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_MESSAGE_SIZE          %d\n", cfg.MaxMessageSize)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_TOOL_RESULT_BYTES     %d\n", cfg.MaxToolResultBytes)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   %s\n", optionalList(cfg.WebhookAllowedDomains, "(none)"))
@@ -370,6 +372,7 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOL_TIMEOUT  optional, defaults to 45s, allowed 5s..10m")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  optional, defaults to 4")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_MESSAGE_SIZE          optional, defaults to 4194304, allowed 1..104857600")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_TOOL_RESULT_BYTES     optional, defaults to 50000, allowed 1..104857600")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOLSET                   optional: core, business, admin, all (default)")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_WRITES         optional, defaults to false")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   optional comma-separated allowlist")

@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -65,6 +67,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 			meta["projectFilterResolvedId"] = resolvedProjectID
 		}
 		views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
+		compactEntryListViews(views)
 		return ok("clockify_entries_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_log_work")), nil
 	}
 
@@ -92,7 +95,28 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 		"pageSize":    pageSize,
 	}, args, page, pageSize)
 	views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
+	compactEntryListViews(views)
 	return ok("clockify_entries_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_log_work")), nil
+}
+
+func compactEntryListViews(views []EntryView) {
+	for i := range views {
+		views[i].CustomFieldValues = nil
+		if len(views[i].CustomFields) == 0 {
+			continue
+		}
+		filtered := views[i].CustomFields[:0]
+		for _, field := range views[i].CustomFields {
+			if field.Value != nil {
+				filtered = append(filtered, field)
+			}
+		}
+		if len(filtered) == 0 {
+			views[i].CustomFields = nil
+			continue
+		}
+		views[i].CustomFields = filtered
+	}
 }
 
 // GetEntry retrieves a single time entry by ID.
@@ -100,6 +124,9 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 	entryID := stringArg(args, "entry_id")
 	if err := resolve.ValidateID(entryID, "entry_id"); err != nil {
 		return ResultEnvelope{}, err
+	}
+	if !looksLikeClockifyEntryID(entryID) {
+		return ResultEnvelope{}, entryNotFoundError(entryID)
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -112,10 +139,65 @@ func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnve
 	query := entryDetailQuery(args)
 	var entry clockify.TimeEntry
 	if err := s.Client.Get(ctx, path, query, &entry); err != nil {
+		if entryLookupMiss(err) {
+			return ResultEnvelope{}, entryNotFoundError(entryID)
+		}
 		return ResultEnvelope{}, err
 	}
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
 	return ok("clockify_entries_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
+}
+
+func entryNotFoundError(entryID string) error {
+	return fmt.Errorf("entry '%s' not found. List entries with clockify_entries_list, or narrow the date range and retry with a returned entry_id", entryID)
+}
+
+func entryLookupMiss(err error) bool {
+	var apiErr *clockify.APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.StatusCode == http.StatusNotFound {
+		return true
+	}
+	if apiErr.StatusCode != http.StatusBadRequest {
+		return false
+	}
+	body := strings.ToLower(apiErr.Body)
+	return strings.Contains(body, "doesn't belong to workspace") ||
+		strings.Contains(body, "doesn’t belong to workspace") ||
+		strings.Contains(body, "not found")
+}
+
+func looksLikeClockifyEntryID(id string) bool {
+	if len(id) == 24 || len(id) == 32 {
+		for i := 0; i < len(id); i++ {
+			if !isHexByte(id[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	if len(id) != 36 {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		switch i {
+		case 8, 13, 18, 23:
+			if id[i] != '-' {
+				return false
+			}
+		default:
+			if !isHexByte(id[i]) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func isHexByte(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 
 // UpdateEntry performs a fetch-then-update of a time entry, merging caller fields

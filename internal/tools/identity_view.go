@@ -58,32 +58,29 @@ type WorkspaceView struct {
 	Subdomain               any               `json:"subdomain,omitempty"`
 	WorkspaceSettings       any               `json:"workspaceSettings,omitempty"`
 	SettingsSummary         WorkspaceSettings `json:"settings_summary"`
-	Raw                     map[string]any    `json:"raw,omitempty"`
 }
 
 type WorkspaceSettings struct {
-	Currencies                any            `json:"currencies,omitempty"`
-	Features                  []string       `json:"features,omitempty"`
-	FeaturePlan               string         `json:"feature_plan,omitempty"`
-	FeaturesHuman             []FeatureLabel `json:"features_human,omitempty"`
-	SubscriptionLabel         string         `json:"subscription_label,omitempty"`
-	PlanCohort                string         `json:"plan_cohort,omitempty"`
-	DurationFormat            string         `json:"duration_format,omitempty"`
-	CurrencyFormat            any            `json:"currency_format,omitempty"`
-	NumberFormat              any            `json:"number_format,omitempty"`
-	ProjectLabel              string         `json:"project_label,omitempty"`
-	TaskLabel                 string         `json:"task_label,omitempty"`
-	WorkingDays               []string       `json:"working_days,omitempty"`
-	WorkingDayPattern         string         `json:"working_day_pattern,omitempty"`
-	WeekendIncluded           bool           `json:"weekend_included,omitempty"`
-	WorkingDayCount           int            `json:"working_day_count,omitempty"`
-	LockPolicy                any            `json:"lock_policy,omitempty"`
-	Rounding                  any            `json:"rounding,omitempty"`
-	EntityCreationPermissions any            `json:"entity_creation_permissions,omitempty"`
-	HasHourlyRate             bool           `json:"has_hourly_rate,omitempty"`
-	HasCostRate               bool           `json:"has_cost_rate,omitempty"`
-	MembershipsCount          int            `json:"memberships_count,omitempty"`
-	Source                    string         `json:"source,omitempty"`
+	Currencies                any      `json:"currencies,omitempty"`
+	FeaturePlan               string   `json:"feature_plan,omitempty"`
+	SubscriptionLabel         string   `json:"subscription_label,omitempty"`
+	PlanCohort                string   `json:"plan_cohort,omitempty"`
+	DurationFormat            string   `json:"duration_format,omitempty"`
+	CurrencyFormat            any      `json:"currency_format,omitempty"`
+	NumberFormat              any      `json:"number_format,omitempty"`
+	ProjectLabel              string   `json:"project_label,omitempty"`
+	TaskLabel                 string   `json:"task_label,omitempty"`
+	WorkingDays               []string `json:"working_days,omitempty"`
+	WorkingDayPattern         string   `json:"working_day_pattern,omitempty"`
+	WeekendIncluded           bool     `json:"weekend_included,omitempty"`
+	WorkingDayCount           int      `json:"working_day_count,omitempty"`
+	LockPolicy                any      `json:"lock_policy,omitempty"`
+	Rounding                  any      `json:"rounding,omitempty"`
+	EntityCreationPermissions any      `json:"entity_creation_permissions,omitempty"`
+	HasHourlyRate             bool     `json:"has_hourly_rate,omitempty"`
+	HasCostRate               bool     `json:"has_cost_rate,omitempty"`
+	MembershipsCount          int      `json:"memberships_count,omitempty"`
+	Source                    string   `json:"source,omitempty"`
 }
 
 type FeatureLabel struct {
@@ -173,21 +170,17 @@ func workspaceViewFromRaw(raw map[string]any) WorkspaceView {
 			FeaturePlan: firstReportString(raw, "featureSubscriptionType"),
 			Source:      "workspace_api",
 		},
-		Raw: maps.Clone(raw),
 	}
 	if features, ok, _ := strictStringSliceArg(raw, "features"); ok {
 		view.Features = features
-		view.SettingsSummary.Features = features
 	} else if values, ok := raw["features"].([]any); ok {
 		for _, value := range values {
 			if s := reportValueString(value); s != "" {
 				view.Features = append(view.Features, s)
 			}
 		}
-		view.SettingsSummary.Features = view.Features
 	}
 	view.FeaturesHuman = humanFeatureLabels(view.Features)
-	view.SettingsSummary.FeaturesHuman = view.FeaturesHuman
 	view.Currencies = firstPresent(raw, "currencies")
 	view.FeatureSubscriptionType = firstReportString(raw, "featureSubscriptionType")
 	view.SubscriptionLabel, view.PlanCohort = subscriptionLabels(view.FeatureSubscriptionType)

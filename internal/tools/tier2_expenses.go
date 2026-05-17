@@ -27,7 +27,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 				"start":     map[string]any{"type": "string", "description": "Start date (YYYY-MM-DD or RFC3339)"},
 				"end":       map[string]any{"type": "string", "description": "End date (YYYY-MM-DD or RFC3339)"},
 			},
-		}), envelopeSchemaFor[[]ExpenseView]("clockify_list_expenses")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeSchemaFor[[]CompactExpenseView]("clockify_list_expenses")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listExpenses(ctx, args)
 		}},
 
@@ -205,12 +205,20 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 		return ResultEnvelope{}, err
 	}
 	items := envelope.Expenses.Expenses
-	return ok("clockify_list_expenses", expenseViewsFromRaw(items), emptyListMeta(map[string]any{
+	// has_more from the known total; the page-full heuristic is only a
+	// fallback for when the API does not report a usable count, otherwise an
+	// exact final page (count == page*pageSize) would falsely report more.
+	hasMore := len(items) == pageSize
+	if envelope.Expenses.Count > 0 {
+		hasMore = page*pageSize < envelope.Expenses.Count
+	}
+	return ok("clockify_list_expenses", compactExpenseViewsFromRaw(items), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(items),
 		"total":       envelope.Expenses.Count,
 		"page":        page,
 		"pageSize":    pageSize,
+		"has_more":    hasMore,
 	}, "clockify_record_expense")), nil
 }
 

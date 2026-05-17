@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 // testTagID is a 24-char hex value that the resolver treats as a
@@ -384,9 +385,66 @@ func TestDeleteTagDryRunDoesNotMutate(t *testing.T) {
 	}
 }
 
+func TestTagsDeleteDryRunStandardizedResultHasEmptyChanged(t *testing.T) {
+	var deleted bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		tagPath := "/workspaces/ws1/tags/" + testTagID
+		switch {
+		case r.URL.Path == tagPath && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Tag{ID: testTagID, Name: "old-tag"})
+		case r.URL.Path == tagPath && r.Method == http.MethodDelete:
+			deleted = true
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	deleteTool := findToolDescriptor(t, svc, "clockify_tags_delete")
+	dry, err := deleteTool.Handler(context.Background(), map[string]any{"tag": testTagID, "dry_run": true})
+	if err != nil {
+		t.Fatalf("dry-run handler: %v", err)
+	}
+	if deleted {
+		t.Fatal("dry-run must not issue DELETE")
+	}
+	dryResult, ok := dry.(ToolResult)
+	if !ok {
+		t.Fatalf("dry-run result type = %T, want ToolResult", dry)
+	}
+	if len(dryResult.Changed.Deleted) != 0 || len(dryResult.Changed.Created) != 0 || len(dryResult.Changed.Updated) != 0 {
+		t.Fatalf("dry-run changed must be empty, got %#v", dryResult.Changed)
+	}
+
+	real, err := deleteTool.Handler(context.Background(), map[string]any{"tag": testTagID})
+	if err != nil {
+		t.Fatalf("real delete handler: %v", err)
+	}
+	realResult, ok := real.(ToolResult)
+	if !ok {
+		t.Fatalf("real delete result type = %T, want ToolResult", real)
+	}
+	if len(realResult.Changed.Deleted) != 1 || realResult.Changed.Deleted[0].ID != testTagID {
+		t.Fatalf("real delete should report changed.deleted receipt, got %#v", realResult.Changed)
+	}
+}
+
 func TestDeleteTagRequiresTag(t *testing.T) {
 	svc := New(nil, "ws1")
 	if _, err := svc.DeleteTag(context.Background(), map[string]any{}); err == nil {
 		t.Fatal("expected error when tag is missing")
 	}
+}
+
+func findToolDescriptor(t *testing.T, svc *Service, name string) mcp.ToolDescriptor {
+	t.Helper()
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if descriptor.Tool.Name == name {
+			return descriptor
+		}
+	}
+	t.Fatalf("missing descriptor for %s", name)
+	return mcp.ToolDescriptor{}
 }

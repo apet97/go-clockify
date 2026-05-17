@@ -245,7 +245,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(32, toolRO("clockify_projects_get", "Get one project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
 			"project":                  map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id":               map[string]any{"type": "string", "description": "Project ID."},
-			"hydrated":                 map[string]any{"type": "boolean", "description": "Clockify hydrated query flag; current handler sends hydrated=true."},
+			"hydrated":                 map[string]any{"type": "boolean", "description": "Clockify hydrated query flag; defaults to false for compact list responses."},
 			"custom_field_entity_type": map[string]any{"type": "string"},
 			"expense_limit":            map[string]any{"type": "integer"},
 			"expense_date":             map[string]any{"type": "string", "description": "Expense date query value, typically YYYY-MM-DD."},
@@ -1099,6 +1099,9 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 		current.Action = action
 		current.Data = sanitizeResultValue(current.Data)
 		current.Meta = sanitizeResultMeta(current.Meta)
+		if dryRunResult(args, current.Data) {
+			current.Changed = ChangeSet{}
+		}
 		return current
 	}
 	ids := map[string]string{}
@@ -1126,7 +1129,23 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 	for key, value := range idsFromData(data, entity) {
 		ids[key] = value
 	}
-	return result(action, entity, ids, data, changedFor(change, entity, data, ids), warnings, nil, meta)
+	changed := ChangeSet{}
+	if !dryRunResult(args, data) {
+		changed = changedFor(change, entity, data, ids)
+	}
+	return result(action, entity, ids, data, changed, warnings, nil, meta)
+}
+
+func dryRunResult(args map[string]any, data any) bool {
+	if boolArg(args, "dry_run") {
+		return true
+	}
+	if m, ok := data.(map[string]any); ok {
+		if dry, _ := m["dry_run"].(bool); dry {
+			return true
+		}
+	}
+	return false
 }
 
 func changedFor(change, entity string, data any, ids map[string]string) ChangeSet {

@@ -204,13 +204,14 @@ func (s *Service) listAssignments(ctx context.Context, args map[string]any) (Res
 	}
 
 	views, enrichment := s.enrichAssignmentViews(ctx, wsID, assignments, args)
-	return ok("clockify_list_assignments", views, emptyListMeta(map[string]any{
+	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(assignments),
 		"page":        page,
 		"pageSize":    pageSize,
 		"enrichment":  enrichment,
-	}, "clockify_schedule_work")), nil
+	}, args, page, pageSize)
+	return ok("clockify_list_assignments", views, emptyListMeta(meta, "clockify_schedule_work")), nil
 }
 
 func (s *Service) listAssignmentsRaw(ctx context.Context, wsID string, args map[string]any) ([]map[string]any, int, int, error) {

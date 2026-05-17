@@ -23,7 +23,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"page_size": map[string]any{"type": "integer", "description": "Items per page (default 50)"},
 				"status":    invoiceStatusSchema("Filter by live invoice status"),
 			},
-		}), envelopeSchemaFor[[]InvoiceView]("clockify_list_invoices")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		}), envelopeSchemaFor[[]CompactInvoiceView]("clockify_list_invoices")), ReadOnlyHint: true, IdempotentHint: true, Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.listInvoices(ctx, args)
 		}},
 
@@ -314,11 +314,20 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_list_invoices", invoiceViewsFromRaw(envelope.Invoices), emptyListMeta(map[string]any{
+	// has_more from the known total; the page-full heuristic is only a
+	// fallback for when the API does not report a usable total, otherwise an
+	// exact final page (total == page*pageSize) would falsely report more.
+	hasMore := len(envelope.Invoices) == pageSize
+	if envelope.Total > 0 {
+		hasMore = page*pageSize < envelope.Total
+	}
+	return ok("clockify_list_invoices", compactInvoiceViewsFromRaw(envelope.Invoices), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(envelope.Invoices),
 		"total":       envelope.Total,
 		"page":        page,
+		"pageSize":    pageSize,
+		"has_more":    hasMore,
 	}, "clockify_invoice_client_work")), nil
 }
 
@@ -458,7 +467,7 @@ func (s *Service) InvoicesInfo(ctx context.Context, args map[string]any) (Result
 		"pageSize":    pageSize,
 		"has_more":    page*pageSize < envelope.Total,
 	}
-	return ok("clockify_invoices_info", invoiceViewsFromRaw(envelope.Invoices), emptyListMeta(meta, "clockify_invoice_client_work")), nil
+	return ok("clockify_invoices_info", compactInvoiceViewsFromRaw(envelope.Invoices), emptyListMeta(meta, "clockify_invoice_client_work")), nil
 }
 
 func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

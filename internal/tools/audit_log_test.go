@@ -99,6 +99,9 @@ func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
 	if got, _ := env.Meta["count"].(int); got != 1 {
 		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
 	}
+	if env.Meta["total"] != 1 || env.Meta["page"] != 1 || env.Meta["pageSize"] != 1 || env.Meta["has_more"] != false {
+		t.Fatalf("audit log meta should include count/total/page/pageSize/has_more, got %+v", env.Meta)
+	}
 }
 
 func TestAuditLogsSearchRejectsMissingActions(t *testing.T) {

@@ -59,6 +59,18 @@ type ProjectView struct {
 	RawHydrated      map[string]any       `json:"raw_hydrated,omitempty"`
 }
 
+type CompactProjectView struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	ClientID   string `json:"clientId,omitempty"`
+	ClientName string `json:"clientName,omitempty"`
+	Color      string `json:"color,omitempty"`
+	Archived   bool   `json:"archived"`
+	Billable   bool   `json:"billable,omitempty"`
+	Public     bool   `json:"public,omitempty"`
+	Duration   string `json:"duration,omitempty"`
+}
+
 type TaskView struct {
 	ID                     string                 `json:"id"`
 	Name                   string                 `json:"name"`
@@ -185,6 +197,34 @@ func projectViewFromProject(project clockify.Project) ProjectView {
 	view.RawHydrated = projectRawHydratedMap(project)
 	view.EstimateProgress = progressFromEstimates(view.Estimates, 0, false)
 	return view
+}
+
+func compactProjectViewFromProject(project clockify.Project) CompactProjectView {
+	clientName := project.ClientName
+	if clientName == "" {
+		if client, ok := project.Client.(map[string]any); ok {
+			clientName = firstReportString(client, "name", "clientName")
+		}
+	}
+	return CompactProjectView{
+		ID:         project.ID,
+		Name:       project.Name,
+		ClientID:   project.ClientID,
+		ClientName: clientName,
+		Color:      project.Color,
+		Archived:   project.Archived,
+		Billable:   project.Billable,
+		Public:     project.Public,
+		Duration:   project.Duration,
+	}
+}
+
+func compactProjectViewsFromProjects(projects []clockify.Project) []CompactProjectView {
+	out := make([]CompactProjectView, 0, len(projects))
+	for _, project := range projects {
+		out = append(out, compactProjectViewFromProject(project))
+	}
+	return out
 }
 
 func taskViewFromTask(task clockify.Task, project *clockify.Project) TaskView {

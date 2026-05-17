@@ -502,8 +502,19 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 			}
 			respondJSON(t, w, map[string]any{
 				"expenses": map[string]any{
-					"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
-					"count":    12,
+					"expenses": []map[string]any{{
+						"id":                "exp1",
+						"amount":            100,
+						"categoryId":        "cat1",
+						"categoryName":      "Travel",
+						"projectId":         "p1",
+						"projectName":       "Build",
+						"userId":            "u1",
+						"billable":          true,
+						"notes":             "Train",
+						"customFieldValues": []map[string]any{{"customFieldId": "cf1", "value": nil}},
+					}},
+					"count": 12,
 				},
 			})
 		default:
@@ -528,6 +539,16 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 	}
 	if res.Meta["total"] != 12 {
 		t.Fatalf("expected workspace total=12, got %v", res.Meta["total"])
+	}
+	expenses, ok := res.Data.([]CompactExpenseView)
+	if !ok {
+		t.Fatalf("data type = %T, want []CompactExpenseView", res.Data)
+	}
+	if len(expenses) != 1 {
+		t.Fatalf("expense count = %d, want 1", len(expenses))
+	}
+	if expenses[0].ID != "exp1" || expenses[0].CategoryName != "Travel" || expenses[0].ProjectName != "Build" || !expenses[0].Billable {
+		t.Fatalf("compact expense fields not preserved: %+v", expenses[0])
 	}
 }
 

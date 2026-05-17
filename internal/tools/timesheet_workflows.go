@@ -20,6 +20,8 @@ type TimesheetReviewData struct {
 	Entries          []EntryView      `json:"entries,omitempty"`
 }
 
+const defaultTimesheetReviewMaxRows = 15
+
 type TimesheetIssue struct {
 	Type            string   `json:"type"`
 	Severity        string   `json:"severity"`
@@ -80,6 +82,10 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 	if maxSuggestions > 50 {
 		maxSuggestions = 50
 	}
+	maxRows := intArg(args, "max_rows", defaultTimesheetReviewMaxRows)
+	if maxRows < 0 {
+		return ResultEnvelope{}, fmt.Errorf("max_rows must be >= 0")
+	}
 
 	limits := s.reportLimitsForArgs(args)
 	effectiveMax := limits.AppliedMaxEntries
@@ -102,22 +108,8 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		Issues:           issues,
 		SuggestedActions: suggestions,
 	}
-	if boolArg(args, "include_entries") {
-		views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
-		data.Entries = views
-		meta := paginationMeta(agg, reportPageSize, limits)
-		meta["financials"] = financialMeta
-		return ok(oneUserToolReviewDay, data, mergeMeta(map[string]any{
-			"workspaceId":  wsID,
-			"userId":       userID,
-			"timezone":     loc.String(),
-			"mode":         mode,
-			"source":       "time-entries-workflow-review",
-			"workdayStart": workdayStart,
-			"workdayEnd":   workdayEnd,
-		}, meta)), nil
-	}
-	meta := mergeMeta(map[string]any{
+	truncationMeta := capTimesheetReviewDetails(&data, maxRows)
+	baseMeta := mergeMeta(map[string]any{
 		"workspaceId":  wsID,
 		"userId":       userID,
 		"timezone":     loc.String(),
@@ -125,8 +117,48 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		"source":       "time-entries-workflow-review",
 		"workdayStart": workdayStart,
 		"workdayEnd":   workdayEnd,
-	}, paginationMeta(agg, reportPageSize, limits))
+		"maxRows":      maxRows,
+	}, truncationMeta)
+	if boolArg(args, "include_entries") {
+		views, financialMeta := s.enrichEntryViews(ctx, wsID, entries)
+		data.Entries = views
+		truncationMeta = capTimesheetReviewDetails(&data, maxRows)
+		baseMeta = mergeMeta(baseMeta, truncationMeta)
+		meta := paginationMeta(agg, reportPageSize, limits)
+		meta["financials"] = financialMeta
+		return ok(oneUserToolReviewDay, data, mergeMeta(baseMeta, meta)), nil
+	}
+	meta := mergeMeta(baseMeta, paginationMeta(agg, reportPageSize, limits))
 	return ok(oneUserToolReviewDay, data, meta), nil
+}
+
+func capTimesheetReviewDetails(data *TimesheetReviewData, maxRows int) map[string]any {
+	meta := map[string]any{}
+	if data == nil || maxRows == 0 {
+		return meta
+	}
+	if total := len(data.ByProject); total > maxRows {
+		data.ByProject = data.ByProject[:maxRows]
+		addReviewCapMeta(meta, "byProject", total, maxRows)
+	}
+	if total := len(data.Issues); total > maxRows {
+		data.Issues = data.Issues[:maxRows]
+		addReviewCapMeta(meta, "issues", total, maxRows)
+	}
+	if total := len(data.Entries); total > maxRows {
+		data.Entries = data.Entries[:maxRows]
+		addReviewCapMeta(meta, "entries", total, maxRows)
+	}
+	if len(meta) > 0 {
+		meta["truncated"] = true
+		meta["next_hint"] = "Review details were capped by max_rows; lower the date range or raise max_rows to inspect more rows."
+	}
+	return meta
+}
+
+func addReviewCapMeta(meta map[string]any, prefix string, total, returned int) {
+	meta[prefix+"Total"] = total
+	meta[prefix+"Returned"] = returned
 }
 
 func timesheetReviewRange(args map[string]any, loc *time.Location) (time.Time, time.Time, string, error) {

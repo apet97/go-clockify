@@ -424,6 +424,10 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 	return ok("clockify_list_holidays", out, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
+		"total":       len(out),
+		"page":        1,
+		"pageSize":    len(out),
+		"has_more":    false,
 	}, "clockify_holidays_create")), nil
 }
 

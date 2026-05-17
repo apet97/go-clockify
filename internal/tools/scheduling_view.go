@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"maps"
 	"math"
 	"sort"
 	"strings"
@@ -281,7 +280,6 @@ func assignmentViewFromRaw(raw map[string]any, start, end time.Time) AssignmentV
 		"source":   "scheduled_minus_tracked",
 	}
 	view["entities"] = assignmentEntities(raw)
-	view["assignment"] = assignmentDetails(raw)
 	return view
 }
 
@@ -1364,6 +1362,17 @@ func scheduleTotalView(raw map[string]any, kind string) map[string]any {
 	for k, v := range raw {
 		view[k] = v
 	}
+	for _, key := range []string{
+		"capacityPerDay", "capacity_per_day",
+		"totalHoursPerDay", "total_hours_per_day",
+		"workingDays", "working_days",
+		"userStatus", "user_status",
+		"userImage", "user_image",
+		"assignments", "assignmentDays",
+		"raw",
+	} {
+		delete(view, key)
+	}
 	scheduled := scheduleSecondsFromTotal(raw)
 	view["scheduled"] = map[string]any{
 		"duration": durationView(scheduled),
@@ -1393,28 +1402,7 @@ func scheduleTotalView(raw map[string]any, kind string) map[string]any {
 		view["project_heatmap"] = assignments
 	}
 	view["schedule_total_kind"] = kind
-	view["raw"] = raw
 	return view
-}
-
-func assignmentDetails(raw map[string]any) map[string]any {
-	details := map[string]any{
-		"id":                       firstReportString(raw, "id", "_id", "assignmentId", "assignment_id"),
-		"published":                firstPresent(raw, "published", "isPublished"),
-		"start_time":               firstReportString(raw, "startTime", "start_time"),
-		"hours_per_day":            firstPresent(raw, "hoursPerDay", "hours_per_day"),
-		"include_non_working_days": firstPresent(raw, "includeNonWorkingDays", "include_non_working_days"),
-		"exclude_days":             firstPresent(raw, "excludeDays", "exclude_days"),
-		"recurring":                firstPresent(raw, "recurring", "recurringAssignment", "recurring_assignment"),
-		"period":                   firstPresent(raw, "period"),
-		"source":                   "scheduling_api",
-	}
-	for key, value := range maps.Clone(details) {
-		if value == nil || value == "" {
-			delete(details, key)
-		}
-	}
-	return details
 }
 
 func scheduleDayDurations(raw any, label string) []map[string]any {
@@ -1430,7 +1418,6 @@ func scheduleDayDurations(raw any, label string) []map[string]any {
 		out = append(out, map[string]any{
 			"date":     firstReportString(row, "date", "day"),
 			"duration": durationView(seconds),
-			"raw":      maps.Clone(row),
 		})
 	}
 	if len(out) == 0 {
@@ -1446,7 +1433,6 @@ func scheduleProjectHeatmap(raw map[string]any) []map[string]any {
 		out = append(out, map[string]any{
 			"date":           firstReportString(row, "date", "day"),
 			"has_assignment": firstPresent(row, "hasAssignment", "has_assignment"),
-			"raw":            maps.Clone(row),
 		})
 	}
 	if len(out) == 0 {

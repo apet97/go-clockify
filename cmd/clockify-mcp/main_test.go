@@ -68,6 +68,7 @@ func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
 		"CLOCKIFY_TOOL_TIMEOUT  45s",
 		"CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  4",
 		"CLOCKIFY_MAX_MESSAGE_SIZE          4194304",
+		"CLOCKIFY_MAX_TOOL_RESULT_BYTES     50000",
 		"CLOCKIFY_TOOLSET                   all",
 		"CLOCKIFY_ENABLE_RAW_WRITES         false",
 		"CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   (none)",

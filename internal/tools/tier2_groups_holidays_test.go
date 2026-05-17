@@ -124,6 +124,9 @@ func TestTier2_GroupsHolidays_FullSweep(t *testing.T) {
 	// Holidays
 	res, err = svc.ListHolidays(ctx)
 	mustOK(t, res, err, "clockify_list_holidays")
+	if res.Meta["count"] != 1 || res.Meta["total"] != 1 || res.Meta["page"] != 1 || res.Meta["has_more"] != false {
+		t.Fatalf("holidays list meta should include count/total/page/pageSize/has_more, got %#v", res.Meta)
+	}
 
 	res, err = svc.CreateHoliday(ctx, map[string]any{
 		"name":            "Memorial Day",

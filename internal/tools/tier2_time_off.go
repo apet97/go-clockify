@@ -130,7 +130,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 				map[string]any{"type": "object", "properties": map[string]any{
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},
-				}}), envelopeSchemaFor[[]TimeOffPolicyView]("clockify_list_time_off_policies")),
+				}}), envelopeSchemaFor[[]CompactTimeOffPolicyView]("clockify_list_time_off_policies")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
 				return s.listTimeOffPolicies(ctx, args)
@@ -620,7 +620,7 @@ func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) 
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_list_time_off_policies", timeOffPolicyViewsFromRaw(policies), emptyListMeta(map[string]any{
+	return ok("clockify_list_time_off_policies", compactTimeOffPolicyViewsFromRaw(policies), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(policies),
 		"total":       len(policies),
@@ -930,12 +930,20 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 				policyIDs = append(policyIDs, id)
 			}
 		}
-		return ok("clockify_time_off_balance", views, map[string]any{
+		meta := map[string]any{
 			"workspaceId": wsID,
 			"userId":      userID,
 			"policyIds":   policyIDs,
-			"total":       envelope.Count,
-		}), nil
+			"count":       len(views),
+			"total":       len(views),
+			"page":        page,
+			"pageSize":    pageSize,
+			"has_more":    false,
+		}
+		if envelope.Count != 0 && envelope.Count != len(views) {
+			meta["upstream_count_ignored"] = envelope.Count
+		}
+		return ok("clockify_time_off_balance", views, meta), nil
 	}
 
 	var balance map[string]any
@@ -954,7 +962,11 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 		"policyId":    policyID,
 		"userId":      userID,
 		"policyIds":   []string{policyID},
-		"total":       envelope.Count,
+		"count":       1,
+		"total":       1,
+		"page":        page,
+		"pageSize":    pageSize,
+		"has_more":    false,
 	}), nil
 }
 

@@ -70,28 +70,29 @@ func TestTaskViewMapsTaskRatesAndEstimate(t *testing.T) {
 	}
 }
 
-func TestListProjectsEnrichmentMapsSummaryReportMoney(t *testing.T) {
+func TestGetProjectEnrichmentMapsSummaryReportMoney(t *testing.T) {
+	const projectID = "507f1f77bcf86cd799439011"
 	var reportCalls int
 	var reportBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+		case r.URL.Path == "/workspaces/ws1/projects/"+projectID && r.Method == http.MethodGet:
 			if got := r.URL.Query().Get("hydrated"); got != "true" {
 				t.Fatalf("hydrated query = %q, want true", got)
 			}
-			respondJSON(t, w, []clockify.Project{{
-				ID:         "p1",
+			respondJSON(t, w, clockify.Project{
+				ID:         projectID,
 				Name:       "Project",
 				Billable:   true,
 				Duration:   "3600000",
 				HourlyRate: &clockify.Rate{Amount: 10000, Currency: "USD"},
 				CostRate:   &clockify.Rate{Amount: 4000, Currency: "USD"},
-			}})
-		case r.URL.Path == "/workspaces/ws1/projects/p1/tasks" && r.Method == http.MethodGet:
+			})
+		case r.URL.Path == "/workspaces/ws1/projects/"+projectID+"/tasks" && r.Method == http.MethodGet:
 			respondJSON(t, w, []clockify.Task{{
 				ID:         "t1",
 				Name:       "Task",
-				ProjectID:  "p1",
+				ProjectID:  projectID,
 				Billable:   true,
 				Duration:   "PT1H",
 				Estimate:   "PT2H",
@@ -105,7 +106,7 @@ func TestListProjectsEnrichmentMapsSummaryReportMoney(t *testing.T) {
 			}
 			respondJSON(t, w, map[string]any{
 				"groupOne": []map[string]any{{
-					"_id":      "p1",
+					"_id":      projectID,
 					"duration": 7200,
 					"amounts": []map[string]any{
 						{"type": "EARNED", "value": 20000, "currency": "USD"},
@@ -131,14 +132,15 @@ func TestListProjectsEnrichmentMapsSummaryReportMoney(t *testing.T) {
 
 	svc := New(client, "ws1")
 	svc.EntryFinancialReports = true
-	result, err := svc.ListProjects(context.Background(), map[string]any{
+	result, err := svc.GetProject(context.Background(), map[string]any{
+		"project":         projectID,
 		"financial_start": "2023-05-13T00:00:00Z",
 		"financial_end":   "2026-05-13T00:00:00Z",
 	})
 	if err != nil {
-		t.Fatalf("ListProjects: %v", err)
+		t.Fatalf("GetProject: %v", err)
 	}
-	projects := result.Data.([]ProjectView)
+	project := result.Data.(ProjectView)
 	if reportCalls != 1 {
 		t.Fatalf("reports calls = %d, want 1", reportCalls)
 	}
@@ -150,11 +152,11 @@ func TestListProjectsEnrichmentMapsSummaryReportMoney(t *testing.T) {
 	if len(groups) != 3 || groups[0] != "CLIENT" || groups[1] != "PROJECT" || groups[2] != "TASK" {
 		t.Fatalf("summary groups = %#v", groups)
 	}
-	if projects[0].Financials.Source != entryFinancialSourceReportsAPI || projects[0].Financials.Earned.AmountCents != 20000 {
-		t.Fatalf("project report financials not mapped: %#v", projects[0].Financials)
+	if project.Financials.Source != entryFinancialSourceReportsAPI || project.Financials.Earned.AmountCents != 20000 {
+		t.Fatalf("project report financials not mapped: %#v", project.Financials)
 	}
-	if len(projects[0].Tasks) != 1 || projects[0].Tasks[0].Financials.Earned.AmountCents != 9000 {
-		t.Fatalf("task report financials not mapped: %#v", projects[0].Tasks)
+	if len(project.Tasks) != 1 || project.Tasks[0].Financials.Earned.AmountCents != 9000 {
+		t.Fatalf("task report financials not mapped: %#v", project.Tasks)
 	}
 }
 
@@ -193,11 +195,12 @@ func TestProjectFinancialsOmitProfitForDifferentCurrencies(t *testing.T) {
 }
 
 func TestProjectEnrichmentFailureDoesNotFailTool(t *testing.T) {
+	const projectID = "507f1f77bcf86cd799439011"
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
-			respondJSON(t, w, []clockify.Project{{ID: "p1", Name: "Project"}})
-		case r.URL.Path == "/workspaces/ws1/projects/p1/tasks" && r.Method == http.MethodGet:
+		case r.URL.Path == "/workspaces/ws1/projects/"+projectID && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Project{ID: projectID, Name: "Project"})
+		case r.URL.Path == "/workspaces/ws1/projects/"+projectID+"/tasks" && r.Method == http.MethodGet:
 			respondJSON(t, w, []clockify.Task{})
 		case r.URL.Path == "/workspaces/ws1/reports/summary" && r.Method == http.MethodPost:
 			http.Error(w, "reports down", http.StatusBadGateway)
@@ -209,13 +212,13 @@ func TestProjectEnrichmentFailureDoesNotFailTool(t *testing.T) {
 
 	svc := New(client, "ws1")
 	svc.EntryFinancialReports = true
-	result, err := svc.ListProjects(context.Background(), nil)
+	result, err := svc.GetProject(context.Background(), map[string]any{"project": projectID})
 	if err != nil {
-		t.Fatalf("ListProjects should not fail on enrichment failure: %v", err)
+		t.Fatalf("GetProject should not fail on enrichment failure: %v", err)
 	}
-	projects := result.Data.([]ProjectView)
-	if projects[0].Financials.Source != entryFinancialSourceUnavailable {
-		t.Fatalf("financial source = %s, want unavailable", projects[0].Financials.Source)
+	project := result.Data.(ProjectView)
+	if project.Financials.Source != entryFinancialSourceUnavailable {
+		t.Fatalf("financial source = %s, want unavailable", project.Financials.Source)
 	}
 	if result.Meta["financials"].(map[string]any)["reports_api_error"] == nil {
 		t.Fatalf("expected reports_api_error meta, got %#v", result.Meta)

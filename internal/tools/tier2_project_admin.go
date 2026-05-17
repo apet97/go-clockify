@@ -12,6 +12,11 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+const (
+	projectTemplateListNoteLimit  = 280
+	projectTemplateListNoteSuffix = "..."
+)
+
 func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List project templates
@@ -271,11 +276,42 @@ func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any)
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
 		return ResultEnvelope{}, err
 	}
+	out = compactProjectTemplateListNotes(out)
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(out),
 	}, args, page, pageSize)
 	return ok("clockify_list_project_templates", out, emptyListMeta(meta, "clockify_projects_templates_create")), nil
+}
+
+func compactProjectTemplateListNotes(items []map[string]any) []map[string]any {
+	compact := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		row := make(map[string]any, len(item)+1)
+		for key, value := range item {
+			row[key] = value
+		}
+		if note, ok := row["note"].(string); ok {
+			if truncated, changed := truncateProjectTemplateListNote(note); changed {
+				row["note"] = truncated
+				row["noteTruncated"] = true
+			}
+		}
+		compact = append(compact, row)
+	}
+	return compact
+}
+
+func truncateProjectTemplateListNote(note string) (string, bool) {
+	runes := []rune(note)
+	if len(runes) <= projectTemplateListNoteLimit {
+		return note, false
+	}
+	keep := projectTemplateListNoteLimit - len([]rune(projectTemplateListNoteSuffix))
+	if keep < 0 {
+		keep = 0
+	}
+	return string(runes[:keep]) + projectTemplateListNoteSuffix, true
 }
 
 func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {

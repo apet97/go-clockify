@@ -7,6 +7,18 @@ import (
 )
 
 type InvoiceView map[string]any
+type CompactInvoiceView struct {
+	ID         string     `json:"id"`
+	Number     string     `json:"number,omitempty"`
+	Status     string     `json:"status,omitempty"`
+	ClientID   string     `json:"clientId,omitempty"`
+	ClientName string     `json:"clientName,omitempty"`
+	IssuedDate string     `json:"issuedDate,omitempty"`
+	DueDate    string     `json:"dueDate,omitempty"`
+	Currency   string     `json:"currency,omitempty"`
+	Amount     *MoneyView `json:"amount,omitempty"`
+}
+
 type InvoiceItemView map[string]any
 type InvoicePaymentView map[string]any
 type InvoiceSettingsView map[string]any
@@ -35,6 +47,29 @@ type InvoiceSummary struct {
 	Source                string         `json:"source"`
 	Reason                string         `json:"reason,omitempty"`
 	SuggestedActionsCount int            `json:"suggested_actions_count,omitempty"`
+}
+
+func compactInvoiceViewFromRaw(raw map[string]any) CompactInvoiceView {
+	currency := reportCurrency(raw)
+	return CompactInvoiceView{
+		ID:         firstReportString(raw, "id", "_id", "invoiceId", "invoice_id"),
+		Number:     firstReportString(raw, "number", "invoiceNumber", "invoice_number"),
+		Status:     strings.ToUpper(firstReportString(raw, "status", "invoiceStatus", "invoice_status")),
+		ClientID:   firstReportString(raw, "clientId", "client_id"),
+		ClientName: firstReportString(raw, "clientName", "client_name"),
+		IssuedDate: firstReportString(raw, "issuedDate", "issued_date"),
+		DueDate:    firstReportString(raw, "dueDate", "due_date"),
+		Currency:   currency,
+		Amount:     moneyFromAny(firstPresent(raw, "amount", "totalAmount", "balance"), currency),
+	}
+}
+
+func compactInvoiceViewsFromRaw(items []map[string]any) []CompactInvoiceView {
+	out := make([]CompactInvoiceView, 0, len(items))
+	for _, item := range items {
+		out = append(out, compactInvoiceViewFromRaw(item))
+	}
+	return out
 }
 
 func invoiceViewFromRaw(raw map[string]any) InvoiceView {

@@ -142,6 +142,9 @@ func (s *Service) aggregateEntriesRangeForWorkspace(ctx context.Context, workspa
 		s.EmitProgress(ctx, float64(result.PagesFetched), -1, fmt.Sprintf("fetched %d entries", result.EntriesCount))
 
 		for _, entry := range batch {
+			if !entryStartsWithinRange(entry, start, end) {
+				continue
+			}
 			result.EntriesCount++
 			secs := entry.DurationSeconds()
 			result.TotalSeconds += secs
@@ -198,6 +201,14 @@ func (s *Service) aggregateEntriesRangeForWorkspace(ctx context.Context, workspa
 		}
 	}
 	return nil, "", "", fmt.Errorf("report pagination safety stop reached at %d pages for range %s..%s; narrow the range", aggregatePageSafetyStop, start.Format(time.RFC3339), end.Format(time.RFC3339))
+}
+
+func entryStartsWithinRange(entry clockify.TimeEntry, start, end time.Time) bool {
+	startTime, err := entry.StartTime()
+	if err != nil {
+		return true
+	}
+	return !startTime.Before(start) && startTime.Before(end)
 }
 
 func (s *Service) resolveAggregateProjectBuckets(ctx context.Context, wsID string, result *aggregateResult) {

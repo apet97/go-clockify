@@ -559,6 +559,59 @@ func TestGetEntry(t *testing.T) {
 	}
 }
 
+func TestEntriesGetBadIDReturnsCleanNotFound(t *testing.T) {
+	const missingID = "000000000000000000000000"
+	requests := 0
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		switch r.URL.Path {
+		case "/workspaces/ws1/time-entries/" + missingID:
+			http.Error(w, `{"message":"Time entry doesn't belong to Workspace","code":501}`, http.StatusBadRequest)
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	getTool := findToolDescriptor(t, svc, "clockify_entries_get")
+	for _, tc := range []struct {
+		name        string
+		entryID     string
+		wantRequest bool
+	}{
+		{name: "malformed", entryID: "abc"},
+		{name: "upstream workspace miss", entryID: missingID, wantRequest: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := requests
+			out, err := getTool.Handler(context.Background(), map[string]any{"entry_id": tc.entryID})
+			if err != nil {
+				t.Fatalf("handler returned transport error: %v", err)
+			}
+			if gotRequest := requests > before; gotRequest != tc.wantRequest {
+				t.Fatalf("request made = %v, want %v", gotRequest, tc.wantRequest)
+			}
+			toolErr, ok := out.(ToolError)
+			if !ok {
+				t.Fatalf("result type = %T, want ToolError: %#v", out, out)
+			}
+			if toolErr.Error.Code != "not_found" {
+				t.Fatalf("code = %q, want not_found: %#v", toolErr.Error.Code, toolErr)
+			}
+			if !strings.Contains(toolErr.Error.Message, "entry '"+tc.entryID+"' not found") {
+				t.Fatalf("message missing clean entry not-found text: %q", toolErr.Error.Message)
+			}
+			if strings.Contains(toolErr.Error.Message, "clockify GET failed") || strings.Contains(toolErr.Error.Message, "501") {
+				t.Fatalf("message leaked raw upstream text: %q", toolErr.Error.Message)
+			}
+			if toolErr.Recovery.Tool != "clockify_entries_list" {
+				t.Fatalf("recovery tool = %q, want clockify_entries_list", toolErr.Recovery.Tool)
+			}
+		})
+	}
+}
+
 func TestEntriesCreate(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -843,11 +896,13 @@ func TestDeleteEntryDryRun(t *testing.T) {
 }
 
 func TestListProjects(t *testing.T) {
+	var gotHydrated string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/workspaces/ws123/projects":
+			gotHydrated = r.URL.Query().Get("hydrated")
 			respondJSON(t, w, []clockify.Project{
-				{ID: "p1", Name: "Backend API", Color: "#0000FF", Archived: false},
+				{ID: "p1", Name: "Backend API", ClientID: "c1", ClientName: "Client", Color: "#0000FF", Archived: false, Billable: true, Public: true, Duration: "PT1H", Note: strings.Repeat("x", 500)},
 				{ID: "p2", Name: "Frontend App", Color: "#FF0000", Archived: false},
 			})
 		default:
@@ -867,9 +922,12 @@ func TestListProjects(t *testing.T) {
 	if result.Action != "clockify_projects_list" {
 		t.Fatalf("expected action clockify_projects_list, got %s", result.Action)
 	}
-	projects, ok := result.Data.([]ProjectView)
+	if gotHydrated != "false" {
+		t.Fatalf("hydrated query = %q, want false", gotHydrated)
+	}
+	projects, ok := result.Data.([]CompactProjectView)
 	if !ok {
-		t.Fatalf("expected []ProjectView, got %T", result.Data)
+		t.Fatalf("expected []CompactProjectView, got %T", result.Data)
 	}
 	if len(projects) != 2 {
 		t.Fatalf("expected 2 projects, got %d", len(projects))
@@ -879,6 +937,9 @@ func TestListProjects(t *testing.T) {
 	}
 	if projects[1].Name != "Frontend App" {
 		t.Fatalf("expected second project Frontend App, got %s", projects[1].Name)
+	}
+	if projects[0].ClientName != "Client" || projects[0].Duration != "PT1H" || !projects[0].Billable || !projects[0].Public {
+		t.Fatalf("compact project fields not preserved: %+v", projects[0])
 	}
 	count, ok := result.Meta["count"].(int)
 	if !ok || count != 2 {
@@ -1096,6 +1157,78 @@ func TestEntriesCreateDryRun(t *testing.T) {
 	validation, ok := dataMap["validation"].(ValidationView)
 	if !ok || validation.Status != validationStatusOK {
 		t.Fatalf("expected validation ok, got %#v", dataMap["validation"])
+	}
+}
+
+func TestEntriesCreateDryRunWarnsOnFutureEntry(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry_run must not issue any request; got %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.EntriesCreate(context.Background(), map[string]any{
+		"start":       "2999-04-06T09:00:00Z",
+		"end":         "2999-04-06T10:00:00Z",
+		"description": "Planned future work",
+		"project_id":  "abc123def456789012345678",
+		"dry_run":     true,
+	})
+	if err != nil {
+		t.Fatalf("EntriesCreate dry run failed: %v", err)
+	}
+	tr, ok := res.(ToolResult)
+	if !ok {
+		t.Fatalf("expected ToolResult, got %T", res)
+	}
+	if len(tr.Warnings) != 1 || tr.Warnings[0].Code != "future_dated" {
+		t.Fatalf("expected future_dated warning, got %#v", tr.Warnings)
+	}
+	dataMap, ok := tr.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected dry-run map, got %T", tr.Data)
+	}
+	if _, ok := dataMap["warnings"].([]Warning); !ok {
+		t.Fatalf("dry-run preview should include warnings, got %#v", dataMap["warnings"])
+	}
+}
+
+func TestClockifyLogWorkWarnsOnFutureFinishedEntry(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:          "future-entry",
+				Description: "Future work",
+				ProjectID:   "abc123def456789012345678",
+				TimeInterval: clockify.TimeInterval{
+					Start: "2999-04-06T09:00:00Z",
+					End:   "2999-04-06T10:00:00Z",
+				},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.ClockifyLogWork(context.Background(), map[string]any{
+		"start":         "2999-04-06T09:00:00Z",
+		"end":           "2999-04-06T10:00:00Z",
+		"description":   "Future work",
+		"project_id":    "abc123def456789012345678",
+		"allow_overlap": true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyLogWork: %v", err)
+	}
+	tr, ok := res.(ToolResult)
+	if !ok {
+		t.Fatalf("expected ToolResult, got %T", res)
+	}
+	if len(tr.Warnings) != 1 || tr.Warnings[0].Code != "future_dated" {
+		t.Fatalf("expected future_dated warning, got %#v", tr.Warnings)
 	}
 }
 
