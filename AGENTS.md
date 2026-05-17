@@ -134,6 +134,8 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   `clockify_webhooks_test`, or `clockify_invoices_items_update`; these tools
   return a clean `unsupported` error with recovery guidance instead of calling
   upstream.
+- Clockify's invoice export endpoint only produces PDF; `clockify_invoices_export`
+  advertises `format: PDF` only — use `clockify_reports_export` for CSV/XLSX.
 - Tool results are capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES` (default 50000):
   oversized list results truncate with `meta.truncated`/`size_capped`, and
   CSV/PDF/XLSX/ZIP exports return `bodyEncoding:"file"` with a temp-file
@@ -147,6 +149,12 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
   timer `billable` overrides report `meta.billable_source`.
 - `clockify_holidays_update` is a partial update: only `holiday_id` is required,
   and unspecified fields are merged from the existing holiday record.
+- `clockify_expenses_categories_update` is a partial update too — Clockify's PUT
+  requires `name`, so the handler pre-fetches the category and merges the
+  existing name when the caller omits it.
+- `clockify_time_off_approve` / `_deny` re-hydrate their response with a
+  follow-up read because the Clockify PATCH body is sparse; a failed
+  re-hydration is reported in `meta` and does not fail the approve/deny.
 - Recoverable `error.message` carries the cleaned upstream message — the HTTP
   method/path prefix and internal `clockify_error_code` suffix are stripped,
   while `clockify.APIError.Error()` keeps the full diagnostic for server logs.
@@ -164,8 +172,13 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
 - `clockify_entries_list` and `clockify_reports_detailed` accept a same-day
   range; a bare `YYYY-MM-DD` `end` is coerced to end-of-day so `start == end`
   is a full one-day window, not a zero-width one.
-- `clockify_approvals_list` and `clockify_approvals_get` strip heavy `entries`
-  payloads; `clockify_invoices_payments_delete` supports a `dry_run` preview;
+- The approval-requests list filter accepts only `PENDING`, `APPROVED`, and
+  `WITHDRAWN_APPROVAL`; `clockify_approvals_list` / `_get` expose exactly that
+  `status` enum (`REJECTED` reverts to `UNSUBMITTED` and is not listable).
+- `clockify_approvals_list`, `_get`, and the approve/reject/withdraw `dry_run`
+  preview strip heavy `entries` payloads; `findApprovalRequest` scans every
+  valid state, so get / resubmit-preflight / patch-dry_run resolve non-PENDING
+  approvals. `clockify_invoices_payments_delete` supports a `dry_run` preview;
   `clockify_approvals_resubmit` preflights approval state for a precise
   recovery hint.
 
