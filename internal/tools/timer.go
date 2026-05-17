@@ -135,6 +135,27 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	if err != nil {
 		return nil, err
 	}
+	running, _, _, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
+	if err != nil {
+		return nil, err
+	}
+	if len(running) == 0 || !running[0].IsRunning() {
+		return ok("clockify_entries_timer_stop", map[string]any{
+			"id":               "",
+			"description":      "",
+			"projectId":        "",
+			"billable":         false,
+			"billable_state":   "absent",
+			"billable_present": false,
+			"financials": map[string]any{
+				"source": entryFinancialSourceUnavailable,
+				"reason": "financial enrichment was not available",
+			},
+			"timeInterval": map[string]any{},
+			"stopped":      false,
+			"reason":       "no timer running",
+		}, map[string]any{"workspaceId": wsID, "userId": user.ID}), nil
+	}
 	payload := map[string]any{"end": time.Now().UTC().Format(time.RFC3339)}
 	path, err := paths.Workspace(wsID, "user", user.ID, "time-entries")
 	if err != nil {

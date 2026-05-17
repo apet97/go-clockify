@@ -212,6 +212,9 @@ func rollupName(row map[string]any, group string) string {
 			}
 		}
 	}
+	if strings.EqualFold(group, "PROJECT") {
+		return "(no project)"
+	}
 	return ""
 }
 

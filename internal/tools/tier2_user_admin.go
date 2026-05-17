@@ -343,7 +343,7 @@ func (s *Service) UpdateUserGroup(ctx context.Context, args map[string]any) (Res
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var result map[string]any
+	var result any
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -409,7 +409,7 @@ func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ResultEn
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var result map[string]any
+	var result any
 	if err := s.Client.PostWithQuery(ctx, path, map[string]string{"send-email": strconv.FormatBool(sendEmail)}, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -554,7 +554,7 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	var result map[string]any
+	var result any
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		return ResultEnvelope{}, err
 	}

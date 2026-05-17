@@ -3,6 +3,7 @@ package mcp
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -245,6 +246,53 @@ func TestStdioDispatch_Unlimited(t *testing.T) {
 	}
 }
 
+func TestEnqueueResponseBytesBlocksWhenQueueFull(t *testing.T) {
+	srv := NewServer("test", nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	srv.outCtx = ctx
+	srv.outDone = make(chan struct{})
+	srv.outChan = make(chan []byte, 1)
+	srv.outChan <- []byte("first")
+
+	done := make(chan error, 1)
+	go func() {
+		done <- srv.enqueueResponseBytes([]byte("second"))
+	}()
+
+	select {
+	case err := <-done:
+		t.Fatalf("enqueue returned while queue was full; err=%v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	if got := string(<-srv.outChan); got != "first" {
+		t.Fatalf("drained %q, want first", got)
+	}
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("enqueue after drain returned error: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("enqueue did not complete after queue space opened")
+	}
+	if got := string(<-srv.outChan); got != "second" {
+		t.Fatalf("queued %q, want second", got)
+	}
+}
+
+func TestRunPropagatesAsyncWriterError(t *testing.T) {
+	wantErr := errors.New("stdout closed")
+	srv := NewServer("test", nil)
+	input := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}` + "\n"
+
+	err := srv.Run(context.Background(), strings.NewReader(input), errorWriter{err: wantErr})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("Run error = %v, want %v", err, wantErr)
+	}
+}
+
 // syncWriter serializes concurrent Write calls on top of an io.Writer.
 // bytes.Buffer is not safe for concurrent use, and the dispatch loop
 // uses the server's encoder mutex for its own writes but tests here can
@@ -255,4 +303,12 @@ type syncWriter struct {
 
 func (s syncWriter) Write(p []byte) (int, error) {
 	return s.w.Write(p)
+}
+
+type errorWriter struct {
+	err error
+}
+
+func (e errorWriter) Write([]byte) (int, error) {
+	return 0, e.err
 }

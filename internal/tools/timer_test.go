@@ -98,6 +98,12 @@ func TestStopTimer_ProjectErrorIsExplained(t *testing.T) {
 		switch {
 		case r.URL.Path == "/user" && r.Method == http.MethodGet:
 			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:           "running1",
+				UserID:       "u1",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-16T10:00:00Z"},
+			}})
 		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodPatch:
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)

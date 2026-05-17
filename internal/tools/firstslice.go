@@ -315,7 +315,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_log_work", "clockify_start_work":
 		return schemaFor[clockify.TimeEntry]()
 	case "clockify_stop_work":
-		return schemaFor[EntryView]()
+		return timerStopDataSchema()
 	case "clockify_fix_entry":
 		return schemaFor[FindAndUpdateEntryData]()
 	case "clockify_switch_work":
@@ -386,8 +386,10 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 			"userId":         map[string]any{"type": "string"},
 			"elapsedSeconds": map[string]any{"type": "integer"},
 		})
-	case "clockify_entries_timer_start", "clockify_entries_timer_stop":
+	case "clockify_entries_timer_start":
 		return schemaFor[EntryView]()
+	case "clockify_entries_timer_stop":
+		return timerStopDataSchema()
 	case "clockify_entries_timer_status":
 		return objectDataSchema(map[string]any{
 			"running": map[string]any{"type": "boolean"},
@@ -672,6 +674,17 @@ func dataKeysSchema(keys ...string) map[string]any {
 		props[key] = map[string]any{}
 	}
 	return objectDataSchema(props)
+}
+
+func timerStopDataSchema() map[string]any {
+	return dataKeysSchema(
+		"id", "description", "projectId", "projectName", "taskId", "tagIds",
+		"billable", "billable_state", "billable_present",
+		"costRate", "customFieldValues", "custom_fields_normalized", "hourlyRate",
+		"isLocked", "kioskId", "type", "userId", "workspaceId", "timeInterval",
+		"financials", "approval", "invoicing", "entities", "audit",
+		"stopped", "reason",
+	)
 }
 
 func arraySchema(description string) map[string]any {
@@ -1424,6 +1437,21 @@ func (s *Service) createTask(ctx context.Context, projectID, name string, args m
 	payload := map[string]any{"name": name}
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
+	} else if projectID != "" {
+		wsID := s.WorkspaceID
+		if wsID == "" {
+			if resolved, err := s.ResolveWorkspaceID(ctx); err == nil {
+				wsID = resolved
+			}
+		}
+		if wsID != "" {
+			if projPath, perr := paths.Workspace(wsID, "projects", projectID); perr == nil {
+				var proj clockify.Project
+				if gerr := s.Client.Get(ctx, projPath, nil, &proj); gerr == nil {
+					payload["billable"] = proj.Billable
+				}
+			}
+		}
 	}
 	path, err := paths.Workspace(s.WorkspaceID, "projects", projectID, "tasks")
 	if err != nil {

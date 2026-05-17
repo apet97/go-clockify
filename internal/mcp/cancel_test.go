@@ -3,6 +3,7 @@ package mcp
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -215,6 +216,43 @@ func TestCancellation_HandleCancelledMalformed(t *testing.T) {
 
 	if got := srv.InflightCount(); got != 0 {
 		t.Fatalf("inflight should remain empty, got %d", got)
+	}
+}
+
+func TestCancellationPreservesLargeNumericRequestID(t *testing.T) {
+	const requestID = "9007199254740993"
+	srv := NewServer("test", nil)
+	var cancelled atomic.Bool
+	srv.registerInflight(json.Number(requestID), func() { cancelled.Store(true) })
+
+	srv.handleCancelled(map[string]any{
+		"requestId": json.Number(requestID),
+		"reason":    "client requested",
+	})
+
+	if !cancelled.Load() {
+		t.Fatal("large numeric request id did not cancel matching inflight request")
+	}
+	if got := srv.InflightCount(); got != 0 {
+		t.Fatalf("expected inflight map to be empty, got %d", got)
+	}
+}
+
+func TestRunPreservesLargeNumericResponseID(t *testing.T) {
+	const requestID = "9007199254740993"
+	srv := NewServer("test", nil)
+	var input bytes.Buffer
+	input.WriteString(`{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}` + "\n")
+	input.WriteString(`{"jsonrpc":"2.0","id":` + requestID + `,"method":"ping"}` + "\n")
+
+	var output bytes.Buffer
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := srv.Run(ctx, &input, syncWriter{&output}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !strings.Contains(output.String(), `"id":`+requestID) {
+		t.Fatalf("large numeric id not preserved in output: %s", output.String())
 	}
 }
 

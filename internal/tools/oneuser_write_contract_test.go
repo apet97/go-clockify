@@ -20,6 +20,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 
 	exceptions := map[string]string{
 		"clockify_entries_timer_stop": "idempotent no-op when the fake server reports no running timer",
+		"clockify_stop_work":          "workflow no-op when the fake server reports no running timer",
 		"clockify_demo_cleanup":       "idempotent cleanup has no matching fake demo resources to delete",
 	}
 	recoverableWrites := map[string]string{

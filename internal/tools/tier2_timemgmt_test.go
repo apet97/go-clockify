@@ -1196,6 +1196,10 @@ func TestUpdateTimeOffRequestPatchesBareRequestPath(t *testing.T) {
 	)
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID {
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "status": "PENDING"})
+			return
+		}
 		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1242,6 +1246,10 @@ func TestUpdateTimeOffRequestIncludesEmptyNoteForStatusPatch(t *testing.T) {
 	)
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID {
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "status": "PENDING"})
+			return
+		}
 		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1324,6 +1332,10 @@ func TestApproveTimeOffPatchesBareRequestPathWithStatusApproved(t *testing.T) {
 	)
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID {
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "status": "PENDING"})
+			return
+		}
 		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1369,6 +1381,14 @@ func TestApproveTimeOffIncludesEmptyNoteForCanonicalStatusBody(t *testing.T) {
 	)
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID {
+			respondJSON(t, w, map[string]any{
+				"id":       requestID,
+				"policyId": policyID,
+				"status":   "PENDING",
+			})
+			return
+		}
 		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1400,6 +1420,10 @@ func TestDenyTimeOffPatchesBareRequestPathWithStatusRejected(t *testing.T) {
 	)
 	var gotBody map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID {
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "status": "PENDING"})
+			return
+		}
 		if r.Method != http.MethodPatch || r.URL.Path != wantPath {
 			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -1434,6 +1458,33 @@ func TestDenyTimeOffPatchesBareRequestPathWithStatusRejected(t *testing.T) {
 	}
 	if gotBody["note"] != "Insufficient balance" {
 		t.Fatalf("expected note in body, got %#v", gotBody)
+	}
+}
+
+func TestDenyTimeOffRejectsNonPendingRequest(t *testing.T) {
+	const (
+		policyID  = "abc123def456789012345678"
+		requestID = "abc123def456789012345679"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/time-off/requests/"+requestID {
+			respondJSON(t, w, map[string]any{"id": requestID, "policyId": policyID, "status": "APPROVED"})
+			return
+		}
+		if r.Method == http.MethodPatch {
+			t.Fatalf("non-pending request must not be patched")
+		}
+		t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.denyTimeOff(context.Background(), map[string]any{
+		"policy_id":  policyID,
+		"request_id": requestID,
+	})
+	if err == nil || !strings.Contains(err.Error(), "must be PENDING") {
+		t.Fatalf("expected pending-state guard, got %v", err)
 	}
 }
 

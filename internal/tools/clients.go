@@ -270,6 +270,11 @@ func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (Result
 		}, nil
 	}
 
+	projects, err := s.listAllProjects(ctx, map[string]any{"clients": []any{clientID}, "archived": false})
+	if err == nil && len(projects) > 0 {
+		return ResultEnvelope{}, fmt.Errorf("client has %d active projects; reassign or archive them first", len(projects))
+	}
+
 	if !existing.Archived {
 		archivePayload := map[string]any{"name": existing.Name, "archived": true}
 		var archived clockify.ClientEntity
