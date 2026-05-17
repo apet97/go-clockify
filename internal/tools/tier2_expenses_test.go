@@ -893,3 +893,19 @@ func TestUpdateExpense_RejectsGarbageDate(t *testing.T) {
 		t.Fatalf("expected could not parse date error, got %v", err)
 	}
 }
+
+func TestCreateExpenseRejectsNonPositiveAmount(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	for _, amount := range []float64{-50, 0} {
+		_, err := svc.createExpense(context.Background(), map[string]any{
+			"amount":      amount,
+			"date":        "2026-05-17",
+			"category_id": "000000000000000000000001",
+		})
+		if err == nil || !strings.Contains(err.Error(), "amount must be greater than 0") {
+			t.Fatalf("amount=%v: want rejection, got err=%v", amount, err)
+		}
+	}
+}

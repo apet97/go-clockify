@@ -256,6 +256,9 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	if !hasAmount {
 		return ResultEnvelope{}, fmt.Errorf("amount is required")
 	}
+	if amount <= 0 {
+		return ResultEnvelope{}, fmt.Errorf("amount must be greater than 0")
+	}
 	date := stringArg(args, "date")
 	if date == "" {
 		return ResultEnvelope{}, fmt.Errorf("date is required")
