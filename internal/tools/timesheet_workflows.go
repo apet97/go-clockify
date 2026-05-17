@@ -136,18 +136,11 @@ func timesheetReviewRange(args map[string]any, loc *time.Location) (time.Time, t
 		if startRaw == "" || endRaw == "" {
 			return time.Time{}, time.Time{}, "", fmt.Errorf("start and end must be provided together")
 		}
-		start, err := parseFlexibleDateTime(startRaw, loc)
+		start, end, err := parseRangeInLocation(map[string]any{"start": startRaw, "end": endRaw}, loc)
 		if err != nil {
-			return time.Time{}, time.Time{}, "", fmt.Errorf("start: %w", err)
+			return time.Time{}, time.Time{}, "", err
 		}
-		end, err := parseFlexibleDateTime(endRaw, loc)
-		if err != nil {
-			return time.Time{}, time.Time{}, "", fmt.Errorf("end: %w", err)
-		}
-		if !end.After(start) {
-			return time.Time{}, time.Time{}, "", fmt.Errorf("end must be after start")
-		}
-		return start.UTC(), end.UTC(), "range", nil
+		return start, end, "range", nil
 	}
 	if weekStart := strings.TrimSpace(stringArg(args, "week_start")); weekStart != "" {
 		start, end, err := weekBounds(weekStart, loc)
@@ -155,7 +148,13 @@ func timesheetReviewRange(args map[string]any, loc *time.Location) (time.Time, t
 	}
 	base := time.Now().In(loc)
 	if dateRaw := strings.TrimSpace(stringArg(args, "date")); dateRaw != "" {
-		parsed, err := parseFlexibleDateTime(dateRaw, loc)
+		var parsed time.Time
+		var err error
+		if isBareDateString(dateRaw) {
+			parsed, err = time.ParseInLocation("2006-01-02", dateRaw, loc)
+		} else {
+			parsed, err = parseFlexibleDateTime(dateRaw, loc)
+		}
 		if err != nil {
 			return time.Time{}, time.Time{}, "", fmt.Errorf("date: %w", err)
 		}

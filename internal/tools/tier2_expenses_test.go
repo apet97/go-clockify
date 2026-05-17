@@ -110,7 +110,11 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 	client, cleanup := newTestClient(t, mux.ServeHTTP)
 	defer cleanup()
 	svc := New(client, "ws1")
-	svc.DefaultTimezone = time.UTC
+	loc, err := time.LoadLocation("Europe/Belgrade")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	svc.DefaultTimezone = loc
 	ctx := context.Background()
 
 	// listExpenses
