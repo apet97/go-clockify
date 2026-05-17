@@ -11,6 +11,12 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+// approvalFilterStates is the exact set Clockify's approval-requests list
+// endpoint accepts for its status filter. REJECTED requests revert to
+// UNSUBMITTED and are not listable; WITHDRAWN_SUBMISSION is not a valid
+// filter value. Live-verified 2026-05-18.
+var approvalFilterStates = []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"}
+
 func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List approval requests (RO)
@@ -148,18 +154,7 @@ func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	// The raw approval embeds every time entry in the period, which can push
-	// the response past 600 KB on a busy approval. Strip it the same way
-	// listApprovalRequests does and point the caller at the report tools for
-	// entry-level detail.
-	entryCount := 0
-	switch e := approval["entries"].(type) {
-	case []any:
-		entryCount = len(e)
-	case []map[string]any:
-		entryCount = len(e)
-	}
-	delete(approval, "entries")
+	entryCount := stripApprovalEntries(approval)
 	meta := map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned}
 	if entryCount > 0 {
 		meta["entriesOmitted"] = entryCount
@@ -327,11 +322,17 @@ func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, a
 		if err != nil {
 			return ResultEnvelope{}, err
 		}
+		entryCount := stripApprovalEntries(approval)
+		meta := map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned, "state": state}
+		if entryCount > 0 {
+			meta["entriesOmitted"] = entryCount
+			meta["entriesHint"] = "Time entries are omitted to keep the response small; use clockify_reports_detailed for entry-level detail."
+		}
 		return ResultEnvelope{
 			OK:     true,
 			Action: action,
 			Data:   dryrun.WrapResult(approvalViewFromRaw(approval), action),
-			Meta:   map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned, "state": state},
+			Meta:   meta,
 		}, nil
 	}
 
@@ -349,8 +350,8 @@ func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, a
 func approvalFilterStateSchema() map[string]any {
 	return map[string]any{
 		"type":        "string",
-		"enum":        []string{"PENDING", "APPROVED", "REJECTED", "WITHDRAWN_SUBMISSION", "WITHDRAWN_APPROVAL"},
-		"description": "Approval request filter state. Includes REJECTED and WITHDRAWN_SUBMISSION, which the workspace transitions requests into.",
+		"enum":        approvalFilterStates,
+		"description": "Approval request filter state. These are the only status filter values Clockify's approval-requests API accepts.",
 	}
 }
 
@@ -436,27 +437,51 @@ func (s *Service) findApprovalRequest(ctx context.Context, wsID, approvalID stri
 		pageSize = 200
 	}
 	status := strings.TrimSpace(stringArg(args, "status"))
+	statuses := []string{status}
+	if status == "" {
+		statuses = approvalFilterStates
+	}
+	pagesScanned := 0
 	scanned := 0
-	for page := 1; page <= aggregatePageSafetyStop; page++ {
-		scanArgs := map[string]any{"page": page, "page_size": pageSize}
-		if status != "" {
-			scanArgs["status"] = status
-		}
-		items, _, _, err := s.listApprovalRequestsRaw(ctx, wsID, scanArgs)
-		if err != nil {
-			return nil, page, scanned, err
-		}
-		scanned += len(items)
-		for _, item := range items {
-			if approvalRequestID(item) == approvalID {
-				return item, page, scanned, nil
+	for _, scanStatus := range statuses {
+		for page := 1; page <= aggregatePageSafetyStop; page++ {
+			pagesScanned++
+			scanArgs := map[string]any{"page": page, "page_size": pageSize}
+			if scanStatus != "" {
+				scanArgs["status"] = scanStatus
+			}
+			items, _, _, err := s.listApprovalRequestsRaw(ctx, wsID, scanArgs)
+			if err != nil {
+				return nil, pagesScanned, scanned, err
+			}
+			scanned += len(items)
+			for _, item := range items {
+				if approvalRequestID(item) == approvalID {
+					return item, pagesScanned, scanned, nil
+				}
+			}
+			if len(items) < pageSize {
+				break
 			}
 		}
-		if len(items) < pageSize {
-			return nil, page, scanned, fmt.Errorf("approval request %q not found via documented approval-requests list", approvalID)
-		}
 	}
-	return nil, aggregatePageSafetyStop, scanned, fmt.Errorf("approval request %q not found before pagination safety stop", approvalID)
+	return nil, pagesScanned, scanned, fmt.Errorf("approval request %q not found via documented approval-requests list", approvalID)
+}
+
+// stripApprovalEntries removes the heavy embedded time-entry array from a raw
+// approval map and returns how many entries were dropped, so callers can record
+// meta.entriesOmitted. The list endpoint embeds every entry in the period,
+// which can exceed the result-size cap.
+func stripApprovalEntries(approval map[string]any) int {
+	n := 0
+	switch e := approval["entries"].(type) {
+	case []any:
+		n = len(e)
+	case []map[string]any:
+		n = len(e)
+	}
+	delete(approval, "entries")
+	return n
 }
 
 func approvalRequestID(raw map[string]any) string {

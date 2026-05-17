@@ -180,12 +180,13 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 	}
 	page := intArg(args, "page", 1)
 	return ok("clockify_audit_logs_search", entries, map[string]any{
-		"workspaceId": wsID,
-		"count":       len(entries),
-		"total":       len(entries),
-		"page":        page,
-		"pageSize":    pageSize,
-		"has_more":    len(entries) >= pageSize,
+		"workspaceId":           wsID,
+		"count":                 len(entries),
+		"page":                  page,
+		"requested_page_size":   pageSize,
+		"total_min":             len(entries),
+		"total_is_lower_bound":  true,
+		"server_page_size_note": "Clockify's audit-log API caps results per request and ignores page_size; all matching rows up to the server cap are returned.",
 	}), nil
 }
 

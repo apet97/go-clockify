@@ -322,38 +322,6 @@ func TestExportInvoiceOneUserDefaultsUserLocale(t *testing.T) {
 	assertRawFileEnvelope(t, data, "document.pdf", []byte("%PDF invoice"))
 }
 
-func TestExportInvoiceCSVKeepsBase64Envelope(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices/inv1/export" {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		if got := r.URL.Query().Get("format"); got != "CSV" {
-			t.Fatalf("format query = %q, want CSV", got)
-		}
-		w.Header().Set("Content-Type", "text/csv")
-		w.Header().Set("Content-Disposition", `attachment; filename="invoice.csv"`)
-		_, _ = w.Write([]byte("invoice,csv\n"))
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	res, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
-		"invoice_id": "inv1",
-		"format":     "CSV",
-	})
-	mustOK(t, res, err, "clockify_invoices_export")
-	data, ok := res.Data.(map[string]any)
-	if !ok {
-		t.Fatalf("export data type = %T, want map[string]any", res.Data)
-	}
-	if data["filename"] != "invoice.csv" || data["bodyEncoding"] != "base64" || data["body"] == "" {
-		t.Fatalf("invoice CSV should keep base64 envelope, got %#v", data)
-	}
-	if data["path"] != nil {
-		t.Fatalf("invoice CSV should not return file path: %#v", data)
-	}
-}
-
 // TestTier2_Invoices_ListSendsStatusesNotStatus pins SUMMARY #10:
 // when the caller passes `status`, the handler must emit ?statuses=
 // (plural) upstream and must NOT emit ?status=. Upstream wire name
@@ -1256,12 +1224,27 @@ func TestExportInvoiceRejectsUnknownFormat(t *testing.T) {
 		"invoice_id": "000000000000000000000001",
 		"format":     "DOCX-INVALID",
 	})
-	if err == nil || !strings.Contains(err.Error(), "format must be one of PDF, CSV, XLSX") {
+	if err == nil || !strings.Contains(err.Error(), "format must be PDF") {
 		t.Fatalf("want format rejection, got err=%v", err)
 	}
 }
 
-func TestExportInvoiceForwardsUppercaseFormat(t *testing.T) {
+func TestExportInvoiceRejectsCSVXLSXFormats(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	for _, format := range []string{"CSV", "XLSX"} {
+		_, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
+			"invoice_id": "000000000000000000000001",
+			"format":     format,
+		})
+		if err == nil || !strings.Contains(err.Error(), "format must be PDF") {
+			t.Fatalf("format %s: want PDF-only rejection, got err=%v", format, err)
+		}
+	}
+}
+
+func TestExportInvoiceForwardsPDFFormat(t *testing.T) {
 	var gotFormat string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/invoices/000000000000000000000001/export" {
@@ -1276,13 +1259,13 @@ func TestExportInvoiceForwardsUppercaseFormat(t *testing.T) {
 	svc := New(client, "ws1")
 	_, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
 		"invoice_id": "000000000000000000000001",
-		"format":     "xlsx",
+		"format":     "pdf",
 	})
 	if err != nil {
 		t.Fatalf("export invoice: %v", err)
 	}
-	if gotFormat != "XLSX" {
-		t.Fatalf("format query = %q, want XLSX", gotFormat)
+	if gotFormat != "PDF" {
+		t.Fatalf("format query = %q, want PDF", gotFormat)
 	}
 }
 

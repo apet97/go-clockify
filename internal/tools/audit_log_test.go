@@ -102,8 +102,15 @@ func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
 	if got, _ := env.Meta["count"].(int); got != 1 {
 		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
 	}
-	if env.Meta["total"] != 1 || env.Meta["page"] != 1 || env.Meta["pageSize"] != 50 || env.Meta["has_more"] != false {
-		t.Fatalf("audit log meta should include count/total/page/pageSize/has_more, got %+v", env.Meta)
+	if _, exists := env.Meta["pageSize"]; exists {
+		t.Fatalf("audit log meta must not report requested page_size as actual pageSize, got %+v", env.Meta)
+	}
+	if env.Meta["page"] != 1 || env.Meta["requested_page_size"] != 50 || env.Meta["total_is_lower_bound"] != true {
+		t.Fatalf("audit log meta should expose requested_page_size and lower-bound total, got %+v", env.Meta)
+	}
+	note, _ := env.Meta["server_page_size_note"].(string)
+	if !strings.Contains(note, "caps results") || !strings.Contains(note, "ignores page_size") {
+		t.Fatalf("missing audit-log server cap note: %+v", env.Meta)
 	}
 }
 

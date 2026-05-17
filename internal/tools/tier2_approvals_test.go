@@ -210,6 +210,69 @@ func TestGetApprovalRequestStripsHeavyEntries(t *testing.T) {
 	}
 }
 
+func TestApproveTimesheetDryRunStripsHeavyEntries(t *testing.T) {
+	heavyEntries := make([]map[string]any, 75)
+	for i := range heavyEntries {
+		heavyEntries[i] = map[string]any{"id": "e", "duration": 3600}
+	}
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/approval-requests" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, []map[string]any{{
+			"id":      "apr1",
+			"status":  "PENDING",
+			"entries": heavyEntries,
+		}})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.approveTimesheet(context.Background(), map[string]any{"approval_id": "apr1", "dry_run": true})
+	mustOK(t, res, err, "clockify_approve_timesheet")
+	if got, _ := res.Meta["entriesOmitted"].(int); got != 75 {
+		t.Fatalf("meta.entriesOmitted = %v, want 75", res.Meta["entriesOmitted"])
+	}
+	data := res.Data.(map[string]any)
+	preview := data["preview"].(ApprovalView)
+	if preview.EntrySummary.Count != 0 {
+		t.Fatalf("dry-run preview should strip entries, got EntrySummary.Count = %d", preview.EntrySummary.Count)
+	}
+}
+
+func TestFindApprovalRequestScansCanonicalStatusesWhenUnfiltered(t *testing.T) {
+	var statuses []string
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/approval-requests" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		status := r.URL.Query().Get("status")
+		statuses = append(statuses, status)
+		if status == "WITHDRAWN_APPROVAL" {
+			respondJSON(t, w, []map[string]any{{"id": "apr-withdrawn", "status": "WITHDRAWN_APPROVAL"}})
+			return
+		}
+		respondJSON(t, w, []map[string]any{})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.getApprovalRequest(context.Background(), map[string]any{"approval_id": "apr-withdrawn"})
+	mustOK(t, res, err, "clockify_get_approval_request")
+	if view := res.Data.(ApprovalView); view.ID != "apr-withdrawn" {
+		t.Fatalf("approval ID = %q, want apr-withdrawn", view.ID)
+	}
+	want := []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"}
+	if len(statuses) != len(want) {
+		t.Fatalf("statuses = %#v, want %#v", statuses, want)
+	}
+	for i := range want {
+		if statuses[i] != want[i] {
+			t.Fatalf("statuses = %#v, want %#v", statuses, want)
+		}
+	}
+}
+
 func TestListApprovalRequestsForwardsDocumentedSort(t *testing.T) {
 	var gotQuery string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -281,9 +344,10 @@ func TestApprovalListSchemaDocumentsCanonicalFilterStates(t *testing.T) {
 		props := descriptor.Tool.InputSchema["properties"].(map[string]any)
 		status := props["status"].(map[string]any)
 		enum := status["enum"].([]string)
-		// REJECTED and WITHDRAWN_SUBMISSION are real states the workspace
-		// transitions requests into, so the filter enum must include them.
-		want := []string{"PENDING", "APPROVED", "REJECTED", "WITHDRAWN_SUBMISSION", "WITHDRAWN_APPROVAL"}
+		// The list-filter enum is narrower than possible request states:
+		// REJECTED reverts to UNSUBMITTED and WITHDRAWN_SUBMISSION is not a
+		// valid filter value on Clockify's approval-requests API.
+		want := []string{"PENDING", "APPROVED", "WITHDRAWN_APPROVAL"}
 		if len(enum) != len(want) {
 			t.Fatalf("status enum length = %d, want %d: %#v", len(enum), len(want), enum)
 		}

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -58,6 +59,41 @@ func TestCreateExpenseAcceptsWireJSONNumberAmount(t *testing.T) {
 	mustOK(t, res, err, "clockify_create_expense")
 	if gotAmount != "42.75" {
 		t.Fatalf("upstream amount = %q, want 42.75", gotAmount)
+	}
+}
+
+func TestUpdateExpenseCategoryMergesExistingName(t *testing.T) {
+	const categoryID = "abc123def456789012345678"
+	var gotBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/categories":
+			respondJSON(t, w, map[string]any{
+				"count":      1,
+				"categories": []map[string]any{{"id": categoryID, "name": "Mileage"}},
+			})
+		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/expenses/categories/"+categoryID:
+			if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			respondJSON(t, w, map[string]any{"id": categoryID, "name": gotBody["name"], "priceInCents": gotBody["priceInCents"]})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.updateExpenseCategory(context.Background(), map[string]any{
+		"category_id":    categoryID,
+		"price_in_cents": 1250,
+	})
+	mustOK(t, res, err, "clockify_update_expense_category")
+	if gotBody["name"] != "Mileage" {
+		t.Fatalf("PUT body name = %#v, want existing Mileage; body=%#v", gotBody["name"], gotBody)
+	}
+	if got, ok := reportInt(gotBody["priceInCents"]); !ok || got != 1250 {
+		t.Fatalf("PUT body priceInCents = %#v, want 1250", gotBody["priceInCents"])
 	}
 }
 

@@ -6087,9 +6087,11 @@
             "type": "string"
           },
           "policy": {
+            "description": "Time-off policy name. Provide either policy or policy_id (one is required).",
             "type": "string"
           },
           "policy_id": {
+            "description": "Time-off policy ID. Provide either policy or policy_id (one is required).",
             "type": "string"
           },
           "start": {
@@ -6098,8 +6100,7 @@
         },
         "required": [
           "start",
-          "end",
-          "note"
+          "end"
         ],
         "type": "object"
       },
@@ -32174,7 +32175,8 @@
         },
         "required": [
           "policy_id",
-          "request_id"
+          "request_id",
+          "status"
         ],
         "type": "object"
       },
@@ -36584,12 +36586,10 @@
             "type": "string"
           },
           "status": {
-            "description": "Approval request filter state. Includes REJECTED and WITHDRAWN_SUBMISSION, which the workspace transitions requests into.",
+            "description": "Approval request filter state. These are the only status filter values Clockify's approval-requests API accepts.",
             "enum": [
               "PENDING",
               "APPROVED",
-              "REJECTED",
-              "WITHDRAWN_SUBMISSION",
               "WITHDRAWN_APPROVAL"
             ],
             "type": "string"
@@ -36855,12 +36855,10 @@
             "type": "integer"
           },
           "status": {
-            "description": "Approval request filter state. Includes REJECTED and WITHDRAWN_SUBMISSION, which the workspace transitions requests into.",
+            "description": "Approval request filter state. These are the only status filter values Clockify's approval-requests API accepts.",
             "enum": [
               "PENDING",
               "APPROVED",
-              "REJECTED",
-              "WITHDRAWN_SUBMISSION",
               "WITHDRAWN_APPROVAL"
             ],
             "type": "string"
@@ -44919,7 +44917,7 @@
     },
     {
       "name": "clockify_invoices_export",
-      "description": "Export an invoice. CSV returns contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path.",
+      "description": "Export invoice PDF only; Clockify invoice export has no CSV/XLSX (use clockify_reports_export). Returns contentType, filename, bytes, bodyEncoding, body/base64 payload, base64Bytes, truncated:false, or path.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44936,11 +44934,9 @@
         "additionalProperties": false,
         "properties": {
           "format": {
-            "description": "Export format, e.g. PDF, CSV, or XLSX",
+            "description": "Invoice export format. Clockify only produces PDF here; use clockify_reports_export for CSV/XLSX data exports.",
             "enum": [
-              "PDF",
-              "CSV",
-              "XLSX"
+              "PDF"
             ],
             "type": "string"
           },
@@ -46604,7 +46600,7 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
-            "description": "True to archive the policy; false to reactivate it",
+            "description": "Default: true. Omit or pass true to archive the policy; pass false to reactivate it.",
             "type": "boolean"
           },
           "policy_id": {
@@ -47130,7 +47126,7 @@
             "type": "string"
           },
           "user_ids": {
-            "description": "Optional user IDs scoping the capacity totals",
+            "description": "User IDs to scope the capacity totals (required).",
             "items": {
               "type": "string"
             },

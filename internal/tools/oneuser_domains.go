@@ -537,7 +537,7 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 		"required": []string{"policy_id"},
 		"properties": map[string]any{
 			"policy_id": map[string]any{"type": "string", "description": "Time-off policy ID"},
-			"archived":  map[string]any{"type": "boolean", "description": "True to archive the policy; false to reactivate it"},
+			"archived":  map[string]any{"type": "boolean", "description": "Default: true. Omit or pass true to archive the policy; pass false to reactivate it."},
 		},
 	})), "time_off", "updated", s.archiveTimeOffPolicy))
 	out = append(out, s.explicitPostTimeOffNativeDescriptors()...)
@@ -546,11 +546,11 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 
 func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export an invoice. CSV returns contentType, filename, bytes, bodyEncoding, body, base64 payload, base64Bytes, truncated:false; PDF/XLSX/ZIP use bodyEncoding:\"file\" and path.", objectSchema(map[string]any{
+		nativeDomainTool(210, toolRO("clockify_invoices_export", "Export invoice PDF only; Clockify invoice export has no CSV/XLSX (use clockify_reports_export). Returns contentType, filename, bytes, bodyEncoding, body/base64 payload, base64Bytes, truncated:false, or path.", objectSchema(map[string]any{
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string", "description": "Invoice ID"},
-				"format":      map[string]any{"type": "string", "enum": []string{"PDF", "CSV", "XLSX"}, "description": "Export format, e.g. PDF, CSV, or XLSX"},
+				"format":      map[string]any{"type": "string", "enum": []string{"PDF"}, "description": "Invoice export format. Clockify only produces PDF here; use clockify_reports_export for CSV/XLSX data exports."},
 				"user_locale": map[string]any{"type": "string", "description": "Locale for the exported document, e.g. en"},
 			},
 		})), "invoice_export", "", s.exportInvoiceOneUser),
@@ -620,7 +620,7 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 			"properties": map[string]any{
 				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 				"end":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional user IDs scoping the capacity totals"},
+				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs to scope the capacity totals (required)."},
 			},
 		})), "scheduling", "", s.schedulingCapacityOneUser),
 		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{
