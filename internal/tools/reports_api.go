@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -81,8 +82,10 @@ func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, end
 		}
 	} else if endpoint.pathName == "summary" {
 		meta["normalizedRollups"] = appendSummaryReportViews(data, body)
+		capReportRollups(data, "summary_rollups", args, meta)
 	} else if endpoint.pathName == "weekly" {
 		meta["normalizedRollups"] = appendWeeklyReportViews(data, body, boolArg(args, "include_future"))
+		capReportRollups(data, "weekly_rollups", args, meta)
 	}
 	return ok(endpoint.toolName, data, meta), nil
 }
@@ -117,6 +120,33 @@ func (s *Service) postReportsAPI(ctx context.Context, path string, body map[stri
 		}
 		return documentedRawResponse(raw.Header, raw.Body), true, nil
 	}
+}
+
+// capReportRollups bounds a report's rollup list so the response stays within
+// the MCP transport budget. It keeps the max_rollups rows with the most tracked
+// time; group_totals_summary and totals_summary already describe every rollup,
+// so the aggregates stay correct. A caller can pass max_rollups:0 to opt into
+// the full, unbounded list.
+func capReportRollups(data map[string]any, key string, args map[string]any, meta map[string]any) {
+	rollups, ok := data[key].([]ReportRollupView)
+	if !ok || len(rollups) == 0 {
+		return
+	}
+	limit := intArg(args, "max_rollups", 15)
+	if limit <= 0 || len(rollups) <= limit {
+		return
+	}
+	full := len(rollups)
+	sorted := make([]ReportRollupView, len(rollups))
+	copy(sorted, rollups)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return sorted[i].Duration.Seconds > sorted[j].Duration.Seconds
+	})
+	data[key] = sorted[:limit]
+	meta["truncated"] = true
+	meta["rollupsTotal"] = full
+	meta["rollupsReturned"] = limit
+	meta["next_hint"] = fmt.Sprintf("%s was capped at the %d largest of %d rows by tracked time; group_totals_summary and totals_summary still describe all %d rows. Pass a higher max_rollups (or max_rollups:0 for the full list), or narrow the date range.", key, limit, full, full)
 }
 
 func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRange bool, defaultTimezone *time.Location) (map[string]any, error) {

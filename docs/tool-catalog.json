@@ -45020,6 +45020,11 @@
             ],
             "type": "string"
           },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
@@ -45303,6 +45308,11 @@
               "ZIP"
             ],
             "type": "string"
+          },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -45588,6 +45598,11 @@
             ],
             "type": "string"
           },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
@@ -45871,6 +45886,11 @@
               "ZIP"
             ],
             "type": "string"
+          },
+          "max_rollups": {
+            "description": "Keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
           },
           "start": {
             "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
@@ -53527,6 +53547,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "max_rollups": {
+            "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "project": {
             "type": "string"
           },
@@ -53830,6 +53855,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "max_rollups": {
+            "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "project": {
             "type": "string"
           },
@@ -54130,6 +54160,11 @@
           },
           "max_entries": {
             "description": "Advisory only. The Clockify reports API returns a fixed page size; narrow start/end to get fewer rows. meta.truncated reports when the row cap was hit.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_rollups": {
+            "description": "Summary/weekly reports: keep only the N largest project rollups by tracked time (default 15). Aggregates still cover every rollup. Pass 0 for the full, unbounded list.",
             "minimum": 0,
             "type": "integer"
           },
