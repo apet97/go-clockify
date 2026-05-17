@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 // newPaginatedHandler returns an http.HandlerFunc that serves the given
@@ -135,6 +136,21 @@ func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
 	}
 	if result.Meta["source"] != "reports-api" {
 		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
+	}
+}
+
+func TestReportsDetailedAcceptsSameDayRange(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	initializeServer(t, server)
+	result := callToolOK(t, server, "clockify_reports_detailed", map[string]any{
+		"start": "2026-05-17",
+		"end":   "2026-05-17",
+	})
+	if !result.OK {
+		t.Fatalf("same-day detailed range returned not ok: %#v", result)
 	}
 }
 

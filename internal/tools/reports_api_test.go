@@ -41,7 +41,7 @@ func TestBuildReportsAPIBody_CoercesPlainDate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildReportsAPIBody: %v", err)
 	}
-	if body["dateRangeStart"] != "2026-05-01T00:00:00.000" || body["dateRangeEnd"] != "2026-05-17T00:00:00.000" {
+	if body["dateRangeStart"] != "2026-05-01T00:00:00.000" || body["dateRangeEnd"] != "2026-05-17T23:59:59.999" {
 		t.Fatalf("plain dates not coerced: %#v", body)
 	}
 }
