@@ -1183,3 +1183,17 @@ func TestExportInvoiceRejectsUnknownFormat(t *testing.T) {
 		t.Fatalf("want format rejection, got err=%v", err)
 	}
 }
+
+func TestCreateInvoicePaymentDoesNotRequireNote(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	_, err := svc.createInvoicePaymentOneUser(context.Background(), map[string]any{
+		"invoice_id": "000000000000000000000001",
+		"amount":     100.0,
+		"date":       "2026-05-17",
+	})
+	if err != nil && strings.Contains(err.Error(), "note is required") {
+		t.Fatalf("payments_create still rejects a missing note: %v", err)
+	}
+}

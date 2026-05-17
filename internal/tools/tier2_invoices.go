@@ -640,7 +640,7 @@ func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[stri
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := requirePresentArgs(args, "amount", "date", "note"); err != nil {
+	if err := requirePresentArgs(args, "amount", "date"); err != nil {
 		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)

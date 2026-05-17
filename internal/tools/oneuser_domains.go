@@ -582,7 +582,7 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 			},
 		})), "payment", "", s.listInvoicePayments),
 		nativeDomainTool(214, toolRW("clockify_invoices_payments_create", "Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:\"major\" to enter the value in major currency units instead.", objectSchema(map[string]any{
-			"required": []string{"invoice_id"},
+			"required": []string{"invoice_id", "amount", "date"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string", "description": "Invoice ID"},
 				"amount":      map[string]any{"type": "number", "description": "Payment amount"},

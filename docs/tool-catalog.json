@@ -46575,7 +46575,9 @@
           }
         },
         "required": [
-          "invoice_id"
+          "invoice_id",
+          "amount",
+          "date"
         ],
         "type": "object"
       },
