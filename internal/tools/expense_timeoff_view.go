@@ -3,6 +3,7 @@ package tools
 import (
 	"maps"
 	"strings"
+	"time"
 )
 
 type ExpenseView map[string]any
@@ -34,8 +35,8 @@ type CompactTimeOffPolicyView struct {
 type TimeOffRequestView map[string]any
 type TimeOffBalanceView map[string]any
 
-func compactExpenseViewFromRaw(raw map[string]any) CompactExpenseView {
-	currency := reportCurrency(raw)
+func compactExpenseViewFromRaw(raw map[string]any, workspaceCurrency string) CompactExpenseView {
+	currency := firstNonEmptyString(reportCurrency(raw), workspaceCurrency)
 	return CompactExpenseView{
 		ID:           firstReportString(raw, "id", "_id", "expenseId", "expense_id"),
 		Date:         firstReportString(raw, "date"),
@@ -51,17 +52,17 @@ func compactExpenseViewFromRaw(raw map[string]any) CompactExpenseView {
 	}
 }
 
-func compactExpenseViewsFromRaw(items []map[string]any) []CompactExpenseView {
+func compactExpenseViewsFromRaw(items []map[string]any, workspaceCurrency string) []CompactExpenseView {
 	out := make([]CompactExpenseView, 0, len(items))
 	for _, item := range items {
-		out = append(out, compactExpenseViewFromRaw(item))
+		out = append(out, compactExpenseViewFromRaw(item, workspaceCurrency))
 	}
 	return out
 }
 
-func expenseViewFromRaw(raw map[string]any) ExpenseView {
+func expenseViewFromRaw(raw map[string]any, workspaceCurrency string) ExpenseView {
 	view := ExpenseView(maps.Clone(raw))
-	currency := reportCurrency(raw)
+	currency := firstNonEmptyString(reportCurrency(raw), workspaceCurrency)
 	view["amount"] = moneyFromAny(firstPresent(raw, "amount", "billableAmount", "total"), currency)
 	view["currency"] = currency
 	view["status"] = strings.ToUpper(firstReportString(raw, "status", "approvalStatus", "invoicingState"))
@@ -213,9 +214,42 @@ func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
 		"days":  firstPresent(raw, "days", "durationDays", "balanceDiff"),
 		"hours": firstPresent(raw, "hours", "durationHours"),
 	}
+	if stale := timeOffRequestStale(status, raw); stale != nil {
+		view["stale"] = stale
+	}
 	view["actions"] = timeOffActions(status)
 	view["suggestedActions"] = timeOffSuggestions(requestID, policyID, status)
 	return view
+}
+
+// timeOffRequestStale flags a PENDING time-off request whose period has
+// already elapsed: it can no longer be acted on meaningfully, so an approver
+// should see it as cleanup, not a live request.
+func timeOffRequestStale(status string, raw map[string]any) map[string]any {
+	if status != "PENDING" {
+		return nil
+	}
+	period, ok := firstPresent(raw, "timeOffPeriod", "time_off_period", "period").(map[string]any)
+	if !ok {
+		return nil
+	}
+	inner, ok := period["period"].(map[string]any)
+	if !ok {
+		inner = period
+	}
+	endRaw := firstReportString(inner, "end", "endDate", "end_date")
+	if endRaw == "" {
+		return nil
+	}
+	end, err := parseFlexibleDateTime(endRaw, time.UTC)
+	if err != nil || !end.Before(time.Now().UTC()) {
+		return nil
+	}
+	return map[string]any{
+		"reason":    "pending_period_in_past",
+		"periodEnd": endRaw,
+		"hint":      "This PENDING request's period has already elapsed; deny or delete it.",
+	}
 }
 
 func timeOffRequestStatus(raw map[string]any) string {

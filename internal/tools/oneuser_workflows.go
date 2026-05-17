@@ -260,7 +260,18 @@ func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any)
 		return err
 	}
 	if len(overlaps) > 0 {
-		return fmt.Errorf("requested entry overlaps %d existing entr%s; pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)))
+		details := make([]string, 0, len(overlaps))
+		for _, o := range overlaps {
+			proj := o.ProjectName
+			if proj == "" {
+				proj = o.ProjectID
+			}
+			if proj == "" {
+				proj = "no project"
+			}
+			details = append(details, fmt.Sprintf("entry %s [%s..%s, %s]", o.ID, o.Start, o.End, proj))
+		}
+		return fmt.Errorf("requested entry overlaps %d existing entr%s (%s); pass allow_overlap=true only after manual review", len(overlaps), pluralY(len(overlaps)), strings.Join(details, "; "))
 	}
 	return nil
 }
@@ -450,6 +461,19 @@ func (s *Service) reviewWorkflow(ctx context.Context, action string, args map[st
 		"workspaceId": stringFromAny(out.Meta["workspaceId"]),
 		"userId":      stringFromAny(out.Meta["userId"]),
 	})
+	if truncated, _ := out.Meta["truncated"].(bool); truncated {
+		total, _ := out.Meta["issuesTotal"].(int)
+		shown := total
+		if r, ok := out.Meta["issuesReturned"].(int); ok {
+			shown = r
+		}
+		if total > shown {
+			standard.Warnings = append(standard.Warnings, Warning{
+				Code:    "issues_truncated",
+				Message: fmt.Sprintf("Only %d of %d issues are shown; raise max_rows or narrow the date range to see the rest.", shown, total),
+			})
+		}
+	}
 	standard.Next = nextFromReviewData(out.Data)
 	if len(standard.Next) == 0 {
 		standard.Next = []NextAction{{Tool: "clockify_log_work", Reason: "Log confirmed missing work if the review found gaps."}}

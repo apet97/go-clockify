@@ -3,11 +3,11 @@ package tools
 import (
 	"context"
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
@@ -180,7 +180,14 @@ func buildReportsAPIBody(args map[string]any, filterKey string, deriveWeeklyRang
 				}
 			}
 			if perr == nil && !strings.Contains(raw, "T") {
-				body[k] = t.Format("2006-01-02T15:04:05.000")
+				// A bare YYYY-MM-DD end means "through the end of that day",
+				// so a same-day range is a valid one-day window. Weekly
+				// reports derive their own exact 7-day range, so leave them.
+				if k == "dateRangeEnd" && !deriveWeeklyRange {
+					body[k] = t.Format("2006-01-02") + "T23:59:59.999"
+				} else {
+					body[k] = t.Format("2006-01-02T15:04:05.000")
+				}
 			}
 		}
 	}
@@ -305,6 +312,9 @@ func validateReportDateRangeValues(startRaw, endRaw string) error {
 	end, errEnd := parseFlexibleDateTime(endRaw, time.UTC)
 	if errStart != nil || errEnd != nil {
 		return nil
+	}
+	if !strings.Contains(endRaw, "T") {
+		end = end.Add(24*time.Hour - time.Millisecond)
 	}
 	if !end.After(start) {
 		return fmt.Errorf("date_range_end (%s) must be after date_range_start (%s)", endRaw, startRaw)
@@ -586,17 +596,19 @@ func reportAmountMeta(data any) map[string]any {
 				continue
 			}
 			cents, _ := reportNumber(m["amount"])
+			centsInt := clockify.CentsFromReportNumber(cents)
 			list = append(list, map[string]any{
 				"currency":    m["currency"],
-				"amountCents": cents,
-				"amount":      math.Round(cents) / 100,
+				"amountCents": centsInt,
+				"amount":      float64(centsInt) / 100,
 			})
 		}
 		out["byCurrency"] = list
 	}
 	if cents, ok := reportNumber(first["totalAmount"]); ok {
-		out["totalAmountCents"] = cents
-		out["totalAmount"] = math.Round(cents) / 100
+		centsInt := clockify.CentsFromReportNumber(cents)
+		out["totalAmountCents"] = centsInt
+		out["totalAmount"] = float64(centsInt) / 100
 	}
 	if len(out) == 0 {
 		return nil

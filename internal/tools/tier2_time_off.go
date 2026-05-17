@@ -929,18 +929,25 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Resu
 				policyIDs = append(policyIDs, id)
 			}
 		}
+		count := len(views)
+		total := count
+		if envelope.Count > count {
+			total = envelope.Count
+		}
 		meta := map[string]any{
 			"workspaceId": wsID,
 			"userId":      userID,
 			"policyIds":   policyIDs,
-			"count":       len(views),
-			"total":       len(views),
+			"count":       count,
+			"total":       total,
 			"page":        page,
 			"pageSize":    pageSize,
-			"has_more":    false,
+			"has_more":    page*pageSize < total,
 		}
-		if envelope.Count != 0 && envelope.Count != len(views) {
+		if envelope.Count > count {
 			meta["upstream_count_ignored"] = envelope.Count
+			meta["dropped"] = envelope.Count - count
+			meta["nextAction"] = fmt.Sprintf("Upstream reports %d balances; this page returned %d. Pass a higher page_size or request page %d for the rest.", envelope.Count, count, page+1)
 		}
 		return ok("clockify_time_off_balance", views, meta), nil
 	}

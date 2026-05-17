@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -16,6 +17,15 @@ func TestDefaultRecoveryRoutesScheduleWorkToProjects(t *testing.T) {
 	}
 	if got := defaultRecovery("clockify_scheduling_assignments_create", nil).Tool; got != "clockify_scheduling_assignments_list" {
 		t.Errorf("scheduling domain recovery Tool = %q, want clockify_scheduling_assignments_list", got)
+	}
+}
+
+func TestProjectlessTimerRecoveryPointsAtProjectsList(t *testing.T) {
+	te := recoverable("clockify_entries_timer_start",
+		fmt.Errorf("this workspace requires a project on every time entry — pass project_id or project"),
+		RecoveryHint{})
+	if te.Recovery.Tool != "clockify_projects_list" {
+		t.Fatalf("recovery tool = %q, want clockify_projects_list", te.Recovery.Tool)
 	}
 }
 

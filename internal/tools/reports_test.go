@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 // newPaginatedHandler returns an http.HandlerFunc that serves the given
@@ -135,6 +136,65 @@ func TestWeeklySummaryUsesReportsAPIAndDerivesWeekRange(t *testing.T) {
 	}
 	if result.Meta["source"] != "reports-api" {
 		t.Fatalf("source meta = %v, want reports-api", result.Meta["source"])
+	}
+}
+
+func TestReportsDetailedAcceptsSameDayRange(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	initializeServer(t, server)
+	result := callToolOK(t, server, "clockify_reports_detailed", map[string]any{
+		"start": "2026-05-17",
+		"end":   "2026-05-17",
+	})
+	if !result.OK {
+		t.Fatalf("same-day detailed range returned not ok: %#v", result)
+	}
+}
+
+func TestReportTotalsSummaryFinancialDisplayUsesSingleCurrency(t *testing.T) {
+	summary := summarizeReportTotals(map[string]any{
+		"totals": []map[string]any{{
+			"entriesCount": 1,
+			"totalAmount":  32151,
+			"totalAmountByCurrency": []map[string]any{{
+				"currency": "USD",
+				"amount":   32151,
+			}},
+		}},
+	}, nil)
+	if summary.Financials.Earned == nil {
+		t.Fatalf("missing totals earned financials: %#v", summary.Financials)
+	}
+	if !strings.Contains(summary.Financials.Earned.Display, "USD") {
+		t.Fatalf("earned display = %q, want currency label", summary.Financials.Earned.Display)
+	}
+}
+
+func TestSummaryReportGroupTotalsFinancialsMatchTotals(t *testing.T) {
+	data := map[string]any{
+		"groupOne": []map[string]any{
+			{"name": "A", "totalAmount": 100.4},
+			{"name": "B", "totalAmount": 200.4},
+		},
+		"totals": []map[string]any{{
+			"entriesCount": 2,
+			"totalAmount":  301,
+		}},
+	}
+	appendSummaryReportViews(data, map[string]any{})
+	groupTotals, ok := data["group_totals_summary"].(ReportGroupTotalsSummary)
+	if !ok {
+		t.Fatalf("unexpected group_totals_summary: %T %#v", data["group_totals_summary"], data["group_totals_summary"])
+	}
+	totals, ok := data["totals_summary"].(ReportTotalsSummary)
+	if !ok {
+		t.Fatalf("unexpected totals_summary: %T %#v", data["totals_summary"], data["totals_summary"])
+	}
+	if groupTotals.Financials.Earned.AmountCents != totals.Financials.Earned.AmountCents {
+		t.Fatalf("group earned = %d, totals earned = %d", groupTotals.Financials.Earned.AmountCents, totals.Financials.Earned.AmountCents)
 	}
 }
 

@@ -57,6 +57,42 @@ type EntryFinancials struct {
 	Rate   *EntryRateView `json:"rate,omitempty"`
 }
 
+// nonNullCustomFields returns the normalized custom-field views for raw,
+// dropping every field whose value is null/empty. A time entry carries a slot
+// for every workspace custom field, most unset; emitting the unset ones is
+// pure noise, so they never reach an entry view.
+func nonNullCustomFields(raw any) []CustomFieldValueView {
+	all := customFieldValuesFromRaw(raw)
+	filtered := all[:0]
+	for _, f := range all {
+		if f.Value != nil {
+			filtered = append(filtered, f)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return filtered
+}
+
+// nonNullRawCustomFields echoes the raw customFieldValues with null-valued
+// fields removed. The raw echo is kept for callers that read it directly; the
+// per-field null noise is dropped so it stays consistent with the normalized
+// custom_fields projection.
+func nonNullRawCustomFields(raw any) any {
+	rows := mapSlice(raw)
+	filtered := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		if view, ok := customFieldValueFromRaw(row); ok && view.Value != nil {
+			filtered = append(filtered, row)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	return filtered
+}
+
 func entryViewFromEntry(entry clockify.TimeEntry) EntryView {
 	billablePresent := entry.BillablePresent || entry.Billable
 	return EntryView{
@@ -70,8 +106,8 @@ func entryViewFromEntry(entry clockify.TimeEntry) EntryView {
 		BillableState:     billableStateFromPresence(entry.Billable, billablePresent),
 		BillablePresent:   billablePresent,
 		CostRate:          entry.CostRate,
-		CustomFieldValues: entry.CustomFieldValues,
-		CustomFields:      customFieldValuesFromRaw(entry.CustomFieldValues),
+		CustomFieldValues: nonNullRawCustomFields(entry.CustomFieldValues),
+		CustomFields:      nonNullCustomFields(entry.CustomFieldValues),
 		HourlyRate:        entry.HourlyRate,
 		IsLocked:          entry.IsLocked,
 		KioskID:           entry.KioskID,

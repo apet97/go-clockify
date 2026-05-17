@@ -556,21 +556,23 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(211, toolRW("clockify_invoices_import_time", "Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids.", objectSchema(map[string]any{
 			"required": []string{"invoice_id", "from", "to"},
 			"properties": map[string]any{
-				"invoice_id":            map[string]any{"type": "string", "description": "Invoice ID."},
-				"from":                  map[string]any{"type": "string", "description": "Start of the billing period (YYYY-MM-DD or RFC3339). All billable time on or after this is imported."},
-				"to":                    map[string]any{"type": "string", "description": "End of the billing period (YYYY-MM-DD or RFC3339)."},
-				"project_ids":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the import to these project IDs; omit to import all of the client's billable time in the range."},
-				"time_entry_group_type": map[string]any{"type": "string", "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default)."},
+				"invoice_id":                  map[string]any{"type": "string", "description": "Invoice ID."},
+				"from":                        map[string]any{"type": "string", "description": "Start of the billing period (YYYY-MM-DD or RFC3339). All billable time on or after this is imported."},
+				"to":                          map[string]any{"type": "string", "description": "End of the billing period (YYYY-MM-DD or RFC3339)."},
+				"project_ids":                 map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the import to these project IDs; omit to import all of the client's billable time in the range."},
+				"time_entry_group_type":       map[string]any{"type": "string", "enum": []string{"SINGLE_ITEM", "GROUPED", "DETAILED"}, "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default). GROUPED also requires time_entry_primary_group_by."},
+				"time_entry_primary_group_by": map[string]any{"type": "string", "enum": []string{"USER", "PROJECT", "DATE"}, "description": "Primary grouping dimension. Required when time_entry_group_type is GROUPED."},
 			},
 		})), "invoice_item", "updated", s.importInvoiceTimeOneUser),
 		nativeDomainTool(212, toolRW("clockify_invoices_import_expenses", "Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses.", objectSchema(map[string]any{
 			"required": []string{"invoice_id", "from", "to"},
 			"properties": map[string]any{
-				"invoice_id":            map[string]any{"type": "string", "description": "Invoice ID."},
-				"from":                  map[string]any{"type": "string", "description": "Start of the billing period (YYYY-MM-DD or RFC3339)."},
-				"to":                    map[string]any{"type": "string", "description": "End of the billing period (YYYY-MM-DD or RFC3339)."},
-				"project_ids":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the import to these project IDs; omit to import all of the client's billable items in the range."},
-				"time_entry_group_type": map[string]any{"type": "string", "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default)."},
+				"invoice_id":                  map[string]any{"type": "string", "description": "Invoice ID."},
+				"from":                        map[string]any{"type": "string", "description": "Start of the billing period (YYYY-MM-DD or RFC3339)."},
+				"to":                          map[string]any{"type": "string", "description": "End of the billing period (YYYY-MM-DD or RFC3339)."},
+				"project_ids":                 map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. Limit the import to these project IDs; omit to import all of the client's billable items in the range."},
+				"time_entry_group_type":       map[string]any{"type": "string", "enum": []string{"SINGLE_ITEM", "GROUPED", "DETAILED"}, "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default). GROUPED also requires time_entry_primary_group_by."},
+				"time_entry_primary_group_by": map[string]any{"type": "string", "enum": []string{"USER", "PROJECT", "DATE"}, "description": "Primary grouping dimension. Required when time_entry_group_type is GROUPED."},
 			},
 		})), "invoice_item", "updated", s.importInvoiceExpensesOneUser),
 		nativeDomainTool(213, toolRO("clockify_invoices_payments_list", "List invoice payments.", objectSchema(map[string]any{

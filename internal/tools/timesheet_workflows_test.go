@@ -314,7 +314,7 @@ func TestTimesheetReviewFiltersEntriesOutsideReportedRange(t *testing.T) {
 		t.Fatalf("TimesheetReview: %v", err)
 	}
 	data := result.Data.(TimesheetReviewData)
-	if data.Range.Start != "2026-05-16T22:00:00Z" || data.Range.End != "2026-05-17T22:00:00Z" {
+	if data.Range.Start != "2026-05-17T00:00:00+02:00" || data.Range.End != "2026-05-18T00:00:00+02:00" {
 		t.Fatalf("unexpected reported range: %+v", data.Range)
 	}
 	if data.Totals.Entries != 1 {

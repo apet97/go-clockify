@@ -45740,7 +45740,21 @@
             "type": "array"
           },
           "time_entry_group_type": {
-            "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default).",
+            "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default). GROUPED also requires time_entry_primary_group_by.",
+            "enum": [
+              "SINGLE_ITEM",
+              "GROUPED",
+              "DETAILED"
+            ],
+            "type": "string"
+          },
+          "time_entry_primary_group_by": {
+            "description": "Primary grouping dimension. Required when time_entry_group_type is GROUPED.",
+            "enum": [
+              "USER",
+              "PROJECT",
+              "DATE"
+            ],
             "type": "string"
           },
           "to": {
@@ -46019,7 +46033,21 @@
             "type": "array"
           },
           "time_entry_group_type": {
-            "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default).",
+            "description": "How imported entries are grouped on the invoice: SINGLE_ITEM, GROUPED, or DETAILED (default). GROUPED also requires time_entry_primary_group_by.",
+            "enum": [
+              "SINGLE_ITEM",
+              "GROUPED",
+              "DETAILED"
+            ],
+            "type": "string"
+          },
+          "time_entry_primary_group_by": {
+            "description": "Primary grouping dimension. Required when time_entry_group_type is GROUPED.",
+            "enum": [
+              "USER",
+              "PROJECT",
+              "DATE"
+            ],
             "type": "string"
           },
           "to": {

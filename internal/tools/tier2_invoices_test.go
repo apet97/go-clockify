@@ -817,6 +817,30 @@ func TestBuildInvoiceImportBodyValidatesDateRange(t *testing.T) {
 	}
 }
 
+func TestBuildInvoiceImportBodyGroupedRequiresPrimaryGroupBy(t *testing.T) {
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	_, err := buildInvoiceImportBody(svc, map[string]any{
+		"from":                  "2026-05-01",
+		"to":                    "2026-05-17",
+		"time_entry_group_type": "GROUPED",
+	}, false)
+	if err == nil || !strings.Contains(err.Error(), "requires time_entry_primary_group_by") {
+		t.Fatalf("want GROUPED dependency error, got %v", err)
+	}
+	body, err := buildInvoiceImportBody(svc, map[string]any{
+		"from":                        "2026-05-01",
+		"to":                          "2026-05-17",
+		"time_entry_group_type":       "GROUPED",
+		"time_entry_primary_group_by": "PROJECT",
+	}, false)
+	if err != nil {
+		t.Fatalf("GROUPED + primary should build: %v", err)
+	}
+	if body["timeEntryPrimaryGroupBy"] != "PROJECT" {
+		t.Fatalf("timeEntryPrimaryGroupBy = %v, want PROJECT", body["timeEntryPrimaryGroupBy"])
+	}
+}
+
 func TestInvoiceImportUsesImportExpensesWireField(t *testing.T) {
 	var bodies []map[string]any
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

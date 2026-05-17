@@ -41,8 +41,27 @@ func TestBuildReportsAPIBody_CoercesPlainDate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildReportsAPIBody: %v", err)
 	}
-	if body["dateRangeStart"] != "2026-05-01T00:00:00.000" || body["dateRangeEnd"] != "2026-05-17T00:00:00.000" {
+	if body["dateRangeStart"] != "2026-05-01T00:00:00.000" || body["dateRangeEnd"] != "2026-05-17T23:59:59.999" {
 		t.Fatalf("plain dates not coerced: %#v", body)
+	}
+}
+
+func TestReportAmountMetaRoundsToIntegerCents(t *testing.T) {
+	meta := reportAmountMeta(map[string]any{
+		"totals": []any{map[string]any{
+			"totalAmount": 69466.66666666667,
+			"totalAmountByCurrency": []any{map[string]any{
+				"currency": "USD",
+				"amount":   69466.66666666667,
+			}},
+		}},
+	})
+	if meta["totalAmountCents"] != int64(69467) {
+		t.Fatalf("totalAmountCents = %#v, want int64 cents", meta["totalAmountCents"])
+	}
+	byCurrency := meta["byCurrency"].([]map[string]any)
+	if byCurrency[0]["amountCents"] != int64(69467) {
+		t.Fatalf("byCurrency amountCents = %#v, want int64 cents", byCurrency[0]["amountCents"])
 	}
 }
 

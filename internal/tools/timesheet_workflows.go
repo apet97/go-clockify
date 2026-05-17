@@ -101,7 +101,7 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 	entries := sortedEntriesByStart(agg.Entries)
 	issues, suggestions := buildTimesheetReview(entries, start, end, loc, workdayStart, workdayEnd, minGapMinutes, maxSuggestions)
 	data := TimesheetReviewData{
-		Range:            DateRange{Start: start.Format(time.RFC3339), End: end.Format(time.RFC3339)},
+		Range:            DateRange{Start: start.In(loc).Format(time.RFC3339), End: end.In(loc).Format(time.RFC3339)},
 		Totals:           totalsFromAgg(agg),
 		ByDay:            daySummariesFromAgg(agg),
 		ByProject:        projectSummariesFromAgg(agg),

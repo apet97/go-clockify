@@ -185,8 +185,11 @@ func TestPaginationMetaAddsConsistentTopLevelSignals(t *testing.T) {
 	if meta["page"] != 2 || meta["pageSize"] != 50 {
 		t.Fatalf("missing top-level page/pageSize: %#v", meta)
 	}
-	if meta["total"] != 100 {
-		t.Fatalf("total should be lower-bound rows reached through this page, got %#v", meta["total"])
+	if meta["total_min"] != 100 {
+		t.Fatalf("total_min should be lower-bound rows reached through this page, got %#v", meta["total_min"])
+	}
+	if _, ok := meta["total"]; ok {
+		t.Fatalf("full page without upstream count must not expose authoritative total: %#v", meta)
 	}
 	if meta["has_more"] != true {
 		t.Fatalf("full page should expose has_more=true, got %#v", meta)

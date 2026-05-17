@@ -79,6 +79,17 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	if projectID == "" && s.workspaceForcesProjects(ctx, wsID) {
 		return ResultEnvelope{}, fmt.Errorf("this workspace requires a project on every time entry — pass project_id or project")
 	}
+	if projectID != "" {
+		// Billable defaults to the project's setting: Clockify treats an
+		// omitted billable as false, which silently makes timers on
+		// billable projects unbillable.
+		if projPath, perr := paths.Workspace(wsID, "projects", projectID); perr == nil {
+			var proj clockify.Project
+			if gerr := s.Client.Get(ctx, projPath, nil, &proj); gerr == nil {
+				payload["billable"] = proj.Billable
+			}
+		}
+	}
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
 		return ResultEnvelope{}, err
