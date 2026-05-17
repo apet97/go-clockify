@@ -226,11 +226,12 @@ func (s *Service) ClockifyLogWork(ctx context.Context, args map[string]any) (any
 	if err := s.rejectLogWorkOverlap(ctx, args); err != nil {
 		return nil, err
 	}
+	warnings := s.futureEntryWarningsFromArgs(args, time.Now().UTC())
 	entry, ids, err := s.createEntry(ctx, args)
 	if err != nil {
 		return nil, err
 	}
-	return result("clockify_log_work", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, nil, []NextAction{
+	return result("clockify_log_work", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, warnings, []NextAction{
 		{Tool: "clockify_review_day", Args: reviewDayArgsFromEntry(entry), Reason: "Review the day after logging work."},
 		{Tool: "clockify_fix_entry", Args: map[string]any{"entry_id": entry.ID}, Reason: "Adjust this entry if any details are wrong."},
 	}), nil
@@ -777,6 +778,7 @@ func reviewDaySchema() map[string]any {
 		"workday_end":     map[string]any{"type": "string", "description": "HH:MM. Default: 17:00."},
 		"min_gap_minutes": map[string]any{"type": "integer"},
 		"include_entries": map[string]any{"type": "boolean"},
+		"max_rows":        map[string]any{"type": "integer", "minimum": 0, "description": "Maximum detail rows for byProject, issues, and included entries. Default: 15; pass 0 for uncapped."},
 	}})
 }
 

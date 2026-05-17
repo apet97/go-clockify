@@ -124,7 +124,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"is_template":        map[string]any{"type": "boolean"},
 				"sort_column":        map[string]any{"type": "string", "enum": []string{"ID", "NAME", "CLIENT_NAME", "DURATION", "BUDGET", "PROGRESS"}},
 				"sort_order":         map[string]any{"type": "string", "enum": []string{"ASCENDING", "DESCENDING"}},
-				"hydrated":           map[string]any{"type": "boolean", "description": "Clockify hydrated query flag; current handler sends hydrated=true."},
+				"hydrated":           map[string]any{"type": "boolean", "description": "Clockify hydrated query flag; defaults to false for compact list responses."},
 				"access":             map[string]any{"type": "string", "enum": []string{"PUBLIC", "PRIVATE"}},
 				"expense_limit":      map[string]any{"type": "integer"},
 				"expense_date":       map[string]any{"type": "string", "description": "Expense date query value, typically YYYY-MM-DD."},
@@ -336,7 +336,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_clients_delete":
 		return entityObjectDataSchema("deleted", "clientId")
 	case "clockify_projects_list":
-		return objectListDataSchema("projects", schemaFor[[]clockify.Project]())
+		return objectListDataSchema("projects", schemaFor[[]CompactProjectView]())
 	case "clockify_projects_create":
 		return schemaFor[clockify.Project]()
 	case "clockify_projects_get", "clockify_projects_update", "clockify_projects_archive":
@@ -416,7 +416,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 			"data":    openObjectOrArraySchema(),
 		})
 	case "clockify_invoices_list":
-		return entityArrayDataSchema("id", "number", "status", "clientId")
+		return schemaFor[[]CompactInvoiceView]()
 	case "clockify_invoices_get", "clockify_invoices_create", "clockify_invoices_update", "clockify_invoices_send", "clockify_invoices_mark_paid":
 		return entityObjectDataSchema("id", "number", "status", "clientId")
 	case "clockify_invoices_delete":
@@ -438,7 +438,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_invoices_payments_delete":
 		return entityObjectDataSchema("deleted", "paymentId", "invoiceId")
 	case "clockify_expenses_list":
-		return entityArrayDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
+		return schemaFor[[]CompactExpenseView]()
 	case "clockify_expenses_get", "clockify_expenses_create", "clockify_expenses_update":
 		return entityObjectDataSchema("id", "amount", "date", "categoryId", "projectId", "userId")
 	case "clockify_expenses_delete":
@@ -466,7 +466,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 	case "clockify_time_off_approve", "clockify_time_off_deny":
 		return entityObjectDataSchema("id", "requestId", "policyId", "status")
 	case "clockify_time_off_policies_list":
-		return entityArrayDataSchema("id", "policyId", "name", "timeUnit", "archived")
+		return schemaFor[[]CompactTimeOffPolicyView]()
 	case "clockify_time_off_policies_get", "clockify_time_off_policies_create", "clockify_time_off_policies_update":
 		return entityObjectDataSchema("id", "policyId", "name", "timeUnit", "archived")
 	case "clockify_time_off_balances":
@@ -583,7 +583,7 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 			}),
 		}
 	case "clockify_invoices_info":
-		return entityArrayDataSchema("id", "number", "status", "clientId", "clientName", "amount", "balance", "issuedDate", "dueDate", "currency")
+		return schemaFor[[]CompactInvoiceView]()
 	case "clockify_scheduling_publish":
 		return objectDataSchema(map[string]any{
 			"published":   map[string]any{"type": "boolean", "description": "True when the publish call succeeded."},
@@ -631,8 +631,10 @@ func objectListDataSchema(key string, itemsSchema map[string]any) map[string]any
 	return objectDataSchema(map[string]any{
 		key:        itemsSchema,
 		"count":    map[string]any{"type": "integer"},
+		"total":    map[string]any{"type": "integer"},
 		"page":     map[string]any{"type": "integer"},
 		"pageSize": map[string]any{"type": "integer"},
+		"has_more": map[string]any{"type": "boolean"},
 	})
 }
 
@@ -932,12 +934,13 @@ func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, er
 	if err != nil {
 		return nil, err
 	}
-	return result("clockify_clients_list", "client", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	return result("clockify_clients_list", "client", map[string]string{"workspaceId": s.WorkspaceID}, withListPaginationData(map[string]any{
 		"clients":  items,
 		"count":    len(items),
 		"page":     page,
 		"pageSize": pageSize,
-	}, ChangeSet{}, nil, nil), nil
+	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
 func (s *Service) ClientsCreate(ctx context.Context, args map[string]any) (any, error) {
@@ -964,12 +967,13 @@ func (s *Service) ProjectsList(ctx context.Context, args map[string]any) (any, e
 	if err != nil {
 		return nil, err
 	}
-	return result("clockify_projects_list", "project", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
-		"projects": items,
+	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	return result("clockify_projects_list", "project", map[string]string{"workspaceId": s.WorkspaceID}, withListPaginationData(map[string]any{
+		"projects": compactProjectViewsFromProjects(items),
 		"count":    len(items),
 		"page":     page,
 		"pageSize": pageSize,
-	}, ChangeSet{}, nil, nil), nil
+	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
 func (s *Service) ProjectsCreate(ctx context.Context, args map[string]any) (any, error) {
@@ -1001,12 +1005,13 @@ func (s *Service) TasksList(ctx context.Context, args map[string]any) (any, erro
 	if err != nil {
 		return nil, err
 	}
-	return result("clockify_tasks_list", "task", map[string]string{"workspaceId": s.WorkspaceID, "projectId": projectID}, map[string]any{
+	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	return result("clockify_tasks_list", "task", map[string]string{"workspaceId": s.WorkspaceID, "projectId": projectID}, withListPaginationData(map[string]any{
 		"tasks":    items,
 		"count":    len(items),
 		"page":     page,
 		"pageSize": pageSize,
-	}, ChangeSet{}, nil, nil), nil
+	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
 func (s *Service) TasksCreate(ctx context.Context, args map[string]any) (any, error) {
@@ -1034,12 +1039,13 @@ func (s *Service) TagsList(ctx context.Context, args map[string]any) (any, error
 	if err != nil {
 		return nil, err
 	}
-	return result("clockify_tags_list", "tag", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
+	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	return result("clockify_tags_list", "tag", map[string]string{"workspaceId": s.WorkspaceID}, withListPaginationData(map[string]any{
 		"tags":     items,
 		"count":    len(items),
 		"page":     page,
 		"pageSize": pageSize,
-	}, ChangeSet{}, nil, nil), nil
+	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
 func (s *Service) TagsCreate(ctx context.Context, args map[string]any) (any, error) {
@@ -1062,12 +1068,25 @@ func (s *Service) EntriesList(ctx context.Context, args map[string]any) (any, er
 	if err != nil {
 		return nil, err
 	}
-	return result("clockify_entries_list", "entry", map[string]string{"workspaceId": s.WorkspaceID, "userId": userID}, map[string]any{
+	meta := addPaginationMeta(map[string]any{"count": len(entries)}, args, page, pageSize)
+	return result("clockify_entries_list", "entry", map[string]string{"workspaceId": s.WorkspaceID, "userId": userID}, withListPaginationData(map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
 		"page":     page,
 		"pageSize": pageSize,
-	}, ChangeSet{}, nil, nil), nil
+	}, meta), ChangeSet{}, nil, nil, meta), nil
+}
+
+func withListPaginationData(data map[string]any, meta map[string]any) map[string]any {
+	if data == nil {
+		data = map[string]any{}
+	}
+	for _, key := range []string{"total", "has_more"} {
+		if value, ok := meta[key]; ok {
+			data[key] = value
+		}
+	}
+	return data
 }
 
 func (s *Service) EntriesCreate(ctx context.Context, args map[string]any) (any, error) {
@@ -1077,14 +1096,19 @@ func (s *Service) EntriesCreate(ctx context.Context, args map[string]any) (any, 
 			return nil, err
 		}
 		preview := dryrunPreviewPayloadValidated("clockify_entries_create", payload, validationOK("payload_check"))
-		return result("clockify_entries_create", "entry", ids, preview, ChangeSet{}, nil, nil), nil
+		warnings := s.futureEntryWarningsFromArgs(args, time.Now().UTC())
+		if len(warnings) > 0 {
+			preview["warnings"] = warnings
+		}
+		return result("clockify_entries_create", "entry", ids, preview, ChangeSet{}, warnings, nil), nil
 	}
+	warnings := s.futureEntryWarningsFromArgs(args, time.Now().UTC())
 	entry, ids, err := s.createEntry(ctx, args)
 	if err != nil {
 		return nil, err
 	}
 	s.emitEntryAndWeeklyWithState(ctx, s.WorkspaceID, entry)
-	return result("clockify_entries_create", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, nil, nil), nil
+	return result("clockify_entries_create", "entry", ids, entry, ChangeSet{Created: []EntityRef{entryRef(entry)}}, warnings, nil), nil
 }
 
 func (s *Service) ClockifyDemoSeed(ctx context.Context, args map[string]any) (any, error) {
@@ -1599,6 +1623,37 @@ func (s *Service) buildEntryPayload(ctx context.Context, args map[string]any) (m
 		ids["tagId"] = tagIDs[0]
 	}
 	return payload, ids, nil
+}
+
+func (s *Service) futureEntryWarningsFromArgs(args map[string]any, now time.Time) []Warning {
+	loc := s.location()
+	startRaw := strings.TrimSpace(stringArg(args, "start"))
+	if startRaw == "" {
+		return nil
+	}
+	start, err := timeparse.ParseDatetime(startRaw, loc)
+	if err != nil {
+		return nil
+	}
+	if endRaw := strings.TrimSpace(stringArg(args, "end")); endRaw != "" {
+		end, err := timeparse.ParseDatetime(endRaw, loc)
+		if err != nil || !end.After(now) {
+			return nil
+		}
+		return []Warning{futureDatedWarning("end", end, now)}
+	}
+	if start.After(now) {
+		return []Warning{futureDatedWarning("start", start, now)}
+	}
+	return nil
+}
+
+func futureDatedWarning(bound string, resolved, now time.Time) Warning {
+	return Warning{
+		Code: "future_dated",
+		Message: fmt.Sprintf("The entry %s (%s) is in the future relative to server now (%s). Confirm this is planned work, not already-finished work.",
+			bound, resolved.UTC().Format(time.RFC3339), now.UTC().Format(time.RFC3339)),
+	}
 }
 
 func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockify.TimeEntry, map[string]string, error) {

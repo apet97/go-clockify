@@ -666,7 +666,7 @@ func TestWorkflowPackageLogReviewAndRepeatableDemoCleanup(t *testing.T) {
 	if !ok {
 		t.Fatalf("review data type = %T, want TimesheetReviewData", review.Data)
 	}
-	if data.Totals.Entries < 2 || data.Totals.TotalSeconds <= 0 {
+	if data.Totals.Entries != 1 || data.Totals.TotalSeconds <= 0 {
 		t.Fatalf("review totals not useful: %+v", data.Totals)
 	}
 	if len(review.Next) == 0 {

@@ -1,31 +1,27 @@
 package tools
 
 import (
-	"maps"
 	"strings"
 )
 
 type CustomFieldDefinitionView struct {
-	ID         string         `json:"id,omitempty"`
-	Name       string         `json:"name,omitempty"`
-	Type       string         `json:"type,omitempty"`
-	Status     string         `json:"status,omitempty"`
-	EntityType string         `json:"entity_type,omitempty"`
-	Source     string         `json:"source,omitempty"`
-	Raw        map[string]any `json:"raw,omitempty"`
+	ID         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Status     string `json:"status,omitempty"`
+	EntityType string `json:"entity_type,omitempty"`
+	Source     string `json:"source,omitempty"`
 }
 
 type CustomFieldValueView struct {
-	ID            string                     `json:"id,omitempty"`
-	CustomFieldID string                     `json:"custom_field_id,omitempty"`
-	Name          string                     `json:"name,omitempty"`
-	Type          string                     `json:"type,omitempty"`
-	Status        string                     `json:"status,omitempty"`
-	EntityType    string                     `json:"entity_type,omitempty"`
-	Value         any                        `json:"value,omitempty"`
-	Source        string                     `json:"source"`
-	Definition    *CustomFieldDefinitionView `json:"definition,omitempty"`
-	Raw           map[string]any             `json:"raw,omitempty"`
+	ID            string `json:"id,omitempty"`
+	CustomFieldID string `json:"custom_field_id,omitempty"`
+	Name          string `json:"name,omitempty"`
+	Type          string `json:"type,omitempty"`
+	Status        string `json:"status,omitempty"`
+	EntityType    string `json:"entity_type,omitempty"`
+	Value         any    `json:"value,omitempty"`
+	Source        string `json:"source"`
 }
 
 func customFieldValuesFromRaw(raw any) []CustomFieldValueView {
@@ -53,7 +49,7 @@ func customFieldValueFromRaw(raw map[string]any) (CustomFieldValueView, bool) {
 	}
 	def := customFieldDefinitionFromRaw(raw)
 	id := firstReportString(raw, "id", "_id", "customFieldValueId", "custom_field_value_id")
-	cfID := firstReportString(raw, "customFieldId", "custom_field_id", "fieldId", "field_id", "id")
+	cfID := firstReportString(raw, "customFieldId", "custom_field_id", "fieldId", "field_id")
 	name := firstReportString(raw, "customFieldName", "custom_field_name", "name", "label")
 	typ := strings.ToUpper(firstReportString(raw, "customFieldType", "custom_field_type", "type", "fieldType", "field_type"))
 	status := strings.ToUpper(firstReportString(raw, "status"))
@@ -75,10 +71,8 @@ func customFieldValueFromRaw(raw map[string]any) (CustomFieldValueView, bool) {
 		EntityType:    entityType,
 		Value:         value,
 		Source:        source,
-		Raw:           maps.Clone(raw),
 	}
 	if def.ID != "" || def.Name != "" || def.Type != "" || def.Status != "" || def.EntityType != "" {
-		view.Definition = &def
 		if view.CustomFieldID == "" {
 			view.CustomFieldID = def.ID
 		}
@@ -121,7 +115,6 @@ func customFieldDefinitionFromRaw(raw map[string]any) CustomFieldDefinitionView 
 		Status:     strings.ToUpper(firstReportString(raw, "status")),
 		EntityType: strings.ToUpper(firstReportString(raw, "entityType", "entity_type", "sourceType", "source_type")),
 		Source:     "embedded",
-		Raw:        maps.Clone(raw),
 	}
 }
 

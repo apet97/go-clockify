@@ -26,6 +26,9 @@ func (s *Service) AttendanceReport(ctx context.Context, args map[string]any) (Re
 }
 
 func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, endpoint reportEndpoint) (ResultEnvelope, error) {
+	if err := validateReportArgsDateRange(args); err != nil {
+		return ResultEnvelope{}, err
+	}
 	wsID := strings.TrimSpace(stringArg(args, "workspace_id"))
 	if wsID == "" {
 		var err error
@@ -217,6 +220,12 @@ func defaultReportFilter(filterKey string) map[string]any {
 	}
 }
 
+func validateReportArgsDateRange(args map[string]any) error {
+	startRaw := strings.TrimSpace(firstNonEmptyString(stringArg(args, "date_range_start"), stringArg(args, "start")))
+	endRaw := strings.TrimSpace(firstNonEmptyString(stringArg(args, "date_range_end"), stringArg(args, "end")))
+	return validateReportDateRangeValues(startRaw, endRaw)
+}
+
 func setReportCommonFields(body map[string]any, args map[string]any) {
 	setIfString(body, args, "amount_shown", "amountShown")
 	if amounts, ok, err := strictStringSliceArg(args, "amounts"); err == nil && ok {
@@ -285,6 +294,10 @@ func setReportCommonFields(body map[string]any, args map[string]any) {
 func validateReportDateRange(body map[string]any) error {
 	startRaw, _ := body["dateRangeStart"].(string)
 	endRaw, _ := body["dateRangeEnd"].(string)
+	return validateReportDateRangeValues(startRaw, endRaw)
+}
+
+func validateReportDateRangeValues(startRaw, endRaw string) error {
 	if startRaw == "" || endRaw == "" {
 		return nil
 	}
@@ -293,8 +306,8 @@ func validateReportDateRange(body map[string]any) error {
 	if errStart != nil || errEnd != nil {
 		return nil
 	}
-	if end.Before(start) {
-		return fmt.Errorf("date_range_end (%s) must not precede date_range_start (%s)", endRaw, startRaw)
+	if !end.After(start) {
+		return fmt.Errorf("date_range_end (%s) must be after date_range_start (%s)", endRaw, startRaw)
 	}
 	return nil
 }

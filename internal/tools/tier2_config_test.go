@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,6 +42,63 @@ func TestProjectAdminHandlersCount(t *testing.T) {
 // ---------------------------------------------------------------------------
 // Integration-style tests with mock HTTP server
 // ---------------------------------------------------------------------------
+
+func TestListProjectTemplatesTruncatesNotesButGetKeepsFullNote(t *testing.T) {
+	const projectID = "0123456789abcdef01234567"
+	longNote := strings.Repeat("template notes ", 60)
+
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/projects" && r.Method == http.MethodGet:
+			if r.URL.Query().Get("is-template") != "true" {
+				t.Fatalf("expected is-template=true, got query %s", r.URL.RawQuery)
+			}
+			respondJSON(t, w, []map[string]any{
+				{"id": projectID, "name": "Template A", "note": longNote},
+			})
+		case r.URL.Path == "/workspaces/ws1/projects/"+projectID && r.Method == http.MethodGet:
+			respondJSON(t, w, map[string]any{"id": projectID, "name": "Template A", "note": longNote})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	listResult, err := svc.ListProjectTemplates(context.Background(), map[string]any{})
+	if err != nil {
+		t.Fatalf("list project templates failed: %v", err)
+	}
+	items, ok := listResult.Data.([]map[string]any)
+	if !ok || len(items) != 1 {
+		t.Fatalf("unexpected list data: %#v", listResult.Data)
+	}
+	note, _ := items[0]["note"].(string)
+	if len([]rune(note)) != projectTemplateListNoteLimit {
+		t.Fatalf("list note length=%d, want %d", len([]rune(note)), projectTemplateListNoteLimit)
+	}
+	if !strings.HasSuffix(note, projectTemplateListNoteSuffix) {
+		t.Fatalf("list note should end with truncation suffix, got %q", note)
+	}
+	if items[0]["noteTruncated"] != true {
+		t.Fatalf("list noteTruncated = %v, want true", items[0]["noteTruncated"])
+	}
+
+	getResult, err := svc.GetProjectTemplate(context.Background(), map[string]any{"project_id": projectID})
+	if err != nil {
+		t.Fatalf("get project template failed: %v", err)
+	}
+	data, ok := getResult.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected get data: %#v", getResult.Data)
+	}
+	if data["note"] != longNote {
+		t.Fatalf("get note should keep full upstream note")
+	}
+	if _, ok := data["noteTruncated"]; ok {
+		t.Fatalf("get path should not add noteTruncated: %#v", data)
+	}
+}
 
 func TestListCustomFields(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

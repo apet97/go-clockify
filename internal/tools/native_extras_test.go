@@ -49,6 +49,13 @@ func TestInvoicesInfoPagedQuery(t *testing.T) {
 	if env.Meta["has_more"] != true {
 		t.Fatalf("has_more = %v, want true (page 1 of 149 at pageSize 1)", env.Meta["has_more"])
 	}
+	invoices, ok := env.Data.([]CompactInvoiceView)
+	if !ok {
+		t.Fatalf("data type = %T, want []CompactInvoiceView", env.Data)
+	}
+	if len(invoices) != 1 || invoices[0].ID != "i1" || invoices[0].Number != "INV-1" || invoices[0].Status != "PAID" {
+		t.Fatalf("compact invoices not preserved: %+v", invoices)
+	}
 }
 
 // TestSchedulingPublishReceiptAndDryRun locks clockify_scheduling_publish: a

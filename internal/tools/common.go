@@ -733,6 +733,24 @@ func addPaginationMeta(meta map[string]any, args map[string]any, page, pageSize 
 	if meta == nil {
 		meta = map[string]any{}
 	}
+	meta["page"] = page
+	meta["pageSize"] = pageSize
+	count, hasCount := reportInt(meta["count"])
+	total, hasTotal := reportInt(meta["total"])
+	if !hasTotal && hasCount {
+		total = ((page - 1) * pageSize) + count
+		meta["total"] = total
+		if count == pageSize {
+			meta["total_is_lower_bound"] = true
+		}
+	}
+	if _, ok := meta["has_more"]; !ok && hasCount {
+		if hasTotal {
+			meta["has_more"] = page*pageSize < total
+		} else {
+			meta["has_more"] = count == pageSize
+		}
+	}
 	pagination := map[string]any{
 		"page":              page,
 		"page_size":         pageSize,

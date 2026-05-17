@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -82,6 +83,101 @@ func TestTimesheetReviewFindsIssuesAndSuggestedActions(t *testing.T) {
 	assertSuggestionTool(t, data.SuggestedActions, oneUserToolEntriesCreateFromGap)
 }
 
+func TestTimesheetReviewMaxRowsCapsDetailLists(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			respondJSON(t, w, []map[string]any{
+				reviewEntryPayload("e1", "", "p1", "Project 1", "2026-04-06T09:00:00Z", "2026-04-06T10:00:00Z"),
+				reviewEntryPayload("e2", "", "p2", "Project 2", "2026-04-06T10:00:00Z", "2026-04-06T11:00:00Z"),
+				reviewEntryPayload("e3", "", "p3", "Project 3", "2026-04-06T11:00:00Z", "2026-04-06T12:00:00Z"),
+				reviewEntryPayload("e4", "", "p4", "Project 4", "2026-04-06T12:00:00Z", "2026-04-06T13:00:00Z"),
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TimesheetReview(context.Background(), map[string]any{
+		"start":           "2026-04-06T09:00:00Z",
+		"end":             "2026-04-06T13:00:00Z",
+		"timezone":        "UTC",
+		"include_entries": true,
+		"min_gap_minutes": 0,
+		"max_rows":        2,
+	})
+	if err != nil {
+		t.Fatalf("TimesheetReview: %v", err)
+	}
+	data := result.Data.(TimesheetReviewData)
+	if data.Totals.Entries != 4 {
+		t.Fatalf("totals should remain complete, got %+v", data.Totals)
+	}
+	if len(data.ByDay) != 1 || data.ByDay[0].Entries != 4 {
+		t.Fatalf("byDay aggregates should remain complete: %+v", data.ByDay)
+	}
+	if len(data.ByProject) != 2 || len(data.Issues) != 2 || len(data.Entries) != 2 {
+		t.Fatalf("detail lists not capped: projects=%d issues=%d entries=%d", len(data.ByProject), len(data.Issues), len(data.Entries))
+	}
+	if result.Meta["truncated"] != true || result.Meta["byProjectTotal"] != 4 || result.Meta["issuesTotal"] != 4 || result.Meta["entriesTotal"] != 4 {
+		t.Fatalf("missing truncation meta: %#v", result.Meta)
+	}
+}
+
+func TestTimesheetReviewDefaultMaxRowsCapsIncludedEntries(t *testing.T) {
+	start := time.Date(2026, 4, 6, 9, 0, 0, 0, time.UTC)
+	entries := make([]map[string]any, defaultTimesheetReviewMaxRows+1)
+	for i := range entries {
+		entryStart := start.Add(time.Duration(i) * time.Hour)
+		entries[i] = reviewEntryPayload(
+			fmt.Sprintf("e%d", i+1),
+			"",
+			fmt.Sprintf("p%d", i+1),
+			fmt.Sprintf("Project %d", i+1),
+			entryStart.Format(time.RFC3339),
+			entryStart.Add(30*time.Minute).Format(time.RFC3339),
+		)
+	}
+
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			respondJSON(t, w, entries)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TimesheetReview(context.Background(), map[string]any{
+		"start":           start.Format(time.RFC3339),
+		"end":             start.Add(time.Duration(len(entries)) * time.Hour).Format(time.RFC3339),
+		"timezone":        "UTC",
+		"include_entries": true,
+		"min_gap_minutes": 0,
+	})
+	if err != nil {
+		t.Fatalf("TimesheetReview: %v", err)
+	}
+	data := result.Data.(TimesheetReviewData)
+	if data.Totals.Entries != len(entries) {
+		t.Fatalf("totals should remain complete, got %+v", data.Totals)
+	}
+	if len(data.ByProject) != defaultTimesheetReviewMaxRows || len(data.Issues) != defaultTimesheetReviewMaxRows || len(data.Entries) != defaultTimesheetReviewMaxRows {
+		t.Fatalf("default detail cap not applied: projects=%d issues=%d entries=%d", len(data.ByProject), len(data.Issues), len(data.Entries))
+	}
+	if result.Meta["truncated"] != true || result.Meta["entriesReturned"] != defaultTimesheetReviewMaxRows {
+		t.Fatalf("missing default truncation meta: %#v", result.Meta)
+	}
+}
+
 func TestTimesheetReviewRangeUsesLocalTimezoneAcrossDST(t *testing.T) {
 	loc, err := time.LoadLocation("America/New_York")
 	if err != nil {
@@ -102,6 +198,19 @@ func TestTimesheetReviewRangeUsesLocalTimezoneAcrossDST(t *testing.T) {
 	}
 	if got := end.Sub(start); got != 23*time.Hour {
 		t.Fatalf("DST day duration=%v, want 23h", got)
+	}
+}
+
+func reviewEntryPayload(id, description, projectID, projectName, start, end string) map[string]any {
+	return map[string]any{
+		"id":          id,
+		"description": description,
+		"projectId":   projectID,
+		"projectName": projectName,
+		"timeInterval": map[string]any{
+			"start": start,
+			"end":   end,
+		},
 	}
 }
 
@@ -175,6 +284,52 @@ func TestClockifyFixEntryReturnsRecoveryForProtectedTimeEntryStates(t *testing.T
 				t.Fatalf("recovery did not mention %q: %+v", tc.wantText, errResult)
 			}
 		})
+	}
+}
+
+func TestTimesheetReviewFiltersEntriesOutsideReportedRange(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Test"})
+		case "/workspaces/ws1/user/u1/time-entries":
+			respondJSON(t, w, []map[string]any{
+				reviewEntryPayload("outside", "previous evening", "p1", "Project", "2026-05-16T20:17:10Z", "2026-05-16T21:17:10Z"),
+				reviewEntryPayload("inside", "inside local day", "p1", "Project", "2026-05-16T22:30:00Z", "2026-05-16T23:30:00Z"),
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	result, err := svc.TimesheetReview(context.Background(), map[string]any{
+		"date":            "2026-05-17",
+		"timezone":        "Europe/Belgrade",
+		"include_entries": true,
+		"min_gap_minutes": 0,
+	})
+	if err != nil {
+		t.Fatalf("TimesheetReview: %v", err)
+	}
+	data := result.Data.(TimesheetReviewData)
+	if data.Range.Start != "2026-05-16T22:00:00Z" || data.Range.End != "2026-05-17T22:00:00Z" {
+		t.Fatalf("unexpected reported range: %+v", data.Range)
+	}
+	if data.Totals.Entries != 1 {
+		t.Fatalf("expected only in-range entry to be reviewed, got totals=%+v", data.Totals)
+	}
+	if len(data.ByDay) != 1 || data.ByDay[0].Date != "2026-05-17" {
+		t.Fatalf("byDay should stay inside requested local day, got %+v", data.ByDay)
+	}
+	if len(data.Entries) != 1 || data.Entries[0].ID != "inside" {
+		t.Fatalf("entries should exclude starts before range, got %+v", data.Entries)
+	}
+	for _, issue := range data.Issues {
+		if issue.EntryID == "outside" || strings.Contains(issue.Message, "outside") {
+			t.Fatalf("issues should not reference outside-range entry: %+v", issue)
+		}
 	}
 }
 

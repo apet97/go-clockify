@@ -2033,34 +2033,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -2069,10 +2041,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -2991,6 +2959,11 @@
           "include_entries": {
             "type": "boolean"
           },
+          "max_rows": {
+            "description": "Maximum detail rows for byProject, issues, and included entries. Default: 15; pass 0 for uncapped.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "min_gap_minutes": {
             "type": "integer"
           },
@@ -3262,34 +3235,6 @@
                           "custom_field_id": {
                             "type": "string"
                           },
-                          "definition": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "raw": {
-                                "additionalProperties": {},
-                                "type": "object"
-                              },
-                              "source": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string"
-                              },
-                              "type": {
-                                "type": "string"
-                              }
-                            },
-                            "type": "object"
-                          },
                           "entity_type": {
                             "type": "string"
                           },
@@ -3298,10 +3243,6 @@
                           },
                           "name": {
                             "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
                           },
                           "source": {
                             "type": "string"
@@ -4036,6 +3977,11 @@
           "include_entries": {
             "type": "boolean"
           },
+          "max_rows": {
+            "description": "Maximum detail rows for byProject, issues, and included entries. Default: 15; pass 0 for uncapped.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "min_gap_minutes": {
             "type": "integer"
           },
@@ -4311,34 +4257,6 @@
                           "custom_field_id": {
                             "type": "string"
                           },
-                          "definition": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "raw": {
-                                "additionalProperties": {},
-                                "type": "object"
-                              },
-                              "source": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string"
-                              },
-                              "type": {
-                                "type": "string"
-                              }
-                            },
-                            "type": "object"
-                          },
                           "entity_type": {
                             "type": "string"
                           },
@@ -4347,10 +4265,6 @@
                           },
                           "name": {
                             "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
                           },
                           "source": {
                             "type": "string"
@@ -5351,34 +5265,6 @@
                         "custom_field_id": {
                           "type": "string"
                         },
-                        "definition": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "entity_type": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            },
-                            "raw": {
-                              "additionalProperties": {},
-                              "type": "object"
-                            },
-                            "source": {
-                              "type": "string"
-                            },
-                            "status": {
-                              "type": "string"
-                            },
-                            "type": {
-                              "type": "string"
-                            }
-                          },
-                          "type": "object"
-                        },
                         "entity_type": {
                           "type": "string"
                         },
@@ -5387,10 +5273,6 @@
                         },
                         "name": {
                           "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
                         },
                         "source": {
                           "type": "string"
@@ -8357,10 +8239,16 @@
               "count": {
                 "type": "integer"
               },
+              "has_more": {
+                "type": "boolean"
+              },
               "page": {
                 "type": "integer"
               },
               "pageSize": {
+                "type": "integer"
+              },
+              "total": {
                 "type": "integer"
               }
             },
@@ -8815,7 +8703,7 @@
             "type": "integer"
           },
           "hydrated": {
-            "description": "Clockify hydrated query flag; current handler sends hydrated=true.",
+            "description": "Clockify hydrated query flag; defaults to false for compact list responses.",
             "type": "boolean"
           },
           "is_template": {
@@ -8990,6 +8878,9 @@
               "count": {
                 "type": "integer"
               },
+              "has_more": {
+                "type": "boolean"
+              },
               "page": {
                 "type": "integer"
               },
@@ -9006,8 +8897,6 @@
                     "billable": {
                       "type": "boolean"
                     },
-                    "budgetEstimate": {},
-                    "client": {},
                     "clientId": {
                       "type": "string"
                     },
@@ -9017,221 +8906,17 @@
                     "color": {
                       "type": "string"
                     },
-                    "costRate": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "amount": {
-                          "type": "integer"
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "inherited": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "amount"
-                      ],
-                      "type": "object"
-                    },
-                    "currency": {},
-                    "customFields": {},
                     "duration": {
                       "type": "string"
-                    },
-                    "estimate": {},
-                    "estimateReset": {},
-                    "expenses": {},
-                    "favorite": {
-                      "type": "boolean"
-                    },
-                    "hourlyRate": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "amount": {
-                          "type": "integer"
-                        },
-                        "currency": {
-                          "type": "string"
-                        },
-                        "inherited": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "amount"
-                      ],
-                      "type": "object"
                     },
                     "id": {
                       "type": "string"
                     },
-                    "memberships": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "costRate": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "amount": {
-                                "type": "integer"
-                              },
-                              "currency": {
-                                "type": "string"
-                              },
-                              "inherited": {
-                                "type": "boolean"
-                              }
-                            },
-                            "required": [
-                              "amount"
-                            ],
-                            "type": "object"
-                          },
-                          "hourlyRate": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "amount": {
-                                "type": "integer"
-                              },
-                              "currency": {
-                                "type": "string"
-                              },
-                              "inherited": {
-                                "type": "boolean"
-                              }
-                            },
-                            "required": [
-                              "amount"
-                            ],
-                            "type": "object"
-                          },
-                          "membershipStatus": {
-                            "type": "string"
-                          },
-                          "membershipType": {
-                            "type": "string"
-                          },
-                          "targetId": {
-                            "type": "string"
-                          },
-                          "userId": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "userId"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
                     "name": {
-                      "type": "string"
-                    },
-                    "note": {
                       "type": "string"
                     },
                     "public": {
                       "type": "boolean"
-                    },
-                    "tasks": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "assigneeId": {
-                            "type": "string"
-                          },
-                          "assigneeIds": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          },
-                          "billable": {
-                            "type": "boolean"
-                          },
-                          "budgetEstimate": {
-                            "type": "integer"
-                          },
-                          "costRate": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "amount": {
-                                "type": "integer"
-                              },
-                              "currency": {
-                                "type": "string"
-                              },
-                              "inherited": {
-                                "type": "boolean"
-                              }
-                            },
-                            "required": [
-                              "amount"
-                            ],
-                            "type": "object"
-                          },
-                          "duration": {
-                            "type": "string"
-                          },
-                          "estimate": {
-                            "type": "string"
-                          },
-                          "hourlyRate": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "amount": {
-                                "type": "integer"
-                              },
-                              "currency": {
-                                "type": "string"
-                              },
-                              "inherited": {
-                                "type": "boolean"
-                              }
-                            },
-                            "required": [
-                              "amount"
-                            ],
-                            "type": "object"
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "projectId": {
-                            "type": "string"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "userGroupIds": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "name",
-                          "projectId",
-                          "billable"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "template": {
-                      "type": "boolean"
-                    },
-                    "timeEstimate": {},
-                    "workspaceId": {
-                      "type": "string"
                     }
                   },
                   "required": [
@@ -9242,6 +8927,9 @@
                   "type": "object"
                 },
                 "type": "array"
+              },
+              "total": {
+                "type": "integer"
               }
             },
             "type": "object"
@@ -10027,6 +9715,9 @@
               "count": {
                 "type": "integer"
               },
+              "has_more": {
+                "type": "boolean"
+              },
               "page": {
                 "type": "integer"
               },
@@ -10122,6 +9813,9 @@
                   "type": "object"
                 },
                 "type": "array"
+              },
+              "total": {
+                "type": "integer"
               }
             },
             "type": "object"
@@ -10738,6 +10432,9 @@
               "count": {
                 "type": "integer"
               },
+              "has_more": {
+                "type": "boolean"
+              },
               "page": {
                 "type": "integer"
               },
@@ -10769,6 +10466,9 @@
                   "type": "object"
                 },
                 "type": "array"
+              },
+              "total": {
+                "type": "integer"
               }
             },
             "type": "object"
@@ -11436,10 +11136,16 @@
                 },
                 "type": "array"
               },
+              "has_more": {
+                "type": "boolean"
+              },
               "page": {
                 "type": "integer"
               },
               "pageSize": {
+                "type": "integer"
+              },
+              "total": {
                 "type": "integer"
               }
             },
@@ -13535,7 +13241,7 @@
             "type": "integer"
           },
           "hydrated": {
-            "description": "Clockify hydrated query flag; current handler sends hydrated=true.",
+            "description": "Clockify hydrated query flag; defaults to false for compact list responses.",
             "type": "boolean"
           },
           "project": {
@@ -13700,34 +13406,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -13736,10 +13414,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -14369,34 +14043,6 @@
                           "custom_field_id": {
                             "type": "string"
                           },
-                          "definition": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "raw": {
-                                "additionalProperties": {},
-                                "type": "object"
-                              },
-                              "source": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string"
-                              },
-                              "type": {
-                                "type": "string"
-                              }
-                            },
-                            "type": "object"
-                          },
                           "entity_type": {
                             "type": "string"
                           },
@@ -14405,10 +14051,6 @@
                           },
                           "name": {
                             "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
                           },
                           "source": {
                             "type": "string"
@@ -15087,34 +14729,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -15123,10 +14737,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -15756,34 +15366,6 @@
                           "custom_field_id": {
                             "type": "string"
                           },
-                          "definition": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "raw": {
-                                "additionalProperties": {},
-                                "type": "object"
-                              },
-                              "source": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string"
-                              },
-                              "type": {
-                                "type": "string"
-                              }
-                            },
-                            "type": "object"
-                          },
                           "entity_type": {
                             "type": "string"
                           },
@@ -15792,10 +15374,6 @@
                           },
                           "name": {
                             "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
                           },
                           "source": {
                             "type": "string"
@@ -16702,34 +16280,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -16738,10 +16288,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -17371,34 +16917,6 @@
                           "custom_field_id": {
                             "type": "string"
                           },
-                          "definition": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "raw": {
-                                "additionalProperties": {},
-                                "type": "object"
-                              },
-                              "source": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string"
-                              },
-                              "type": {
-                                "type": "string"
-                              }
-                            },
-                            "type": "object"
-                          },
                           "entity_type": {
                             "type": "string"
                           },
@@ -17407,10 +16925,6 @@
                           },
                           "name": {
                             "type": "string"
-                          },
-                          "raw": {
-                            "additionalProperties": {},
-                            "type": "object"
                           },
                           "source": {
                             "type": "string"
@@ -18352,34 +17866,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -18388,10 +17874,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -19060,34 +18542,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -19096,10 +18550,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -21108,34 +20558,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -21144,10 +20566,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -21972,34 +21390,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -22008,10 +21398,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -23310,34 +22696,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -23346,10 +22704,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -23755,10 +23109,6 @@
               "plan_cohort": {
                 "type": "string"
               },
-              "raw": {
-                "additionalProperties": {},
-                "type": "object"
-              },
               "settings_summary": {
                 "additionalProperties": false,
                 "properties": {
@@ -23770,31 +23120,6 @@
                   "entity_creation_permissions": {},
                   "feature_plan": {
                     "type": "string"
-                  },
-                  "features": {
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "features_human": {
-                    "items": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "key": {
-                          "type": "string"
-                        },
-                        "label": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "key",
-                        "label"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
                   },
                   "has_cost_rate": {
                     "type": "boolean"
@@ -24116,13 +23441,58 @@
           },
           "data": {
             "items": {
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
-                "clientId": {},
-                "id": {},
-                "number": {},
-                "status": {}
+                "amount": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount_cents": {
+                      "type": "integer"
+                    },
+                    "amount_decimal": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "display": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount_cents",
+                    "amount_decimal"
+                  ],
+                  "type": "object"
+                },
+                "clientId": {
+                  "type": "string"
+                },
+                "clientName": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "issuedDate": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
               },
+              "required": [
+                "id"
+              ],
               "type": "object"
             },
             "type": "array"
@@ -28451,15 +27821,64 @@
           },
           "data": {
             "items": {
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
-                "amount": {},
-                "categoryId": {},
-                "date": {},
-                "id": {},
-                "projectId": {},
-                "userId": {}
+                "amount": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount_cents": {
+                      "type": "integer"
+                    },
+                    "amount_decimal": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "display": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount_cents",
+                    "amount_decimal"
+                  ],
+                  "type": "object"
+                },
+                "billable": {
+                  "type": "boolean"
+                },
+                "categoryId": {
+                  "type": "string"
+                },
+                "categoryName": {
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "locked": {
+                  "type": "boolean"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                },
+                "userId": {
+                  "type": "string"
+                }
               },
+              "required": [
+                "id"
+              ],
               "type": "object"
             },
             "type": "array"
@@ -34484,14 +33903,37 @@
           },
           "data": {
             "items": {
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
-                "archived": {},
-                "id": {},
-                "name": {},
-                "policyId": {},
-                "timeUnit": {}
+                "archived": {
+                  "type": "boolean"
+                },
+                "assigneeCount": {
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "timeUnit": {
+                  "type": "string"
+                },
+                "userCount": {
+                  "type": "integer"
+                },
+                "userGroupCount": {
+                  "type": "integer"
+                }
               },
+              "required": [
+                "id",
+                "name",
+                "userCount",
+                "userGroupCount",
+                "assigneeCount"
+              ],
               "type": "object"
             },
             "type": "array"
@@ -50587,19 +50029,58 @@
           },
           "data": {
             "items": {
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
-                "amount": {},
-                "balance": {},
-                "clientId": {},
-                "clientName": {},
-                "currency": {},
-                "dueDate": {},
-                "id": {},
-                "issuedDate": {},
-                "number": {},
-                "status": {}
+                "amount": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amount_cents": {
+                      "type": "integer"
+                    },
+                    "amount_decimal": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "display": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount_cents",
+                    "amount_decimal"
+                  ],
+                  "type": "object"
+                },
+                "clientId": {
+                  "type": "string"
+                },
+                "clientName": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "dueDate": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "issuedDate": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
               },
+              "required": [
+                "id"
+              ],
               "type": "object"
             },
             "type": "array"
@@ -51455,34 +50936,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -51491,10 +50944,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"
@@ -52278,34 +51727,6 @@
                     "custom_field_id": {
                       "type": "string"
                     },
-                    "definition": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "entity_type": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "raw": {
-                          "additionalProperties": {},
-                          "type": "object"
-                        },
-                        "source": {
-                          "type": "string"
-                        },
-                        "status": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        }
-                      },
-                      "type": "object"
-                    },
                     "entity_type": {
                       "type": "string"
                     },
@@ -52314,10 +51735,6 @@
                     },
                     "name": {
                       "type": "string"
-                    },
-                    "raw": {
-                      "additionalProperties": {},
-                      "type": "object"
                     },
                     "source": {
                       "type": "string"

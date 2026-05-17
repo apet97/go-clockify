@@ -94,8 +94,8 @@ func TestListInvoices(t *testing.T) {
 			respondJSON(t, w, map[string]any{
 				"total": 2,
 				"invoices": []map[string]any{
-					{"id": "inv1", "clientId": "c1", "status": "DRAFT", "amount": 150.0},
-					{"id": "inv2", "clientId": "c2", "status": "SENT", "amount": 300.0},
+					{"id": "inv1", "number": "INV-1", "clientId": "c1", "clientName": "Client 1", "status": "DRAFT", "amount": 150.0, "items": []map[string]any{{"id": "item1"}}},
+					{"id": "inv2", "number": "INV-2", "clientId": "c2", "status": "SENT", "amount": 300.0},
 				},
 			})
 		default:
@@ -115,12 +115,15 @@ func TestListInvoices(t *testing.T) {
 	if result.Action != "clockify_list_invoices" {
 		t.Fatalf("expected action clockify_list_invoices, got %s", result.Action)
 	}
-	items, ok := result.Data.([]InvoiceView)
+	items, ok := result.Data.([]CompactInvoiceView)
 	if !ok {
 		t.Fatalf("unexpected data type: %T", result.Data)
 	}
 	if len(items) != 2 {
 		t.Fatalf("expected 2 invoices, got %d", len(items))
+	}
+	if items[0].ID != "inv1" || items[0].Number != "INV-1" || items[0].ClientName != "Client 1" || items[0].Status != "DRAFT" {
+		t.Fatalf("compact invoice fields not preserved: %+v", items[0])
 	}
 	if result.Meta["count"] != 2 {
 		t.Fatalf("expected meta count=2, got %v", result.Meta["count"])

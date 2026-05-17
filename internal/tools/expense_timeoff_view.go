@@ -6,9 +6,58 @@ import (
 )
 
 type ExpenseView map[string]any
+type CompactExpenseView struct {
+	ID           string     `json:"id"`
+	Date         string     `json:"date,omitempty"`
+	Amount       *MoneyView `json:"amount,omitempty"`
+	CategoryID   string     `json:"categoryId,omitempty"`
+	CategoryName string     `json:"categoryName,omitempty"`
+	ProjectID    string     `json:"projectId,omitempty"`
+	ProjectName  string     `json:"projectName,omitempty"`
+	UserID       string     `json:"userId,omitempty"`
+	Billable     bool       `json:"billable,omitempty"`
+	Locked       bool       `json:"locked,omitempty"`
+	Notes        string     `json:"notes,omitempty"`
+}
+
 type TimeOffPolicyView map[string]any
+type CompactTimeOffPolicyView struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Archived       bool   `json:"archived,omitempty"`
+	TimeUnit       string `json:"timeUnit,omitempty"`
+	UserCount      int    `json:"userCount"`
+	UserGroupCount int    `json:"userGroupCount"`
+	AssigneeCount  int    `json:"assigneeCount"`
+}
+
 type TimeOffRequestView map[string]any
 type TimeOffBalanceView map[string]any
+
+func compactExpenseViewFromRaw(raw map[string]any) CompactExpenseView {
+	currency := reportCurrency(raw)
+	return CompactExpenseView{
+		ID:           firstReportString(raw, "id", "_id", "expenseId", "expense_id"),
+		Date:         firstReportString(raw, "date"),
+		Amount:       moneyFromAny(firstPresent(raw, "amount", "billableAmount", "total"), currency),
+		CategoryID:   firstReportString(raw, "categoryId", "category_id"),
+		CategoryName: firstReportString(raw, "categoryName", "category_name"),
+		ProjectID:    firstReportString(raw, "projectId", "project_id"),
+		ProjectName:  firstReportString(raw, "projectName", "project_name"),
+		UserID:       firstReportString(raw, "userId", "user_id"),
+		Billable:     boolFromAny(firstPresent(raw, "billable", "isBillable")),
+		Locked:       boolFromAny(firstPresent(raw, "locked", "isLocked")),
+		Notes:        firstReportString(raw, "notes", "note"),
+	}
+}
+
+func compactExpenseViewsFromRaw(items []map[string]any) []CompactExpenseView {
+	out := make([]CompactExpenseView, 0, len(items))
+	for _, item := range items {
+		out = append(out, compactExpenseViewFromRaw(item))
+	}
+	return out
+}
 
 func expenseViewFromRaw(raw map[string]any) ExpenseView {
 	view := ExpenseView(maps.Clone(raw))
@@ -82,12 +131,39 @@ func expenseViewFromRaw(raw map[string]any) ExpenseView {
 	return view
 }
 
-func expenseViewsFromRaw(items []map[string]any) []ExpenseView {
-	out := make([]ExpenseView, 0, len(items))
+func compactTimeOffPolicyViewFromRaw(raw map[string]any) CompactTimeOffPolicyView {
+	userCount := arrayLikeLen(firstPresent(raw, "userIds", "user_ids", "assigneeIds", "assignee_ids"))
+	groupCount := arrayLikeLen(firstPresent(raw, "userGroupIds", "user_group_ids", "groupIds", "group_ids"))
+	return CompactTimeOffPolicyView{
+		ID:             firstReportString(raw, "id", "_id", "policyId", "policy_id"),
+		Name:           firstReportString(raw, "name"),
+		Archived:       boolFromAny(firstPresent(raw, "archived", "isArchived")),
+		TimeUnit:       firstReportString(raw, "timeUnit", "time_unit"),
+		UserCount:      userCount,
+		UserGroupCount: groupCount,
+		AssigneeCount:  userCount + groupCount,
+	}
+}
+
+func compactTimeOffPolicyViewsFromRaw(items []map[string]any) []CompactTimeOffPolicyView {
+	out := make([]CompactTimeOffPolicyView, 0, len(items))
 	for _, item := range items {
-		out = append(out, expenseViewFromRaw(item))
+		out = append(out, compactTimeOffPolicyViewFromRaw(item))
 	}
 	return out
+}
+
+func arrayLikeLen(value any) int {
+	switch v := value.(type) {
+	case []any:
+		return len(v)
+	case []string:
+		return len(v)
+	case []map[string]any:
+		return len(v)
+	default:
+		return 0
+	}
 }
 
 func timeOffPolicyViewFromRaw(raw map[string]any) TimeOffPolicyView {
@@ -110,14 +186,6 @@ func timeOffPolicyViewFromRaw(raw map[string]any) TimeOffPolicyView {
 	}
 	view["raw"] = maps.Clone(raw)
 	return view
-}
-
-func timeOffPolicyViewsFromRaw(items []map[string]any) []TimeOffPolicyView {
-	out := make([]TimeOffPolicyView, 0, len(items))
-	for _, item := range items {
-		out = append(out, timeOffPolicyViewFromRaw(item))
-	}
-	return out
 }
 
 func timeOffRequestViewFromRaw(raw map[string]any) TimeOffRequestView {
@@ -175,7 +243,7 @@ func timeOffRequestViewsFromRaw(items []map[string]any) []TimeOffRequestView {
 }
 
 func timeOffBalanceViewFromRaw(raw map[string]any) TimeOffBalanceView {
-	view := TimeOffBalanceView(maps.Clone(raw))
+	view := TimeOffBalanceView{}
 	view["balance"] = map[string]any{
 		"available": firstPresent(raw, "available", "availableBalance", "balance"),
 		"used":      firstPresent(raw, "used", "usedBalance"),
@@ -192,7 +260,6 @@ func timeOffBalanceViewFromRaw(raw map[string]any) TimeOffBalanceView {
 		"id":   firstReportString(raw, "policyId", "policy_id"),
 		"name": firstReportString(raw, "policyName", "policy_name"),
 	}
-	view["raw"] = maps.Clone(raw)
 	return view
 }
 
