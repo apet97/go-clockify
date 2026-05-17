@@ -295,3 +295,17 @@ func TestUpdateHolidayAllowsPartialUpdate(t *testing.T) {
 		t.Fatalf("holidays_update still rejects a partial update: %v", err)
 	}
 }
+
+func TestCreateHolidayRejectsMalformedDate(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	_, err := svc.CreateHoliday(context.Background(), map[string]any{
+		"name":       "Bad Date Holiday",
+		"start_date": "2026-13-45",
+		"user_ids":   []any{"000000000000000000000001"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "could not parse start_date") {
+		t.Fatalf("want malformed-date rejection, got err=%v", err)
+	}
+}

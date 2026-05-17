@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -499,6 +500,12 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 	if endDate == "" {
 		// Single-day holidays use the same value for both bounds.
 		endDate = startDate
+	}
+	if _, err := time.Parse("2006-01-02", startDate); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("could not parse start_date %q - use YYYY-MM-DD", startDate)
+	}
+	if _, err := time.Parse("2006-01-02", endDate); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("could not parse end_date %q - use YYYY-MM-DD", endDate)
 	}
 
 	userIDs := stringSliceArg(args, "user_ids")
