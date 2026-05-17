@@ -718,9 +718,11 @@ func cleanIDs(in map[string]string) map[string]string {
 
 func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 	code := "error"
-	message := err.Error()
+	rawMessage := err.Error()
+	message := rawMessage
 	var apiErr *clockify.APIError
 	if errors.As(err, &apiErr) {
+		message = apiErr.ClientFacingMessage()
 		switch apiErr.StatusCode {
 		case 400:
 			code = "invalid_request"
@@ -728,7 +730,7 @@ func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 			code = "feature_unavailable"
 		case 401, 403:
 			code = "auth_or_permission"
-			if looksLikeFeatureUnavailable(message) {
+			if looksLikeFeatureUnavailable(rawMessage) {
 				code = "feature_unavailable"
 			}
 		case 404:
