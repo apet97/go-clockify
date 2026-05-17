@@ -739,9 +739,14 @@ func addPaginationMeta(meta map[string]any, args map[string]any, page, pageSize 
 	total, hasTotal := reportInt(meta["total"])
 	if !hasTotal && hasCount {
 		total = ((page - 1) * pageSize) + count
-		meta["total"] = total
 		if count == pageSize {
+			// Full page, no upstream count: more rows may exist, so expose
+			// only a lower bound — never an authoritative `total`.
+			meta["total_min"] = total
 			meta["total_is_lower_bound"] = true
+		} else {
+			// Short page: every row was seen, so this is the real total.
+			meta["total"] = total
 		}
 	}
 	if _, ok := meta["has_more"]; !ok && hasCount {
