@@ -506,7 +506,12 @@ func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any)
 	}
 	query := url.Values{}
 	if format := strings.TrimSpace(stringArg(args, "format")); format != "" {
-		query.Set("format", format)
+		switch strings.ToUpper(format) {
+		case "PDF", "CSV", "XLSX":
+			query.Set("format", strings.ToUpper(format))
+		default:
+			return ResultEnvelope{}, fmt.Errorf("format must be one of PDF, CSV, XLSX (got %q)", format)
+		}
 	}
 	userLocale := firstNonEmpty([]string{stringArg(args, "user_locale"), "en-US"})
 	query.Set("userLocale", userLocale)

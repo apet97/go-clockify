@@ -1170,3 +1170,16 @@ func TestAddInvoiceItemRejectsNonPositiveQuantity(t *testing.T) {
 		t.Fatalf("want quantity rejection, got err=%v", err)
 	}
 }
+
+func TestExportInvoiceRejectsUnknownFormat(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	_, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
+		"invoice_id": "000000000000000000000001",
+		"format":     "DOCX-INVALID",
+	})
+	if err == nil || !strings.Contains(err.Error(), "format must be one of PDF, CSV, XLSX") {
+		t.Fatalf("want format rejection, got err=%v", err)
+	}
+}

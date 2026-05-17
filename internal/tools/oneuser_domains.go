@@ -549,7 +549,7 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id":  map[string]any{"type": "string", "description": "Invoice ID"},
-				"format":      map[string]any{"type": "string", "description": "Export format, e.g. PDF, CSV, or XLSX"},
+				"format":      map[string]any{"type": "string", "enum": []string{"PDF", "CSV", "XLSX"}, "description": "Export format, e.g. PDF, CSV, or XLSX"},
 				"user_locale": map[string]any{"type": "string", "description": "Locale for the exported document, e.g. en"},
 			},
 		})), "invoice_export", "", s.exportInvoiceOneUser),
