@@ -142,6 +142,13 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
 - Recoverable `error.message` carries the cleaned upstream message — the HTTP
   method/path prefix and internal `clockify_error_code` suffix are stripped,
   while `clockify.APIError.Error()` keeps the full diagnostic for server logs.
+- `clockify_invoices_import_time` / `clockify_invoices_import_expenses`:
+  `time_entry_group_type` `GROUPED` also requires `time_entry_primary_group_by`
+  (`USER`/`PROJECT`/`DATE`); `SINGLE_ITEM` and `DETAILED` stand alone.
+- List tools with no upstream count (`projects`/`clients`/`tags`) expose
+  `total_min` + `total_is_lower_bound` on a full page instead of an
+  authoritative `total`; `clockify_time_off_balances` paginates with honest
+  `has_more`/`dropped`.
 
 ## Testing Discipline
 
