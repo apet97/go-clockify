@@ -2987,6 +2987,10 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return "2026-01-02"
 	case "date_range_end":
 		return "2026-01-03"
+	case "start_date":
+		return "2026-01-02"
+	case "end_date":
+		return "2026-01-03"
 	case "start", "start_time":
 		return "2026-01-02T09:00:00Z"
 	case "end", "end_time":

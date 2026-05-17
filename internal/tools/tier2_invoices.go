@@ -506,7 +506,12 @@ func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any)
 	}
 	query := url.Values{}
 	if format := strings.TrimSpace(stringArg(args, "format")); format != "" {
-		query.Set("format", format)
+		switch strings.ToUpper(format) {
+		case "PDF", "CSV", "XLSX":
+			query.Set("format", strings.ToUpper(format))
+		default:
+			return ResultEnvelope{}, fmt.Errorf("format must be one of PDF, CSV, XLSX (got %q)", format)
+		}
 	}
 	userLocale := firstNonEmpty([]string{stringArg(args, "user_locale"), "en-US"})
 	query.Set("userLocale", userLocale)
@@ -635,7 +640,7 @@ func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[stri
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := requirePresentArgs(args, "amount", "date", "note"); err != nil {
+	if err := requirePresentArgs(args, "amount", "date"); err != nil {
 		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -1154,6 +1159,10 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 		body["description"] = v
 	}
 	if v, ok := args["quantity"]; ok {
+		quantity, isNumber := numberArg(args, "quantity")
+		if !isNumber || quantity <= 0 {
+			return ResultEnvelope{}, fmt.Errorf("quantity must be a number greater than 0")
+		}
 		body["quantity"] = v
 	}
 	if v, ok := args["unit_price"]; ok {

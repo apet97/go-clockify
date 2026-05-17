@@ -45450,6 +45450,11 @@
         "properties": {
           "format": {
             "description": "Export format, e.g. PDF, CSV, or XLSX",
+            "enum": [
+              "PDF",
+              "CSV",
+              "XLSX"
+            ],
             "type": "string"
           },
           "invoice_id": {
@@ -46570,7 +46575,9 @@
           }
         },
         "required": [
-          "invoice_id"
+          "invoice_id",
+          "amount",
+          "date"
         ],
         "type": "object"
       },

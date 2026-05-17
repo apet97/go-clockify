@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
 
 func TestSubmitForApprovalBodyUsesCamelCaseKeys(t *testing.T) {
@@ -253,4 +256,18 @@ func TestApprovalListSchemaDocumentsCanonicalFilterStates(t *testing.T) {
 		return
 	}
 	t.Fatal("clockify_list_approval_requests descriptor not found")
+}
+
+func TestResubmitApprovalDoesNotRequireOptionalFields(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	_, err := svc.resubmitApprovalOneUser(context.Background(), map[string]any{
+		"approval_id": "000000000000000000000001",
+		"entry_ids":   []any{"000000000000000000000002"},
+	})
+	if err != nil && (strings.Contains(err.Error(), "expense_ids is required") ||
+		strings.Contains(err.Error(), "note is required")) {
+		t.Fatalf("resubmit still gated on optional fields: %v", err)
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -500,6 +501,12 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 		// Single-day holidays use the same value for both bounds.
 		endDate = startDate
 	}
+	if _, err := time.Parse("2006-01-02", startDate); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("could not parse start_date %q - use YYYY-MM-DD", startDate)
+	}
+	if _, err := time.Parse("2006-01-02", endDate); err != nil {
+		return ResultEnvelope{}, fmt.Errorf("could not parse end_date %q - use YYYY-MM-DD", endDate)
+	}
 
 	userIDs := stringSliceArg(args, "user_ids")
 	groupIDs := stringSliceArg(args, "user_group_ids")
@@ -552,9 +559,6 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	holidayID, err := requiredIDArg(args, "holiday_id")
 	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if err := requirePresentArgs(args, "name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids"); err != nil {
 		return ResultEnvelope{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)

@@ -73,3 +73,22 @@ func TestAPIError_SanitizedNilSafe(t *testing.T) {
 		t.Errorf("nil sanitized should be empty, got %q", got)
 	}
 }
+
+func TestClientFacingMessageStripsPrefixAndCode(t *testing.T) {
+	e := &APIError{
+		Method:     "GET",
+		Path:       "/workspaces/x/clients/y",
+		StatusCode: 400,
+		Status:     "400 Bad Request",
+		Body:       `{"message":"Client doesn't belong to Workspace","code":501}`,
+	}
+	msg := e.ClientFacingMessage()
+	if msg == "" {
+		t.Fatalf("ClientFacingMessage returned empty")
+	}
+	for _, leak := range []string{"clockify_error_code", "/workspaces/", "failed:"} {
+		if strings.Contains(msg, leak) {
+			t.Fatalf("ClientFacingMessage leaked %q: %s", leak, msg)
+		}
+	}
+}

@@ -71,6 +71,24 @@ func (e *APIError) Sanitized() string {
 	return fmt.Sprintf("clockify %s %s failed: %s", e.Method, e.Path, e.Status)
 }
 
+// ClientFacingMessage returns a clean, human-readable message for the MCP
+// client: the upstream message text without the HTTP method/path prefix or
+// the internal clockify_error_code suffix. Server-side logs still call Error()
+// for the full diagnostic.
+func (e *APIError) ClientFacingMessage() string {
+	if e == nil {
+		return ""
+	}
+	msg := TranslateAPIError(e.StatusCode, e.Body).Message
+	if msg == "" || msg == "Clockify request failed." {
+		return fmt.Sprintf("Clockify request failed (HTTP %d).", e.StatusCode)
+	}
+	if i := strings.LastIndex(msg, " (clockify_error_code="); i >= 0 {
+		msg = msg[:i]
+	}
+	return msg
+}
+
 func (e *APIError) ErrorTranslation() any {
 	if e == nil {
 		return ErrorTranslation{}
