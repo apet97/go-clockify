@@ -34,8 +34,8 @@ type CompactTimeOffPolicyView struct {
 type TimeOffRequestView map[string]any
 type TimeOffBalanceView map[string]any
 
-func compactExpenseViewFromRaw(raw map[string]any) CompactExpenseView {
-	currency := reportCurrency(raw)
+func compactExpenseViewFromRaw(raw map[string]any, workspaceCurrency string) CompactExpenseView {
+	currency := firstNonEmptyString(reportCurrency(raw), workspaceCurrency)
 	return CompactExpenseView{
 		ID:           firstReportString(raw, "id", "_id", "expenseId", "expense_id"),
 		Date:         firstReportString(raw, "date"),
@@ -51,17 +51,17 @@ func compactExpenseViewFromRaw(raw map[string]any) CompactExpenseView {
 	}
 }
 
-func compactExpenseViewsFromRaw(items []map[string]any) []CompactExpenseView {
+func compactExpenseViewsFromRaw(items []map[string]any, workspaceCurrency string) []CompactExpenseView {
 	out := make([]CompactExpenseView, 0, len(items))
 	for _, item := range items {
-		out = append(out, compactExpenseViewFromRaw(item))
+		out = append(out, compactExpenseViewFromRaw(item, workspaceCurrency))
 	}
 	return out
 }
 
-func expenseViewFromRaw(raw map[string]any) ExpenseView {
+func expenseViewFromRaw(raw map[string]any, workspaceCurrency string) ExpenseView {
 	view := ExpenseView(maps.Clone(raw))
-	currency := reportCurrency(raw)
+	currency := firstNonEmptyString(reportCurrency(raw), workspaceCurrency)
 	view["amount"] = moneyFromAny(firstPresent(raw, "amount", "billableAmount", "total"), currency)
 	view["currency"] = currency
 	view["status"] = strings.ToUpper(firstReportString(raw, "status", "approvalStatus", "invoicingState"))

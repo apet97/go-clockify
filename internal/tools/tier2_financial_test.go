@@ -98,6 +98,8 @@ func TestListInvoices(t *testing.T) {
 					{"id": "inv2", "number": "INV-2", "clientId": "c2", "status": "SENT", "amount": 300.0},
 				},
 			})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -154,6 +156,8 @@ func TestCreateExpense(t *testing.T) {
 				"projectId":  gotForm["projectId"][0],
 				"notes":      gotForm["notes"][0],
 			})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -219,6 +223,8 @@ func TestDeleteInvoiceDryRun(t *testing.T) {
 		case r.URL.Path == "/workspaces/ws1/invoices/inv123" && r.Method == http.MethodDelete:
 			deleteCalled = true
 			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -264,6 +270,8 @@ func TestDeleteExpenseDryRun(t *testing.T) {
 		case r.URL.Path == "/workspaces/ws1/expenses/exp456" && r.Method == http.MethodDelete:
 			deleteCalled = true
 			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -306,6 +314,8 @@ func TestInvoiceReport(t *testing.T) {
 					{"id": "inv3", "status": "DRAFT", "amount": 100.0},
 				},
 			})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -362,6 +372,10 @@ func TestInvoiceReport(t *testing.T) {
 func TestCreateExpenseMinorUnitAmountScalesToMajorUnits(t *testing.T) {
 	var gotAmount string
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1" {
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
+			return
+		}
 		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/expenses" {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}

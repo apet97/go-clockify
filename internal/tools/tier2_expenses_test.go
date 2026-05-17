@@ -102,6 +102,8 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 			respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "archived": true})
 		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
 			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -247,6 +249,8 @@ func TestCreateExpenseContractDefaultsUserAndAllowsNoFileNoProject(t *testing.T)
 			gotForm = r.MultipartForm.Value
 			gotFiles = r.MultipartForm.File
 			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 12.5})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -326,6 +330,8 @@ func TestUpdateExpenseFallsBackToExistingFields(t *testing.T) {
 			}
 			gotForm = r.MultipartForm.Value
 			respondJSON(t, w, map[string]any{"id": "exp1"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -378,6 +384,8 @@ func TestUpdateExpenseFallsBackToCurrentUserWhenUserIDOmitted(t *testing.T) {
 			}
 			gotForm = r.MultipartForm.Value
 			respondJSON(t, w, map[string]any{"id": "exp1"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -517,6 +525,8 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 					"count": 12,
 				},
 			})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -549,6 +559,38 @@ func TestListExpensesDateRangeFilters(t *testing.T) {
 	}
 	if expenses[0].ID != "exp1" || expenses[0].CategoryName != "Travel" || expenses[0].ProjectName != "Build" || !expenses[0].Billable {
 		t.Fatalf("compact expense fields not preserved: %+v", expenses[0])
+	}
+}
+
+func TestListExpensesLabelsAmountDisplayWithWorkspaceCurrency(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses":
+			respondJSON(t, w, map[string]any{
+				"expenses": map[string]any{
+					"expenses": []map[string]any{{"id": "exp1", "amount": 85.5}},
+					"count":    1,
+				},
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.listExpenses(context.Background(), map[string]any{})
+	if err != nil {
+		t.Fatalf("listExpenses: %v", err)
+	}
+	items, ok := res.Data.([]CompactExpenseView)
+	if !ok || len(items) != 1 || items[0].Amount == nil {
+		t.Fatalf("unexpected expense data: %#v", res.Data)
+	}
+	if !strings.Contains(items[0].Amount.Display, "USD") {
+		t.Fatalf("amount display = %q, want currency label", items[0].Amount.Display)
 	}
 }
 
@@ -625,6 +667,8 @@ func TestCreateExpenseUploadsReceiptWhenFileFieldsSupplied(t *testing.T) {
 			gotForm = r.MultipartForm.Value
 			gotFiles = r.MultipartForm.File
 			respondJSON(t, w, map[string]any{"id": "exp-uploaded", "amount": 9.99, "fileId": "file-1"})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -687,6 +731,8 @@ func TestCreateExpenseNoFileSendsPlainMultipart(t *testing.T) {
 			}
 			gotFiles = r.MultipartForm.File
 			respondJSON(t, w, map[string]any{"id": "exp-nofile", "amount": 5})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}

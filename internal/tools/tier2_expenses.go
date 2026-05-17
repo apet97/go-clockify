@@ -170,6 +170,34 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 // Expense handlers
 // ---------------------------------------------------------------------------
 
+// workspaceDefaultCurrency returns the pinned workspace's default currency
+// code (e.g. "USD"). Expenses carry no currency of their own. Returns "" on
+// any failure so callers degrade to an unlabelled amount rather than erroring.
+func (s *Service) workspaceDefaultCurrency(ctx context.Context, wsID string) string {
+	path, err := paths.Workspace(wsID)
+	if err != nil {
+		return ""
+	}
+	var ws struct {
+		Currencies []struct {
+			Code      string `json:"code"`
+			IsDefault bool   `json:"isDefault"`
+		} `json:"currencies"`
+	}
+	if err := s.Client.Get(ctx, path, nil, &ws); err != nil {
+		return ""
+	}
+	for _, c := range ws.Currencies {
+		if c.IsDefault {
+			return c.Code
+		}
+	}
+	if len(ws.Currencies) > 0 {
+		return ws.Currencies[0].Code
+	}
+	return ""
+}
+
 func (s *Service) listExpenses(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -212,7 +240,8 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 	if envelope.Expenses.Count > 0 {
 		hasMore = page*pageSize < envelope.Expenses.Count
 	}
-	return ok("clockify_list_expenses", compactExpenseViewsFromRaw(items), emptyListMeta(map[string]any{
+	workspaceCurrency := s.workspaceDefaultCurrency(ctx, wsID)
+	return ok("clockify_list_expenses", compactExpenseViewsFromRaw(items, workspaceCurrency), emptyListMeta(map[string]any{
 		"workspaceId": wsID,
 		"count":       len(items),
 		"total":       envelope.Expenses.Count,
@@ -240,7 +269,7 @@ func (s *Service) getExpense(ctx context.Context, args map[string]any) (ResultEn
 	if err := s.Client.Get(ctx, path, nil, &expense); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_get_expense", expenseViewFromRaw(expense), map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_get_expense", expenseViewFromRaw(expense, s.workspaceDefaultCurrency(ctx, wsID)), map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) createExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -338,7 +367,7 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 			return ResultEnvelope{}, err
 		}
 	}
-	return ok("clockify_create_expense", expenseViewFromRaw(created), map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_create_expense", expenseViewFromRaw(created, s.workspaceDefaultCurrency(ctx, wsID)), map[string]any{"workspaceId": wsID}), nil
 }
 
 // expenseReceiptFiles reads the optional receipt-file trio. All three
@@ -580,7 +609,7 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	if err := s.Client.PutMultipart(ctx, path, form, &updated); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_update_expense", expenseViewFromRaw(updated), map[string]any{"workspaceId": wsID}), nil
+	return ok("clockify_update_expense", expenseViewFromRaw(updated, s.workspaceDefaultCurrency(ctx, wsID)), map[string]any{"workspaceId": wsID}), nil
 }
 
 func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
