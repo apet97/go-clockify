@@ -554,9 +554,6 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	if err := requirePresentArgs(args, "name", "start_date", "end_date", "occurs_annually", "user_ids", "user_group_ids"); err != nil {
-		return ResultEnvelope{}, err
-	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
