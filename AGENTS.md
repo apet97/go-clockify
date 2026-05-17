@@ -137,6 +137,11 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
 - Tool results are capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES` (default 50000):
   oversized list results truncate with `meta.truncated`/`size_capped`, and
   PDF/XLSX/ZIP exports return `bodyEncoding:"file"` with a temp-file `path`.
+- `clockify_holidays_update` is a partial update: only `holiday_id` is required,
+  and unspecified fields are merged from the existing holiday record.
+- Recoverable `error.message` carries the cleaned upstream message — the HTTP
+  method/path prefix and internal `clockify_error_code` suffix are stripped,
+  while `clockify.APIError.Error()` keeps the full diagnostic for server logs.
 
 ## Testing Discipline
 
