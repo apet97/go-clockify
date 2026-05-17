@@ -328,6 +328,10 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 			envName: "CLOCKIFY_MAX_TOOL_RESULT_BYTES",
 			value:   "104857601",
 		},
+		"overflow tool result bytes": {
+			envName: "CLOCKIFY_MAX_TOOL_RESULT_BYTES",
+			value:   "9223372036854775807",
+		},
 		"bad raw writes": {
 			envName: "CLOCKIFY_ENABLE_RAW_WRITES",
 			value:   "maybe",

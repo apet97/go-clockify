@@ -23,6 +23,7 @@ const (
 	DefaultMaxMessageSize                 = 4 * 1024 * 1024
 	DefaultMaxToolResultBytes             = 50_000
 	MaxMessageSize                        = 100 * 1024 * 1024
+	MaxToolResultBytes                    = 100 * 1024 * 1024
 	DefaultToolset                        = "all"
 	DefaultCircuitBreakerFailureThreshold = 5
 	DefaultCircuitBreakerOpenDuration     = 45 * time.Second
@@ -110,11 +111,11 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.MaxMessageSize = maxMessageSize
-	maxToolResultBytes, err := parseBoundedPositiveInt64Env("CLOCKIFY_MAX_TOOL_RESULT_BYTES", DefaultMaxToolResultBytes, MaxMessageSize)
+	maxToolResultBytes, err := parseBoundedPositiveIntEnv("CLOCKIFY_MAX_TOOL_RESULT_BYTES", DefaultMaxToolResultBytes, MaxToolResultBytes)
 	if err != nil {
 		return OneUserConfig{}, err
 	}
-	cfg.MaxToolResultBytes = int(maxToolResultBytes)
+	cfg.MaxToolResultBytes = maxToolResultBytes
 	toolset, err := parseToolsetEnv()
 	if err != nil {
 		return OneUserConfig{}, err
@@ -163,6 +164,17 @@ func parsePositiveIntEnv(name string, fallback int) (int, error) {
 	v, err := strconv.Atoi(raw)
 	if err != nil || v <= 0 {
 		return 0, fmt.Errorf("%s must be a positive integer", name)
+	}
+	return v, nil
+}
+
+func parseBoundedPositiveIntEnv(name string, fallback, maxValue int) (int, error) {
+	v, err := parsePositiveIntEnv(name, fallback)
+	if err != nil {
+		return 0, err
+	}
+	if v > maxValue {
+		return 0, fmt.Errorf("%s must be between 1 and %d", name, maxValue)
 	}
 	return v, nil
 }
