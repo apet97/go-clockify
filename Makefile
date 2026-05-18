@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift mod-tidy-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
@@ -90,6 +90,28 @@ selfinspect-drift:
 	@diff -q docs/live-tests.md internal/tools/selfinspect_assets/live-tests.md >/dev/null \
 	  || { echo "[selfinspect-drift] live tests asset is stale; run make sync-selfinspect-assets"; exit 1; }
 
+# mod-tidy-drift fails when `go mod tidy` would change go.mod or go.sum, i.e.
+# the committed root-module graph is not tidy. A trap restores go.mod/go.sum on
+# every exit path, so the gate is side-effect-free even on failure. GOWORK=off
+# keeps the tidy deterministic regardless of the repo-root go.work file. The
+# separate tools/govulncheck module is intentionally out of scope.
+mod-tidy-drift:
+	@tmpdir="$$(mktemp -d)"; \
+	 cp go.mod "$$tmpdir/go.mod.before"; \
+	 cp go.sum "$$tmpdir/go.sum.before"; \
+	 trap 'cp "$$tmpdir/go.mod.before" go.mod; cp "$$tmpdir/go.sum.before" go.sum; rm -rf "$$tmpdir"' EXIT; \
+	 if ! GOWORK=off go mod tidy; then \
+	   echo "[mod-tidy-drift] 'go mod tidy' failed"; \
+	   exit 1; \
+	 fi; \
+	 drift=0; \
+	 diff -u "$$tmpdir/go.mod.before" go.mod || drift=1; \
+	 diff -u "$$tmpdir/go.sum.before" go.sum || drift=1; \
+	 if [ "$$drift" -ne 0 ]; then \
+	   echo "[mod-tidy-drift] go.mod/go.sum are stale; run 'go mod tidy' and commit the result"; \
+	   exit 1; \
+	 fi
+
 # api-parity-matrix-drift fails when docs/api-parity-matrix.md no longer
 # matches the regenerated output of check-api-parity-matrix.sh. The script
 # itself exits non-zero when the file would change, so a clean run proves
@@ -136,6 +158,7 @@ perfect:
 	$(MAKE) openapi-drift
 	$(MAKE) raw-allowlist-drift
 	$(MAKE) selfinspect-drift
+	$(MAKE) mod-tidy-drift
 	git diff --check
 
 # perfect-local adds the lint and benchmark gates that need extra local tools.
