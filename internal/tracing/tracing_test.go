@@ -34,21 +34,6 @@ func TestNoopTracerStartReturnsUsableSpan(t *testing.T) {
 	span.End()
 }
 
-func TestSetDefaultNilFallsBackToNoop(t *testing.T) {
-	original := Default
-	defer func() { Default = original }()
-
-	// Install a recording tracer, then nil out — should revert to noop.
-	SetDefault(&stubTracer{})
-	if _, ok := Default.(noopTracer); ok {
-		t.Fatal("SetDefault(stub) should replace Default")
-	}
-	SetDefault(nil)
-	if _, ok := Default.(noopTracer); !ok {
-		t.Fatalf("SetDefault(nil) should revert to noopTracer, got %T", Default)
-	}
-}
-
 func TestInjectHTTPHeadersNoop(t *testing.T) {
 	headers := map[string][]string{"X-Existing": {"v"}}
 	Default.InjectHTTPHeaders(context.Background(), headers)
@@ -62,14 +47,3 @@ func TestShutdownNoop(t *testing.T) {
 		t.Fatalf("noop Shutdown: %v", err)
 	}
 }
-
-// stubTracer is a test-only tracer used to verify SetDefault replaces the
-// package-level Default. It records nothing — the identity check is the
-// only assertion.
-type stubTracer struct{}
-
-func (stubTracer) Start(ctx context.Context, _ string) (context.Context, Span) {
-	return ctx, noopSpan{}
-}
-func (stubTracer) InjectHTTPHeaders(_ context.Context, _ map[string][]string) {}
-func (stubTracer) Shutdown(_ context.Context) error                           { return nil }

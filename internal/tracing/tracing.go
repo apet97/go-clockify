@@ -53,14 +53,3 @@ func (noopSpan) End()                         {}
 // Call sites dereference Default on every Start — replacing Default after
 // spans are live is not supported.
 var Default Tracer = noopTracer{}
-
-// SetDefault installs a new Tracer. Call at program startup before any
-// traced code runs; concurrent replacement while spans are in flight is
-// not supported.
-func SetDefault(t Tracer) {
-	if t == nil {
-		Default = noopTracer{}
-		return
-	}
-	Default = t
-}
