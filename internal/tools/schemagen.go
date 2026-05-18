@@ -15,9 +15,8 @@ import (
 //   - The output JSON Schema is a pure function of the post-deref type;
 //     given the same reflect.Type the result is byte-identical across
 //     every call.
-//   - All consumers (envelopeSchemaFor[T], applyOpaqueOutputSchemas)
-//     embed the returned map as a property of
-//     a fresh outer map and never mutate it afterwards.
+//   - All consumers embed the returned map as a property of a fresh outer map
+//     and never mutate it afterwards.
 //
 // This collapses repeated typed-schema generation to a single
 // per-binary cost; subsequent sessions inherit the result with zero
@@ -210,23 +209,6 @@ func envelopeOpenMap(action string) map[string]any {
 
 func envelopeOpenMapSlice(action string) map[string]any {
 	return envelopeSchemaFor[[]map[string]any](action)
-}
-
-// envelopeOpaque produces an outputSchema for tools whose Data field is
-// an open-shape map[string]any (most domain CRUD wrappers). It still
-// pins the action field as a const and validates the required envelope
-// fields. Optional data/meta fields remain allowed by the schema's default
-// open-object behavior without repeating unconstrained property schemas in
-// every tools/list descriptor.
-func envelopeOpaque(action string) map[string]any {
-	return map[string]any{
-		"type":     "object",
-		"required": []string{"ok", "action"},
-		"properties": map[string]any{
-			"ok":     map[string]any{"type": "boolean"},
-			"action": map[string]any{"type": "string", "const": action},
-		},
-	}
 }
 
 // withOutputSchema returns a copy of t with OutputSchema set. Used by
