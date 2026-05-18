@@ -462,12 +462,12 @@ func TestRunDoctorLiveRoleVerdicts(t *testing.T) {
 		{
 			name: "member_or_unknown",
 			handler: func(w http.ResponseWriter, r *http.Request) {
-				switch {
-				case r.URL.Path == "/user":
+				switch r.URL.Path {
+				case "/user":
 					respondDoctorJSON(t, w, map[string]any{"id": "u1"})
-				case r.URL.Path == "/workspaces/"+wsID:
+				case "/workspaces/" + wsID:
 					respondDoctorJSON(t, w, map[string]any{"id": wsID, "name": "Pinned"})
-				case r.URL.Path == "/workspaces":
+				case "/workspaces":
 					respondDoctorJSON(t, w, []map[string]any{})
 				default:
 					http.NotFound(w, r)
