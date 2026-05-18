@@ -7,6 +7,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +23,54 @@ func readBody(t *testing.T, r *http.Request) string {
 		t.Fatalf("read body: %v", err)
 	}
 	return string(body)
+}
+
+func TestFetchAllExpenseCategoriesPaginates(t *testing.T) {
+	// Page 1 returns a full page (50), page 2 a partial page (7),
+	// page 3 is empty — total 57 across pages.
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/expenses/categories") {
+			http.Error(w, "unexpected path "+r.URL.Path, http.StatusNotFound)
+			return
+		}
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		var n, base int
+		switch page {
+		case 1:
+			n, base = 50, 0
+		case 2:
+			n, base = 7, 50
+		default:
+			n, base = 0, 0
+		}
+		cats := make([]map[string]any, 0, n)
+		for i := 0; i < n; i++ {
+			cats = append(cats, map[string]any{
+				"id":   "cat" + strconv.Itoa(base+i),
+				"name": "Category " + strconv.Itoa(base+i),
+			})
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"count": n, "categories": cats})
+	}))
+	defer upstream.Close()
+
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+
+	all, err := svc.fetchAllExpenseCategories(context.Background(), "65b382b606de527a7ee2b60e")
+	if err != nil {
+		t.Fatalf("fetchAllExpenseCategories: %v", err)
+	}
+	if len(all) != 57 {
+		t.Fatalf("got %d categories, want 57", len(all))
+	}
+	// A category on page 2 (past the first-page cap) must be findable.
+	got, err := svc.findExpenseCategory(context.Background(), "65b382b606de527a7ee2b60e", "cat55")
+	if err != nil {
+		t.Fatalf("findExpenseCategory(cat55): %v", err)
+	}
+	if got["name"] != "Category 55" {
+		t.Fatalf("findExpenseCategory(cat55) name = %v, want Category 55", got["name"])
+	}
 }
 
 // TestCreateExpenseAcceptsWireJSONNumberAmount drives createExpense with

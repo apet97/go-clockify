@@ -1073,12 +1073,14 @@ func (s *Service) resolveExpenseCategoryID(ctx context.Context, category string)
 	if err := resolve.ValidateID(category, "category_id"); err == nil && len(category) == 24 {
 		return category, nil
 	}
-	out, err := s.listExpenseCategories(ctx, nil)
+	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return "", err
 	}
-	env := out
-	categories, _ := env.Data.([]map[string]any)
+	categories, err := s.fetchAllExpenseCategories(ctx, wsID)
+	if err != nil {
+		return "", err
+	}
 	return uniqueIDByName(categories, category, "expense category", "category_id")
 }
 

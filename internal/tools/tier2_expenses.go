@@ -654,22 +654,9 @@ func (s *Service) listExpenseCategories(ctx context.Context, args map[string]any
 		return ResultEnvelope{}, err
 	}
 
-	path, err := paths.Workspace(wsID, "expenses", "categories")
+	all, err := s.fetchAllExpenseCategories(ctx, wsID)
 	if err != nil {
 		return ResultEnvelope{}, err
-	}
-	// Upstream returns {count: N, categories: [...]}. Probe evidence:
-	// clockify-api-probe-lab/findings/expenses.md (rev 2 2026-05-02).
-	var envelope struct {
-		Count      int              `json:"count"`
-		Categories []map[string]any `json:"categories"`
-	}
-	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
-		return ResultEnvelope{}, err
-	}
-	all := envelope.Categories
-	if all == nil {
-		all = []map[string]any{}
 	}
 	page, pageSize := paginationFromArgs(args)
 	start := (page - 1) * pageSize
@@ -777,22 +764,59 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 }
 
 func (s *Service) findExpenseCategory(ctx context.Context, wsID, catID string) (map[string]any, error) {
-	path, err := paths.Workspace(wsID, "expenses", "categories")
+	categories, err := s.fetchAllExpenseCategories(ctx, wsID)
 	if err != nil {
 		return nil, err
 	}
-	var envelope struct {
-		Categories []map[string]any `json:"categories"`
-	}
-	if err := s.Client.Get(ctx, path, nil, &envelope); err != nil {
-		return nil, err
-	}
-	for _, category := range envelope.Categories {
+	for _, category := range categories {
 		if firstReportString(category, "id", "_id") == catID {
 			return category, nil
 		}
 	}
 	return nil, fmt.Errorf("expense category %q not found", catID)
+}
+
+// fetchAllExpenseCategories walks every server page of
+// GET /expenses/categories. Clockify caps this endpoint's page size, so a
+// single un-paginated GET silently drops categories past the first page.
+// It de-duplicates by id, so the loop terminates even if the endpoint
+// ignores `page` and keeps returning the first page.
+func (s *Service) fetchAllExpenseCategories(ctx context.Context, wsID string) ([]map[string]any, error) {
+	path, err := paths.Workspace(wsID, "expenses", "categories")
+	if err != nil {
+		return nil, err
+	}
+	const pageSize = 50
+	seen := make(map[string]bool)
+	all := []map[string]any{}
+	for page := 1; page <= 200; page++ {
+		var envelope struct {
+			Categories []map[string]any `json:"categories"`
+		}
+		query := map[string]string{
+			"page":      strconv.Itoa(page),
+			"page-size": strconv.Itoa(pageSize),
+		}
+		if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
+			return nil, err
+		}
+		added := 0
+		for _, category := range envelope.Categories {
+			id := firstReportString(category, "id", "_id")
+			if id != "" && seen[id] {
+				continue
+			}
+			if id != "" {
+				seen[id] = true
+			}
+			all = append(all, category)
+			added++
+		}
+		if added < pageSize {
+			break
+		}
+	}
+	return all, nil
 }
 
 func expenseCategoryUpdateBody(existing map[string]any, args map[string]any) map[string]any {
