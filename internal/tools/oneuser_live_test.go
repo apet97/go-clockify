@@ -183,6 +183,7 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 		args map[string]any
 	}{
 		{"clockify_invoices_list", map[string]any{"page_size": float64(1)}},
+		{"clockify_invoices_info", map[string]any{"page_size": float64(1)}},
 		{"clockify_expenses_categories_list", nil},
 		{"clockify_time_off_policies_list", map[string]any{"page_size": float64(1)}},
 		{"clockify_scheduling_assignments_list", map[string]any{"start": "2026-01-05", "end": "2026-01-09"}},
@@ -220,6 +221,11 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 		"start":         "2026-01-12T09:00:00Z",
 		"end":           "2026-01-16T17:00:00Z",
 		"hours_per_day": float64(4),
+	})
+	callLiveToolDataOrRecovery(t, server, "clockify_scheduling_publish", map[string]any{
+		"start":   "2026-01-12",
+		"end":     "2026-01-16",
+		"dry_run": true,
 	})
 	callLiveToolOKOrRecovery(t, server, "clockify_users_invite", map[string]any{
 		"email":      "mcp-live-" + runID + "@example.com",
@@ -720,7 +726,7 @@ func assertNoDryRunArgs(t *testing.T, name string, args map[string]any) {
 	if args == nil {
 		return
 	}
-	if _, ok := args["dry_run"]; ok {
+	if _, ok := args["dry_run"]; ok && name != "clockify_scheduling_publish" {
 		t.Fatalf("%s live probe must not pass dry_run", name)
 	}
 }

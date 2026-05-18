@@ -3,6 +3,7 @@
   "tools": [
     {
       "name": "clockify_status",
+      "title": "Status Overview",
       "description": "Show current user, pinned workspace, timezone, features, and current timer.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -442,11 +443,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Status"
+        "title": "Status Overview"
       }
     },
     {
       "name": "clockify_tools_guide",
+      "title": "Tools Guide",
       "description": "Show grouped workflow and domain tools with common task guidance.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -729,6 +731,7 @@
     },
     {
       "name": "clockify_create_work_package",
+      "title": "Create Work Package",
       "description": "Create or reuse a client/project/task/tag work package from names or IDs.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -1061,6 +1064,7 @@
     },
     {
       "name": "clockify_log_work",
+      "title": "Log Finished Work",
       "description": "Log a finished time entry using human-friendly names or returned IDs.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -1461,11 +1465,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Log Work"
+        "title": "Log Finished Work"
       }
     },
     {
       "name": "clockify_start_work",
+      "title": "Start Work Timer",
       "description": "Start a running work timer using names or IDs.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -1850,11 +1855,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Start Work"
+        "title": "Start Work Timer"
       }
     },
     {
       "name": "clockify_stop_work",
+      "title": "Stop Work Timer",
       "description": "Stop the current running work timer.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -2127,11 +2133,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Stop Work"
+        "title": "Stop Work Timer"
       }
     },
     {
       "name": "clockify_switch_work",
+      "title": "Switch Work Timer",
       "description": "Switch the running timer to another work item using names or IDs.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -2439,11 +2446,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Switch Work"
+        "title": "Switch Work Timer"
       }
     },
     {
       "name": "clockify_review_day",
+      "title": "Review Day",
       "description": "Review one day of work and return totals, issues, and next actions.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -3469,6 +3477,7 @@
     },
     {
       "name": "clockify_review_week",
+      "title": "Review Week",
       "description": "Review one week of work and return totals, issues, and next actions.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -4490,6 +4499,7 @@
     },
     {
       "name": "clockify_fix_entry",
+      "title": "Fix Time Entry",
       "description": "Find one entry by ID or strict filters, then update selected fields.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -5487,11 +5497,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Fix Entry"
+        "title": "Fix Time Entry"
       }
     },
     {
       "name": "clockify_invoice_client_work",
+      "title": "Invoice Client Work",
       "description": "Create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -5810,6 +5821,7 @@
     },
     {
       "name": "clockify_record_expense",
+      "title": "Record Expense",
       "description": "Record an expense with category, project, task, and user names or IDs.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -6117,6 +6129,7 @@
     },
     {
       "name": "clockify_request_time_off",
+      "title": "Request Time Off",
       "description": "Create a time-off request with a policy name or ID.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -6407,6 +6420,7 @@
     },
     {
       "name": "clockify_schedule_work",
+      "title": "Schedule Work",
       "description": "Create a scheduling assignment with user/project names or IDs.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -6728,6 +6742,7 @@
     },
     {
       "name": "clockify_setup_webhook",
+      "title": "Set Up Webhook",
       "description": "Create a webhook subscription for this workspace.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -7017,11 +7032,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Setup Webhook"
+        "title": "Set Up Webhook"
       }
     },
     {
       "name": "clockify_demo_seed",
+      "title": "Seed Demo Data",
       "description": "Create or reuse deterministic demo client/project/task/tag/time-entry objects.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -7312,11 +7328,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Demo Seed"
+        "title": "Seed Demo Data"
       }
     },
     {
       "name": "clockify_demo_cleanup",
+      "title": "Clean Up Demo Data",
       "description": "Delete deterministic demo objects by prefix, continuing through partial failures.",
       "category": "workflow",
       "handler_kind": "native handler",
@@ -7591,12 +7608,13 @@
         "riskClass": [
           "write"
         ],
-        "title": "Demo Cleanup"
+        "title": "Clean Up Demo Data"
       }
     },
     {
       "name": "clockify_clients_list",
-      "description": "List clients in the pinned workspace.",
+      "title": "List Clients",
+      "description": "List clients in the pinned workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -7923,11 +7941,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Clients List"
+        "title": "List Clients"
       }
     },
     {
       "name": "clockify_clients_create",
+      "title": "Create Clients",
       "description": "Create a client in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -8201,12 +8220,13 @@
         "riskClass": [
           "write"
         ],
-        "title": "Clients Create"
+        "title": "Create Clients"
       }
     },
     {
       "name": "clockify_projects_list",
-      "description": "List projects in the pinned workspace.",
+      "title": "List Projects",
+      "description": "List projects in the pinned workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -8620,11 +8640,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Projects List"
+        "title": "List Projects"
       }
     },
     {
       "name": "clockify_projects_create",
+      "title": "Create Projects",
       "description": "Create a project in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -9125,12 +9146,13 @@
         "riskClass": [
           "write"
         ],
-        "title": "Projects Create"
+        "title": "Create Projects"
       }
     },
     {
       "name": "clockify_tasks_list",
-      "description": "List tasks for a project.",
+      "title": "List Tasks",
+      "description": "List tasks for a project with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -9519,11 +9541,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Tasks List"
+        "title": "List Tasks"
       }
     },
     {
       "name": "clockify_tasks_create",
+      "title": "Create Tasks",
       "description": "Create a task under a project.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -9863,12 +9886,13 @@
         "riskClass": [
           "write"
         ],
-        "title": "Tasks Create"
+        "title": "Create Tasks"
       }
     },
     {
       "name": "clockify_tags_list",
-      "description": "List tags in the pinned workspace.",
+      "title": "List Tags",
+      "description": "List tags in the pinned workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -10181,11 +10205,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Tags List"
+        "title": "List Tags"
       }
     },
     {
       "name": "clockify_tags_create",
+      "title": "Create Tags",
       "description": "Create a tag in the pinned workspace. Retrying after a network timeout can create a duplicate tag; check with clockify_tags_list before retrying.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -10444,12 +10469,13 @@
         "riskClass": [
           "write"
         ],
-        "title": "Tags Create"
+        "title": "Create Tags"
       }
     },
     {
       "name": "clockify_entries_list",
-      "description": "List current-user time entries in the pinned workspace.",
+      "title": "List Entries",
+      "description": "List current-user time entries in the pinned workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -10870,11 +10896,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Entries List"
+        "title": "List Entries"
       }
     },
     {
       "name": "clockify_entries_create",
+      "title": "Create Entries",
       "description": "Create a current-user time entry in the pinned workspace. This is a direct create with no overlap guard; use clockify_log_work for overlap-protected logging.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -11270,11 +11297,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Entries Create"
+        "title": "Create Entries"
       }
     },
     {
       "name": "clockify_clients_get",
+      "title": "Get Clients",
       "description": "Get one client by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -11900,11 +11928,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Clients Get"
+        "title": "Get Clients"
       }
     },
     {
       "name": "clockify_clients_update",
+      "title": "Update Clients",
       "description": "Update a client by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -12573,11 +12602,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Clients Update"
+        "title": "Update Clients"
       }
     },
     {
       "name": "clockify_clients_delete",
+      "title": "Delete Clients",
       "description": "Permanently delete a client by name or ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -12828,11 +12858,12 @@
         "riskClass": [
           "destructive"
         ],
-        "title": "Clients Delete"
+        "title": "Delete Clients"
       }
     },
     {
       "name": "clockify_projects_get",
+      "title": "Get Projects",
       "description": "Get one project by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -14140,11 +14171,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Projects Get"
+        "title": "Get Projects"
       }
     },
     {
       "name": "clockify_projects_update",
+      "title": "Update Projects",
       "description": "Update a project by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -15471,11 +15503,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Projects Update"
+        "title": "Update Projects"
       }
     },
     {
       "name": "clockify_projects_delete",
+      "title": "Delete Projects",
       "description": "Permanently delete a project by name or ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -15726,11 +15759,12 @@
         "riskClass": [
           "destructive"
         ],
-        "title": "Projects Delete"
+        "title": "Delete Projects"
       }
     },
     {
       "name": "clockify_projects_archive",
+      "title": "Projects Archive",
       "description": "Archive a project by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -17027,6 +17061,7 @@
     },
     {
       "name": "clockify_projects_rates_update",
+      "title": "Update Projects Rates",
       "description": "Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -17311,11 +17346,12 @@
           "billing",
           "admin"
         ],
-        "title": "Projects Rates Update"
+        "title": "Update Projects Rates"
       }
     },
     {
       "name": "clockify_tasks_get",
+      "title": "Get Tasks",
       "description": "Get one task by name or ID within a project.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -17954,11 +17990,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Tasks Get"
+        "title": "Get Tasks"
       }
     },
     {
       "name": "clockify_tasks_update",
+      "title": "Update Tasks",
       "description": "Update a task by name or ID within a project.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -18636,11 +18673,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Tasks Update"
+        "title": "Update Tasks"
       }
     },
     {
       "name": "clockify_tasks_delete",
+      "title": "Delete Tasks",
       "description": "Permanently delete a task by name or ID within a project. A task that is not DONE is marked DONE first (Clockify requires it), then deleted. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -18901,11 +18939,12 @@
         "riskClass": [
           "destructive"
         ],
-        "title": "Tasks Delete"
+        "title": "Delete Tasks"
       }
     },
     {
       "name": "clockify_tasks_rates_update",
+      "title": "Update Tasks Rates",
       "description": "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -19196,11 +19235,12 @@
           "write",
           "billing"
         ],
-        "title": "Tasks Rates Update"
+        "title": "Update Tasks Rates"
       }
     },
     {
       "name": "clockify_tags_get",
+      "title": "Get Tags",
       "description": "Get one tag by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -19462,11 +19502,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Tags Get"
+        "title": "Get Tags"
       }
     },
     {
       "name": "clockify_tags_update",
+      "title": "Update Tags",
       "description": "Update a tag by name or ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -19737,11 +19778,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Tags Update"
+        "title": "Update Tags"
       }
     },
     {
       "name": "clockify_tags_delete",
+      "title": "Delete Tags",
       "description": "Permanently delete a tag by name or ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -19992,11 +20034,12 @@
         "riskClass": [
           "destructive"
         ],
-        "title": "Tags Delete"
+        "title": "Delete Tags"
       }
     },
     {
       "name": "clockify_entries_get",
+      "title": "Get Entries",
       "description": "Get one time entry by ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -20786,11 +20829,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Entries Get"
+        "title": "Get Entries"
       }
     },
     {
       "name": "clockify_entries_update",
+      "title": "Update Entries",
       "description": "Update a time entry by ID.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -21624,11 +21668,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Entries Update"
+        "title": "Update Entries"
       }
     },
     {
       "name": "clockify_entries_delete",
+      "title": "Delete Entries",
       "description": "Permanently delete a time entry by ID. Destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -21875,12 +21920,13 @@
         "riskClass": [
           "destructive"
         ],
-        "title": "Entries Delete"
+        "title": "Delete Entries"
       }
     },
     {
       "name": "clockify_users_list",
-      "description": "List users in the pinned workspace.",
+      "title": "List Users",
+      "description": "List users in the pinned workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -22219,11 +22265,12 @@
           "read",
           "sensitive_read"
         ],
-        "title": "Users List"
+        "title": "List Users"
       }
     },
     {
       "name": "clockify_users_profile",
+      "title": "Users Profile",
       "description": "Get the current Clockify user.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -22567,6 +22614,7 @@
     },
     {
       "name": "clockify_workspace_settings",
+      "title": "Workspace Settings",
       "description": "Read pinned workspace settings.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -22956,6 +23004,7 @@
     },
     {
       "name": "clockify_invoices_list",
+      "title": "List Invoices",
       "description": "List invoices in the workspace with pagination",
       "category": "domain",
       "handler_kind": "native handler",
@@ -23274,6 +23323,7 @@
     },
     {
       "name": "clockify_invoices_get",
+      "title": "Get Invoice",
       "description": "Get a single invoice by ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -23527,6 +23577,7 @@
     },
     {
       "name": "clockify_invoices_create",
+      "title": "Create Invoice",
       "description": "Create a new invoice for a client. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -23847,6 +23898,7 @@
     },
     {
       "name": "clockify_invoices_update",
+      "title": "Update Invoice",
       "description": "Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -24177,6 +24229,7 @@
     },
     {
       "name": "clockify_invoices_delete",
+      "title": "Delete Invoice",
       "description": "Delete an invoice permanently by ID. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -24433,6 +24486,7 @@
     },
     {
       "name": "clockify_invoices_send",
+      "title": "Send Invoice",
       "description": "Explain that this Clockify API surface does not expose an invoice send-email endpoint; no external side effect occurs and the Clockify UI must send email delivery.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -24689,6 +24743,7 @@
     },
     {
       "name": "clockify_invoices_mark_paid",
+      "title": "Mark Invoice Paid",
       "description": "Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -24947,7 +25002,8 @@
     },
     {
       "name": "clockify_invoices_items_list",
-      "description": "List items for an invoice",
+      "title": "List Invoice Items",
+      "description": "List items for an invoice with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -25204,6 +25260,7 @@
     },
     {
       "name": "clockify_invoices_items_add",
+      "title": "Add Invoice Item",
       "description": "Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:\"major\" to enter the value in major currency units and let the MCP multiply by 100 before the POST.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -25503,6 +25560,7 @@
     },
     {
       "name": "clockify_invoices_items_update",
+      "title": "Update Invoice Item",
       "description": "Explain that Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -25764,6 +25822,7 @@
     },
     {
       "name": "clockify_invoices_items_delete",
+      "title": "Delete Invoice Item",
       "description": "Permanently delete an invoice item by line index. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -26032,6 +26091,7 @@
     },
     {
       "name": "clockify_projects_templates_list",
+      "title": "List Project Templates",
       "description": "List project templates in the workspace with pagination",
       "category": "domain",
       "handler_kind": "native handler",
@@ -26288,6 +26348,7 @@
     },
     {
       "name": "clockify_projects_templates_create",
+      "title": "Create Project Template",
       "description": "Create a new project template",
       "category": "domain",
       "handler_kind": "native handler",
@@ -26555,6 +26616,7 @@
     },
     {
       "name": "clockify_projects_estimates_update",
+      "title": "Update Project Estimate",
       "description": "Update a project's documented estimate fields",
       "category": "domain",
       "handler_kind": "native handler",
@@ -26942,6 +27004,7 @@
     },
     {
       "name": "clockify_projects_memberships_update",
+      "title": "Update Project Memberships",
       "description": "Replace project memberships and optional user-group filter/rate metadata",
       "category": "domain",
       "handler_kind": "native handler",
@@ -27317,6 +27380,7 @@
     },
     {
       "name": "clockify_expenses_list",
+      "title": "List Expenses",
       "description": "List expenses in the workspace with pagination and optional date range",
       "category": "domain",
       "handler_kind": "native handler",
@@ -27638,6 +27702,7 @@
     },
     {
       "name": "clockify_expenses_get",
+      "title": "Get Expense",
       "description": "Get a single expense by ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -27893,6 +27958,7 @@
     },
     {
       "name": "clockify_expenses_create",
+      "title": "Create Expense",
       "description": "Create an expense. amount defaults to major currency units; pass amount_unit:\"minor\" for cents. Receipt upload is optional; provide all three file_* fields together to attach one.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -28206,6 +28272,7 @@
     },
     {
       "name": "clockify_expenses_update",
+      "title": "Update Expense",
       "description": "Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -28524,6 +28591,7 @@
     },
     {
       "name": "clockify_expenses_delete",
+      "title": "Delete Expense",
       "description": "Permanently delete an expense by ID. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -28780,7 +28848,8 @@
     },
     {
       "name": "clockify_expenses_categories_list",
-      "description": "List expense categories in the workspace",
+      "title": "List Expense Categories",
+      "description": "List expense categories in the workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -29042,6 +29111,7 @@
     },
     {
       "name": "clockify_expenses_categories_create",
+      "title": "Create Expense Category",
       "description": "Create a new expense category, optionally including upstream unit-price fields.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -29319,6 +29389,7 @@
     },
     {
       "name": "clockify_expenses_categories_update",
+      "title": "Update Expense Category",
       "description": "Update an expense category, including upstream unit-price fields.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -29606,6 +29677,7 @@
     },
     {
       "name": "clockify_expenses_categories_delete",
+      "title": "Delete Expense Category",
       "description": "Permanently delete an expense category. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -29862,6 +29934,7 @@
     },
     {
       "name": "clockify_custom_fields_list",
+      "title": "List Custom Fields",
       "description": "List custom fields in the workspace with optional pagination",
       "category": "domain",
       "handler_kind": "native handler",
@@ -30119,7 +30192,8 @@
     },
     {
       "name": "clockify_custom_fields_get",
-      "description": "Get a custom field by ID",
+      "title": "Get Custom Field",
+      "description": "Get a custom field by ID in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -30369,6 +30443,7 @@
     },
     {
       "name": "clockify_custom_fields_create",
+      "title": "Create Custom Field",
       "description": "Create a custom field. Valid type values are TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK. allowed_values is required for dropdown fields.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -30682,6 +30757,7 @@
     },
     {
       "name": "clockify_custom_fields_update",
+      "title": "Update Custom Field",
       "description": "Update an existing custom field by ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -30999,6 +31075,7 @@
     },
     {
       "name": "clockify_custom_fields_delete",
+      "title": "Delete Custom Field",
       "description": "Delete a custom field by ID (supports dry_run preview)",
       "category": "domain",
       "handler_kind": "native handler",
@@ -31255,6 +31332,7 @@
     },
     {
       "name": "clockify_custom_fields_set_value",
+      "title": "Set Custom Field Value",
       "description": "Set a custom field value on a project or time entry. Project values use the documented custom-fields route; entry values preserve the existing entry and replace customFields.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -31544,7 +31622,8 @@
     },
     {
       "name": "clockify_time_off_requests_list",
-      "description": "List time off requests with optional status filter",
+      "title": "List Time Off Requests",
+      "description": "List time off requests with optional status filter with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -31821,6 +31900,7 @@
     },
     {
       "name": "clockify_time_off_requests_get",
+      "title": "Get Time Off Request",
       "description": "Get a time off request by policy ID and request ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -32079,6 +32159,7 @@
     },
     {
       "name": "clockify_time_off_requests_create",
+      "title": "Create Time Off Request",
       "description": "Create a time off request under a policy. Changes leave balances/approval workflow.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -32364,6 +32445,7 @@
     },
     {
       "name": "clockify_time_off_requests_update",
+      "title": "Update Time Off Request",
       "description": "Update an existing time off request approval status.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -32640,6 +32722,7 @@
     },
     {
       "name": "clockify_time_off_requests_delete",
+      "title": "Delete Time Off Request",
       "description": "Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -32902,6 +32985,7 @@
     },
     {
       "name": "clockify_time_off_approve",
+      "title": "Approve Time Off",
       "description": "Approve a pending time off request and update its approval state.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -33168,6 +33252,7 @@
     },
     {
       "name": "clockify_time_off_deny",
+      "title": "Deny Time Off",
       "description": "Deny a pending time off request and update its approval state.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -33434,7 +33519,8 @@
     },
     {
       "name": "clockify_time_off_policies_list",
-      "description": "List time off policies for the workspace",
+      "title": "List Time Off Policies",
+      "description": "List time off policies for the workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -33718,6 +33804,7 @@
     },
     {
       "name": "clockify_time_off_policies_get",
+      "title": "Get Time Off Policy",
       "description": "Get a time off policy by ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -33972,6 +34059,7 @@
     },
     {
       "name": "clockify_time_off_policies_create",
+      "title": "Create Time Off Policy",
       "description": "Create a simplified time off policy for the current user. Supports approval and days_per_year accrual basics; use clockify_api_request for advanced Clockify fields such as color, icon, expiration, half days, approval stages, or filters.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -34254,6 +34342,7 @@
     },
     {
       "name": "clockify_time_off_policies_update",
+      "title": "Update Time Off Policy",
       "description": "Update a time off policy by merging supplied fields into the current upstream body. Preserves advanced Clockify fields outside this simplified schema; use clockify_api_request for full-surface updates.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -34541,6 +34630,7 @@
     },
     {
       "name": "clockify_time_off_balances",
+      "title": "Time Off Balance",
       "description": "Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user (page through them with page/page_size).",
       "category": "domain",
       "handler_kind": "native handler",
@@ -34808,6 +34898,7 @@
     },
     {
       "name": "clockify_time_off_balances_update",
+      "title": "Update Time Off Balance",
       "description": "Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -35087,12 +35178,13 @@
           "billing",
           "admin"
         ],
-        "title": "Time Off Balance Update"
+        "title": "Update Time Off Balance"
       }
     },
     {
       "name": "clockify_scheduling_assignments_list",
-      "description": "List scheduling assignments within a date range",
+      "title": "List Assignments",
+      "description": "List scheduling assignments within a date range with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -35379,7 +35471,8 @@
     },
     {
       "name": "clockify_scheduling_assignments_get",
-      "description": "Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward.",
+      "title": "Get Assignment",
+      "description": "Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -35652,6 +35745,7 @@
     },
     {
       "name": "clockify_scheduling_assignments_create",
+      "title": "Create Assignment",
       "description": "Create a recurring scheduling assignment for a user on a project. Retrying after a network timeout can create a duplicate assignment; check with clockify_list_assignments before retrying.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -35963,6 +36057,7 @@
     },
     {
       "name": "clockify_scheduling_assignments_update",
+      "title": "Update Assignment",
       "description": "Update a recurring scheduling assignment by ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -36267,6 +36362,7 @@
     },
     {
       "name": "clockify_scheduling_assignments_delete",
+      "title": "Delete Assignment",
       "description": "Delete a recurring scheduling assignment by ID (supports dry_run preview)",
       "category": "domain",
       "handler_kind": "native handler",
@@ -36527,7 +36623,8 @@
     },
     {
       "name": "clockify_scheduling_project_totals",
-      "description": "Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available",
+      "title": "Get Project Schedule Totals",
+      "description": "Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -36802,6 +36899,7 @@
     },
     {
       "name": "clockify_approvals_list",
+      "title": "List Approval Requests",
       "description": "List approval requests with optional status filter and pagination",
       "category": "domain",
       "handler_kind": "native handler",
@@ -37092,7 +37190,8 @@
     },
     {
       "name": "clockify_approvals_get",
-      "description": "Get a single approval request by ID by scanning the documented approval-requests list endpoint",
+      "title": "Get Approval Request",
+      "description": "Get a single approval request by ID by scanning the documented approval-requests list endpoint with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -37362,6 +37461,7 @@
     },
     {
       "name": "clockify_approvals_submit",
+      "title": "Submit For Approval",
       "description": "Submit the caller's timesheet for approval and create/update an approval request.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -37639,6 +37739,7 @@
     },
     {
       "name": "clockify_approvals_approve",
+      "title": "Approve Timesheet",
       "description": "Approve a pending timesheet approval request and update its state.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -37906,6 +38007,7 @@
     },
     {
       "name": "clockify_approvals_reject",
+      "title": "Reject Timesheet",
       "description": "Reject a pending timesheet approval request and update its state.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -38177,6 +38279,7 @@
     },
     {
       "name": "clockify_approvals_withdraw",
+      "title": "Withdraw Approval",
       "description": "Withdraw a submitted or already-approved approval request and update its state.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -38452,7 +38555,8 @@
     },
     {
       "name": "clockify_webhooks_list",
-      "description": "List webhooks in the workspace",
+      "title": "List Webhooks",
+      "description": "List webhooks in the workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -38712,7 +38816,8 @@
     },
     {
       "name": "clockify_webhooks_get",
-      "description": "Get a webhook by ID",
+      "title": "Get Webhook",
+      "description": "Get a webhook by ID in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -38965,6 +39070,7 @@
     },
     {
       "name": "clockify_webhooks_create",
+      "title": "Create Webhook",
       "description": "Create a new webhook subscription that delivers Clockify events to an external URL. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -39264,6 +39370,7 @@
     },
     {
       "name": "clockify_webhooks_update",
+      "title": "Update Webhook",
       "description": "Update an existing webhook subscription. Changes affect every future outbound delivery to the configured URL. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -39566,6 +39673,7 @@
     },
     {
       "name": "clockify_webhooks_delete",
+      "title": "Delete Webhook",
       "description": "Permanently delete a webhook subscription. Destructive: stops all future outbound deliveries to the configured URL. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -39822,6 +39930,7 @@
     },
     {
       "name": "clockify_webhooks_test",
+      "title": "Test Webhook",
       "description": "Explain that Clockify does not expose a webhook test delivery/test-send endpoint; no external side effect occurs, so trigger a real event or inspect delivery logs in the Clockify UI.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -40075,7 +40184,8 @@
     },
     {
       "name": "clockify_webhooks_events",
-      "description": "List available webhook event types",
+      "title": "List Webhook Events",
+      "description": "List available webhook event types with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -40316,6 +40426,7 @@
     },
     {
       "name": "clockify_groups_list",
+      "title": "List User Groups Admin",
       "description": "List user groups in the workspace (admin view) with pagination",
       "category": "domain",
       "handler_kind": "native handler",
@@ -40605,7 +40716,8 @@
     },
     {
       "name": "clockify_groups_get",
-      "description": "Get a user group by ID",
+      "title": "Get User Group",
+      "description": "Get a user group by ID in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -40858,6 +40970,7 @@
     },
     {
       "name": "clockify_groups_create",
+      "title": "Create User Group Admin",
       "description": "Create a new user group with optional member user IDs",
       "category": "domain",
       "handler_kind": "native handler",
@@ -41120,6 +41233,7 @@
     },
     {
       "name": "clockify_groups_update",
+      "title": "Update User Group Admin",
       "description": "Update an existing user group by ID",
       "category": "domain",
       "handler_kind": "native handler",
@@ -41388,6 +41502,7 @@
     },
     {
       "name": "clockify_groups_delete",
+      "title": "Delete User Group Admin",
       "description": "Delete a user group by ID (supports dry_run preview)",
       "category": "domain",
       "handler_kind": "native handler",
@@ -41644,6 +41759,7 @@
     },
     {
       "name": "clockify_groups_add_user",
+      "title": "Add User To Group",
       "description": "Add a user to a user group",
       "category": "domain",
       "handler_kind": "native handler",
@@ -41908,6 +42024,7 @@
     },
     {
       "name": "clockify_groups_remove_user",
+      "title": "Remove User From Group",
       "description": "Remove a user from a user group. Admin and permission-change impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -42172,7 +42289,8 @@
     },
     {
       "name": "clockify_holidays_list",
-      "description": "List holidays configured in the workspace",
+      "title": "List Holidays",
+      "description": "List holidays configured in the workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -42416,7 +42534,8 @@
     },
     {
       "name": "clockify_holidays_list_for_user_period",
-      "description": "List holidays assigned to a user in a date period",
+      "title": "List Holidays In Period",
+      "description": "List holidays assigned to a user in a date period with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -42682,6 +42801,7 @@
     },
     {
       "name": "clockify_holidays_create",
+      "title": "Create Holiday",
       "description": "Create a new holiday in the workspace. Requires name + start_date and at least one user_ids or user_group_ids entry; the upstream rejects holidays with no assignment.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -42961,6 +43081,7 @@
     },
     {
       "name": "clockify_holidays_delete",
+      "title": "Delete Holiday",
       "description": "Delete a holiday by ID (supports dry_run preview)",
       "category": "domain",
       "handler_kind": "native handler",
@@ -43212,6 +43333,7 @@
     },
     {
       "name": "clockify_users_deactivate",
+      "title": "Deactivate User",
       "description": "Deactivate a workspace user and remove access. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -43470,6 +43592,7 @@
     },
     {
       "name": "clockify_users_role",
+      "title": "Update User Role",
       "description": "Update a user's workspace role. Supports dry_run:true.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -43816,7 +43939,8 @@
     },
     {
       "name": "clockify_projects_memberships_list",
-      "description": "List project memberships from the hydrated project record.",
+      "title": "List Projects Memberships",
+      "description": "List project memberships from the hydrated project record with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44065,12 +44189,13 @@
           "read",
           "sensitive_read"
         ],
-        "title": "Projects Memberships List"
+        "title": "List Projects Memberships"
       }
     },
     {
       "name": "clockify_reports_attendance",
-      "description": "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.",
+      "title": "Reports Attendance",
+      "description": "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency; large responses use truncation or file envelopes.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44362,7 +44487,8 @@
     },
     {
       "name": "clockify_reports_money",
-      "description": "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals.",
+      "title": "Reports Money",
+      "description": "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals; large responses use truncation or file envelopes.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44654,7 +44780,8 @@
     },
     {
       "name": "clockify_reports_expense",
-      "description": "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.",
+      "title": "Reports Expense",
+      "description": "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency; large responses use truncation or file envelopes.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44946,6 +45073,7 @@
     },
     {
       "name": "clockify_reports_export",
+      "title": "Reports Export",
       "description": "Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -45246,6 +45374,7 @@
     },
     {
       "name": "clockify_invoices_export",
+      "title": "Invoices Export",
       "description": "Export invoice PDF only; Clockify invoice export has no CSV/XLSX (use clockify_reports_export). Returns contentType, filename, bytes, bodyEncoding, body/base64 payload, base64Bytes, truncated:false, or path.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -45515,6 +45644,7 @@
     },
     {
       "name": "clockify_invoices_import_time",
+      "title": "Invoices Import Time",
       "description": "Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -45808,6 +45938,7 @@
     },
     {
       "name": "clockify_invoices_import_expenses",
+      "title": "Invoices Import Expenses",
       "description": "Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -46101,7 +46232,8 @@
     },
     {
       "name": "clockify_invoices_payments_list",
-      "description": "List invoice payments.",
+      "title": "List Invoices Payments",
+      "description": "List invoice payments in the pinned workspace with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -46364,11 +46496,12 @@
           "read",
           "sensitive_read"
         ],
-        "title": "Invoices Payments List"
+        "title": "List Invoices Payments"
       }
     },
     {
       "name": "clockify_invoices_payments_create",
+      "title": "Create Invoices Payments",
       "description": "Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:\"major\" to enter the value in major currency units instead.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -46644,11 +46777,12 @@
           "write",
           "billing"
         ],
-        "title": "Invoices Payments Create"
+        "title": "Create Invoices Payments"
       }
     },
     {
       "name": "clockify_invoices_payments_delete",
+      "title": "Delete Invoices Payments",
       "description": "Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -46907,11 +47041,12 @@
           "billing",
           "destructive"
         ],
-        "title": "Invoices Payments Delete"
+        "title": "Delete Invoices Payments"
       }
     },
     {
       "name": "clockify_time_off_archive",
+      "title": "Time Off Archive",
       "description": "Archive or reactivate a time off policy.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -47171,6 +47306,7 @@
     },
     {
       "name": "clockify_scheduling_user_totals",
+      "title": "Scheduling User Totals",
       "description": "Get scheduled assignment totals for one user.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -47433,6 +47569,7 @@
     },
     {
       "name": "clockify_scheduling_capacity",
+      "title": "Scheduling Capacity",
       "description": "Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -47698,6 +47835,7 @@
     },
     {
       "name": "clockify_approvals_resubmit",
+      "title": "Approvals Resubmit",
       "description": "Resubmit rejected or withdrawn entries and expenses and update approval state.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -47991,7 +48129,8 @@
     },
     {
       "name": "clockify_holidays_get",
-      "description": "Get one holiday.",
+      "title": "Get Holidays",
+      "description": "Get one holiday in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -48235,12 +48374,13 @@
         "riskClass": [
           "read"
         ],
-        "title": "Holidays Get"
+        "title": "Get Holidays"
       }
     },
     {
       "name": "clockify_holidays_update",
-      "description": "Update a holiday.",
+      "title": "Update Holidays",
+      "description": "Update a holiday in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -48515,11 +48655,12 @@
         "riskClass": [
           "write"
         ],
-        "title": "Holidays Update"
+        "title": "Update Holidays"
       }
     },
     {
       "name": "clockify_entries_mark_invoiced",
+      "title": "Entries Mark Invoiced",
       "description": "Mark time entries as invoiced or not invoiced.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -48796,6 +48937,7 @@
     },
     {
       "name": "clockify_users_invite",
+      "title": "Users Invite",
       "description": "Invite users by email. External side effect when send_email is true; supports dry_run.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -49070,7 +49212,8 @@
     },
     {
       "name": "clockify_audit_logs_search",
-      "description": "Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API.",
+      "title": "Audit Logs Search",
+      "description": "Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -49407,7 +49550,8 @@
     },
     {
       "name": "clockify_entity_changes_list",
-      "description": "List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type.",
+      "title": "List Entity Changes",
+      "description": "List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type with pagination.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -49722,11 +49866,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Entity Changes List"
+        "title": "List Entity Changes"
       }
     },
     {
       "name": "clockify_invoices_info",
+      "title": "Invoices Info",
       "description": "Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_invoice_report (money aggregates).",
       "category": "domain",
       "handler_kind": "native handler",
@@ -50043,6 +50188,7 @@
     },
     {
       "name": "clockify_scheduling_publish",
+      "title": "Scheduling Publish",
       "description": "Publish draft scheduling assignments so they take effect. Assignment create/update produce drafts; this is the required separate publish step for the start..end window. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -50317,6 +50463,7 @@
     },
     {
       "name": "clockify_entries_running",
+      "title": "Entries Running",
       "description": "Return the current running timer, if any.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -50570,7 +50717,8 @@
     },
     {
       "name": "clockify_entries_timer_start",
-      "description": "Start a timer.",
+      "title": "Entries Timer Start",
+      "description": "Start a timer in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -51374,7 +51522,8 @@
     },
     {
       "name": "clockify_entries_timer_stop",
-      "description": "Stop the current timer.",
+      "title": "Entries Timer Stop",
+      "description": "Stop the current timer in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -51642,7 +51791,8 @@
     },
     {
       "name": "clockify_entries_timer_status",
-      "description": "Show timer status.",
+      "title": "Entries Timer Status",
+      "description": "Show timer status in the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -51892,6 +52042,7 @@
     },
     {
       "name": "clockify_entries_timer_switch",
+      "title": "Entries Timer Switch",
       "description": "Switch the running timer to another project.",
       "category": "domain",
       "handler_kind": "native handler",
@@ -52159,7 +52310,8 @@
     },
     {
       "name": "clockify_reports_detailed",
-      "description": "Run the local detailed time report helper.",
+      "title": "Reports Detailed",
+      "description": "Run the local detailed time report helper; large responses use truncation or file envelopes.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -52470,7 +52622,8 @@
     },
     {
       "name": "clockify_reports_summary",
-      "description": "Run the local summary report helper.",
+      "title": "Reports Summary",
+      "description": "Run the local summary report helper; large responses use truncation or file envelopes.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -52781,7 +52934,8 @@
     },
     {
       "name": "clockify_reports_weekly",
-      "description": "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end.",
+      "title": "Reports Weekly",
+      "description": "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end; large responses use truncation or file envelopes.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -53119,6 +53273,7 @@
     },
     {
       "name": "clockify_api_get",
+      "title": "Raw Clockify API GET",
       "description": "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.",
       "category": "raw",
       "handler_kind": "native handler",
@@ -53361,11 +53516,12 @@
         "riskClass": [
           "read"
         ],
-        "title": "Api Get"
+        "title": "Raw Clockify API GET"
       }
     },
     {
       "name": "clockify_api_request",
+      "title": "Raw Clockify API Request",
       "description": "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.",
       "category": "raw",
       "handler_kind": "native handler",
@@ -53625,7 +53781,7 @@
         "riskClass": [
           "write"
         ],
-        "title": "Api Request"
+        "title": "Raw Clockify API Request"
       }
     }
   ]

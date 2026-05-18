@@ -174,7 +174,7 @@ func TestRunDoctorLiveExitCodes(t *testing.T) {
 					http.NotFound(w, r)
 				}
 			},
-			wantCode: 5,
+			wantCode: 0,
 		},
 		"owner check forbidden": {
 			handler: func(w http.ResponseWriter, r *http.Request) {

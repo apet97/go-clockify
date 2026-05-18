@@ -28,7 +28,12 @@ product definition.
 3. `docs/tool-catalog.md` - generated runtime tool list and order.
 4. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
 5. `docs/live-tests.md` - live-test gates and sacrificial workspace rules.
-6. `docs/launch-readiness-review-may-8.md` - launch disposition ledger; do not
+6. `docs/permissions.md` - role, plan, and feature requirements by tool family.
+7. `docs/dangerous-tools.md` - destructive, billing, admin, permission-change,
+   and external-side-effect tools plus dry-run coverage.
+8. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
+9. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
+10. `docs/launch-readiness-review-may-8.md` - launch disposition ledger; do not
    mark launch-ready while it shows open external-evidence or approval gates.
 
 Historical docs explain prior decisions; current work starts from the files
@@ -59,6 +64,8 @@ docs as setup instructions.
 | Local lint | `golangci-lint run` |
 | Catalog drift / regenerate | `make catalog-drift` · `make gen-tool-catalog` |
 | OpenAPI drift / regenerate | `make openapi-drift` · `make gen-openapi` |
+| Raw allowlist drift / regenerate | `make raw-allowlist-drift` · `make gen-raw-allowlist` |
+| Self-inspection drift / sync | `make selfinspect-drift` · `make sync-selfinspect-assets` |
 | Focus tools / MCP | `go test -count=1 ./internal/tools` · `./internal/mcp` |
 | Live compile only | `go test -tags=livee2e -count=0 ./tests/...` |
 
@@ -139,6 +146,10 @@ instead of depending on Psych's exact parser wording.
   `clockify_webhooks_test`, or `clockify_invoices_items_update`; these tools
   return a clean `unsupported` error with recovery guidance instead of calling
   upstream.
+- Raw fallback is workspace fenced. Raw writes require
+  `CLOCKIFY_ENABLE_RAW_WRITES=true` and default to documented Clockify routes
+  only via `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=true`; raw `DELETE` preserves
+  upstream response bodies.
 - Clockify's invoice export endpoint only produces PDF; `clockify_invoices_export`
   advertises `format: PDF` only — use `clockify_reports_export` for CSV/XLSX.
 - Tool results are capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES` (default 50000):

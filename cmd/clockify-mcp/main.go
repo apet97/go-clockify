@@ -114,6 +114,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 
 	service := tools.New(client, cfg.WorkspaceID)
 	service.EnableRawWrites = cfg.EnableRawWrites
+	service.RawWriteDocumentedOnly = cfg.RawWriteDocumentedOnly
 	service.Toolset = cfg.Toolset
 	service.WebhookValidateDNS = true
 	service.WebhookAllowedDomains = cfg.WebhookAllowedDomains
@@ -132,6 +133,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	server.MaxToolResultBytes = cfg.MaxToolResultBytes
 	server.ResourceProvider = service
 	service.EmitResourceUpdate = server.NotifyResourceUpdated
+	service.EmitResourceListChanged = server.NotifyResourcesListChanged
 	service.SubscriptionGate = server.HasResourceSubscription
 
 	slog.Info("one_user_server_start",
@@ -198,6 +200,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_TOOL_RESULT_BYTES     %d\n", cfg.MaxToolResultBytes)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY %t\n", cfg.RawWriteDocumentedOnly)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   %s\n", optionalList(cfg.WebhookAllowedDomains, "(none)"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER           %s\n", circuitBreakerStatus(cfg.CircuitBreaker.Enabled))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD  %d\n", cfg.CircuitBreaker.FailureThreshold)
@@ -265,12 +268,18 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 	}
 	for _, ws := range ownerWorkspaces {
 		if ws.ID == cfg.WorkspaceID {
-			_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       OK\n")
+			_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       OK (owner)\n")
 			return 0
 		}
 	}
-	_, _ = fmt.Fprintf(stderr, "owner role check failed: configured workspace is not in /workspaces?roles=OWNER\n")
-	return 5
+	_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       WARN\n")
+	_, _ = fmt.Fprintf(stdout, "    note: this API key does not own the configured workspace.\n")
+	_, _ = fmt.Fprintf(stdout, "    The MCP works with an owner OR admin key; owner-only operations will fail.\n")
+	_, _ = fmt.Fprintf(stdout, "    Tool families that may be denied without owner/admin rights:\n")
+	_, _ = fmt.Fprintf(stdout, "      admin    - clockify_users_role, clockify_users_deactivate, clockify_users_invite, clockify_groups_*\n")
+	_, _ = fmt.Fprintf(stdout, "      billing  - clockify_invoices_*, clockify_expenses_* (workspace plan dependent)\n")
+	_, _ = fmt.Fprintf(stdout, "      settings - clockify_workspace_settings (write paths)\n")
+	return 0
 }
 
 func doctorFeatureSummary(features []string) string {
@@ -375,6 +384,7 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_TOOL_RESULT_BYTES     optional, defaults to 50000, allowed 1..104857600")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOLSET                   optional: core, business, admin, all (default)")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_WRITES         optional, defaults to false")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY optional, defaults to true")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   optional comma-separated allowlist")
 	_, _ = fmt.Fprintln(w, "  MCP_LOG_LEVEL          optional: debug, info, warn, error")
 }

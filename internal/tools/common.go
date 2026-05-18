@@ -86,6 +86,9 @@ type Service struct {
 	// EnableRawWrites allows the raw API fallback to use mutating HTTP
 	// methods. Raw GET remains available either way.
 	EnableRawWrites bool
+	// RawWriteDocumentedOnly restricts raw mutating methods to routes present
+	// in the generated OpenAPI allowlist. Raw GET remains unaffected.
+	RawWriteDocumentedOnly bool
 	// Toolset selects the startup registry surface. Empty/all exposes the
 	// full owner workbench; smaller values are filtered by RegistryForToolset.
 	Toolset string
@@ -97,6 +100,10 @@ type Service struct {
 	// so the subscription gate lives in the protocol core rather than in
 	// every mutation handler. nil = drop silently.
 	EmitResourceUpdate func(uri string, delta mcp.ResourceUpdateDelta)
+	// EmitResourceListChanged publishes notifications/resources/list_changed
+	// when the set of available resources changes (e.g. a new demo-run
+	// resource appears). nil disables the notification.
+	EmitResourceListChanged func()
 	// SubscriptionGate reports whether any client is currently subscribed
 	// to a URI. When wired (Server.HasResourceSubscription),
 	// emitResourceUpdate short-circuits before the ReadResource round-trip
@@ -313,21 +320,53 @@ func New(client *clockify.Client, workspaceID string) *Service {
 // set instead of a sparse one that spec-strict clients misinterpret.
 func baseAnnotations(name string) map[string]any {
 	return map[string]any{
-		"title":         titleFromName(name),
+		"title":         titleFor(name),
 		"openWorldHint": true,
 	}
 }
 
-// titleFromName converts a snake_case tool name into a human-readable title.
-// "clockify_entries_list" -> "Entries List", "clockify_reports_summary" -> "Quick
-// Report". Custom per-tool titles can be added later by overriding the
-// "title" key after the base annotations are copied.
-func titleFromName(name string) string {
-	stripped := strings.TrimPrefix(name, "clockify_")
-	if stripped == "" {
-		return name
+var toolTitleOverrides = map[string]string{
+	"clockify_status":              "Status Overview",
+	"clockify_tools_guide":         "Tools Guide",
+	"clockify_create_work_package": "Create Work Package",
+	"clockify_log_work":            "Log Finished Work",
+	"clockify_start_work":          "Start Work Timer",
+	"clockify_stop_work":           "Stop Work Timer",
+	"clockify_switch_work":         "Switch Work Timer",
+	"clockify_review_day":          "Review Day",
+	"clockify_review_week":         "Review Week",
+	"clockify_fix_entry":           "Fix Time Entry",
+	"clockify_invoice_client_work": "Invoice Client Work",
+	"clockify_record_expense":      "Record Expense",
+	"clockify_request_time_off":    "Request Time Off",
+	"clockify_schedule_work":       "Schedule Work",
+	"clockify_setup_webhook":       "Set Up Webhook",
+	"clockify_demo_seed":           "Seed Demo Data",
+	"clockify_demo_cleanup":        "Clean Up Demo Data",
+	"clockify_api_get":             "Raw Clockify API GET",
+	"clockify_api_request":         "Raw Clockify API Request",
+}
+
+var titleCRUDVerbs = map[string]bool{
+	"create": true,
+	"update": true,
+	"delete": true,
+	"list":   true,
+	"get":    true,
+}
+
+// titleFor returns a stable, human-readable display title for a tool name.
+// Curated overrides win; otherwise a deterministic transform applies.
+func titleFor(name string) string {
+	if t, ok := toolTitleOverrides[name]; ok {
+		return t
 	}
-	parts := strings.Split(stripped, "_")
+	trimmed := strings.TrimPrefix(name, "clockify_")
+	parts := strings.Split(trimmed, "_")
+	if len(parts) > 1 && titleCRUDVerbs[parts[len(parts)-1]] {
+		verb := parts[len(parts)-1]
+		parts = append([]string{verb}, parts[:len(parts)-1]...)
+	}
 	for i, p := range parts {
 		if p == "" {
 			continue
@@ -382,6 +421,10 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		if _, ok := in[i].Tool.Annotations["category"]; !ok {
 			in[i].Tool.Annotations["category"] = defaultToolCategory(in[i].Tool.Name)
 		}
+		if in[i].Tool.Title == "" {
+			in[i].Tool.Title = titleFor(in[i].Tool.Name)
+		}
+		in[i].Tool.Description = polishToolDescription(in[i].Tool.Name, in[i].Tool.Description, in[i].Tool.InputSchema)
 		if value, ok := in[i].Tool.Annotations["readOnlyHint"].(bool); ok {
 			in[i].ReadOnlyHint = value
 		}
@@ -398,6 +441,31 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		applyAgentToolMetadata(&in[i])
 	}
 	return in
+}
+
+func polishToolDescription(name, desc string, schema map[string]any) string {
+	desc = strings.TrimSpace(desc)
+	lower := strings.ToLower(desc)
+	if len(desc) < 25 {
+		desc = strings.TrimRight(desc, ".") + " in the pinned workspace."
+		lower = strings.ToLower(desc)
+	}
+	if (strings.Contains(name, "_list") || toolSchemaHasProperty(schema, "page") || toolSchemaHasProperty(schema, "page_size")) &&
+		!strings.Contains(lower, "page") && !strings.Contains(lower, "pagination") {
+		desc = strings.TrimRight(desc, ".") + " with pagination."
+		lower = strings.ToLower(desc)
+	}
+	if (strings.HasPrefix(name, "clockify_reports_") || strings.Contains(name, "_export")) &&
+		!strings.Contains(lower, "size") && !strings.Contains(lower, "truncat") && !strings.Contains(lower, "file") {
+		desc = strings.TrimRight(desc, ".") + "; large responses use truncation or file envelopes."
+	}
+	return desc
+}
+
+func toolSchemaHasProperty(schema map[string]any, field string) bool {
+	props, _ := schema["properties"].(map[string]any)
+	_, ok := props[field]
+	return ok
 }
 
 func defaultToolCategory(name string) string {

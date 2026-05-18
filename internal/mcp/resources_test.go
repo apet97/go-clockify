@@ -251,6 +251,27 @@ func TestResourcesSubscribeAndNotify(t *testing.T) {
 	}
 }
 
+func TestNotifyResourcesListChanged(t *testing.T) {
+	notifier := &recordingNotifier{}
+	server := newResourceTestServer(&stubResourceProvider{})
+	server.SetNotifier(notifier)
+
+	server.NotifyResourcesListChanged()
+	if len(notifier.calls) != 1 {
+		t.Fatalf("expected 1 notification, got %d", len(notifier.calls))
+	}
+	if notifier.calls[0].Method != "notifications/resources/list_changed" {
+		t.Fatalf("method: %q", notifier.calls[0].Method)
+	}
+
+	disabled := NewServer("test", nil)
+	disabled.SetNotifier(notifier)
+	disabled.NotifyResourcesListChanged()
+	if len(notifier.calls) != 1 {
+		t.Fatalf("resources disabled should not notify, got %+v", notifier.calls)
+	}
+}
+
 func TestResourcesReadRoundTripsThroughJSON(t *testing.T) {
 	// Smoke: ensure the server's response marshals cleanly through encoding/json
 	// (a previous bug had ResourceContents slipping a typed zero into Blob).

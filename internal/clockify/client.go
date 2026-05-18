@@ -192,6 +192,15 @@ func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[str
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, nil)
 }
 
+// DeleteWithQueryCapture issues a DELETE with optional query parameters and
+// decodes any response body into out. Clockify DELETE routes are inconsistent:
+// most reply with an empty body, but some return the deleted entity. doJSON
+// returns nil for a zero-length body, so out is left at its zero value when the
+// server sends nothing. out must be non-nil.
+func (c *Client) DeleteWithQueryCapture(ctx context.Context, path string, query map[string]string, out any) error {
+	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, out)
+}
+
 func (c *Client) DeleteWithBody(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, body, out)
 }

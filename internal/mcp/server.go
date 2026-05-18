@@ -223,7 +223,11 @@ type Server struct {
 	// looks up the ID and aborts the in-flight tool handler. Nil IDs
 	// (notifications) are not tracked.
 	inflightMu sync.Mutex
-	inflight   map[any]context.CancelFunc
+	inflight   map[any]context.CancelCauseFunc
+	// activeProgressTokens tracks progress tokens of in-flight tools/call
+	// requests so a duplicate token across concurrent requests is rejected.
+	// Keyed by the token's canonical string form. Guarded by inflightMu.
+	activeProgressTokens map[string]struct{}
 }
 
 // AddNotifier registers a notification sink and returns a function that
@@ -289,7 +293,7 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 	s := &Server{
 		Version:  version,
 		tools:    toolMap,
-		inflight: make(map[any]context.CancelFunc),
+		inflight: make(map[any]context.CancelCauseFunc),
 		prompts:  newPromptRegistry(),
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
@@ -299,14 +303,14 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 // registerInflight stores a cancel func keyed by JSON-RPC request ID so
 // notifications/cancelled can abort the in-flight tool handler. Nil IDs
 // (notifications) and zero-value uninitialised maps are no-ops.
-func (s *Server) registerInflight(id any, cancel context.CancelFunc) {
+func (s *Server) registerInflight(id any, cancel context.CancelCauseFunc) {
 	if id == nil {
 		return
 	}
 	key := rpcIDKey(id)
 	s.inflightMu.Lock()
 	if s.inflight == nil {
-		s.inflight = make(map[any]context.CancelFunc)
+		s.inflight = make(map[any]context.CancelCauseFunc)
 	}
 	s.inflight[key] = cancel
 	s.inflightMu.Unlock()
@@ -337,10 +341,20 @@ func (s *Server) cancelInflight(id any) bool {
 	}
 	s.inflightMu.Unlock()
 	if ok {
-		cancel()
+		cancel(errExplicitCancellation)
 	}
 	return ok
 }
+
+// errExplicitCancellation is the context cancellation cause set by
+// cancelInflight when a client sends notifications/cancelled. handle compares
+// context.Cause against this sentinel to decide whether to suppress the
+// response per the MCP cancellation spec. Because the cause is bound to the
+// individual request's context, a later request that reuses the same JSON-RPC
+// id is never affected by an earlier cancellation. The repeat-initialize reset
+// path (cancelAllInflight) uses context.Canceled instead, so its late
+// responses are still delivered.
+var errExplicitCancellation = errors.New("request cancelled via notifications/cancelled")
 
 func rpcIDKey(id any) any {
 	switch v := id.(type) {
@@ -356,6 +370,65 @@ func rpcIDKey(id any) any {
 	}
 }
 
+// validateProgressToken enforces the MCP rule that a progress token is a
+// string or an integer. Wire values arrive json-decoded with UseNumber, so
+// numbers are json.Number; a non-integral number, a boolean, an object, an
+// array, or null are all rejected.
+func validateProgressToken(token any) error {
+	switch v := token.(type) {
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return fmt.Errorf("progressToken string must not be empty")
+		}
+		return nil
+	case json.Number:
+		if _, err := v.Int64(); err != nil {
+			return fmt.Errorf("progressToken number must be an integer")
+		}
+		return nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return nil
+	case float64, float32:
+		return fmt.Errorf("progressToken number must be an integer, not a float")
+	default:
+		return fmt.Errorf("progressToken must be a string or integer")
+	}
+}
+
+func progressTokenKey(token any) string {
+	switch v := token.(type) {
+	case string:
+		return "s:" + v
+	case json.Number:
+		return "n:" + v.String()
+	default:
+		return fmt.Sprintf("v:%v", v)
+	}
+}
+
+// registerProgressToken records token as active. It returns an error when
+// the token is already in use by another in-flight request.
+func (s *Server) registerProgressToken(token any) error {
+	key := progressTokenKey(token)
+	s.inflightMu.Lock()
+	defer s.inflightMu.Unlock()
+	if s.activeProgressTokens == nil {
+		s.activeProgressTokens = make(map[string]struct{})
+	}
+	if _, dup := s.activeProgressTokens[key]; dup {
+		return fmt.Errorf("progressToken is already in use by another in-flight request")
+	}
+	s.activeProgressTokens[key] = struct{}{}
+	return nil
+}
+
+func (s *Server) releaseProgressToken(token any) {
+	key := progressTokenKey(token)
+	s.inflightMu.Lock()
+	delete(s.activeProgressTokens, key)
+	s.inflightMu.Unlock()
+}
+
 // cancelAllInflight cancels and untracks every in-flight request. It is used
 // when a client repeats initialize: the session negotiation is being reset, so
 // cancelAllInflight is a best-effort initialize/reset boundary: request IDs
@@ -365,15 +438,18 @@ func rpcIDKey(id any) any {
 // responses by ID.
 func (s *Server) cancelAllInflight() int {
 	s.inflightMu.Lock()
-	cancels := make([]context.CancelFunc, 0, len(s.inflight))
+	cancels := make([]context.CancelCauseFunc, 0, len(s.inflight))
 	for id, cancel := range s.inflight {
 		delete(s.inflight, id)
 		cancels = append(cancels, cancel)
 	}
 	s.inflightMu.Unlock()
 
+	// Use context.Canceled, not errExplicitCancellation: an initialize/reset
+	// is not a client cancellation, so these handlers' late responses are
+	// still delivered rather than suppressed.
 	for _, cancel := range cancels {
-		cancel()
+		cancel(context.Canceled)
 	}
 	return len(cancels)
 }
@@ -541,7 +617,10 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 						}
 					})
 					resp := s.handle(ctx, r)
-					if r.ID != nil {
+					// A zero-value Response (empty JSONRPC) means handle
+					// suppressed the reply for an explicitly cancelled
+					// tools/call per the MCP cancellation spec; write nothing.
+					if r.ID != nil && resp.JSONRPC != "" {
 						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
 						}
@@ -610,7 +689,10 @@ func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error
 		return out, err
 	}
 	resp := s.handle(ctx, req)
-	if req.ID == nil {
+	// req.ID == nil is a notification; an empty JSONRPC means handle
+	// suppressed the reply for an explicitly cancelled tools/call. Either
+	// way there is nothing to send on the wire.
+	if req.ID == nil || resp.JSONRPC == "" {
 		return nil, nil
 	}
 	return json.Marshal(resp)
@@ -849,15 +931,33 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		// from the inflight map before this case returns regardless of
 		// outcome.
 		if params.Meta != nil && params.Meta.ProgressToken != nil {
+			if err := validateProgressToken(params.Meta.ProgressToken); err != nil {
+				resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params: " + err.Error()}
+				return resp
+			}
+			if err := s.registerProgressToken(params.Meta.ProgressToken); err != nil {
+				resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params: " + err.Error()}
+				return resp
+			}
+			defer s.releaseProgressToken(params.Meta.ProgressToken)
 			ctx = WithProgressToken(ctx, params.Meta.ProgressToken)
 		}
-		callCtx, cancel := context.WithCancel(ctx)
+		callCtx, cancel := context.WithCancelCause(ctx)
 		s.registerInflight(req.ID, cancel)
 		defer s.unregisterInflight(req.ID)
-		defer cancel()
+		defer cancel(nil)
 
 		result, err := s.callTool(callCtx, params)
 		if err != nil {
+			// MCP cancellation spec: when the client explicitly cancelled this
+			// request via notifications/cancelled, send no response at all. A
+			// zero-value Response signals Run and DispatchMessage to write
+			// nothing. context.Cause is read from this request's own context,
+			// so a later request that reuses the same JSON-RPC id is
+			// unaffected by this cancellation.
+			if errors.Is(context.Cause(callCtx), errExplicitCancellation) {
+				return Response{}
+			}
 			// W2-01: schema-validation failures are protocol-level errors
 			// (JSON-RPC -32602), not tool-errors. The JSON Pointer to the
 			// failing field goes in error.data.pointer so clients can
@@ -1020,8 +1120,8 @@ func decodeParams(raw any, out any) error {
 //     spec says null arguments behave identically to no arguments),
 //     matching json.Unmarshal which leaves the destination at its zero value.
 //   - Extra keys in m are ignored, matching json.Unmarshal's default.
-//   - Progress token is taken verbatim so clients supplying a string
-//     or number both round-trip untouched.
+//   - Progress token type is validated by validateProgressToken in handle; a
+//     present null token is rejected here.
 //
 // See FuzzToolCallParamsFromMap for the equivalence guard against
 // json.Unmarshal on random maps.
@@ -1050,6 +1150,9 @@ func toolCallParamsFromMap(m map[string]any) (ToolCallParams, error) {
 		}
 		p.Meta = &RequestMeta{}
 		if tok, ok := meta["progressToken"]; ok {
+			if tok == nil {
+				return p, fmt.Errorf("_meta.progressToken must not be null")
+			}
 			p.Meta.ProgressToken = tok
 		}
 	}

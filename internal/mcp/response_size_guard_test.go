@@ -117,6 +117,28 @@ func TestToolsCallResultSizeGuardReturnsToolErrorForNonTruncatableData(t *testin
 	}
 }
 
+func TestResultTooLargeEnvelopeSchemaConformance(t *testing.T) {
+	env := resultTooLargeEnvelope("clockify_projects_list", 100_000, 50_000)
+	if env["ok"] != false {
+		t.Fatalf("ok=%v want false", env["ok"])
+	}
+	if env["action"] != "clockify_projects_list" {
+		t.Fatalf("action=%v", env["action"])
+	}
+	errObj, ok := env["error"].(map[string]any)
+	if !ok || errObj["code"] != "result_too_large" {
+		t.Fatalf("error object = %+v", env["error"])
+	}
+	recovery, ok := env["recovery"].(map[string]any)
+	if !ok || recovery["hint"] == "" || recovery["retryable"] != true {
+		t.Fatalf("recovery object = %+v", env["recovery"])
+	}
+	meta, ok := env["meta"].(map[string]any)
+	if !ok || meta["size_capped"] != true || meta["truncationSuccessful"] != false {
+		t.Fatalf("meta object = %+v", env["meta"])
+	}
+}
+
 func TestToolsCallResultSizeGuardLeavesUnderBudgetResponseByteIdentical(t *testing.T) {
 	descriptor := ToolDescriptor{
 		Tool: Tool{Name: "small_result", InputSchema: map[string]any{"type": "object"}},
@@ -168,6 +190,29 @@ func BenchmarkShrinkListToBudgetLargeList(b *testing.B) {
 			envelope["data"] = kept
 		}) {
 			b.Fatal("shrinkListToBudget returned false")
+		}
+	}
+}
+
+func BenchmarkResultSizeGuardLargeList(b *testing.B) {
+	items := make([]map[string]any, 5_000)
+	for i := range items {
+		items[i] = map[string]any{"id": i, "name": "row", "note": strings.Repeat("x", 24)}
+	}
+	server := NewServer("bench", nil)
+	server.MaxToolResultBytes = 4_000
+
+	b.ReportAllocs()
+	for b.Loop() {
+		envelope := map[string]any{
+			"ok":     true,
+			"action": "large_list",
+			"data":   append([]map[string]any(nil), items...),
+			"meta":   map[string]any{"page": 1, "pageSize": len(items)},
+		}
+		_, tooLarge := server.applyToolResultSizeGuard("large_list", envelope)
+		if tooLarge != nil {
+			b.Fatal("expected truncation instead of too-large envelope")
 		}
 	}
 }

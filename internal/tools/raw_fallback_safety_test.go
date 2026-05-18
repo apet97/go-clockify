@@ -125,6 +125,153 @@ func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
 	}
 }
 
+func TestRawAPIWriteDocumentedOnly(t *testing.T) {
+	var called bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/clients" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"id": "client-1"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/clients",
+		"body":   map[string]any{"name": "Allowed"},
+	}); err != nil {
+		t.Fatalf("documented raw write rejected: %v", err)
+	}
+	if !called {
+		t.Fatal("documented raw write did not reach upstream")
+	}
+}
+
+// TestRawAPIWriteDocumentedOnlyAllowsByIDRoute pins that the documented-only
+// allowlist matches templated path parameters: a real DELETE targeting a
+// project by id matches DELETE /workspaces/{workspaceId}/projects/{projectId}.
+func TestRawAPIWriteDocumentedOnlyAllowsByIDRoute(t *testing.T) {
+	var called bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/projects/proj-1" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/projects/proj-1",
+	}); err != nil {
+		t.Fatalf("documented by-id raw write rejected: %v", err)
+	}
+	if !called {
+		t.Fatal("documented by-id raw write did not reach upstream")
+	}
+}
+
+func TestRawAPIWriteDocumentedOnlyRejectsUndocumented(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("undocumented raw write reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	_, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/not-documented",
+		"body":   map[string]any{"name": "Blocked"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false") {
+		t.Fatalf("undocumented raw write err = %v", err)
+	}
+}
+
+func TestRawAPIWriteDocumentedOnlyFalseAllowsUndocumented(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/not-documented" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"ok": true})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = false
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/not-documented",
+		"body":   map[string]any{"name": "Allowed"},
+	}); err != nil {
+		t.Fatalf("undocumented raw write with flag false failed: %v", err)
+	}
+}
+
+func TestRawAPIDeletePreservesBody(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/deletions/body" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"id": "deleted-123", "status": "DELETED"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/deletions/body",
+	})
+	if err != nil {
+		t.Fatalf("raw DELETE failed: %v", err)
+	}
+	envelope := result.(ToolResult)
+	data := envelope.Data.(map[string]any)
+	if data["id"] != "deleted-123" || data["status"] != "DELETED" {
+		t.Fatalf("raw DELETE data = %+v", data)
+	}
+	if data["deleted"] == true {
+		t.Fatalf("raw DELETE discarded upstream body: %+v", data)
+	}
+}
+
+func TestRawAPIDeleteEmptyBody(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/deletions/empty" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/deletions/empty",
+	})
+	if err != nil {
+		t.Fatalf("raw DELETE failed: %v", err)
+	}
+	envelope := result.(ToolResult)
+	data := envelope.Data.(map[string]any)
+	if data["deleted"] != true {
+		t.Fatalf("raw DELETE empty data = %+v", data)
+	}
+}
+
 func TestRawFallbackRecoveryHintsPreferTypedTools(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("raw fallback reached upstream before recovery: %s %s", r.Method, r.URL.Path)

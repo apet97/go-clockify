@@ -33,19 +33,20 @@ const (
 // OneUserConfig is the complete runtime configuration for the
 // one-user/full-access stdio product path.
 type OneUserConfig struct {
-	APIKey                string
-	WorkspaceID           string
-	Timezone              string
-	BaseURL               string
-	LogLevel              string
-	MaxInFlightToolCalls  int
-	ToolTimeout           time.Duration
-	MaxMessageSize        int64
-	MaxToolResultBytes    int
-	Toolset               string
-	EnableRawWrites       bool
-	WebhookAllowedDomains []string
-	CircuitBreaker        clockify.CircuitBreakerConfig
+	APIKey                 string
+	WorkspaceID            string
+	Timezone               string
+	BaseURL                string
+	LogLevel               string
+	MaxInFlightToolCalls   int
+	ToolTimeout            time.Duration
+	MaxMessageSize         int64
+	MaxToolResultBytes     int
+	Toolset                string
+	EnableRawWrites        bool
+	RawWriteDocumentedOnly bool
+	WebhookAllowedDomains  []string
+	CircuitBreaker         clockify.CircuitBreakerConfig
 }
 
 // LoadOneUser reads the intentionally tiny environment surface used by the
@@ -53,17 +54,18 @@ type OneUserConfig struct {
 // matrix by design.
 func LoadOneUser() (OneUserConfig, error) {
 	cfg := OneUserConfig{
-		APIKey:                strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY")),
-		WorkspaceID:           strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID")),
-		Timezone:              strings.TrimSpace(os.Getenv("CLOCKIFY_TIMEZONE")),
-		BaseURL:               strings.TrimSpace(os.Getenv("CLOCKIFY_BASE_URL")),
-		LogLevel:              strings.TrimSpace(os.Getenv("MCP_LOG_LEVEL")),
-		MaxInFlightToolCalls:  DefaultMaxInFlightToolCalls,
-		ToolTimeout:           DefaultToolTimeout,
-		MaxMessageSize:        DefaultMaxMessageSize,
-		MaxToolResultBytes:    DefaultMaxToolResultBytes,
-		Toolset:               DefaultToolset,
-		WebhookAllowedDomains: parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
+		APIKey:                 strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY")),
+		WorkspaceID:            strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID")),
+		Timezone:               strings.TrimSpace(os.Getenv("CLOCKIFY_TIMEZONE")),
+		BaseURL:                strings.TrimSpace(os.Getenv("CLOCKIFY_BASE_URL")),
+		LogLevel:               strings.TrimSpace(os.Getenv("MCP_LOG_LEVEL")),
+		MaxInFlightToolCalls:   DefaultMaxInFlightToolCalls,
+		ToolTimeout:            DefaultToolTimeout,
+		MaxMessageSize:         DefaultMaxMessageSize,
+		MaxToolResultBytes:     DefaultMaxToolResultBytes,
+		Toolset:                DefaultToolset,
+		RawWriteDocumentedOnly: true,
+		WebhookAllowedDomains:  parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
 		CircuitBreaker: clockify.CircuitBreakerConfig{
 			Enabled:          true,
 			FailureThreshold: DefaultCircuitBreakerFailureThreshold,
@@ -96,6 +98,11 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.EnableRawWrites = enableRawWrites
+	rawWriteDocumentedOnly, err := parseBoolEnvDefault("CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY", true)
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.RawWriteDocumentedOnly = rawWriteDocumentedOnly
 	maxInFlight, err := parsePositiveIntEnv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", DefaultMaxInFlightToolCalls)
 	if err != nil {
 		return OneUserConfig{}, err
@@ -130,9 +137,13 @@ func LoadOneUser() (OneUserConfig, error) {
 }
 
 func parseBoolEnv(name string) (bool, error) {
+	return parseBoolEnvDefault(name, false)
+}
+
+func parseBoolEnvDefault(name string, fallback bool) (bool, error) {
 	raw := strings.TrimSpace(os.Getenv(name))
 	if raw == "" {
-		return false, nil
+		return fallback, nil
 	}
 	v, err := strconv.ParseBool(raw)
 	if err != nil {

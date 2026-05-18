@@ -1109,6 +1109,88 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 	}
 }
 
+func TestEveryToolHasTitle(t *testing.T) {
+	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+		if strings.TrimSpace(descriptor.Tool.Title) == "" {
+			t.Fatalf("%s missing title", descriptor.Tool.Name)
+		}
+		if strings.TrimSpace(titleFor(descriptor.Tool.Name)) == "" {
+			t.Fatalf("%s titleFor returned empty title", descriptor.Tool.Name)
+		}
+		if title, _ := descriptor.Tool.Annotations["title"].(string); strings.TrimSpace(title) == "" {
+			t.Fatalf("%s missing annotation title", descriptor.Tool.Name)
+		}
+	}
+}
+
+func TestEveryToolHasOutputSchema(t *testing.T) {
+	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+		if len(descriptor.Tool.OutputSchema) == 0 {
+			t.Fatalf("%s missing output schema", descriptor.Tool.Name)
+		}
+	}
+}
+
+func TestToolDescriptionsAreNotVague(t *testing.T) {
+	vagueOpenings := []string{"get data", "manage", "handle", "do"}
+	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+		name := descriptor.Tool.Name
+		desc := strings.TrimSpace(descriptor.Tool.Description)
+		lower := strings.ToLower(desc)
+		if len(desc) < 25 {
+			t.Errorf("%s description too short: %q", name, desc)
+		}
+		for _, vague := range vagueOpenings {
+			if lower == vague || strings.HasPrefix(lower, vague+" ") {
+				t.Errorf("%s description starts vaguely: %q", name, desc)
+			}
+		}
+		if strings.Contains(name, "_list") || schemaHasProperty(descriptor.Tool.InputSchema, "page") || schemaHasProperty(descriptor.Tool.InputSchema, "page_size") {
+			if !strings.Contains(lower, "page") && !strings.Contains(lower, "pagination") {
+				t.Errorf("%s list/paged description should mention pagination/page: %q", name, desc)
+			}
+		}
+		if strings.HasPrefix(name, "clockify_reports_") || strings.Contains(name, "_export") {
+			if !strings.Contains(lower, "size") && !strings.Contains(lower, "truncat") && !strings.Contains(lower, "file") {
+				t.Errorf("%s report/export description should mention size, truncation, or file behavior: %q", name, desc)
+			}
+		}
+	}
+}
+
+func TestRecoveryEnvelopeConformsToOutputSchema(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	initializeServer(t, server)
+
+	descriptors := map[string]mcp.ToolDescriptor{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		descriptors[descriptor.Tool.Name] = descriptor
+	}
+	for _, name := range []string{
+		"clockify_invoices_send",
+		"clockify_webhooks_test",
+		"clockify_invoices_items_update",
+	} {
+		t.Run(name, func(t *testing.T) {
+			errResult := callToolError(t, server, name, oneUserCoverageArgs(descriptors[name].Tool))
+			raw, err := json.Marshal(errResult)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var jsonValue any
+			if err := json.Unmarshal(raw, &jsonValue); err != nil {
+				t.Fatal(err)
+			}
+			if err := jsonschema.Validate(descriptors[name].Tool.OutputSchema, jsonValue); err != nil {
+				t.Fatalf("%s recovery envelope failed advertised output schema: %v\nvalue=%s", name, err, raw)
+			}
+		})
+	}
+}
+
 func TestOneUserCoverageLedgerStatusesAreActionable(t *testing.T) {
 	ledger := parseOneUserCoverageLedger(t)
 	allowed := setOf("ready", "raw_fallback_only")
@@ -2426,6 +2508,12 @@ func schemaMentionsField(schema map[string]any, field string) bool {
 	return false
 }
 
+func schemaHasProperty(schema map[string]any, field string) bool {
+	props, _ := schema["properties"].(map[string]any)
+	_, ok := props[field]
+	return ok
+}
+
 func parseCoverageSummaryCount(t *testing.T, line, prefix string) int {
 	t.Helper()
 	var count int
@@ -2516,8 +2604,10 @@ func oneUserNamedLiveEvidence() map[string]liveCoverageEvidence {
 		"clockify_entries_mark_invoiced",
 		"clockify_invoices_create",
 		"clockify_invoices_send",
+		"clockify_invoices_info",
 		"clockify_time_off_requests_create",
 		"clockify_scheduling_assignments_create",
+		"clockify_scheduling_publish",
 		"clockify_webhooks_create",
 		"clockify_users_invite",
 		"clockify_audit_logs_search",
@@ -2703,6 +2793,7 @@ func oneUserNamedLiveHappyPathEvidence() map[string]liveCoverageEvidence {
 	add("TestOneUserLiveOptionalDomainContracts", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS"},
 		"clockify_audit_logs_search",
 		"clockify_entity_changes_list",
+		"clockify_invoices_info",
 	)
 	add("TestLiveOneUserPaidFeatureHappyPaths", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 		"clockify_invoice_client_work",

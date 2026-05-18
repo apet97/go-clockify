@@ -357,3 +357,16 @@ func (s *Server) NotifyResourceUpdated(uri string, delta ResourceUpdateDelta) {
 		}
 	}
 }
+
+// NotifyResourcesListChanged emits notifications/resources/list_changed to
+// every registered notifier. The one-user server calls this when the set of
+// available resources changes (a demo-run resource is added) so the advertised
+// resources.listChanged capability is truthful. No-op when resources are off.
+func (s *Server) NotifyResourcesListChanged() {
+	if s.ResourceProvider == nil {
+		return
+	}
+	if err := s.Notify("notifications/resources/list_changed", nil); err != nil {
+		slog.Warn("resources_list_changed_notify_failed", "err", err)
+	}
+}

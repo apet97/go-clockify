@@ -41,7 +41,10 @@ export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
 ```
 
 `doctor` validates your configuration and prints every resolved setting.
-`doctor --live` additionally proves the key and workspace against Clockify.
+`doctor --live` additionally proves the key and workspace against Clockify. It
+accepts an owner **or** admin key; if the key is not the workspace owner it
+prints a warning and lists the tool families that may be denied, but still
+reports OK.
 
 ### 4. Connect it to your MCP client
 
@@ -64,6 +67,15 @@ Point your MCP client at the binary. For a Claude `.mcp.json`:
 The client launches `clockify-mcp` as a stdio subprocess. That is the whole
 setup — start with the `clockify_status` tool and go from there.
 
+For a direct Codex/CLI smoke run, keep secrets in your shell environment and
+launch the server over stdio:
+
+```bash
+export CLOCKIFY_API_KEY="your-api-key"
+export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
+/absolute/path/to/clockify-mcp
+```
+
 ## Tools
 
 `clockify-mcp` loads the full 156-tool startup registry in a fixed order:
@@ -78,6 +90,11 @@ setup — start with the `clockify_status` tool and go from there.
 The complete generated list is in
 [docs/tool-catalog.md](docs/tool-catalog.md), and
 [docs/agent-cookbook.md](docs/agent-cookbook.md) shows worked examples.
+Operator references:
+[permissions](docs/permissions.md),
+[dangerous tools](docs/dangerous-tools.md),
+[raw fallback](docs/raw-fallback.md), and
+[error recovery](docs/error-recovery.md).
 
 ### Raw API fallback
 
@@ -85,12 +102,18 @@ The complete generated list is in
 have no dedicated tool, scoped to your pinned workspace. Raw `GET` always
 works; raw `POST`, `PUT`, `PATCH`, and `DELETE` require
 `CLOCKIFY_ENABLE_RAW_WRITES=true`. Prefer the domain tools — raw writes are an
-explicit escape hatch.
+explicit escape hatch. Raw writes are also limited to documented Clockify
+routes by default; see [docs/raw-fallback.md](docs/raw-fallback.md) for
+`CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY`.
 
 ## Configuration
 
 `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID` are required. Everything else is
 optional:
+
+Most tools need a workspace **owner or admin** API key. A regular-member key can
+still read data and manage its own time entries, but admin, billing, and
+settings tools will return `feature_unavailable` or Clockify permission errors.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -98,6 +121,7 @@ optional:
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
 | `CLOCKIFY_TOOLSET` | `all` | Tool surface: `core`, `business`, `admin`, or `all` |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` |
+| `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY` | `true` | Limit raw writes to documented Clockify routes |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout |
 | `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation |
 | `MCP_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |

@@ -54,13 +54,59 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	return normalizeDescriptors(dedupeToolDescriptors(out))
 }
 
-// cloneToolDescriptors protects the cached registry slice header from caller
-// mutation. Descriptor internals such as InputSchema and Annotations maps remain
-// shared by reference, so callers must treat descriptors as read-only.
+// cloneToolDescriptors returns an independent copy of the descriptor slice.
+// Each descriptor's Tool.InputSchema, Tool.OutputSchema, and Tool.Annotations
+// maps are deep-copied so a caller that mutates a returned schema or annotation
+// cannot corrupt the cached registry.
 func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, len(in))
 	copy(out, in)
+	for i := range out {
+		out[i].Tool.InputSchema = deepCopyAnyMap(out[i].Tool.InputSchema)
+		out[i].Tool.OutputSchema = deepCopyAnyMap(out[i].Tool.OutputSchema)
+		out[i].Tool.Annotations = deepCopyAnyMap(out[i].Tool.Annotations)
+	}
 	return out
+}
+
+// deepCopyAnyMap returns an independent copy of a JSON-shaped map: nested
+// map[string]any, []any, and []string values are copied; scalars are passed
+// through (immutable). Used so cloneToolDescriptors hands callers a descriptor
+// whose schema/annotation maps cannot mutate the cached registry.
+func deepCopyAnyMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = deepCopyAnyValue(v)
+	}
+	return out
+}
+
+func deepCopyAnyValue(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		return deepCopyAnyMap(t)
+	case []any:
+		if t == nil {
+			return []any(nil)
+		}
+		cp := make([]any, len(t))
+		for i := range t {
+			cp[i] = deepCopyAnyValue(t[i])
+		}
+		return cp
+	case []string:
+		if t == nil {
+			return []string(nil)
+		}
+		cp := make([]string, len(t))
+		copy(cp, t)
+		return cp
+	default:
+		return v
+	}
 }
 
 func toolAllowedForToolset(toolset, name string) bool {
@@ -1325,6 +1371,9 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 	if err != nil {
 		return nil, err
 	}
+	if method != "GET" && s.RawWriteDocumentedOnly && !isDocumentedRawWriteRoute(method, path) {
+		return nil, fmt.Errorf("raw write %s %s is not a documented Clockify endpoint; set CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false to allow undocumented raw writes", method, path)
+	}
 	query := rawQuery(args["query"])
 	body, _ := args["body"].(map[string]any)
 	var data any
@@ -1338,8 +1387,13 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 	case "PATCH":
 		err = s.Client.Patch(ctx, path, body, &data)
 	case "DELETE":
-		err = s.Client.DeleteWithQuery(ctx, path, query)
-		data = map[string]any{"deleted": true}
+		var deleted any
+		err = s.Client.DeleteWithQueryCapture(ctx, path, query, &deleted)
+		if deleted != nil {
+			data = deleted
+		} else {
+			data = map[string]any{"deleted": true}
+		}
 	default:
 		return nil, fmt.Errorf("unsupported method %s", method)
 	}
