@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"log"
 	"os"
 	"sort"
@@ -43,7 +44,11 @@ func main() {
 		fmt.Fprintf(&b, "\t%q: true,\n", route)
 	}
 	b.WriteString("}\n")
-	if err := os.WriteFile("internal/tools/raw_allowlist_gen.go", b.Bytes(), 0o644); err != nil {
+	formatted, err := format.Source(b.Bytes())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile("internal/tools/raw_allowlist_gen.go", formatted, 0o644); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("wrote %d documented raw write routes\n", len(routes))
