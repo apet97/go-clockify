@@ -10,6 +10,21 @@ more — as tools an AI client can call.
 No account to create and no service to deploy: the binary runs as a subprocess
 of your MCP client.
 
+## Current docs
+
+Start current one-user setup from this README. Bannered historical pages and
+everything under `docs/archive/platform-era/` are preserved for audit history
+only; they are not setup instructions for this product.
+
+- Setup, build, doctor, Claude config, and first calls: this README
+- Workflow examples: [docs/agent-cookbook.md](docs/agent-cookbook.md)
+- Full generated tool list: [docs/tool-catalog.md](docs/tool-catalog.md)
+- Permissions and plan requirements: [docs/permissions.md](docs/permissions.md)
+- Destructive, billing, admin, and external-side-effect tools:
+  [docs/dangerous-tools.md](docs/dangerous-tools.md)
+- Raw API fallback: [docs/raw-fallback.md](docs/raw-fallback.md)
+- Live tests and sacrificial workspace gates: [docs/live-tests.md](docs/live-tests.md)
+
 ## Start from zero
 
 You need a Go toolchain ([go.dev/dl](https://go.dev/dl/)) and a Clockify
@@ -66,7 +81,17 @@ Point your MCP client at the binary. For a Claude `.mcp.json`:
 ```
 
 The client launches `clockify-mcp` as a stdio subprocess. That is the whole
-setup — start with the `clockify_status` tool and go from there.
+setup. Start with `clockify_status`, then use workflow tools before raw or
+low-level domain tools:
+
+- `clockify_status` - confirm the pinned workspace, user, feature plan, and
+  optional feature visibility
+- `clockify_start_timer` / `clockify_stop_timer` - day-to-day time tracking
+- `clockify_review_day` - summarize and check a workday
+- `clockify_create_work_package` - create a client/project/task/tag bundle
+- `clockify_invoice_client_work`, `clockify_record_expense`,
+  `clockify_request_time_off`, `clockify_schedule_work`,
+  `clockify_setup_webhook` - business workflows that guide follow-up calls
 
 For a direct Codex/CLI smoke run, keep secrets in your shell environment and
 launch the server over stdio:
