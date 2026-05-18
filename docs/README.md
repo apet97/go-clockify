@@ -50,3 +50,13 @@ make openapi-drift
 Older launch, deployment, profile, release, and ADR material may still exist for
 audit history. Treat it as historical context, not active product guidance. The
 active product path is the one-user stdio server described by the files above.
+
+## Operator references
+
+- [permissions.md](permissions.md) — role, plan, and feature requirements by tool family
+- [dangerous-tools.md](dangerous-tools.md) — destructive / billing / admin tools and dry-run coverage
+- [raw-fallback.md](raw-fallback.md) — raw API path fence and raw-write gates
+- [error-recovery.md](error-recovery.md) — common `ok:false` codes and recovery
+- [protocol-notes.md](protocol-notes.md) — pagination posture, progress, and rate-control model
+- [release-checklist.md](release-checklist.md) — pre-release gate sequence
+- [branch-protection-required-checks.md](branch-protection-required-checks.md) — the required CI check set
