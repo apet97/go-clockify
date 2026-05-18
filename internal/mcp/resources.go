@@ -13,6 +13,7 @@ import (
 type Resource struct {
 	URI         string `json:"uri"`
 	Name        string `json:"name"`
+	Title       string `json:"title,omitempty"`
 	Description string `json:"description,omitempty"`
 	MimeType    string `json:"mimeType,omitempty"`
 }
@@ -22,6 +23,7 @@ type Resource struct {
 type ResourceTemplate struct {
 	URITemplate string `json:"uriTemplate"`
 	Name        string `json:"name"`
+	Title       string `json:"title,omitempty"`
 	Description string `json:"description,omitempty"`
 	MimeType    string `json:"mimeType,omitempty"`
 }
