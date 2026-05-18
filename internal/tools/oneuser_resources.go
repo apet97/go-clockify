@@ -115,6 +115,11 @@ func oneUserResources() []mcp.Resource {
 	}
 }
 
+// maxDemoResourcesListed caps how many per-run demo resources resources/list
+// surfaces. The backing map is unbounded over a process lifetime; this keeps
+// the listing bounded and predictable.
+const maxDemoResourcesListed = 50
+
 func (s *Service) demoResourcesList() []mcp.Resource {
 	if s == nil {
 		return nil
@@ -138,6 +143,9 @@ func (s *Service) demoResourcesList() []mcp.Resource {
 			Description: fmt.Sprintf("Current state for deterministic demo run %s.", state.RunID),
 			MimeType:    "application/json",
 		})
+	}
+	if len(out) > maxDemoResourcesListed {
+		out = out[len(out)-maxDemoResourcesListed:]
 	}
 	return out
 }
