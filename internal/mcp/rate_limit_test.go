@@ -109,3 +109,37 @@ func TestRateLimitedEnvelopeHasStructuredRecovery(t *testing.T) {
 		t.Fatalf("recovery = %v, want a retryable hint", env["recovery"])
 	}
 }
+
+// TestProductWiringInstallsFamilyCapsWithRateLimitDisabled reproduces the wiring
+// sequence from cmd/clockify-mcp/main.go: NewServer(...) followed by
+// ConfigureToolLimits(cfg.ToolRateLimitPerMinute). CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE
+// defaults to 0, so the product path routinely runs with the token-bucket rate
+// limiter disabled — the per-risk-family concurrency caps must still be active.
+func TestProductWiringInstallsFamilyCapsWithRateLimitDisabled(t *testing.T) {
+	srv := NewServer("test", nil)
+	if srv.toolFamilyCaps == nil {
+		t.Fatal("NewServer must install per-risk-family concurrency caps")
+	}
+
+	srv.ConfigureToolLimits(0) // rate limiting disabled (the default)
+	if srv.toolFamilyCaps == nil {
+		t.Fatal("ConfigureToolLimits(0) must not clear the family caps installed by NewServer")
+	}
+	if srv.toolRateLimiter != nil {
+		t.Fatal("ConfigureToolLimits(0) must leave the token-bucket rate limiter disabled")
+	}
+
+	// Behavioural proof: the high-risk family is serialized at 1 concurrent
+	// even with rate limiting off.
+	ctx := context.Background()
+	release, err := srv.toolFamilyCaps.acquire(ctx, RiskDestructive)
+	if err != nil {
+		t.Fatalf("first high-risk acquire: %v", err)
+	}
+	blocked, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	defer cancel()
+	if _, err := srv.toolFamilyCaps.acquire(blocked, RiskBilling); err == nil {
+		t.Fatal("a second concurrent high-risk acquire should block (cap is 1) with rate limiting disabled")
+	}
+	release()
+}
