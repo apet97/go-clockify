@@ -210,8 +210,7 @@ func TestCancellation_NormalCompletionCleansUp(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx, &input, syncWriter{&output}) }()
@@ -275,13 +274,28 @@ func TestRunPreservesLargeNumericResponseID(t *testing.T) {
 	input.WriteString(`{"jsonrpc":"2.0","id":` + requestID + `,"method":"ping"}` + "\n")
 
 	var output bytes.Buffer
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	if err := srv.Run(ctx, &input, syncWriter{&output}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if !strings.Contains(output.String(), `"id":`+requestID) {
 		t.Fatalf("large numeric id not preserved in output: %s", output.String())
+	}
+}
+
+// TestDispatchMessagePreservesLargeNumericID pins that the embedded
+// DispatchMessage decode path keeps a >2^53 JSON-RPC id intact, the same
+// guarantee TestRunPreservesLargeNumericResponseID gives the stdio loop.
+func TestDispatchMessagePreservesLargeNumericID(t *testing.T) {
+	const requestID = "9007199254740993"
+	srv := NewServer("test", nil)
+	raw, err := srv.DispatchMessage(context.Background(),
+		[]byte(`{"jsonrpc":"2.0","id":`+requestID+`,"method":"initialize","params":{}}`))
+	if err != nil {
+		t.Fatalf("DispatchMessage: %v", err)
+	}
+	if !strings.Contains(string(raw), `"id":`+requestID) {
+		t.Fatalf("large numeric id not preserved in DispatchMessage output: %s", raw)
 	}
 }
 

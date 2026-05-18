@@ -446,9 +446,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 		}
 	}()
 	var writerWG sync.WaitGroup
-	writerWG.Add(1)
-	go func() {
-		defer writerWG.Done()
+	writerWG.Go(func() {
 		defer close(s.outDone)
 		for b := range s.outChan {
 			s.encoderMu.Lock()
@@ -461,7 +459,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 			}
 			s.encoderMu.Unlock()
 		}
-	}()
+	})
 	defer writerWG.Wait()
 	defer close(s.outChan)
 	// Install the stdio notifier so list/resource change notifications flow
@@ -618,7 +616,11 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 // that need backpressure on tools/call must implement their own bound.
 func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error) {
 	var req Request
-	if err := json.Unmarshal(msg, &req); err != nil {
+	// Decode with UseNumber (like Run) so large numeric ids keep precision
+	// and numeric tool arguments arrive as json.Number, not float64.
+	decoder := json.NewDecoder(bytes.NewReader(msg))
+	decoder.UseNumber()
+	if err := decoder.Decode(&req); err != nil {
 		return json.Marshal(Response{JSONRPC: "2.0", Error: &RPCError{Code: -32700, Message: "invalid JSON"}})
 	}
 	if rpcErr := validateRequest(req); rpcErr != nil {
@@ -688,7 +690,7 @@ func toolNameFromRequest(req Request) string {
 
 func dispatchAsyncRequest(method string) bool {
 	switch method {
-	case "resources/list", "resources/read", "resources/templates/list", "prompts/get":
+	case "resources/list", "resources/read", "resources/templates/list", "prompts/get", "prompts/list":
 		return true
 	default:
 		return false
