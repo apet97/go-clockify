@@ -9,7 +9,10 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-const resolveCacheTTL = time.Minute
+const (
+	resolveCacheTTL            = time.Minute
+	resolveCacheSweepThreshold = 1024
+)
 
 type resolveKey struct {
 	kind  string
@@ -104,6 +107,14 @@ func (s *Service) resolveCacheSet(key resolveKey, id string, expiresAt time.Time
 	s.resolveMu.Lock()
 	if s.resolveCache == nil {
 		s.resolveCache = make(map[resolveKey]resolveEntry)
+	}
+	if len(s.resolveCache) >= resolveCacheSweepThreshold {
+		now := time.Now()
+		for cachedKey, entry := range s.resolveCache {
+			if !now.Before(entry.expiresAt) {
+				delete(s.resolveCache, cachedKey)
+			}
+		}
 	}
 	s.resolveCache[key] = resolveEntry{id: id, expiresAt: expiresAt}
 	s.resolveMu.Unlock()
