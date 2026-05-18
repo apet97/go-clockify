@@ -125,6 +125,72 @@ func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
 	}
 }
 
+func TestRawAPIWriteDocumentedOnly(t *testing.T) {
+	var called bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/clients" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"id": "client-1"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/clients",
+		"body":   map[string]any{"name": "Allowed"},
+	}); err != nil {
+		t.Fatalf("documented raw write rejected: %v", err)
+	}
+	if !called {
+		t.Fatal("documented raw write did not reach upstream")
+	}
+}
+
+func TestRawAPIWriteDocumentedOnlyRejectsUndocumented(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("undocumented raw write reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	_, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/not-documented",
+		"body":   map[string]any{"name": "Blocked"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false") {
+		t.Fatalf("undocumented raw write err = %v", err)
+	}
+}
+
+func TestRawAPIWriteDocumentedOnlyFalseAllowsUndocumented(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/workspaces/ws1/not-documented" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"ok": true})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = false
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "POST",
+		"path":   "/workspaces/{workspaceId}/not-documented",
+		"body":   map[string]any{"name": "Allowed"},
+	}); err != nil {
+		t.Fatalf("undocumented raw write with flag false failed: %v", err)
+	}
+}
+
 func TestRawAPIDeletePreservesBody(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/deletions/body" {

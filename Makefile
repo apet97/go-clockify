@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift api-parity-matrix-drift live-contract-local
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift api-parity-matrix-drift live-contract-local
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
@@ -67,6 +67,18 @@ openapi-drift:
 	 diff -q docs/openapi/clockify-openapi.yaml "$$tmpdir/clockify-openapi.yaml.before" >/dev/null \
 	  || { echo "[openapi-drift] docs/openapi/clockify-openapi.yaml is stale; run make gen-openapi"; \
 	       diff -u "$$tmpdir/clockify-openapi.yaml.before" docs/openapi/clockify-openapi.yaml | head -120; exit 1; }
+
+gen-raw-allowlist:
+	go run ./scripts/gen-raw-allowlist
+
+raw-allowlist-drift:
+	@tmpdir="$$(mktemp -d)"; \
+	 trap 'rm -rf "$$tmpdir"' EXIT; \
+	 cp internal/tools/raw_allowlist_gen.go "$$tmpdir/raw_allowlist_gen.go.before"; \
+	 $(MAKE) --no-print-directory gen-raw-allowlist >/dev/null; \
+	 diff -q internal/tools/raw_allowlist_gen.go "$$tmpdir/raw_allowlist_gen.go.before" >/dev/null \
+	  || { echo "[raw-allowlist-drift] internal/tools/raw_allowlist_gen.go is stale; run make gen-raw-allowlist"; \
+	       diff -u "$$tmpdir/raw_allowlist_gen.go.before" internal/tools/raw_allowlist_gen.go | head -120; exit 1; }
 
 # api-parity-matrix-drift fails when docs/api-parity-matrix.md no longer
 # matches the regenerated output of check-api-parity-matrix.sh. The script

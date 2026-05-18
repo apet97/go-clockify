@@ -114,6 +114,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 
 	service := tools.New(client, cfg.WorkspaceID)
 	service.EnableRawWrites = cfg.EnableRawWrites
+	service.RawWriteDocumentedOnly = cfg.RawWriteDocumentedOnly
 	service.Toolset = cfg.Toolset
 	service.WebhookValidateDNS = true
 	service.WebhookAllowedDomains = cfg.WebhookAllowedDomains
@@ -199,6 +200,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_TOOL_RESULT_BYTES     %d\n", cfg.MaxToolResultBytes)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY %t\n", cfg.RawWriteDocumentedOnly)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   %s\n", optionalList(cfg.WebhookAllowedDomains, "(none)"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER           %s\n", circuitBreakerStatus(cfg.CircuitBreaker.Enabled))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD  %d\n", cfg.CircuitBreaker.FailureThreshold)
@@ -382,6 +384,7 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_TOOL_RESULT_BYTES     optional, defaults to 50000, allowed 1..104857600")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOLSET                   optional: core, business, admin, all (default)")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_WRITES         optional, defaults to false")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY optional, defaults to true")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   optional comma-separated allowlist")
 	_, _ = fmt.Fprintln(w, "  MCP_LOG_LEVEL          optional: debug, info, warn, error")
 }

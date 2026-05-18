@@ -86,6 +86,9 @@ type Service struct {
 	// EnableRawWrites allows the raw API fallback to use mutating HTTP
 	// methods. Raw GET remains available either way.
 	EnableRawWrites bool
+	// RawWriteDocumentedOnly restricts raw mutating methods to routes present
+	// in the generated OpenAPI allowlist. Raw GET remains unaffected.
+	RawWriteDocumentedOnly bool
 	// Toolset selects the startup registry surface. Empty/all exposes the
 	// full owner workbench; smaller values are filtered by RegistryForToolset.
 	Toolset string

@@ -57,6 +57,9 @@ func TestLoadOneUserMinimalConfig(t *testing.T) {
 	if cfg.EnableRawWrites {
 		t.Fatal("EnableRawWrites defaulted true")
 	}
+	if !cfg.RawWriteDocumentedOnly {
+		t.Fatal("RawWriteDocumentedOnly defaulted false")
+	}
 	if len(cfg.WebhookAllowedDomains) != 0 {
 		t.Fatalf("WebhookAllowedDomains = %#v", cfg.WebhookAllowedDomains)
 	}
@@ -83,6 +86,7 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_MAX_TOOL_RESULT_BYTES", "12345")
 	t.Setenv("CLOCKIFY_TOOLSET", "business")
 	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "true")
+	t.Setenv("CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY", "false")
 	t.Setenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", "hooks.example.com, .trusted.test, , api.example.com ")
 	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER", "disabled")
 	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "7")
@@ -110,6 +114,9 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	}
 	if !cfg.EnableRawWrites {
 		t.Fatal("EnableRawWrites = false")
+	}
+	if cfg.RawWriteDocumentedOnly {
+		t.Fatal("RawWriteDocumentedOnly = true")
 	}
 	wantDomains := []string{"hooks.example.com", ".trusted.test", "api.example.com"}
 	if !reflect.DeepEqual(cfg.WebhookAllowedDomains, wantDomains) {
