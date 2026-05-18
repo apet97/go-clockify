@@ -137,9 +137,20 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 	if s == nil || s.Notifier == nil {
 		return
 	}
+	// Stop emitting once the call is cancelled or has timed out.
+	if ctx.Err() != nil {
+		return
+	}
 	token, ok := mcp.ProgressTokenFromContext(ctx)
 	if !ok {
 		return
+	}
+	// When the notifier can gate progress (the MCP server does), drop
+	// non-increasing or flooding notifications instead of forwarding them.
+	if gate, ok := s.Notifier.(mcp.ProgressGate); ok {
+		if !gate.AllowProgress(token, progress) {
+			return
+		}
 	}
 	params := map[string]any{
 		"progressToken": token,
