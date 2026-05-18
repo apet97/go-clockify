@@ -1372,7 +1372,7 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 		return nil, err
 	}
 	if method != "GET" && s.RawWriteDocumentedOnly && !isDocumentedRawWriteRoute(method, path) {
-		return nil, fmt.Errorf("raw write %s %s is not a documented Clockify endpoint; set CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false to allow undocumented raw writes", method, path)
+		return nil, fmt.Errorf("raw write %s %s is not a documented Clockify endpoint; use a typed domain tool if one exists, or set CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false only for endpoints you have confirmed are documented or probed", method, path)
 	}
 	query := rawQuery(args["query"])
 	body, _ := args["body"].(map[string]any)
