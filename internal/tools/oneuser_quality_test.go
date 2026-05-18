@@ -1114,8 +1114,11 @@ func TestEveryToolHasTitle(t *testing.T) {
 		if strings.TrimSpace(descriptor.Tool.Title) == "" {
 			t.Fatalf("%s missing title", descriptor.Tool.Name)
 		}
-		if titleFor(descriptor.Tool.Name) != titleFor(descriptor.Tool.Name) {
-			t.Fatalf("%s titleFor is not stable", descriptor.Tool.Name)
+		if strings.TrimSpace(titleFor(descriptor.Tool.Name)) == "" {
+			t.Fatalf("%s titleFor returned empty title", descriptor.Tool.Name)
+		}
+		if title, _ := descriptor.Tool.Annotations["title"].(string); strings.TrimSpace(title) == "" {
+			t.Fatalf("%s missing annotation title", descriptor.Tool.Name)
 		}
 	}
 }
