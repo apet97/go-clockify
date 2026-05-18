@@ -1471,66 +1471,6 @@ func durationSecondsFromNested(v any) int64 {
 	return 0
 }
 
-func moneyFromAny(v any, currency string) *MoneyView {
-	if v == nil {
-		return nil
-	}
-	switch typed := v.(type) {
-	case *MoneyView:
-		return typed
-	case MoneyView:
-		return &typed
-	}
-	if nested, ok := v.(map[string]any); ok {
-		currency = firstNonEmptyString(reportCurrency(nested), currency)
-		v = firstPresent(nested, "amount_cents", "amountCents", "value", "amount", "total")
-	}
-	if n, ok := reportNumber(v); ok {
-		return moneyPtr(MoneyFromReportNumber(n, currency))
-	}
-	return nil
-}
-
-func moneySum(a, b *MoneyView) *MoneyView {
-	if a == nil {
-		return b
-	}
-	if b == nil {
-		return a
-	}
-	if a.Currency != "" && b.Currency != "" && a.Currency != b.Currency {
-		return a
-	}
-	return moneyPtr(MoneyFromCents(a.AmountCents+b.AmountCents, firstNonEmptyString(a.Currency, b.Currency)))
-}
-
-func moneyDiff(a, b *MoneyView) *MoneyView {
-	if a == nil && b == nil {
-		return nil
-	}
-	if a == nil {
-		zero := MoneyFromCents(0, b.Currency)
-		a = &zero
-	}
-	if b == nil {
-		zero := MoneyFromCents(0, a.Currency)
-		b = &zero
-	}
-	if a.Currency != "" && b.Currency != "" && a.Currency != b.Currency {
-		return nil
-	}
-	return moneyPtr(MoneyFromCents(a.AmountCents-b.AmountCents, firstNonEmptyString(a.Currency, b.Currency)))
-}
-
-func firstMoney(values ...*MoneyView) *MoneyView {
-	for _, value := range values {
-		if value != nil {
-			return value
-		}
-	}
-	return nil
-}
-
 func assignmentFinancialsMap(earned, cost, profit *MoneyView, source, reason string) map[string]any {
 	out := map[string]any{"source": source}
 	if earned != nil {
