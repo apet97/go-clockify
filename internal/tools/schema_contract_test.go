@@ -63,3 +63,14 @@ func TestToolRequiredArraysMatchHandlerContracts(t *testing.T) {
 		}
 	}
 }
+
+func TestSchedulingCapacityUserIDsOptional(t *testing.T) {
+	tools := registryToolsByName(t)
+	tool, ok := tools["clockify_scheduling_capacity"]
+	if !ok {
+		t.Fatal("clockify_scheduling_capacity not in registry")
+	}
+	if requiredSet(tool.InputSchema)["user_ids"] {
+		t.Error("clockify_scheduling_capacity must not require user_ids")
+	}
+}

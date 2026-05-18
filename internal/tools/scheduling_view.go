@@ -490,19 +490,18 @@ func (s *Service) schedulingUserTotalsOneUser(ctx context.Context, args map[stri
 }
 
 func (s *Service) schedulingCapacityOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	userIDs, found, err := strictStringSliceArg(args, "user_ids")
+	userIDs, _, err := strictStringSliceArg(args, "user_ids")
 	if err != nil {
 		return ResultEnvelope{}, err
-	}
-	if !found || len(userIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("user_ids is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
 	rawArgs := copyArgs(args)
-	rawArgs["users"] = userIDs
+	if len(userIDs) > 0 {
+		rawArgs["users"] = userIDs
+	}
 	totals, err := s.getWorkspaceScheduleUserTotalsRaw(ctx, wsID, rawArgs)
 	if err != nil {
 		return ResultEnvelope{}, err

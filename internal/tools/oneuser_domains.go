@@ -615,12 +615,11 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 				"end":     map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			},
 		})), "scheduling", "", s.schedulingUserTotalsOneUser),
-		nativeDomainTool(607, toolRO("clockify_scheduling_capacity", "Get workspace capacity totals.", objectSchema(map[string]any{
-			"required": []string{"user_ids"},
+		nativeDomainTool(607, toolRO("clockify_scheduling_capacity", "Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users.", objectSchema(map[string]any{
 			"properties": map[string]any{
 				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 				"end":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs to scope the capacity totals (required)."},
+				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. User IDs to scope the capacity totals; omit to include all workspace users."},
 			},
 		})), "scheduling", "", s.schedulingCapacityOneUser),
 		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{

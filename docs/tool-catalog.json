@@ -47112,7 +47112,7 @@
     },
     {
       "name": "clockify_scheduling_capacity",
-      "description": "Get workspace capacity totals.",
+      "description": "Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -47137,16 +47137,13 @@
             "type": "string"
           },
           "user_ids": {
-            "description": "User IDs to scope the capacity totals (required).",
+            "description": "Optional. User IDs to scope the capacity totals; omit to include all workspace users.",
             "items": {
               "type": "string"
             },
             "type": "array"
           }
         },
-        "required": [
-          "user_ids"
-        ],
         "type": "object"
       },
       "output_schema": {
