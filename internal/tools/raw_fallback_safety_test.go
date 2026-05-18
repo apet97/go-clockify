@@ -67,6 +67,17 @@ func TestSafeRawPathAllowsPinnedWorkspaceAndUserPaths(t *testing.T) {
 	}
 }
 
+func TestSafeRawPathAllowsDocumentedSchedulingCopyExample(t *testing.T) {
+	got, err := safeRawPath("ws1", "/workspaces/{workspaceId}/scheduling/assignments/assignment-1/copy")
+	if err != nil {
+		t.Fatalf("documented scheduling-copy path was rejected: %v", err)
+	}
+	want := "/workspaces/ws1/scheduling/assignments/assignment-1/copy"
+	if got != want {
+		t.Fatalf("safeRawPath = %q, want %q", got, want)
+	}
+}
+
 func TestRawFallbackCannotHitFileImage(t *testing.T) {
 	called := false
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
