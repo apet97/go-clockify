@@ -1128,6 +1128,33 @@ func TestEveryToolHasOutputSchema(t *testing.T) {
 	}
 }
 
+func TestToolDescriptionsAreNotVague(t *testing.T) {
+	vagueOpenings := []string{"get data", "manage", "handle", "do"}
+	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+		name := descriptor.Tool.Name
+		desc := strings.TrimSpace(descriptor.Tool.Description)
+		lower := strings.ToLower(desc)
+		if len(desc) < 25 {
+			t.Errorf("%s description too short: %q", name, desc)
+		}
+		for _, vague := range vagueOpenings {
+			if lower == vague || strings.HasPrefix(lower, vague+" ") {
+				t.Errorf("%s description starts vaguely: %q", name, desc)
+			}
+		}
+		if strings.Contains(name, "_list") || schemaHasProperty(descriptor.Tool.InputSchema, "page") || schemaHasProperty(descriptor.Tool.InputSchema, "page_size") {
+			if !strings.Contains(lower, "page") && !strings.Contains(lower, "pagination") {
+				t.Errorf("%s list/paged description should mention pagination/page: %q", name, desc)
+			}
+		}
+		if strings.HasPrefix(name, "clockify_reports_") || strings.Contains(name, "_export") {
+			if !strings.Contains(lower, "size") && !strings.Contains(lower, "truncat") && !strings.Contains(lower, "file") {
+				t.Errorf("%s report/export description should mention size, truncation, or file behavior: %q", name, desc)
+			}
+		}
+	}
+}
+
 func TestRecoveryEnvelopeConformsToOutputSchema(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
@@ -2476,6 +2503,12 @@ func schemaMentionsField(schema map[string]any, field string) bool {
 		return true
 	}
 	return false
+}
+
+func schemaHasProperty(schema map[string]any, field string) bool {
+	props, _ := schema["properties"].(map[string]any)
+	_, ok := props[field]
+	return ok
 }
 
 func parseCoverageSummaryCount(t *testing.T, line, prefix string) int {
