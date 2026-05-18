@@ -508,7 +508,6 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(65, toolRWIdem("clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", objectSchema(map[string]any{"required": []string{"time_entry_ids", "invoiced"}, "properties": map[string]any{
 			"time_entry_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 			"invoiced":       map[string]any{"type": "boolean"},
-			"body":           map[string]any{"type": "object", "additionalProperties": true},
 		}})), "entry", "updated", s.EntriesMarkInvoiced),
 		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite users by email. External side effect when send_email is true; supports dry_run.", objectSchema(map[string]any{"properties": map[string]any{
 			"email":      map[string]any{"type": "string", "format": "email"},

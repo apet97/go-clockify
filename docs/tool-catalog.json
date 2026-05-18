@@ -48496,11 +48496,6 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
-          "body": {
-            "additionalProperties": true,
-            "description": "Raw JSON request body forwarded to the Clockify API.",
-            "type": "object"
-          },
           "invoiced": {
             "description": "Whether the time entries are marked as invoiced.",
             "type": "boolean"
