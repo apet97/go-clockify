@@ -2,212 +2,78 @@
 
 ## Supported Versions
 
-| Version | Status                                                                                          |
-|---------|-------------------------------------------------------------------------------------------------|
-| 1.2.x   | Active — receives security fixes alongside features and bug fixes                               |
-| 1.1.x   | Superseded — upgrade to `1.2.x` for security fixes                                              |
-| 1.0.x   | Patch-only for correctness regressions on the stable v1 wire format (security CVEs that meet that bar are backported) |
-| 0.x     | End-of-life since `v1.0.0`                                                                      |
+`clockify-mcp` ships a single supported release line. Security fixes land on
+the latest release.
 
-Security fixes always land on the Active minor (`1.2.x` today). The
-prior minor (`1.1.x`) is superseded; operators on it should upgrade
-rather than wait for a backport. The `1.0.x` line receives only
-correctness-regression patches on the stable v1 wire format — security
-CVEs that meet that bar are backported, others are not.
-
-See [SUPPORT.md](SUPPORT.md) for the canonical version-status state and
-[docs/release-policy.md](docs/release-policy.md) for the historical release
-policy record. Current one-user setup and product routing start from
-[README.md](README.md), [docs/agent-cookbook.md](docs/agent-cookbook.md),
-[docs/tool-catalog.md](docs/tool-catalog.md), and
-[docs/goals/oneuser-tool-coverage.md](docs/goals/oneuser-tool-coverage.md).
+| Version | Status    |
+| ------- | --------- |
+| 0.1.x   | Supported |
 
 ## Reporting a Vulnerability
 
 **Do not open a public issue for security vulnerabilities.**
 
-Use the private **GitHub Security Advisory** workflow at
-<https://github.com/apet97/go-clockify/security/advisories/new> to
-disclose a vulnerability. That channel is end-to-end encrypted with
-project maintainers and provides an audit trail for the fix lifecycle.
+Report privately through GitHub's Security Advisory workflow:
+<https://github.com/apet97/go-clockify/security/advisories/new>
 
-Include:
-- Description of the vulnerability
+Please include:
+
+- A description of the vulnerability
 - Steps to reproduce
-- Affected versions
-- Potential impact
+- The affected version
+- The potential impact
 
-## Response Timeline
+## Response
 
-- **Acknowledgment:** Within 48 hours
-- **Initial assessment:** Within 1 week
-- **Fix release:** Depends on severity (critical: ASAP, high: 1-2 weeks, medium: next release)
+- **Acknowledgment:** within 48 hours
+- **Initial assessment:** within 1 week
+- **Fix:** severity-dependent — critical as soon as possible, high within
+  1-2 weeks, medium in the next release
 
 ## Scope
 
-Current product note: the active product is a local one-user, stdio-only MCP
-server for one `CLOCKIFY_API_KEY` and one required `CLOCKIFY_WORKSPACE_ID`.
-HTTP, hosted, tenant, OIDC, mTLS, gRPC, forward-auth, policy-mode, and
-confirmation-token references below are retained as security history for the
-platform-era code path; they are not current one-user setup instructions.
+`clockify-mcp` is a local, single-user, stdio MCP server. It runs as a
+subprocess of a trusted MCP client, holds one `CLOCKIFY_API_KEY`, and talks to
+one Clockify workspace. It opens no network listener and has no multi-user
+surface.
 
-The following are in scope:
-- API key exposure or leakage
-- Command injection via tool inputs
-- SSRF through webhook URL parameters
-- Authentication bypass in HTTP transport
-- OIDC/JWKS validation weaknesses, including token-binding and key-selection failures
-- Tenant-isolation failures in shared-service HTTP, gRPC, and control-plane storage
-- Audit-durability failures for non-read-only tool calls
-- Path traversal in ID validation
-- CORS bypass in HTTP transport
-- DNS rebinding or private-network exposure in webhook and HTTP transport paths
-- Timing attacks on bearer token comparison
+For setup and usage, see [README.md](README.md),
+[docs/agent-cookbook.md](docs/agent-cookbook.md),
+[docs/tool-catalog.md](docs/tool-catalog.md), and
+[docs/goals/oneuser-tool-coverage.md](docs/goals/oneuser-tool-coverage.md).
 
-## Security Features
+In scope:
 
-- **AuthN**: API keys passed via environment variables only (never in config files); HTTP transport requires a ≥16-char bearer token compared with `crypto/subtle`; strict `Authorization: Bearer <token>` parsing.
-- **Inline /metrics security**: `/metrics` on the main HTTP listener is **disabled by default** (`MCP_HTTP_INLINE_METRICS_ENABLED`). When enabled, access requires authentication: `inherit_main_bearer` reuses the primary bearer token; `static_bearer` uses a dedicated separate token; `none` requires explicit opt-in and emits a startup warning. The dedicated `MCP_METRICS_BIND` listener is the recommended alternative for shared-service deployments.
-- **Audit durability**: non-read-only tool calls emit intent/outcome `AuditEvent` records and increment `clockify_mcp_audit_events_total`. Persistence failures are always logged at `ERROR` level and increment `clockify_mcp_audit_failures_total` with `reason="persist_error"` and `phase` set to `intent`, `outcome`, or `single`; outcome durability alerts key on `clockify_mcp_audit_failures_total{reason="persist_error",phase="outcome"}`. In `fail_closed` mode (`MCP_AUDIT_DURABILITY=fail_closed`) an intent persistence failure causes the tool call to return an error before mutation; outcome persistence failure is logged and metered. In `fail_closed_strict`, outcome persistence failure is also returned to the client after the mutation completes. In `best_effort` mode (default) the tool call succeeds and audit failures are observable only through logs and metrics.
-- **Audit fidelity**: every tool descriptor carries a `RiskClass` bitmask (`Read | Write | Billing | Admin | PermissionChange | ExternalSideEffect | Destructive`) and an `AuditKeys []string` listing action-defining argument keys. The audit recorder consumes both: `RiskClass` is recorded on every event so downstream filters can isolate billing / admin / permission-change calls, and `AuditKeys` causes the recorder to capture the named arguments alongside the `*_id` fields (e.g. `role`, `status`, `quantity`, `unit_price` for permission/billing changes — not just the IDs that were touched). Closes the gap from audit Finding 8 where audit events recorded *what* was touched but not *what change* was applied.
-- **Transport hardening**: `ReadHeaderTimeout` (10s), `ReadTimeout` (30s), `WriteTimeout` (60s), `IdleTimeout` (120s) prevent resource exhaustion. Every MCP HTTP response carries `Strict-Transport-Security` when TLS or a trusted HTTPS proxy is active, plus `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, `Cross-Origin-Resource-Policy: same-origin`, `Referrer-Policy: no-referrer`, `Permissions-Policy: ()`, `X-Content-Type-Options: nosniff`, and `Cache-Control: no-store`.
-- **CORS**: cross-origin requests rejected by default. Explicit opt-in required via `MCP_ALLOWED_ORIGINS` (allowlist) or `MCP_ALLOW_ANY_ORIGIN=1`.
-- **DNS rebinding protection**: opt-in via `MCP_STRICT_HOST_CHECK=1` — when enabled, the Host header must match `localhost`, `127.0.0.1`, `::1`, or a host component of an allowed origin. Non-loopback hosts are rejected unless explicitly allowlisted; `0.0.0.0` is never accepted as a Host header.
-- **Config validation**: non-HTTPS `CLOCKIFY_BASE_URL` rejected unless loopback or explicitly opted in with `CLOCKIFY_INSECURE=1` (hosted profiles `shared-service` / `prod-postgres` refuse the override outright at startup — see TLS / HTTP Transport below). `CLOCKIFY_WORKSPACE_ID` is run through `resolve.ValidateID` at startup so path-traversal-shaped values (`/`, `?`, `#`, `%`, `..`, control bytes) fail config load instead of silently propagating into every `/workspaces/{id}/...` URL.
-- **Panic containment**: both the stdio dispatch goroutine and the HTTP handlers recover panics, emit a `panic_recovered` slog event with a bounded, path-sanitized stack, increment `clockify_mcp_panics_recovered_total{site}`, and return a tool-error envelope instead of crashing the process.
-- **PII-redacting logs**: the default slog handler is wrapped in `internal/logging.RedactingHandler`, which recursively masks 20+ well-known secret-key patterns (`authorization`, `api_key`, `bearer`, `token`, `cookie`, `client_secret`, `refresh_token`, …) and obvious secret-shaped string values before encoding.
-- **Hosted-profile error sanitisation**: tool-error responses on the `shared-service` and `prod-postgres` profiles omit upstream Clockify response bodies (`CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=1` is the profile default). A 4xx body from Clockify can carry per-tenant identifiers; without sanitisation those leak across tenant boundaries via the MCP wire. The full upstream `APIError` is still logged server-side via slog for operator debugging. Operator override: `CLOCKIFY_SANITIZE_UPSTREAM_ERRORS=0/1`.
-- **Webhook URL validation**: rejects non-HTTPS URLs, embedded credentials, localhost, and private/loopback/link-local/reserved IP literals. Hosted profiles (`shared-service`, `prod-postgres`) additionally resolve the host via DNS and reject any reply containing a private/reserved IP — closing the literal-IP-only gap (a hostname pointing at `169.254.169.254` would otherwise sail through the literal check). Operator override: `CLOCKIFY_WEBHOOK_VALIDATE_DNS=0/1`. Per-deployment escape hatch: `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS=<host>[,<host>...]` admits known-trusted hostnames (exact or leading-dot suffix) for split-horizon DNS environments.
-- **Path injection**: ID validation rejects path traversal characters (`/?#%`, `..`, control bytes).
-- **Policy modes**: five modes (`read_only`, `time_tracking_safe`, `safe_core`, `standard`, `full`) let operators disable destructive tools entirely or apply fine-grained deny/allow lists for both individual tools and Tier 2 groups.
-- **Dry-run**: three-strategy (confirm pattern, GET preview, minimal fallback) dry-run for every destructive operation; enabled by default. Non-destructive RW tools whose execution triggers an external side effect (`clockify_invoices_send`, `clockify_invoices_mark_paid`, `clockify_webhooks_test`, `clockify_users_deactivate`) also honour `dry_run:true` — the handler GETs a preview and returns it without issuing the PUT/POST, so agent flows can stage a confirmation step before billing or admin actions land.
-- **Name resolution**: ambiguous matches fail closed (no guessing).
-- **Stdout purity**: protocol responses only on stdout; every log goes to stderr via slog — never mixes with JSON-RPC frames in stdio mode.
-- **Tool annotations**: all 154 current catalog tools carry `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, and `title`. Spec-strict MCP clients get the correct safety hints on every descriptor.
-- **Response limits**: 10MB on Clockify API responses, 4MB default on HTTP request bodies (`MCP_MAX_MESSAGE_SIZE`, capped at 100MB).
-- **Zero external dependencies in the default binary** (stdlib only) — minimal supply chain attack surface. The root `go.mod` has zero `require` lines beyond the workspace pointer to the local `internal/tracing/otel` sub-module; the build-tagged sub-modules (`internal/transport/grpc`, `internal/controlplane/postgres`, `internal/tracing/otel`) live in their own `go.mod` files and only enter the build under `-tags=grpc`/`postgres`/`otel`. The root `go.sum` covers those sub-module deps for reproducibility but is irrelevant to the default-binary attack surface.
-- **Initialization guard**: `tools/call` rejected before `initialize` handshake (`-32002 server not initialized`).
+- API key exposure or leakage — in logs, error messages, or tool output
+- Command or path injection through tool inputs
+- Server-side request forgery (SSRF) through webhook URL parameters
+- Path traversal in workspace or entity ID handling
 
-## TLS / HTTP Transport
+Out of scope: anything that requires a second user, an inbound network
+listener, or a modified build — the server has none of those.
 
-By default the HTTP transport does **not** terminate TLS — production
-deployments using `static_bearer`, `oidc`, or `forward_auth` MUST front the
-server with a TLS-terminating reverse proxy (Caddy, nginx, Envoy, Traefik,
-or a cloud load balancer). Without a proxy, the bearer token and all
-request/response bodies travel in plain HTTP. See `deploy/Caddyfile`
-for a reference configuration that uses Caddy's automatic Let's Encrypt
-support.
+## Security Properties
 
-In-process TLS termination is supported on the `streamable_http` and `grpc`
-transports when explicit cert + key paths are set:
-
-- `streamable_http`: set `MCP_HTTP_TLS_CERT` + `MCP_HTTP_TLS_KEY` (and
-  `MCP_MTLS_CA_CERT_PATH` for `MCP_AUTH_MODE=mtls`). The legacy `http`
-  transport rejects `MCP_HTTP_TLS_CERT` at config load — terminate TLS
-  upstream and use `forward_auth`.
-- `grpc` (build-tag opt-in): set `MCP_GRPC_TLS_CERT` + `MCP_GRPC_TLS_KEY`
-  (and `MCP_MTLS_CA_CERT_PATH` for `MCP_AUTH_MODE=mtls`).
-
-mTLS-anchored deployments rely on this in-process termination — see
-[`docs/support-matrix.md`](docs/support-matrix.md) for the per-transport
-auth-mode matrix.
-
-`CLOCKIFY_INSECURE=1` only bypasses base-URL scheme validation when resolving
-`CLOCKIFY_BASE_URL`; it does not disable TLS certificate verification in the
-outbound Clockify client. Hosted profiles (`shared-service`,
-`prod-postgres`) refuse `CLOCKIFY_INSECURE=1` outright at startup —
-only `local-stdio` / `single-tenant-http` honour the override.
-
-## Verifying release artifacts
-
-Every release ships **15 binaries across five tag combinations**
-(see [`docs/release-policy.md`](docs/release-policy.md#release-artifacts)
-for the full enumeration and `scripts/check-release-assets.sh` for
-the canonical platform matrix):
-
-- 5 default (stdlib only): `darwin-arm64`, `darwin-x64`,
-  `linux-x64`, `linux-arm64`, `windows-x64.exe`.
-- 4 FIPS-tagged: `darwin/linux × arm64/x64` (Go's FIPS 140-3 module
-  has no Windows toolchain support).
-- 2 Postgres-tagged: `linux × arm64/x64`. Required by
-  `doctor --strict --check-backends` per the hosted-launch checklist.
-- 2 gRPC-tagged: `linux × arm64/x64`. Backs the
-  `private-network-grpc` profile.
-- 2 gRPC + Postgres: `linux × arm64/x64`. The hosted gRPC shape.
-
-Each binary ships with:
-
-- A sigstore bundle (`<binary>.sigstore.json`) produced by per-binary
-  keyless cosign signing.
-- A SPDX SBOM (`<binary>.spdx.json`).
-- A GitHub build provenance attestation (SLSA-aligned, stored in the
-  GitHub attestation service) when GitHub artifact attestations are
-  available for the repository account tier. On the current user-owned
-  private repository, ADR-0013 keeps SLSA best-effort and the mandatory
-  cryptographic gate is the cosign binary/image chain.
-
-`SHA256SUMS.txt` is shipped alongside as an unsigned manifest; it
-lets `sha256sum -c` cross-check downloads against goreleaser's staged
-hashes once a binary is independently verified via cosign.
-
-A multi-arch container image at `ghcr.io/apet97/go-clockify:v<version>`
-ships in parallel: Trivy-scanned (HIGH+CRITICAL blocking),
-cosign-signed, carries a SPDX SBOM attestation, and carries SLSA build
-provenance for the image digest when GitHub artifact attestations are
-available.
-
-Release binaries are built with `-trimpath` so they do not embed the
-builder's absolute paths.
-
-See [docs/verification.md](docs/verification.md) for step-by-step
-verification commands using `cosign verify-blob --bundle`,
-`cosign verify <image>`, and `gh attestation verify`.
-
-## Candidate-tag security evidence
-
-Per [`docs/launch-candidate-checklist.md`](docs/launch-candidate-checklist.md)
-Group 6 and the
-[`docs/runbooks/release-candidate-evidence.md`](docs/runbooks/release-candidate-evidence.md)
-runbook, every release-candidate tag carries a transcript of the local
-security walk-through executed against the candidate-tag tree. Each
-entry below is a fresh run on the tag's peeled commit, captured on a
-clean checkout; nothing here grants official-product status, closes
-Group 7 (release/sigstore/SLSA), the mutation cron evidence, or any
-external/legal/product gate.
-
-### v1.2.1-rc.3 (2026-05-10)
-
-- Tag: `v1.2.1-rc.3` (annotated tag SHA
-  `8f245174ca3567104a05a65a66250f0a10e5d486`, peeled commit
-  `ce56414ae012c4a49d21ae0a319b178619c5966a`).
-- Host: short name `192` (macOS arm64).
-- Date: 2026-05-10, evidence captured between 01:55 UTC and 01:59 UTC.
-- Working directory:
-  `/Users/15x/Downloads/WORKING/addons-me/GOCLMCP-worktrees/opus-group6-security-rc3-20260510`
-  (clean fresh worktree off the tag's peeled commit; no `.local/`,
-  `.serena/`, or duplicate `go-clockify/` checkouts).
-- Toolchain: host Go `go1.26.2 darwin/arm64`; pinned scanner toolchain
-  `GOTOOLCHAIN=go1.25.10` resolved from `go.mod`; `govulncheck@v1.3.0`
-  built from `tools/govulncheck`; `gitleaks 8.30.1`; `semgrep 1.157.0`;
-  `GNU Make 3.81`; `git 2.39.5`.
-
-| Command | Exit | Result |
-|---|---|---|
-| `make check` | 0 | `go vet ./...` plus `go test -race -count=1 -timeout 120s ./...` green across every package and test binary. |
-| `make verify-vuln` | 0 | `govulncheck@v1.3.0` under `GOTOOLCHAIN=go1.25.10` against the `vuln.go.dev` DB snapshot updated `2026-05-07 19:21:40 +0000 UTC` reported `No vulnerabilities found.` |
-| `make secret-scan` | 0 | `gitleaks detect --no-git --source . --redact --config .gitleaks.toml` scanned ~4.97 MB in 667 ms; `no leaks found`. |
-| `semgrep scan --config p/default --metrics=off --error --exclude .git --exclude .bench --exclude clockify-mcp .` | 0 | 558 rules executed across 1155 git-tracked files; `Findings: 0 (0 blocking)`. |
-| `git grep -n -C 5 nosemgrep -- ':!CHANGELOG.md'` | enumeration | Five in-source directives, each with inline justification within five lines: `tests/harness/grpc.go:71` (ADR 0008 — bufconn-only in-memory test transport) and `internal/mcp/transport_streamable_http.go:541,563,565,568` (ADR 0017 — server-controlled SSE `text/event-stream` framing). |
-| `make verify-fips` | 0 | `-tags=fips` (GOFIPS140=latest) built and emitted `INFO fips140_enabled` before every package test passed; `-tags=fips,grpc` build combination green. |
-
-This evidence closes the four candidate-tag-dependent boxes in the
-Group 6 row of the launch-candidate checklist
-(`make verify-vuln`, gitleaks, semgrep, `make verify-fips`) for
-`v1.2.1-rc.3`. It does **not** declare the repository launch-ready and
-does **not** close Group 7 release/sigstore/SLSA evidence, the
-mutation cron, the next-release npm expected-version proof, the
-paid-hosted external security review, the DPA / privacy / trademark
-gates (see [`NOTICE.md`](NOTICE.md) for the non-affiliation
-disclaimer and trademark-attribution boilerplate; the formal
-paid-tier policy review remains open), or issue #78 (19-context
-branch-protection restoration), all of which remain open.
+- **Credentials from the environment only.** `CLOCKIFY_API_KEY` is read from
+  the environment, never from a config file, and `doctor` reports it only as
+  `set (redacted)`.
+- **Redacted logs.** The logging handler masks well-known secret keys and
+  secret-shaped values before anything is written.
+- **Stdout stays clean.** Only JSON-RPC frames go to stdout; every log line
+  goes to stderr, so diagnostics never mix into the protocol stream.
+- **ID validation at startup.** `CLOCKIFY_WORKSPACE_ID` is validated when
+  configuration loads — path-traversal-shaped values (`/ ? # % ..`, control
+  bytes) fail fast instead of flowing into request URLs.
+- **Webhook URL validation.** Webhook tools reject non-HTTPS URLs, embedded
+  credentials, and hosts that resolve to localhost, private, reserved, or
+  link-local addresses. `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` is the explicit
+  allowlist escape hatch.
+- **Raw API writes are off by default.** `clockify_api_get` and
+  `clockify_api_request` stay scoped to the pinned workspace; raw `POST`,
+  `PUT`, `PATCH`, and `DELETE` require `CLOCKIFY_ENABLE_RAW_WRITES=true`.
+- **Panic containment.** The stdio dispatch loop recovers panics and returns a
+  tool-error envelope instead of crashing the process.
+- **Bounded results.** Tool results are capped (`CLOCKIFY_MAX_TOOL_RESULT_BYTES`,
+  default 50000); oversized exports spill to a temp file rather than inline.
+- **Minimal dependencies.** The binary is effectively standard-library only,
+  which keeps the supply-chain surface small.
