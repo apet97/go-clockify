@@ -15,7 +15,7 @@ import (
 
 func TestUserAdminHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descriptors, ok := tier2Handlers(svc, "user_admin")
+	descriptors, ok := domainHandlers(svc, "user_admin")
 	if !ok {
 		t.Fatal("user_admin group not found")
 	}
@@ -26,7 +26,7 @@ func TestUserAdminHandlersCount(t *testing.T) {
 
 func TestWebhookHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descriptors, ok := tier2Handlers(svc, "webhooks")
+	descriptors, ok := domainHandlers(svc, "webhooks")
 	if !ok {
 		t.Fatal("webhooks group not found")
 	}

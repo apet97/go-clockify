@@ -90,7 +90,7 @@ real entity; a useful recovery envelope is protocol/recovery evidence only.
 | MCP protocol | `internal/mcp/server.go` |
 | Workflow tools | `internal/tools/oneuser_workflows.go` |
 | Domain registry | `internal/tools/oneuser_domains.go` |
-| Native domain logic | `internal/tools/*_view.go`, `internal/tools/tier2_*.go` |
+| Native domain logic | `internal/tools/*_view.go`, domain files in `internal/tools/*.go` |
 | Resources / prompts | `internal/tools/oneuser_resources.go`, `oneuser_prompts.go` |
 | Clockify client | `internal/clockify/client.go` |
 | Fake server | `internal/testclockify/fake_server.go` |

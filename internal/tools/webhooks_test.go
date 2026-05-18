@@ -10,7 +10,7 @@ import (
 )
 
 // Note: webhook group registration is already covered by
-// TestWebhookHandlersCount in tier2_admin_test.go. This file pins the
+// TestWebhookHandlersCount in admin_test.go. This file pins the
 // list-webhooks shape (envelope unwrap) and the static webhook-events
 // enum which had no unit coverage.
 

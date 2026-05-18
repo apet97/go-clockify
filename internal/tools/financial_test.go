@@ -13,7 +13,7 @@ import (
 
 func TestInvoiceHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descs, ok := tier2Handlers(svc, "invoices")
+	descs, ok := domainHandlers(svc, "invoices")
 	if !ok {
 		t.Fatal("invoices group not registered")
 	}
@@ -51,7 +51,7 @@ func TestInvoiceHandlersCount(t *testing.T) {
 
 func TestExpenseHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descs, ok := tier2Handlers(svc, "expenses")
+	descs, ok := domainHandlers(svc, "expenses")
 	if !ok {
 		t.Fatal("expenses group not registered")
 	}
