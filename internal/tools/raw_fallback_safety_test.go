@@ -151,6 +151,34 @@ func TestRawAPIWriteDocumentedOnly(t *testing.T) {
 	}
 }
 
+// TestRawAPIWriteDocumentedOnlyAllowsByIDRoute pins that the documented-only
+// allowlist matches templated path parameters: a real DELETE targeting a
+// project by id matches DELETE /workspaces/{workspaceId}/projects/{projectId}.
+func TestRawAPIWriteDocumentedOnlyAllowsByIDRoute(t *testing.T) {
+	var called bool
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/projects/proj-1" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/projects/proj-1",
+	}); err != nil {
+		t.Fatalf("documented by-id raw write rejected: %v", err)
+	}
+	if !called {
+		t.Fatal("documented by-id raw write did not reach upstream")
+	}
+}
+
 func TestRawAPIWriteDocumentedOnlyRejectsUndocumented(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("undocumented raw write reached upstream: %s %s", r.Method, r.URL.Path)
