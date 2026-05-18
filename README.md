@@ -41,7 +41,10 @@ export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
 ```
 
 `doctor` validates your configuration and prints every resolved setting.
-`doctor --live` additionally proves the key and workspace against Clockify.
+`doctor --live` additionally proves the key and workspace against Clockify. It
+accepts an owner **or** admin key; if the key is not the workspace owner it
+prints a warning and lists the tool families that may be denied, but still
+reports OK.
 
 ### 4. Connect it to your MCP client
 
@@ -91,6 +94,10 @@ explicit escape hatch.
 
 `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID` are required. Everything else is
 optional:
+
+Most tools need a workspace **owner or admin** API key. A regular-member key can
+still read data and manage its own time entries, but admin, billing, and
+settings tools will return `feature_unavailable` or Clockify permission errors.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |

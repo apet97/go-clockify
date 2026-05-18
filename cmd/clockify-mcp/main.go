@@ -266,12 +266,18 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 	}
 	for _, ws := range ownerWorkspaces {
 		if ws.ID == cfg.WorkspaceID {
-			_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       OK\n")
+			_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       OK (owner)\n")
 			return 0
 		}
 	}
-	_, _ = fmt.Fprintf(stderr, "owner role check failed: configured workspace is not in /workspaces?roles=OWNER\n")
-	return 5
+	_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       WARN\n")
+	_, _ = fmt.Fprintf(stdout, "    note: this API key does not own the configured workspace.\n")
+	_, _ = fmt.Fprintf(stdout, "    The MCP works with an owner OR admin key; owner-only operations will fail.\n")
+	_, _ = fmt.Fprintf(stdout, "    Tool families that may be denied without owner/admin rights:\n")
+	_, _ = fmt.Fprintf(stdout, "      admin    - clockify_users_role, clockify_users_deactivate, clockify_users_invite, clockify_groups_*\n")
+	_, _ = fmt.Fprintf(stdout, "      billing  - clockify_invoices_*, clockify_expenses_* (workspace plan dependent)\n")
+	_, _ = fmt.Fprintf(stdout, "      settings - clockify_workspace_settings (write paths)\n")
+	return 0
 }
 
 func doctorFeatureSummary(features []string) string {
