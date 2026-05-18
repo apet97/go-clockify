@@ -2,50 +2,107 @@
 
 ![MCP Protocol](https://img.shields.io/badge/MCP-2025--11--25-blue)
 
-A local, single-user, full-access Clockify MCP server for one trusted user and
-one pinned Clockify workspace. It runs over stdio, uses one Clockify API key,
-loads every tool at startup, and returns predictable JSON envelopes.
+A local, single-user Model Context Protocol (MCP) server for Clockify. It runs
+on your machine over stdio, holds one Clockify API key, and exposes one
+Clockify workspace — time entries, projects, invoices, reports, scheduling, and
+more — as tools an AI client can call.
 
-## Product shape
+No account to create and no service to deploy: the binary runs as a subprocess
+of your MCP client.
 
-- One local user, one `CLOCKIFY_API_KEY`, one required `CLOCKIFY_WORKSPACE_ID`.
-- Stdio transport only; full access from startup.
-- Workflow tools first, domain tools second, raw API fallback last.
-- Every write returns IDs; recoverable errors include a recovery hint.
+## Start from zero
 
-## Quick start
+You need a Go toolchain ([go.dev/dl](https://go.dev/dl/)) and a Clockify
+account.
+
+### 1. Build the binary
 
 ```bash
 git clone https://github.com/apet97/go-clockify.git
 cd go-clockify
-
-export CLOCKIFY_API_KEY="..."
-export CLOCKIFY_WORKSPACE_ID="..."
-
-go run ./cmd/clockify-mcp doctor       # validate configuration
-go run ./cmd/clockify-mcp              # run the stdio MCP server
+go build -o clockify-mcp ./cmd/clockify-mcp
 ```
 
-`doctor --live` also proves the key, workspace, owner role, and feature plan
-against Clockify. For a compiled install, `go build -o ./bin/clockify-mcp
-./cmd/clockify-mcp` and point the MCP client at the binary. MCP clients launch
-the binary as a stdio subprocess with the environment above.
+That produces a `clockify-mcp` binary in the current directory.
 
-### Optional environment
+### 2. Get your Clockify credentials
 
-| Variable | Default |
-| --- | --- |
-| `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` |
-| `CLOCKIFY_TIMEZONE` | system local |
-| `CLOCKIFY_TOOLSET` | `all` |
-| `CLOCKIFY_TOOL_TIMEOUT` | `45s` |
-| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` |
-| `CLOCKIFY_ENABLE_RAW_WRITES` | `false` |
-| `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` | (none) |
-| `CLOCKIFY_CIRCUIT_BREAKER` | `enabled` |
-| `MCP_LOG_LEVEL` | `info` |
+- **API key** — open your Clockify profile settings and generate a key in the
+  API section.
+- **Workspace ID** — the identifier that appears after `/workspaces/` in your
+  Clockify workspace URL.
 
-`go run ./cmd/clockify-mcp doctor` prints every resolved setting.
+### 3. Check the setup
+
+```bash
+export CLOCKIFY_API_KEY="your-api-key"
+export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
+./clockify-mcp doctor
+```
+
+`doctor` validates your configuration and prints every resolved setting.
+`doctor --live` additionally proves the key and workspace against Clockify.
+
+### 4. Connect it to your MCP client
+
+Point your MCP client at the binary. For a Claude `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "clockify": {
+      "command": "/absolute/path/to/clockify-mcp",
+      "env": {
+        "CLOCKIFY_API_KEY": "your-api-key",
+        "CLOCKIFY_WORKSPACE_ID": "your-workspace-id"
+      }
+    }
+  }
+}
+```
+
+The client launches `clockify-mcp` as a stdio subprocess. That is the whole
+setup — start with the `clockify_status` tool and go from there.
+
+## Tools
+
+`clockify-mcp` loads the full 156-tool startup registry in a fixed order:
+
+1. **Workflow tools** — high-level actions like start and stop work, log time,
+   review a day, or invoice a client. Reach for these first.
+2. **Domain tools** — direct create / read / update / delete for clients,
+   projects, tasks, time entries, reports, invoices, expenses, time off,
+   scheduling, and more.
+3. **Raw API fallback** — for the rare endpoint with no dedicated tool.
+
+The complete generated list is in
+[docs/tool-catalog.md](docs/tool-catalog.md), and
+[docs/agent-cookbook.md](docs/agent-cookbook.md) shows worked examples.
+
+### Raw API fallback
+
+`clockify_api_get` and `clockify_api_request` reach Clockify endpoints that
+have no dedicated tool, scoped to your pinned workspace. Raw `GET` always
+works; raw `POST`, `PUT`, `PATCH`, and `DELETE` require
+`CLOCKIFY_ENABLE_RAW_WRITES=true`. Prefer the domain tools — raw writes are an
+explicit escape hatch.
+
+## Configuration
+
+`CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID` are required. Everything else is
+optional:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL |
+| `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
+| `CLOCKIFY_TOOLSET` | `all` | Tool surface: `core`, `business`, `admin`, or `all` |
+| `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` |
+| `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout |
+| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation |
+| `MCP_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+
+Run `clockify-mcp doctor` to see every resolved value.
 
 ## Compatibility
 
@@ -55,83 +112,16 @@ the binary as a stdio subprocess with the environment above.
 | Transport | stdio |
 | Clockify scope | one pinned workspace |
 
-## Tools
-
-`CLOCKIFY_TOOLSET=all` (the default) preserves the 156-tool startup registry.
-Narrower surfaces — `core`, `business`, `admin` — filter that registry without
-changing the product model. `docs/tool-catalog.md` is the authoritative,
-generated tool list and order.
-
-Start with `clockify_status`, then use IDs returned by earlier calls. Workflow
-tools come first in `tools/list` and carry `category`, `priority`, `bestFor`,
-and related annotations so an agent picks the high-level path before CRUD.
-
-Workflow tools: `clockify_status`, `clockify_tools_guide`,
-`clockify_create_work_package`, `clockify_log_work`, `clockify_start_work`,
-`clockify_stop_work`, `clockify_switch_work`, `clockify_review_day`,
-`clockify_review_week`, `clockify_fix_entry`, `clockify_invoice_client_work`,
-`clockify_record_expense`, `clockify_request_time_off`, `clockify_schedule_work`,
-`clockify_setup_webhook`, `clockify_demo_seed`, `clockify_demo_cleanup`.
-
-Domain tools cover clients, projects, tasks, tags, time entries, reports,
-invoices, expenses, custom fields, time off, scheduling, approvals, webhooks,
-groups, holidays, and users/workspace. Some expose a deliberately simplified
-owner-friendly body; per-tool omissions are recorded in
-`docs/api-parity-matrix.md`.
-
-Raw API fallback — `clockify_api_get` and `clockify_api_request` — is
-pinned-workspace scoped. Raw `GET` is always available; raw `POST`, `PUT`,
-`PATCH`, and `DELETE` require `CLOCKIFY_ENABLE_RAW_WRITES=true`. Prefer domain
-tools; raw writes are an explicit, high-risk escape hatch.
-
-Webhook tools require HTTPS, reject embedded credentials, and validate DNS so
-hostnames resolving to localhost, private, reserved, or link-local IPs are
-blocked. `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` is the escape hatch for trusted
-test domains.
-
-## Result envelope
-
-Success:
-
-```json
-{ "ok": true, "action": "clockify_projects_create", "entity": "project",
-  "ids": {}, "data": {}, "meta": {},
-  "changed": { "created": [], "updated": [], "deleted": [], "reused": [] },
-  "warnings": [], "next": [] }
-```
-
-Recoverable failure:
-
-```json
-{ "ok": false, "action": "clockify_projects_create",
-  "error": { "code": "invalid_request", "message": "name is required" },
-  "recovery": { "hint": "List projects, then retry with returned IDs.",
-                "tool": "clockify_projects_list" } }
-```
-
-## Prompts and resources
-
-`prompts/list` exposes action-oriented prompts (demo, setup, log-week,
-invoicing, time off, scheduling, webhooks). `resources/list` exposes one-user
-workspace context under `clockify://` URIs (status, workspace, user, features,
-tools, workflows, recent data).
-
 ## Tests
 
 ```bash
-go test ./...        # full suite against a stateful fake Clockify server
-make check           # race-enabled gate plus repo hygiene
+go test ./...     # full suite against an in-memory fake Clockify server
+make check        # adds the race detector and repo hygiene checks
 ```
 
-Live tests are opt-in and must point at a sacrificial Clockify workspace:
+Live tests run against real Clockify, are opt-in, and must target a sacrificial
+workspace — see [docs/live-tests.md](docs/live-tests.md).
 
-```bash
-export CLOCKIFY_API_KEY="..." CLOCKIFY_WORKSPACE_ID="..." CLOCKIFY_RUN_LIVE_E2E=1
-go test -tags=livee2e -count=1 -timeout 5m ./tests/...
-```
+## License
 
-## Implementation goal
-
-The spec lives at
-[`docs/goals/perfect-one-user-full-mcp.md`](docs/goals/perfect-one-user-full-mcp.md):
-keep the product local, single-user, full-access, and stdio-only.
+[MIT](LICENSE).
