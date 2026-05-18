@@ -1325,12 +1325,14 @@ func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) 
 		"TestOneUserLiveWorkflow":                    {"CLOCKIFY_RUN_LIVE_E2E"},
 		"TestOneUserLivePaidFeatureWorkflowRecovery": {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS"},
 		"TestOneUserLiveOptionalDomainContracts":     {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS"},
+		"TestLiveOneUserPaidFeatureHappyPaths":       {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 		"TestOneUserLiveRemainingCoverageProbes":     {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 	}
 	knownGates := setOf(
 		"CLOCKIFY_RUN_LIVE_E2E",
 		"CLOCKIFY_LIVE_OPTIONAL_DOMAINS",
 		"CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS",
+		"CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS",
 		"CLOCKIFY_LIVE_WORKSPACE_CONFIRM",
 		"CLOCKIFY_LIVE_ADMIN_ENABLED",
 		"CLOCKIFY_LIVE_BILLING_ENABLED",
@@ -1377,6 +1379,50 @@ func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) 
 	for tool := range evidence {
 		if !seen[tool] {
 			t.Fatalf("%s has named live evidence but is not marked live protocol/recovery tested yes", tool)
+		}
+	}
+
+	happyEvidence := oneUserNamedLiveHappyPathEvidence()
+	seenHappy := map[string]bool{}
+	for _, row := range ledger.Rows {
+		item, ok := happyEvidence[row.Tool]
+		if row.LiveHappyPath != "yes" {
+			if ok {
+				t.Fatalf("%s has named live happy-path evidence but ledger live happy-path tested=%s", row.Tool, row.LiveHappyPath)
+			}
+			continue
+		}
+		if !ok {
+			t.Fatalf("%s is live happy-path tested yes but lacks named happy-path evidence", row.Tool)
+		}
+		if item.Test == "" {
+			t.Fatalf("%s live happy-path evidence is missing a test name", row.Tool)
+		}
+		if !testFunctions[item.Test] {
+			t.Fatalf("%s references live happy-path evidence test %q, but no matching test function exists", row.Tool, item.Test)
+		}
+		if len(item.Gates) == 0 {
+			t.Fatalf("%s live happy-path evidence %s is missing live gates", row.Tool, item.Test)
+		}
+		required, ok := requiredGates[item.Test]
+		if !ok {
+			t.Fatalf("%s references unknown live happy-path evidence test %q", row.Tool, item.Test)
+		}
+		for _, gate := range item.Gates {
+			if !knownGates[gate] {
+				t.Fatalf("%s happy-path evidence uses unknown gate %s", row.Tool, gate)
+			}
+		}
+		for _, gate := range required {
+			if !containsString(item.Gates, gate) {
+				t.Fatalf("%s happy-path evidence %s missing required gate %s", row.Tool, item.Test, gate)
+			}
+		}
+		seenHappy[row.Tool] = true
+	}
+	for tool := range happyEvidence {
+		if !seenHappy[tool] {
+			t.Fatalf("%s has named live happy-path evidence but is not marked live happy-path tested yes", tool)
 		}
 	}
 }
