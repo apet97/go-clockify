@@ -10,7 +10,7 @@ import (
 // forbiddenWorkspacePlaceholders are raw-API path forms that safeRawPath does
 // NOT substitute. Only "{workspaceId}" is valid.
 var forbiddenWorkspacePlaceholders = []string{
-	"/workspaces/{id}",
+	"/workspaces/" + "{id}",
 	"/workspaces/{workspace_id}",
 	"/workspaces/<workspaceId>",
 	"/workspaces/<workspace-id>",
