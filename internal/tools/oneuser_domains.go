@@ -328,7 +328,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "task", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.DeleteTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),
-		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount"}, "properties": map[string]any{
+		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount", "project", "task"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string"},
 			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
@@ -534,10 +534,10 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
-		"required": []string{"policy_id"},
+		"required": []string{"policy_id", "archived"},
 		"properties": map[string]any{
 			"policy_id": map[string]any{"type": "string", "description": "Time-off policy ID"},
-			"archived":  map[string]any{"type": "boolean", "description": "Default: true. Omit or pass true to archive the policy; pass false to reactivate it."},
+			"archived":  map[string]any{"type": "boolean", "description": "Required. Pass true to archive the policy; pass false to reactivate it."},
 		},
 	})), "time_off", "updated", s.archiveTimeOffPolicy))
 	out = append(out, s.explicitPostTimeOffNativeDescriptors()...)

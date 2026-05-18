@@ -144,6 +144,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 			},
 		})), s.ProjectsCreate),
 		firstSliceDescriptor(40, toolRO("clockify_tasks_list", "List tasks for a project.", paginationSchema(map[string]any{
+			"required": []string{"project"},
 			"properties": map[string]any{
 				"project_id":         map[string]any{"type": "string"},
 				"project":            map[string]any{"type": "string", "description": "Project name or ID."},
@@ -155,7 +156,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 			},
 		})), s.TasksList),
 		firstSliceDescriptor(41, toolRW("clockify_tasks_create", "Create a task under a project.", objectSchema(map[string]any{
-			"required": []string{"name"},
+			"required": []string{"name", "project"},
 			"properties": map[string]any{
 				"project_id":        map[string]any{"type": "string"},
 				"project":           map[string]any{"type": "string", "description": "Project name or ID."},

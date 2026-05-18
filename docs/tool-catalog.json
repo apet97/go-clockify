@@ -5463,11 +5463,11 @@
         "additionalProperties": false,
         "properties": {
           "client": {
-            "description": "Client name or ID (this or client_id is required).",
+            "description": "Client name or ID. Required.",
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID (this or client is required).",
+            "description": "Optional ID-only alias for client; prefer client, which already accepts an ID.",
             "type": "string"
           },
           "currency": {
@@ -5513,7 +5513,8 @@
           }
         },
         "required": [
-          "currency"
+          "currency",
+          "client"
         ],
         "type": "object"
       },
@@ -6383,11 +6384,11 @@
             "type": "string"
           },
           "project": {
-            "description": "Project name or ID. Provide either project or project_id (one is required).",
+            "description": "Project name or ID. Required.",
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID. Provide either project or project_id (one is required).",
+            "description": "Optional ID-only alias for project; prefer project, which already accepts an ID.",
             "type": "string"
           },
           "repeat": {
@@ -6404,11 +6405,11 @@
             "type": "string"
           },
           "user": {
-            "description": "User name, email, or ID. Provide either user or user_id (one is required).",
+            "description": "User name, email, or ID. Required.",
             "type": "string"
           },
           "user_id": {
-            "description": "User ID. Provide either user or user_id (one is required).",
+            "description": "Optional ID-only alias for user; prefer user, which already accepts an ID.",
             "type": "string"
           },
           "weeks": {
@@ -6421,7 +6422,9 @@
         "required": [
           "start",
           "end",
-          "hours_per_day"
+          "hours_per_day",
+          "user",
+          "project"
         ],
         "type": "object"
       },
@@ -6680,7 +6683,7 @@
             "type": "boolean"
           },
           "event": {
-            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Alias for webhook_event; provide either event or webhook_event (one is required).",
+            "description": "Optional alias for webhook_event.",
             "type": "string"
           },
           "name": {
@@ -6701,13 +6704,14 @@
             "type": "string"
           },
           "webhook_event": {
-            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Provide either webhook_event or event (one is required).",
+            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Required.",
             "type": "string"
           }
         },
         "required": [
           "name",
-          "url"
+          "url",
+          "webhook_event"
         ],
         "type": "object"
       },
@@ -9090,6 +9094,9 @@
             "type": "boolean"
           }
         },
+        "required": [
+          "project"
+        ],
         "type": "object"
       },
       "output_schema": {
@@ -9451,7 +9458,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "project"
         ],
         "type": "object"
       },
@@ -18804,7 +18812,9 @@
         },
         "required": [
           "rate_kind",
-          "amount"
+          "amount",
+          "project",
+          "task"
         ],
         "type": "object"
       },
@@ -46600,7 +46610,7 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
-            "description": "Default: true. Omit or pass true to archive the policy; pass false to reactivate it.",
+            "description": "Required. Pass true to archive the policy; pass false to reactivate it.",
             "type": "boolean"
           },
           "policy_id": {
@@ -46609,7 +46619,8 @@
           }
         },
         "required": [
-          "policy_id"
+          "policy_id",
+          "archived"
         ],
         "type": "object"
       },

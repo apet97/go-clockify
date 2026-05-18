@@ -866,10 +866,10 @@ func fixEntrySchema() map[string]any {
 
 func invoiceClientWorkSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"required": []string{"currency"},
+		"required": []string{"currency", "client"},
 		"properties": map[string]any{
-			"client":                map[string]any{"type": "string", "description": "Client name or ID (this or client_id is required)."},
-			"client_id":             map[string]any{"type": "string", "description": "Client ID (this or client is required)."},
+			"client":                map[string]any{"type": "string", "description": "Client name or ID. Required."},
+			"client_id":             map[string]any{"type": "string", "description": "Optional ID-only alias for client; prefer client, which already accepts an ID."},
 			"number":                map[string]any{"type": "string"},
 			"issued_date":           map[string]any{"type": "string", "description": "Invoice issued date (YYYY-MM-DD or RFC3339). Defaults to today."},
 			"due_date":              map[string]any{"type": "string", "description": "Invoice due date (YYYY-MM-DD or RFC3339). Defaults to 14 days out."},
@@ -911,11 +911,11 @@ func requestTimeOffSchema() map[string]any {
 }
 
 func scheduleWorkSchema() map[string]any {
-	return objectSchema(map[string]any{"required": []string{"start", "end", "hours_per_day"}, "properties": map[string]any{
-		"user":                     map[string]any{"type": "string", "description": "User name, email, or ID. Provide either user or user_id (one is required)."},
-		"user_id":                  map[string]any{"type": "string", "description": "User ID. Provide either user or user_id (one is required)."},
-		"project":                  map[string]any{"type": "string", "description": "Project name or ID. Provide either project or project_id (one is required)."},
-		"project_id":               map[string]any{"type": "string", "description": "Project ID. Provide either project or project_id (one is required)."},
+	return objectSchema(map[string]any{"required": []string{"start", "end", "hours_per_day", "user", "project"}, "properties": map[string]any{
+		"user":                     map[string]any{"type": "string", "description": "User name, email, or ID. Required."},
+		"user_id":                  map[string]any{"type": "string", "description": "Optional ID-only alias for user; prefer user, which already accepts an ID."},
+		"project":                  map[string]any{"type": "string", "description": "Project name or ID. Required."},
+		"project_id":               map[string]any{"type": "string", "description": "Optional ID-only alias for project; prefer project, which already accepts an ID."},
 		"start":                    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"end":                      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		"hours_per_day":            map[string]any{"type": "number", "minimum": 0.5, "maximum": 24, "description": "Work hours per day (0.5-24)."},
@@ -930,11 +930,11 @@ func scheduleWorkSchema() map[string]any {
 }
 
 func setupWebhookSchema() map[string]any {
-	return objectSchema(map[string]any{"required": []string{"name", "url"}, "properties": map[string]any{
+	return objectSchema(map[string]any{"required": []string{"name", "url", "webhook_event"}, "properties": map[string]any{
 		"name":                map[string]any{"type": "string"},
 		"url":                 map[string]any{"type": "string"},
-		"event":               map[string]any{"type": "string", "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Alias for webhook_event; provide either event or webhook_event (one is required)."},
-		"webhook_event":       map[string]any{"type": "string", "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Provide either webhook_event or event (one is required)."},
+		"event":               map[string]any{"type": "string", "description": "Optional alias for webhook_event."},
+		"webhook_event":       map[string]any{"type": "string", "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Required."},
 		"trigger_source_type": map[string]any{"type": "string"},
 		"trigger_source":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 		"dry_run":             map[string]any{"type": "boolean"},
