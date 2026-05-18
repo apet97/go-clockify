@@ -414,3 +414,121 @@ func TestRunWithContextClassifiesConfigError(t *testing.T) {
 		t.Fatalf("config-load failure not classified as *startupConfigError: %T %v", err, err)
 	}
 }
+
+func TestRunDoctorLiveRoleVerdicts(t *testing.T) {
+	const wsID = "65b382b606de527a7ee2b60e"
+	cases := []struct {
+		name     string
+		handler  http.HandlerFunc
+		wantCode int
+		wantText string
+	}{
+		{
+			name: "owner",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user":
+					respondDoctorJSON(t, w, map[string]any{"id": "u1"})
+				case r.URL.Path == "/workspaces/"+wsID:
+					respondDoctorJSON(t, w, map[string]any{"id": wsID, "name": "Pinned"})
+				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
+					respondDoctorJSON(t, w, []map[string]any{{"id": wsID}})
+				default:
+					http.NotFound(w, r)
+				}
+			},
+			wantCode: 0,
+			wantText: "OK (owner)",
+		},
+		{
+			name: "workspace_admin",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user":
+					respondDoctorJSON(t, w, map[string]any{"id": "u1"})
+				case r.URL.Path == "/workspaces/"+wsID:
+					respondDoctorJSON(t, w, map[string]any{"id": wsID, "name": "Pinned"})
+				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
+					respondDoctorJSON(t, w, []map[string]any{})
+				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "ADMIN":
+					respondDoctorJSON(t, w, []map[string]any{{"id": wsID}})
+				default:
+					http.NotFound(w, r)
+				}
+			},
+			wantCode: 0,
+			wantText: "OK (workspace_admin)",
+		},
+		{
+			name: "member_or_unknown",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user":
+					respondDoctorJSON(t, w, map[string]any{"id": "u1"})
+				case r.URL.Path == "/workspaces/"+wsID:
+					respondDoctorJSON(t, w, map[string]any{"id": wsID, "name": "Pinned"})
+				case r.URL.Path == "/workspaces":
+					respondDoctorJSON(t, w, []map[string]any{})
+				default:
+					http.NotFound(w, r)
+				}
+			},
+			wantCode: 0,
+			wantText: "OK with warning (member_or_unknown)",
+		},
+		{
+			name: "auth_failure",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+			},
+			wantCode: 3,
+		},
+		{
+			name: "workspace_failure",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/user" {
+					respondDoctorJSON(t, w, map[string]any{"id": "u1"})
+					return
+				}
+				http.NotFound(w, r)
+			},
+			wantCode: 4,
+		},
+		{
+			name: "owner_probe_server_error",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/user":
+					respondDoctorJSON(t, w, map[string]any{"id": "u1"})
+				case r.URL.Path == "/workspaces/"+wsID:
+					respondDoctorJSON(t, w, map[string]any{"id": wsID, "name": "Pinned"})
+				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
+					http.Error(w, "boom", http.StatusInternalServerError)
+				default:
+					http.NotFound(w, r)
+				}
+			},
+			wantCode: 5,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			upstream := httptest.NewServer(tc.handler)
+			defer upstream.Close()
+			t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
+			t.Setenv("CLOCKIFY_WORKSPACE_ID", wsID)
+			t.Setenv("CLOCKIFY_BASE_URL", upstream.URL)
+			var stdout, stderr bytes.Buffer
+			code := runDoctor([]string{"--live"}, &stdout, &stderr)
+			if code != tc.wantCode {
+				t.Fatalf("exit code = %d, want %d\nstdout=%s\nstderr=%s", code, tc.wantCode, stdout.String(), stderr.String())
+			}
+			if tc.wantText != "" && !strings.Contains(stdout.String(), tc.wantText) {
+				t.Fatalf("stdout missing %q:\n%s", tc.wantText, stdout.String())
+			}
+			if strings.Contains(stdout.String(), "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") {
+				t.Fatal("doctor leaked the API key")
+			}
+		})
+	}
+}
