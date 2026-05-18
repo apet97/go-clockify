@@ -42,7 +42,7 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 2. Get approval request (RO)
-		{Tool: withOutputSchema(toolRO("clockify_get_approval_request", "Get a single approval request by ID by scanning the documented approval-requests list endpoint", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_get_approval_request", "Get a single approval request by ID by scanning the documented approval-requests list endpoint page by page.", map[string]any{
 			"type":     "object",
 			"required": []string{"approval_id"},
 			"properties": map[string]any{

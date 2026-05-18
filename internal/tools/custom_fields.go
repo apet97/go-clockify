@@ -49,7 +49,7 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 		// 2. Get custom field by ID
 		{
 			Tool: toolRO("clockify_get_custom_field",
-				"Get a custom field by ID",
+				"Get a custom field definition by ID from the pinned workspace.",
 				requiredSchema("field_id")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {

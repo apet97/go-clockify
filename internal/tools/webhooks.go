@@ -22,7 +22,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List webhooks (RO)
 		{
-			Tool: toolRO("clockify_list_webhooks", "List webhooks in the workspace", map[string]any{
+			Tool: toolRO("clockify_list_webhooks", "List webhooks in the workspace, paginated via page and page_size.", map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
@@ -36,7 +36,7 @@ func webhookHandlers(s *Service) []mcp.ToolDescriptor {
 		},
 		// 2. Get webhook (RO)
 		{
-			Tool: toolRO("clockify_get_webhook", "Get a webhook by ID", map[string]any{
+			Tool: toolRO("clockify_get_webhook", "Get a webhook by ID from the pinned workspace.", map[string]any{
 				"type":     "object",
 				"required": []string{"webhook_id"},
 				"properties": map[string]any{

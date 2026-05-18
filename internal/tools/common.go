@@ -424,7 +424,6 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		if in[i].Tool.Title == "" {
 			in[i].Tool.Title = titleFor(in[i].Tool.Name)
 		}
-		in[i].Tool.Description = polishToolDescription(in[i].Tool.Name, in[i].Tool.Description, in[i].Tool.InputSchema)
 		if value, ok := in[i].Tool.Annotations["readOnlyHint"].(bool); ok {
 			in[i].ReadOnlyHint = value
 		}
@@ -441,31 +440,6 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		applyAgentToolMetadata(&in[i])
 	}
 	return in
-}
-
-func polishToolDescription(name, desc string, schema map[string]any) string {
-	desc = strings.TrimSpace(desc)
-	lower := strings.ToLower(desc)
-	if len(desc) < 25 {
-		desc = strings.TrimRight(desc, ".") + " in the pinned workspace."
-		lower = strings.ToLower(desc)
-	}
-	if (strings.Contains(name, "_list") || toolSchemaHasProperty(schema, "page") || toolSchemaHasProperty(schema, "page_size")) &&
-		!strings.Contains(lower, "page") && !strings.Contains(lower, "pagination") {
-		desc = strings.TrimRight(desc, ".") + " with pagination."
-		lower = strings.ToLower(desc)
-	}
-	if (strings.HasPrefix(name, "clockify_reports_") || strings.Contains(name, "_export")) &&
-		!strings.Contains(lower, "size") && !strings.Contains(lower, "truncat") && !strings.Contains(lower, "file") {
-		desc = strings.TrimRight(desc, ".") + "; large responses use truncation or file envelopes."
-	}
-	return desc
-}
-
-func toolSchemaHasProperty(schema map[string]any, field string) bool {
-	props, _ := schema["properties"].(map[string]any)
-	_, ok := props[field]
-	return ok
 }
 
 func defaultToolCategory(name string) string {

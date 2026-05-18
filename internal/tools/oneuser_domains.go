@@ -219,25 +219,25 @@ func (s *Service) timerAndReportDescriptors() []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, 0, 8)
 	out = append(out,
 		firstSliceDescriptor(66, toolRO("clockify_entries_running", "Return the current running timer, if any.", objectSchema(nil)), s.EntriesRunning),
-		firstSliceDescriptor(67, toolRW("clockify_entries_timer_start", "Start a timer.", objectSchema(map[string]any{"properties": map[string]any{
+		firstSliceDescriptor(67, toolRW("clockify_entries_timer_start", "Start a running time-entry timer for the current user.", objectSchema(map[string]any{"properties": map[string]any{
 			"project_id":  map[string]any{"type": "string"},
 			"project":     map[string]any{"type": "string"},
 			"description": map[string]any{"type": "string"},
 			"billable":    map[string]any{"type": "boolean", "description": "Override the project's billable default. Omit to inherit the project setting."},
 		}})), s.EntriesTimerStart),
-		firstSliceDescriptor(68, toolRWIdem("clockify_entries_timer_stop", "Stop the current timer.", objectSchema(map[string]any{"properties": map[string]any{
+		firstSliceDescriptor(68, toolRWIdem("clockify_entries_timer_stop", "Stop the current user's running time-entry timer.", objectSchema(map[string]any{"properties": map[string]any{
 			"end": map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 		}})), s.EntriesTimerStop),
-		firstSliceDescriptor(69, toolRO("clockify_entries_timer_status", "Show timer status.", objectSchema(nil)), s.EntriesTimerStatus),
+		firstSliceDescriptor(69, toolRO("clockify_entries_timer_status", "Show whether the current user has a running timer.", objectSchema(nil)), s.EntriesTimerStatus),
 		firstSliceDescriptor(70, toolRW("clockify_entries_timer_switch", "Switch the running timer to another project.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
 			"project":     map[string]any{"type": "string"},
 			"description": map[string]any{"type": "string"},
 			"task_id":     map[string]any{"type": "string"},
 			"billable":    map[string]any{"type": "boolean"},
 		}})), s.EntriesTimerSwitch),
-		firstSliceDescriptor(104, toolRO("clockify_reports_detailed", "Run the local detailed time report helper.", reportHelperSchema()), aliasHandler("clockify_reports_detailed", "report", "", s.DetailedReport)),
-		firstSliceDescriptor(105, toolRO("clockify_reports_summary", "Run the local summary report helper.", reportHelperSchema()), aliasHandler("clockify_reports_summary", "report", "", s.SummaryReport)),
-		firstSliceDescriptor(106, toolRO("clockify_reports_weekly", "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end.", reportHelperSchema()), aliasHandler("clockify_reports_weekly", "report", "", s.WeeklySummary)),
+		firstSliceDescriptor(104, toolRO("clockify_reports_detailed", "Run the local detailed time report helper. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_detailed", "report", "", s.DetailedReport)),
+		firstSliceDescriptor(105, toolRO("clockify_reports_summary", "Run the local summary report helper. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_summary", "report", "", s.SummaryReport)),
+		firstSliceDescriptor(106, toolRO("clockify_reports_weekly", "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_weekly", "report", "", s.WeeklySummary)),
 	)
 	return out
 }
@@ -418,7 +418,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"dry_run":  map[string]any{"type": "boolean"},
 		}})), "entry", "deleted", s.DeleteEntry),
 
-		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace.", userListSchema()), "user", "", s.ListUsers),
+		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace, paginated via page and page_size.", userListSchema()), "user", "", s.ListUsers),
 		nativeDomainTool(1101, toolRO("clockify_users_profile", "Get the current Clockify user.", objectSchema(nil)), "user", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
 			return s.CurrentUser(ctx)
 		}),
@@ -551,15 +551,15 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 
 func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	out := []mcp.ToolDescriptor{
-		nativeDomainTool(39, toolRO("clockify_projects_memberships_list", "List project memberships from the hydrated project record.", objectSchema(map[string]any{
+		nativeDomainTool(39, toolRO("clockify_projects_memberships_list", "List project memberships read from the hydrated project record; the full membership set is returned on a single page.", objectSchema(map[string]any{
 			"required":   []string{"project_id"},
 			"properties": map[string]any{"project_id": map[string]any{"type": "string", "description": "Project ID"}},
 		})), "membership", "", s.ListProjectMemberships),
 	}
 	out = append(out,
-		nativeDomainTool(100, toolRO("clockify_reports_attendance", "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.AttendanceReport),
-		nativeDomainTool(101, toolRO("clockify_reports_money", "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals.", reportInputSchema()), "report", "", s.MoneyReport),
-		nativeDomainTool(102, toolRO("clockify_reports_expense", "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency.", reportInputSchema()), "report", "", s.ExpenseReport),
+		nativeDomainTool(100, toolRO("clockify_reports_attendance", "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. Large results truncate to the size cap.", reportInputSchema()), "report", "", s.AttendanceReport),
+		nativeDomainTool(101, toolRO("clockify_reports_money", "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals. Large results truncate to the size cap.", reportInputSchema()), "report", "", s.MoneyReport),
+		nativeDomainTool(102, toolRO("clockify_reports_expense", "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. Large results truncate to the size cap.", reportInputSchema()), "report", "", s.ExpenseReport),
 		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.", reportInputSchema()), "report", "", s.DetailedReport),
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
@@ -606,7 +606,7 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 				"time_entry_primary_group_by": map[string]any{"type": "string", "enum": []string{"USER", "PROJECT", "DATE"}, "description": "Primary grouping dimension. Required when time_entry_group_type is GROUPED."},
 			},
 		})), "invoice_item", "updated", s.importInvoiceExpensesOneUser),
-		nativeDomainTool(213, toolRO("clockify_invoices_payments_list", "List invoice payments.", objectSchema(map[string]any{
+		nativeDomainTool(213, toolRO("clockify_invoices_payments_list", "List the payments recorded against an invoice, paginated via page and page_size.", objectSchema(map[string]any{
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{
 				"invoice_id": map[string]any{"type": "string", "description": "Invoice ID"},
@@ -663,11 +663,11 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 				"note":         map[string]any{"type": "string", "description": "Optional resubmission note"},
 			},
 		})), "approval", "updated", s.resubmitApprovalOneUser),
-		nativeDomainTool(1001, toolRO("clockify_holidays_get", "Get one holiday.", objectSchema(map[string]any{
+		nativeDomainTool(1001, toolRO("clockify_holidays_get", "Get one holiday by ID from the pinned workspace.", objectSchema(map[string]any{
 			"required":   []string{"holiday_id"},
 			"properties": map[string]any{"holiday_id": map[string]any{"type": "string"}},
 		})), "holiday", "", s.GetHoliday),
-		nativeDomainTool(1002, toolRWIdem("clockify_holidays_update", "Update a holiday.", objectSchema(map[string]any{
+		nativeDomainTool(1002, toolRWIdem("clockify_holidays_update", "Update a holiday by ID; unspecified fields merge from the existing record.", objectSchema(map[string]any{
 			"required": []string{"holiday_id"},
 			"properties": map[string]any{
 				"holiday_id":      map[string]any{"type": "string", "description": "Holiday ID"},
@@ -736,7 +736,7 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 		}
 	}
 	add([]mcp.ToolDescriptor{
-		{Tool: toolRO("clockify_users_list", "List users in the pinned workspace.", userListSchema()), Handler: func(ctx context.Context, args map[string]any) (any, error) {
+		{Tool: toolRO("clockify_users_list", "List users in the pinned workspace, paginated via page and page_size.", userListSchema()), Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return s.ListUsers(ctx, args)
 		}},
 		{Tool: toolRO("clockify_users_profile", "Get the current Clockify user.", map[string]any{"type": "object"}), Handler: func(ctx context.Context, _ map[string]any) (any, error) {
