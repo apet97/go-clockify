@@ -6,12 +6,16 @@
 # source bundle includes a mix of valid OpenAPI YAML, pasted Markdown API docs,
 # live probe findings, and QA reports.
 
+require "date"
 require "digest"
 require "fileutils"
 require "json"
 require "optparse"
 require "set"
 require "yaml"
+
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
 
 METHODS = %w[get post put patch delete options head trace].freeze
 METHOD_ORDER = {
@@ -111,7 +115,7 @@ def yaml_files(dir)
 end
 
 def load_yaml_file(path)
-  YAML.load_file(path, aliases: true)
+  YAML.load_file(path, aliases: true, permitted_classes: [Date, Time])
 rescue ArgumentError
   YAML.load_file(path)
 end
@@ -725,7 +729,11 @@ class Merger
       end
     end
   rescue StandardError => e
-    reason = e.message.lines.first.to_s.strip.gsub(File.expand_path(path), source_label(path, @options))
+    reason = if defined?(Psych::SyntaxError) && e.is_a?(Psych::SyntaxError)
+               "invalid YAML source quarantined"
+             else
+               e.message.lines.first.to_s.strip.gsub(File.expand_path(path), source_label(path, @options))
+             end
     @quarantine << {
       "source" => source_label(path, @options),
       "reason" => reason
