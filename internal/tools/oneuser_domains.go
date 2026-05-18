@@ -1670,6 +1670,11 @@ func safeRawPath(workspaceID, raw string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("raw API path must be a valid escaped path: %w", err)
 	}
+	for _, r := range path {
+		if r < 0x20 || r == 0x7F {
+			return "", fmt.Errorf("raw API path must not contain control characters")
+		}
+	}
 	if strings.Contains(path, "\\") {
 		return "", fmt.Errorf("raw API path must be a relative Clockify API path")
 	}
