@@ -21,7 +21,7 @@ func TestLiveOneUserReadOnly(t *testing.T) {
 		defer cancel()
 		result := h.callOK(ctx, "clockify_status", nil)
 		data := extractDataMap(t, result)
-		workspace, _ := data["pinnedWorkspace"].(map[string]any)
+		workspace, _ := data["workspace"].(map[string]any)
 		if id, _ := workspace["id"].(string); id != c.WorkspaceID {
 			t.Fatalf("pinned workspace id=%q expected %q", id, c.WorkspaceID)
 		}
@@ -95,7 +95,7 @@ func TestLiveOneUserReadOnly(t *testing.T) {
 			"end":   end.Format("2006-01-02T15:04:05.000"),
 		})
 		data := extractDataMap(t, result)
-		if _, ok := data["totals"]; !ok {
+		if !hasAnyReportTotals(data) {
 			t.Fatalf("summary_report response missing totals field: %#v", data)
 		}
 	})
@@ -107,7 +107,7 @@ func TestLiveOneUserReadOnly(t *testing.T) {
 			"week_start": time.Now().UTC().Format("2006-01-02"),
 		})
 		data := extractDataMap(t, result)
-		if _, ok := data["totals"]; !ok {
+		if !hasAnyReportTotals(data) {
 			t.Fatalf("weekly_summary response missing totals field: %#v", data)
 		}
 	})
@@ -149,7 +149,7 @@ func TestLiveOneUserReadOnly(t *testing.T) {
 			"end":   end.Format("2006-01-02T15:04:05.000"),
 		})
 		data := extractDataMap(t, result)
-		if _, ok := data["totals"]; !ok {
+		if !hasAnyReportTotals(data) {
 			t.Fatalf("detailed_report response missing totals field: %#v", data)
 		}
 	})
@@ -173,4 +173,13 @@ func TestLiveOneUserReadOnly(t *testing.T) {
 			t.Fatalf("status response missing featureStatus: %#v", data)
 		}
 	})
+}
+
+func hasAnyReportTotals(data map[string]any) bool {
+	for _, key := range []string{"totals", "totals_summary", "group_totals_summary", "weekly_totals_summary"} {
+		if _, ok := data[key]; ok {
+			return true
+		}
+	}
+	return false
 }

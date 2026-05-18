@@ -14,8 +14,9 @@ import (
 // list_expenses / list_expense_categories / expense_report shape
 // mismatches were closed in Batch 1, and the createExpense multipart
 // fix in Batch 3 unblocks the create-path subtest below. The category
-// archive constraint is still pinned because Clockify exposes no
-// archive-flag mutation route.
+// category delete path is pinned because live Clockify now accepts direct
+// deletion of a freshly-created category; older notes expected an archive
+// constraint here.
 func TestLiveOneUserExpensesCRUD(t *testing.T) {
 	h := setupLiveMCPHarness(t, liveMCPOptions{})
 	c := setupLiveCampaign(t, h)
@@ -79,28 +80,30 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("delete_expense_category_blocked_by_archive_constraint", func(t *testing.T) {
-		if categoryID == "" {
-			t.Skip("create_expense_category did not produce an id")
-		}
+	t.Run("delete_expense_category", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		// Upstream rejects deletion of unarchived categories. The
-		// archive flag is not writable via PUT on the category
-		// resource (verified by direct curl probe), there is no
-		// /archive subroute, and POST/PATCH on the category resource
-		// are not supported. So the MCP path's delete necessarily
-		// surfaces the upstream's "must be archived" error. This
-		// assertion pins that contract: a future Clockify version
-		// that accepts the delete (or a handler that pre-archives)
-		// will flip the assertion and force this annotation to be
-		// reviewed.
-		errMsg := h.callExpectError(ctx, "clockify_expenses_categories_delete", map[string]any{
-			"category_id": categoryID,
+		deleteCategoryDeleted := false
+		result := h.callOK(ctx, "clockify_expenses_categories_create", map[string]any{
+			"name": c.LivePrefix("exp-cat-delete", 0),
 		})
-		if !strings.Contains(errMsg, "archived") {
-			t.Fatalf("expected upstream archive-required error, got: %q", errMsg)
+		deleteCategoryID, _ := extractDataMap(t, result)["id"].(string)
+		if deleteCategoryID == "" {
+			t.Fatalf("delete fixture category returned no id: %#v", extractDataMap(t, result))
 		}
+		c.RegisterCleanup("expense-category", deleteCategoryID, func(ctx context.Context) error {
+			if deleteCategoryDeleted {
+				return nil
+			}
+			return c.rawDeletePath(ctx, "/expenses/categories/"+deleteCategoryID)
+		})
+		deleted := h.callOK(ctx, "clockify_expenses_categories_delete", map[string]any{
+			"category_id": deleteCategoryID,
+		})
+		if okFlag, _ := structuredContentMap(t, deleted)["ok"].(bool); !okFlag {
+			t.Fatalf("delete category returned ok=false: %#v", structuredContentMap(t, deleted))
+		}
+		deleteCategoryDeleted = true
 	})
 
 	t.Run("create_expense_returns_id", func(t *testing.T) {
