@@ -826,7 +826,7 @@ var paramDescriptions = map[string]string{
 	"required":            "Whether the custom field is required.",
 	// Raw API fallback.
 	"body":   "Raw JSON request body forwarded to the Clockify API.",
-	"path":   "Clockify API path, e.g. /workspaces/{id}/projects.",
+	"path":   "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
 	"query":  "Query-string parameters as a key/value object.",
 	"method": "HTTP method: GET, POST, PUT, PATCH, or DELETE.",
 }

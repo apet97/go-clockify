@@ -204,8 +204,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_detailed` | `domain` | yes | no | yes | no | `read` | Run the local detailed time report helper. Large results truncate to the size cap. |
 | `clockify_reports_summary` | `domain` | yes | no | yes | no | `read` | Run the local summary report helper. Large results truncate to the size cap. |
 | `clockify_reports_weekly` | `domain` | yes | no | yes | no | `read` | Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. Large results truncate to the size cap. |
-| `clockify_api_get` | `raw` | yes | no | yes | no | `read` | Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected. |
-| `clockify_api_request` | `raw` | no | no | no | no | `write` | Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected. |
+| `clockify_api_get` | `raw` | yes | no | yes | no | `read` | Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. |
+| `clockify_api_request` | `raw` | no | no | no | no | `write` | Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. |
 
 ## Audit-tracked argument capture
 

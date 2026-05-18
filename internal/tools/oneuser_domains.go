@@ -1338,11 +1338,11 @@ func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
+		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
 			"path":  map[string]any{"type": "string"},
 			"query": map[string]any{"type": "object", "additionalProperties": true},
 		}})), s.RawAPIGet),
-		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
 			"method": map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
 			"path":   map[string]any{"type": "string"},
 			"query":  map[string]any{"type": "object", "additionalProperties": true},

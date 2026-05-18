@@ -53274,7 +53274,7 @@
     {
       "name": "clockify_api_get",
       "title": "Raw Clockify API GET",
-      "description": "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.",
+      "description": "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.",
       "category": "raw",
       "handler_kind": "native handler",
       "read_only": true,
@@ -53288,7 +53288,7 @@
         "additionalProperties": false,
         "properties": {
           "path": {
-            "description": "Clockify API path, e.g. /workspaces/{id}/projects.",
+            "description": "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
             "type": "string"
           },
           "query": {
@@ -53522,7 +53522,7 @@
     {
       "name": "clockify_api_request",
       "title": "Raw Clockify API Request",
-      "description": "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.",
+      "description": "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.",
       "category": "raw",
       "handler_kind": "native handler",
       "read_only": false,
@@ -53552,7 +53552,7 @@
             "type": "string"
           },
           "path": {
-            "description": "Clockify API path, e.g. /workspaces/{id}/projects.",
+            "description": "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
             "type": "string"
           },
           "query": {

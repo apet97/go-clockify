@@ -178,7 +178,7 @@ reconstruction from Clockify's own activity log can fill the gap.
   the tenant metadata.
 - [ ] **Reconstruct the trail from Clockify.** For each affected
   tenant, query Clockify's own activity endpoint (e.g.
-  `/workspaces/{id}/activity` or project/task history) for the
+  `/workspaces/{workspaceId}/activity` or project/task history) for the
   outage window and compare against the audit store.
 - [ ] **Communicate.** If the outage affected a compliance-sensitive
   tenant (shared-service deployments with contractual audit
