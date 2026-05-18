@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -23,6 +24,39 @@ func TestEffectiveVersionFallsBackToDev(t *testing.T) {
 
 	if got := effectiveVersion(); got == "" {
 		t.Fatal("effectiveVersion returned empty string")
+	}
+}
+
+func TestPrintHelpDoesNotDoublePrefixVVersions(t *testing.T) {
+	oldVersion := version
+	version = "v0.1.1"
+	defer func() { version = oldVersion }()
+
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stderr = w
+	t.Cleanup(func() {
+		os.Stderr = oldStderr
+		_ = r.Close()
+	})
+
+	printHelp()
+	if err := w.Close(); err != nil {
+		t.Fatalf("close stderr pipe writer: %v", err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read help output: %v", err)
+	}
+	text := string(out)
+	if strings.Contains(text, "clockify-mcp vv0.1.1") {
+		t.Fatalf("help output double-prefixed v version:\n%s", text)
+	}
+	if !strings.Contains(text, "clockify-mcp v0.1.1") {
+		t.Fatalf("help output missing expected version:\n%s", text)
 	}
 }
 
