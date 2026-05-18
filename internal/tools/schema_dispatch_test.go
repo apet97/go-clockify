@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,6 +117,54 @@ func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
 	}
 	if len(resp.Result) == 0 || string(resp.Result) == "null" {
 		t.Fatalf("expected dry-run result, got %s", resp.Result)
+	}
+}
+
+func TestUsersRoleRejectsMalformedRoleGrantAtSchemaGate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+
+	call, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      2,
+		"method":  "tools/call",
+		"params": map[string]any{
+			"name": "clockify_users_role",
+			"arguments": map[string]any{
+				"user_id":     "65b382b606de527a7ee2b60e",
+				"role":        "REGULAR",
+				"dry_run":     true,
+				"role_grants": []any{map[string]any{}},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	raw, err := server.DispatchMessage(context.Background(), call)
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+	var resp struct {
+		Error *struct {
+			Code int            `json:"code"`
+			Data map[string]any `json:"data"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if resp.Error == nil {
+		t.Fatal("malformed role_grants item reached handler; want schema rejection")
+	}
+	if resp.Error.Code != -32602 {
+		t.Fatalf("error.code = %d, want -32602", resp.Error.Code)
+	}
+	if ptr, _ := resp.Error.Data["pointer"].(string); !strings.Contains(ptr, "/role_grants/0") {
+		t.Fatalf("error pointer = %q, want role_grants item pointer", ptr)
 	}
 }
 

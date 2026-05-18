@@ -136,7 +136,21 @@ func userAdminHandlers(s *Service) []mcp.ToolDescriptor {
 					"role_grants": map[string]any{
 						"type":        "array",
 						"description": "For role=REGULAR, explicit elevated grants to remove. Each item needs role and entity_id/entityId.",
-						"items":       map[string]any{"type": "object", "additionalProperties": true},
+						"items": map[string]any{
+							"type":                 "object",
+							"additionalProperties": false,
+							"required":             []string{"role"},
+							"properties": map[string]any{
+								"role":        map[string]any{"type": "string", "enum": []string{"WORKSPACE_ADMIN", "PROJECT_MANAGER", "TEAM_MANAGER"}},
+								"entity_id":   map[string]any{"type": "string"},
+								"entityId":    map[string]any{"type": "string"},
+								"project_id":  map[string]any{"type": "string"},
+								"projectId":   map[string]any{"type": "string"},
+								"source_type": map[string]any{"type": "string", "enum": []string{"USER_GROUP"}},
+								"sourceType":  map[string]any{"type": "string", "enum": []string{"USER_GROUP"}},
+								"source":      map[string]any{"type": "object", "additionalProperties": true},
+							},
+						},
 					},
 					"dry_run": map[string]any{"type": "boolean", "description": "Preview the role change without applying it"},
 				},

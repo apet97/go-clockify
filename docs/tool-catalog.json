@@ -43523,7 +43523,49 @@
           "role_grants": {
             "description": "For role=REGULAR, explicit elevated grants to remove. Each item needs role and entity_id/entityId.",
             "items": {
-              "additionalProperties": true,
+              "additionalProperties": false,
+              "properties": {
+                "entityId": {
+                  "type": "string"
+                },
+                "entity_id": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "project_id": {
+                  "description": "Project ID.",
+                  "type": "string"
+                },
+                "role": {
+                  "enum": [
+                    "WORKSPACE_ADMIN",
+                    "PROJECT_MANAGER",
+                    "TEAM_MANAGER"
+                  ],
+                  "type": "string"
+                },
+                "source": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "sourceType": {
+                  "enum": [
+                    "USER_GROUP"
+                  ],
+                  "type": "string"
+                },
+                "source_type": {
+                  "enum": [
+                    "USER_GROUP"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "role"
+              ],
               "type": "object"
             },
             "type": "array"
