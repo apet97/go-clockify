@@ -142,7 +142,9 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 	}
 }
 
-func TestGeneratedOpenAPIContractKeepsOwnerModeCoverage(t *testing.T) {
+// Floor check only; artifact-vs-generator drift is gated by make openapi-drift
+// in CI.
+func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	contract := readOpenAPIContract(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 
 	if got, want := len(contract.paths), 125; got < want {
