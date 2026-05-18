@@ -121,6 +121,7 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL |
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
 | `CLOCKIFY_TOOLSET` | `all` | Tool surface: `core`, `business`, `admin`, or `all` |
+| `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `0` | Optional tool-invocation rate cap per minute; `0` disables it |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` |
 | `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY` | `true` | Limit raw writes to documented Clockify routes |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout |

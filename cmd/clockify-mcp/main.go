@@ -128,6 +128,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	server := mcp.NewServer(effective, service.RegistryForToolset(cfg.Toolset))
 	server.StaticToolList = true
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
+	server.ConfigureToolLimits(cfg.ToolRateLimitPerMinute)
 	server.ToolTimeout = cfg.ToolTimeout
 	server.MaxMessageSize = cfg.MaxMessageSize
 	server.MaxToolResultBytes = cfg.MaxToolResultBytes
@@ -199,6 +200,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  %d\n", cfg.MaxInFlightToolCalls)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_MESSAGE_SIZE          %d\n", cfg.MaxMessageSize)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_TOOL_RESULT_BYTES     %d\n", cfg.MaxToolResultBytes)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE %d\n", cfg.ToolRateLimitPerMinute)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY %t\n", cfg.RawWriteDocumentedOnly)
