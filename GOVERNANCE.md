@@ -27,12 +27,8 @@ alternatives cited above reference back here.
 
 Operators evaluating whether to depend on `go-clockify`:
 you can read this document, see who is on the hook, and decide
-whether the audit trail that does exist (public CI logs, GitHub
-web-flow signed squash commits on `main` where available, SLSA
-build provenance on every release since the 2026-04-22 public flip
-(per ADR-0013, now Superseded — pre-flip releases were
-best-effort), the release-smoke workflow) is sufficient for your
-risk appetite.
+whether the audit trail that does exist (public CI logs and the
+commit history on `main`) is sufficient for your risk appetite.
 
 ## Who can merge to `main`
 
@@ -84,9 +80,8 @@ A PR may merge to `main` only if all of the following are true:
    merge.
 
 The merge gate is the same for self-authored PRs and external PRs. The
-audit trail (public CI logs, SLSA build provenance on releases where
-available, release-smoke verification, and GitHub's signed web-flow
-squash commits on `main`) makes the chain reviewable after the fact.
+audit trail (public CI logs and the commit history on `main`) makes the
+chain reviewable after the fact.
 
 ## Target state — not yet enforced
 
@@ -117,9 +112,6 @@ expectation are:
 - `internal/tools/` — workflow, domain, resource, and raw fallback tools.
 - `internal/clockify/` — HTTP client and auth headers.
 - `tests/` — live MCP harnesses.
-- `.github/workflows/release.yml` — the release pipeline.
-- `.github/workflows/docker-image.yml` — the image pipeline.
-- `.goreleaser.yaml` — the release orchestrator.
 
 When a second maintainer joins, the sensitive-path list in
 `.github/CODEOWNERS` will switch on required CODEOWNERS review; until
@@ -129,13 +121,10 @@ rationale is documented in the PR body via the checkbox in
 
 ## Releases
 
-Releases are cut by `@apet97` via a tag push, which triggers
-`release.yml` and `docker-image.yml`. The release pipeline is fully
-automated; the maintainer's only manual step is choosing the version
-number per `docs/release-policy.md` and writing the changelog entry.
-
-Every release artifact is verified by `release-smoke.yml` on
-publication and weekly thereafter (see `docs/verification.md`).
+Releases are cut by `@apet97`: choose the version number, write the
+`CHANGELOG.md` entry, push an annotated `vX.Y.Z` tag, and publish the
+GitHub release. There is no automated release pipeline — the binary is
+built from source with `go build` or `go install`.
 
 ## Security disclosures
 
