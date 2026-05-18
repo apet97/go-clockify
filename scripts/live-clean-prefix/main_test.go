@@ -72,3 +72,18 @@ func TestCleanErrorRedactsWorkspaceID(t *testing.T) {
 		t.Fatalf("redacted placeholder missing: %s", got)
 	}
 }
+
+func TestArchivePayloadIncludesClientName(t *testing.T) {
+	got := archivePayload(collection{label: "clients"}, namedObject{ID: "c1", Name: "MCP-LIVE-client"})
+	if got["archived"] != true {
+		t.Fatalf("archived flag missing: %#v", got)
+	}
+	if got["name"] != "MCP-LIVE-client" {
+		t.Fatalf("client archive payload must preserve name for Clockify PUT validation: %#v", got)
+	}
+
+	project := archivePayload(collection{label: "projects"}, namedObject{ID: "p1", Name: "MCP-LIVE-project"})
+	if _, ok := project["name"]; ok {
+		t.Fatalf("project archive payload should not add a name: %#v", project)
+	}
+}

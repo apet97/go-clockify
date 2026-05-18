@@ -223,7 +223,7 @@ func (s *sweeper) sweep(c collection) {
 		itemPath := basePath + "/" + it.ID
 		if c.archiveFirst {
 			var ignore map[string]any
-			_ = s.client.Put(s.ctx, itemPath, map[string]any{"archived": true}, &ignore)
+			_ = s.client.Put(s.ctx, itemPath, archivePayload(c, it), &ignore)
 		}
 		if err := s.client.Delete(s.ctx, itemPath); err != nil {
 			fmt.Printf("  DELETE %s %s (%s) failed: %v\n", c.label, it.Name, it.ID, s.cleanError(err))
@@ -232,6 +232,14 @@ func (s *sweeper) sweep(c collection) {
 		}
 		s.deleted[c.label]++
 	}
+}
+
+func archivePayload(c collection, it namedObject) map[string]any {
+	payload := map[string]any{"archived": true}
+	if c.label == "clients" && it.Name != "" && it.Name != "<unnamed>" {
+		payload["name"] = it.Name
+	}
+	return payload
 }
 
 // report prints the human-readable and JSON summaries and returns the process
