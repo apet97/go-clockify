@@ -66,6 +66,27 @@ func BenchmarkDispatchToolsListLarge(b *testing.B) {
 	}
 }
 
+func BenchmarkBuildToolList(b *testing.B) {
+	server := newBenchServer(b, 156)
+	for name, descriptor := range server.tools {
+		if descriptor.Tool.Annotations == nil {
+			descriptor.Tool.Annotations = map[string]any{}
+		}
+		descriptor.Tool.Annotations["priority"] = len(name) % 100
+		server.tools[name] = descriptor
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		server.mu.Lock()
+		tools := server.buildToolListLocked()
+		server.mu.Unlock()
+		if len(tools) != 156 {
+			b.Fatalf("buildToolListLocked returned %d tools", len(tools))
+		}
+	}
+}
+
 func TestToolsListRepeatedCallsReuseSerializedResult(t *testing.T) {
 	server := NewServer("test", []ToolDescriptor{{
 		Tool: Tool{Name: "bench_tool", Description: "bench-only no-op"},
