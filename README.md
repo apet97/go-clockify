@@ -41,10 +41,11 @@ export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
 ```
 
 `doctor` validates your configuration and prints every resolved setting.
-`doctor --live` additionally proves the key and workspace against Clockify. It
-accepts an owner **or** admin key; if the key is not the workspace owner it
-prints a warning and lists the tool families that may be denied, but still
-reports OK.
+`doctor --live` verifies auth and workspace access against Clockify. It
+positively verifies owner status and makes a best-effort check for
+workspace-admin status. A key that is neither passes with a warning that
+lists the tool families that may be denied, and still reports OK. Admin
+status is detected on a best-effort basis and is not guaranteed by doctor.
 
 ### 4. Connect it to your MCP client
 
