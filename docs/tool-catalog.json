@@ -48765,7 +48765,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin",
@@ -48780,6 +48780,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
+          },
           "email": {
             "description": "Email address.",
             "format": "email",
@@ -49012,7 +49016,7 @@
       "annotations": {
         "category": "domain",
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,

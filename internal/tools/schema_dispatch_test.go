@@ -75,6 +75,50 @@ func TestRealRegistrySchemaRejectsMissingRequiredArgs(t *testing.T) {
 	}
 }
 
+func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+
+	call, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      2,
+		"method":  "tools/call",
+		"params": map[string]any{
+			"name": "clockify_users_invite",
+			"arguments": map[string]any{
+				"email":   "invitee@example.com",
+				"dry_run": true,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	raw, err := server.DispatchMessage(context.Background(), call)
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+	var resp struct {
+		Error *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+		Result json.RawMessage `json:"result"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("clockify_users_invite dry_run was rejected at schema gate: code=%d message=%q", resp.Error.Code, resp.Error.Message)
+	}
+	if len(resp.Result) == 0 || string(resp.Result) == "null" {
+		t.Fatalf("expected dry-run result, got %s", resp.Result)
+	}
+}
+
 // inputSchemaRequiredFields returns the declared required-field names of a
 // tool input schema, tolerating both the []string descriptors are built with
 // and the []any a JSON round-trip would yield.

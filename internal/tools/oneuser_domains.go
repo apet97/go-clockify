@@ -513,6 +513,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite users by email. External side effect when send_email is true; supports dry_run.", objectSchema(map[string]any{"properties": map[string]any{
 			"email":      map[string]any{"type": "string", "format": "email"},
 			"emails":     map[string]any{"type": "array", "items": map[string]any{"type": "string", "format": "email"}},
+			"dry_run":    map[string]any{"type": "boolean"},
 			"send_email": map[string]any{"type": "boolean", "description": "Whether Clockify should send invitation email. Defaults to true."},
 		}})), "user", "created", s.UsersInvite),
 	)
