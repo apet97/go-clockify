@@ -97,6 +97,10 @@ type Service struct {
 	// so the subscription gate lives in the protocol core rather than in
 	// every mutation handler. nil = drop silently.
 	EmitResourceUpdate func(uri string, delta mcp.ResourceUpdateDelta)
+	// EmitResourceListChanged publishes notifications/resources/list_changed
+	// when the set of available resources changes (e.g. a new demo-run
+	// resource appears). nil disables the notification.
+	EmitResourceListChanged func()
 	// SubscriptionGate reports whether any client is currently subscribed
 	// to a URI. When wired (Server.HasResourceSubscription),
 	// emitResourceUpdate short-circuits before the ReadResource round-trip

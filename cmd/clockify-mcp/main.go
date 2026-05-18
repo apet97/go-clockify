@@ -132,6 +132,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	server.MaxToolResultBytes = cfg.MaxToolResultBytes
 	server.ResourceProvider = service
 	service.EmitResourceUpdate = server.NotifyResourceUpdated
+	service.EmitResourceListChanged = server.NotifyResourcesListChanged
 	service.SubscriptionGate = server.HasResourceSubscription
 
 	slog.Info("one_user_server_start",

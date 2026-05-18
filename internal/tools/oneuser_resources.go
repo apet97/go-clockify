@@ -373,9 +373,15 @@ func (s *Service) updateDemoResource(runID, prefix, status string, out ToolResul
 	if s.demoResources == nil {
 		s.demoResources = map[string]demoResourceState{}
 	}
+	_, existed := s.demoResources[runID]
 	s.demoResources[runID] = state
 	s.mu.Unlock()
 	s.emitResourceUpdateWithState(state.URI, state)
+	// A previously-unseen non-default run id is a new entry in
+	// ListResources()/demoResourcesList(), so the resource list changed.
+	if !existed && runID != defaultDemoResourceRunID && s.EmitResourceListChanged != nil {
+		s.EmitResourceListChanged()
+	}
 }
 
 func (s *Service) demoResourceState(runID string) demoResourceState {
