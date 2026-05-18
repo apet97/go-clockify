@@ -241,12 +241,19 @@ func (s *Service) EntityChangesList(ctx context.Context, args map[string]any) (R
 	if err := s.Client.GetValues(ctx, path, query, &changes); err != nil {
 		return ResultEnvelope{}, err
 	}
-	return ok("clockify_entity_changes_list", changes, map[string]any{
-		"workspaceId": wsID,
-		"changeType":  changeType,
-		"count":       len(changes),
-		"page":        page,
-		"limit":       limit,
-		"has_more":    len(changes) == limit,
-	}), nil
+	meta := map[string]any{
+		"workspaceId":          wsID,
+		"changeType":           changeType,
+		"count":                len(changes),
+		"page":                 page,
+		"limit":                limit,
+		"total_min":            len(changes),
+		"total_is_lower_bound": true,
+	}
+	if _, present := args["limit"]; present {
+		meta["has_more"] = len(changes) == limit
+	} else {
+		meta["server_page_size_note"] = "Clockify's entity-change API applies its own default page size when limit is omitted; total_min is a lower bound."
+	}
+	return ok("clockify_entity_changes_list", changes, meta), nil
 }
