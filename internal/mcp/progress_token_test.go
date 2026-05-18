@@ -178,6 +178,80 @@ func TestToolsCallNoTokenWhenMetaAbsent(t *testing.T) {
 	}
 }
 
+func TestProgressTokenRejectsNonStringNonInteger(t *testing.T) {
+	for _, tok := range []any{1.5, float32(2), true, false, nil, []any{1}, map[string]any{"a": 1}} {
+		if err := validateProgressToken(tok); err == nil {
+			t.Fatalf("validateProgressToken(%#v) = nil, want error", tok)
+		}
+	}
+}
+
+func TestProgressTokenRejectsDuplicateActiveToken(t *testing.T) {
+	s := NewServer("test", nil)
+	if err := s.registerProgressToken("dup"); err != nil {
+		t.Fatalf("first register: %v", err)
+	}
+	if err := s.registerProgressToken("dup"); err == nil {
+		t.Fatal("second register of an active token should fail")
+	}
+	s.releaseProgressToken("dup")
+	if err := s.registerProgressToken("dup"); err != nil {
+		t.Fatalf("register after release should succeed: %v", err)
+	}
+}
+
+func TestProgressNotificationMustIncrease(t *testing.T) {
+	s := NewServer("test", nil)
+	if err := s.registerProgressToken("inc"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	steps := []struct {
+		progress float64
+		want     bool
+	}{
+		{1, true},
+		{2, true},
+		{2, false},
+		{1, false},
+		{3, true},
+	}
+	for i, step := range steps {
+		if got := s.AllowProgress("inc", step.progress); got != step.want {
+			t.Fatalf("step %d: AllowProgress(%v) = %v, want %v", i, step.progress, got, step.want)
+		}
+	}
+}
+
+func TestProgressTokenReleasedAfterCompletion(t *testing.T) {
+	s := NewServer("test", nil)
+	if err := s.registerProgressToken("rel"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if !s.AllowProgress("rel", 1) {
+		t.Fatal("AllowProgress should succeed while the token is active")
+	}
+	s.releaseProgressToken("rel")
+	if s.AllowProgress("rel", 2) {
+		t.Fatal("AllowProgress should fail once the token has been released")
+	}
+}
+
+func TestProgressFloodGuardDropsExcessNotifications(t *testing.T) {
+	s := NewServer("test", nil)
+	if err := s.registerProgressToken("flood"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	allowed := 0
+	for i := 1; i <= 25; i++ {
+		if s.AllowProgress("flood", float64(i)) {
+			allowed++
+		}
+	}
+	if allowed != maxProgressNotificationsPerSecond {
+		t.Fatalf("flood guard allowed %d notifications, want %d", allowed, maxProgressNotificationsPerSecond)
+	}
+}
+
 func progressTokenTestServer(handler ToolHandler) *Server {
 	if handler == nil {
 		handler = func(context.Context, map[string]any) (any, error) {

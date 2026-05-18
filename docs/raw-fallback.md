@@ -14,7 +14,7 @@ workspace ID are never passed as tool arguments.
 Raw fallback is scoped to safe Clockify paths:
 
 - `/user` is allowed for caller identity checks.
-- `/workspaces/{CLOCKIFY_WORKSPACE_ID}/...` is allowed for the pinned
+- `/workspaces/{workspaceId}/...` is allowed for the pinned
   workspace.
 - Other workspace IDs, absolute URLs, scheme-relative URLs, path traversal,
   `/file/image`, and non-API escape paths are rejected.
@@ -23,7 +23,7 @@ Prefer relative paths such as:
 
 ```json
 {
-  "path": "/workspaces/<workspace-id>/clients",
+  "path": "/workspaces/{workspaceId}/clients",
   "query": {
     "page": "1",
     "page-size": "50"

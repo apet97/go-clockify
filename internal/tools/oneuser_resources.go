@@ -31,77 +31,94 @@ func oneUserResources() []mcp.Resource {
 		{
 			URI:         "clockify://status",
 			Name:        "Status",
+			Title:       "Clockify Status",
 			Description: "Current user, pinned workspace, timezone, and running timer.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://workspace",
 			Name:        "Workspace",
+			Title:       "Pinned Workspace",
 			Description: "The pinned Clockify workspace for this one-user MCP.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://user",
 			Name:        "User",
+			Title:       "Current User",
 			Description: "The Clockify user for the configured API key.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://features",
 			Name:        "Features",
+			Title:       "Workspace Features",
 			Description: "Workspace feature list and subscription feature label when returned by Clockify.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://tools",
 			Name:        "Tools",
+			Title:       "Loaded Tools",
 			Description: "All tools loaded at startup, grouped for one-user workflow use.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://mcp/tool-catalog",
 			Name:        "MCP tool catalog",
+			Title:       "MCP Tool Catalog",
 			Description: "Live tool catalog generated from the startup registry.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://mcp/api-parity",
 			Name:        "MCP API parity matrix",
+			Title:       "API Parity Matrix",
 			Description: "Committed API parity matrix for the current MCP surface.",
 			MimeType:    "text/markdown",
 		},
 		{
 			URI:         "clockify://mcp/live-evidence",
 			Name:        "MCP live-test evidence",
+			Title:       "Live Test Evidence",
 			Description: "Committed live-test evidence and gates for the current MCP surface.",
 			MimeType:    "text/markdown",
 		},
 		{
 			URI:         "clockify://workflows",
 			Name:        "Workflows",
+			Title:       "Workflow Guide",
 			Description: "Workflow-first guide for common Clockify MCP tasks.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         demoResourceURI(defaultDemoResourceRunID),
 			Name:        "Demo run",
+			Title:       "Demo Run State",
 			Description: "Current state for the default deterministic demo run.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://recent/entries",
 			Name:        "Recent entries",
+			Title:       "Recent Time Entries",
 			Description: "Recent current-user time entries from the pinned workspace.",
 			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://recent/projects",
 			Name:        "Recent projects",
+			Title:       "Recent Projects",
 			Description: "Recent projects from the pinned workspace.",
 			MimeType:    "application/json",
 		},
 	}
 }
+
+// maxDemoResourcesListed caps how many per-run demo resources resources/list
+// surfaces. The backing map is unbounded over a process lifetime; this keeps
+// the listing bounded and predictable.
+const maxDemoResourcesListed = 50
 
 func (s *Service) demoResourcesList() []mcp.Resource {
 	if s == nil {
@@ -122,9 +139,13 @@ func (s *Service) demoResourcesList() []mcp.Resource {
 		out = append(out, mcp.Resource{
 			URI:         state.URI,
 			Name:        fmt.Sprintf("Demo run %s", state.RunID),
+			Title:       "Demo Run State",
 			Description: fmt.Sprintf("Current state for deterministic demo run %s.", state.RunID),
 			MimeType:    "application/json",
 		})
+	}
+	if len(out) > maxDemoResourcesListed {
+		out = out[len(out)-maxDemoResourcesListed:]
 	}
 	return out
 }

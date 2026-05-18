@@ -6,7 +6,7 @@ Accepted — 2026-05-11
 
 ## Context
 
-`clockify_update_user_role` exposes four role values:
+`clockify_users_role` exposes four role values:
 `WORKSPACE_ADMIN`, `PROJECT_MANAGER`, `TEAM_MANAGER`, and `REGULAR`.
 
 The first three are **grant** operations: a `PUT` to
@@ -18,7 +18,7 @@ Setting a user back to **REGULAR** is semantically different: it
 **strips** all elevated role grants (WORKSPACE_ADMIN / PROJECT_MANAGER /
 TEAM_MANAGER) from the user, leaving them as a plain, active workspace
 member who can still log time. It does **not** remove the user from the
-workspace — that is the separate `clockify_deactivate_user` operation
+workspace — that is the separate `clockify_users_deactivate` operation
 (`PUT /workspaces/{ws}/users/{userId}` with `{"status":"INACTIVE"}`).
 
 The live Clockify API performs a role-strip via:
@@ -44,7 +44,7 @@ function returns an explicit, accurate `not-yet-supported` error when
 
 1. Correctly describes what REGULAR means (strips elevated grants,
    user stays in workspace).
-2. States that `clockify_deactivate_user` is **NOT** a substitute
+2. States that `clockify_users_deactivate` is **NOT** a substitute
    (deactivate removes the user entirely).
 3. Explains the technical blocker (client `Delete` lacks body support).
 4. Points callers to the Clockify web UI or a direct API call as the

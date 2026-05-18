@@ -137,9 +137,20 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 	if s == nil || s.Notifier == nil {
 		return
 	}
+	// Stop emitting once the call is cancelled or has timed out.
+	if ctx.Err() != nil {
+		return
+	}
 	token, ok := mcp.ProgressTokenFromContext(ctx)
 	if !ok {
 		return
+	}
+	// When the notifier can gate progress (the MCP server does), drop
+	// non-increasing or flooding notifications instead of forwarding them.
+	if gate, ok := s.Notifier.(mcp.ProgressGate); ok {
+		if !gate.AllowProgress(token, progress) {
+			return
+		}
 	}
 	params := map[string]any{
 		"progressToken": token,
@@ -826,7 +837,7 @@ var paramDescriptions = map[string]string{
 	"required":            "Whether the custom field is required.",
 	// Raw API fallback.
 	"body":   "Raw JSON request body forwarded to the Clockify API.",
-	"path":   "Clockify API path, e.g. /workspaces/{id}/projects.",
+	"path":   "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
 	"query":  "Query-string parameters as a key/value object.",
 	"method": "HTTP method: GET, POST, PUT, PATCH, or DELETE.",
 }

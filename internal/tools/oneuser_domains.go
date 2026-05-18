@@ -1338,11 +1338,11 @@ func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
+		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
 			"path":  map[string]any{"type": "string"},
 			"query": map[string]any{"type": "object", "additionalProperties": true},
 		}})), s.RawAPIGet),
-		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
 			"method": map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
 			"path":   map[string]any{"type": "string"},
 			"query":  map[string]any{"type": "object", "additionalProperties": true},
@@ -1372,7 +1372,7 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 		return nil, err
 	}
 	if method != "GET" && s.RawWriteDocumentedOnly && !isDocumentedRawWriteRoute(method, path) {
-		return nil, fmt.Errorf("raw write %s %s is not a documented Clockify endpoint; set CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false to allow undocumented raw writes", method, path)
+		return nil, fmt.Errorf("raw write %s %s is not a documented Clockify endpoint; use a typed domain tool if one exists, or set CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false only for endpoints you have confirmed are documented or probed", method, path)
 	}
 	query := rawQuery(args["query"])
 	body, _ := args["body"].(map[string]any)

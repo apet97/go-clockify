@@ -126,3 +126,25 @@ When recording a new run, include the date, the visible workspace plan (from
 `doctor --live`), the env-var set that was active, the named test functions,
 the pass/fail result, and a leftover count from `clockify_demo_cleanup` plus
 any prefix-scoped audit.
+
+## Cleaning up after live runs
+
+`TestOneUserLiveOptionalDomainContracts` intentionally leaves the objects it creates
+(clients, projects, tasks, tags, an invoice, an expense, a time-off request, a
+scheduling assignment, a group, a holiday, a webhook) in the sacrificial workspace so a
+failed run can be inspected.
+
+**If a live run fails, do not clean immediately. Inspect the leftover objects first.**
+Once you are done inspecting, sweep them with:
+
+```sh
+export CLOCKIFY_API_KEY=...           # sacrificial workspace key
+export CLOCKIFY_WORKSPACE_ID=...      # sacrificial workspace id
+export CLOCKIFY_LIVE_PREFIX=MCP-T4-... # the prefix the failed run used
+export CLOCKIFY_LIVE_WORKSPACE_CONFIRM="$CLOCKIFY_WORKSPACE_ID"
+make live-clean-prefix
+```
+
+`make live-clean-prefix` deletes only objects whose name starts with
+`CLOCKIFY_LIVE_PREFIX`, and refuses to run unless `CLOCKIFY_LIVE_WORKSPACE_CONFIRM`
+matches `CLOCKIFY_WORKSPACE_ID`. It prints `Leftovers: 0` when the sweep is clean.

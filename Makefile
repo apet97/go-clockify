@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift api-parity-matrix-drift live-contract-local
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
@@ -118,3 +118,33 @@ live-contract-local:
 	else \
 		echo "== optional livee2e domain campaign skipped (CLOCKIFY_LIVE_OPTIONAL_DOMAINS != 1) =="; \
 	fi
+
+# live-clean-prefix deletes objects in the sacrificial workspace whose name
+# starts with CLOCKIFY_LIVE_PREFIX. Read docs/live-tests.md first.
+live-clean-prefix:
+	@if [ -z "$${CLOCKIFY_API_KEY:-}" ] || [ -z "$${CLOCKIFY_WORKSPACE_ID:-}" ] || [ -z "$${CLOCKIFY_LIVE_PREFIX:-}" ] || [ -z "$${CLOCKIFY_LIVE_WORKSPACE_CONFIRM:-}" ]; then \
+		echo "live-clean-prefix: set CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, CLOCKIFY_LIVE_PREFIX, and CLOCKIFY_LIVE_WORKSPACE_CONFIRM." >&2; \
+		exit 1; \
+	fi
+	go run ./scripts/live-clean-prefix
+
+# perfect runs every deterministic gate. It must be green before a release.
+perfect:
+	go test -race -count=1 -timeout 120s ./...
+	$(MAKE) catalog-drift
+	$(MAKE) api-parity-matrix-drift
+	$(MAKE) openapi-drift
+	$(MAKE) raw-allowlist-drift
+	$(MAKE) selfinspect-drift
+	git diff --check
+
+# perfect-local adds the lint and benchmark gates that need extra local tools.
+perfect-local: perfect
+	golangci-lint run
+	$(MAKE) bench-baseline-check
+
+# perfect-live runs the sacrificial-workspace contract suite, then sweeps it.
+# Requires the live env vars from docs/live-tests.md.
+perfect-live:
+	$(MAKE) live-contract-local
+	$(MAKE) live-clean-prefix

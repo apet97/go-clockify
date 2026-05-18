@@ -41,10 +41,11 @@ export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
 ```
 
 `doctor` validates your configuration and prints every resolved setting.
-`doctor --live` additionally proves the key and workspace against Clockify. It
-accepts an owner **or** admin key; if the key is not the workspace owner it
-prints a warning and lists the tool families that may be denied, but still
-reports OK.
+`doctor --live` verifies auth and workspace access against Clockify. It
+positively verifies owner status and makes a best-effort check for
+workspace-admin status. A key that is neither passes with a warning that
+lists the tool families that may be denied, and still reports OK. Admin
+status is detected on a best-effort basis and is not guaranteed by doctor.
 
 ### 4. Connect it to your MCP client
 
@@ -120,6 +121,7 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL |
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
 | `CLOCKIFY_TOOLSET` | `all` | Tool surface: `core`, `business`, `admin`, or `all` |
+| `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `0` | Optional tool-invocation rate cap per minute; `0` disables it |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` |
 | `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY` | `true` | Limit raw writes to documented Clockify routes |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout |

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CI now gates `raw-allowlist-drift` and `selfinspect-drift` on every PR.
+- `doctor --live` reports a truthful owner / workspace_admin / member_or_unknown
+  role verdict.
+- `notifications/progress` is enforced for strict monotonicity and capped at 10
+  notifications per second per token; the runtime now actually delivers progress.
+- `Resource` and `ResourceTemplate` carry an optional `title`; every resource and
+  template is titled.
+- Optional tool-invocation rate limiting via `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE`,
+  plus always-on per-risk-family concurrency caps.
+- `make live-clean-prefix` sweeps prefixed objects from the sacrificial workspace;
+  `make perfect` / `perfect-local` / `perfect-live` release gates.
+- Docs-lint tests for tool-name, dangerous-tool, env-var, and raw-path-placeholder
+  drift, and a consolidated product-contract regression test.
+
+### Fixed
+
+- Raw-fallback docs and tool descriptions advertise the `{workspaceId}` placeholder
+  that `safeRawPath` actually substitutes.
+
+### Changed
+
+- `go.mod` / `go.sum` tidied; the dynamic demo resource listing is capped at 50.
+
 ## [0.1.0] - 2026-05-18
 
 Version re-baseline. `0.1.0` restarts the version line for the one-user

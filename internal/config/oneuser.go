@@ -42,6 +42,7 @@ type OneUserConfig struct {
 	ToolTimeout            time.Duration
 	MaxMessageSize         int64
 	MaxToolResultBytes     int
+	ToolRateLimitPerMinute int
 	Toolset                string
 	EnableRawWrites        bool
 	RawWriteDocumentedOnly bool
@@ -123,6 +124,11 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.MaxToolResultBytes = maxToolResultBytes
+	rateLimit, err := parseNonNegativeIntEnv("CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE", 0)
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.ToolRateLimitPerMinute = rateLimit
 	toolset, err := parseToolsetEnv()
 	if err != nil {
 		return OneUserConfig{}, err
@@ -175,6 +181,20 @@ func parsePositiveIntEnv(name string, fallback int) (int, error) {
 	v, err := strconv.Atoi(raw)
 	if err != nil || v <= 0 {
 		return 0, fmt.Errorf("%s must be a positive integer", name)
+	}
+	return v, nil
+}
+
+// parseNonNegativeIntEnv reads name as a non-negative integer, returning def
+// when the variable is unset. Zero is permitted (it means "disabled").
+func parseNonNegativeIntEnv(name string, def int) (int, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return def, nil
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v < 0 {
+		return 0, fmt.Errorf("%s must be a non-negative integer", name)
 	}
 	return v, nil
 }

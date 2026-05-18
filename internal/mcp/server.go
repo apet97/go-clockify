@@ -218,6 +218,11 @@ type Server struct {
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
+	// toolRateLimiter throttles tool invocations process-wide; nil = disabled.
+	// toolFamilyCaps serializes high-risk writes; nil = disabled.
+	toolRateLimiter *tokenBucket
+	toolFamilyCaps  *familyLimiter
+
 	// inflight tracks cancellable contexts for in-flight tools/call
 	// requests, keyed by JSON-RPC request ID. notifications/cancelled
 	// looks up the ID and aborts the in-flight tool handler. Nil IDs
@@ -227,7 +232,7 @@ type Server struct {
 	// activeProgressTokens tracks progress tokens of in-flight tools/call
 	// requests so a duplicate token across concurrent requests is rejected.
 	// Keyed by the token's canonical string form. Guarded by inflightMu.
-	activeProgressTokens map[string]struct{}
+	activeProgressTokens map[string]*progressTokenState
 }
 
 // AddNotifier registers a notification sink and returns a function that
@@ -413,12 +418,12 @@ func (s *Server) registerProgressToken(token any) error {
 	s.inflightMu.Lock()
 	defer s.inflightMu.Unlock()
 	if s.activeProgressTokens == nil {
-		s.activeProgressTokens = make(map[string]struct{})
+		s.activeProgressTokens = make(map[string]*progressTokenState)
 	}
 	if _, dup := s.activeProgressTokens[key]; dup {
 		return fmt.Errorf("progressToken is already in use by another in-flight request")
 	}
-	s.activeProgressTokens[key] = struct{}{}
+	s.activeProgressTokens[key] = &progressTokenState{}
 	return nil
 }
 
@@ -1233,6 +1238,62 @@ func jsonObjectRaw(raw []byte) bool {
 		}
 	}
 	return false
+}
+
+// maxProgressNotificationsPerSecond bounds notifications/progress for a single
+// token so a misbehaving handler cannot flood the client.
+const maxProgressNotificationsPerSecond = 10
+
+// progressTokenState tracks per-token progress so the server can enforce the
+// MCP rule that progress values strictly increase, and rate-limit bursts.
+type progressTokenState struct {
+	lastProgress float64
+	hasProgress  bool
+	windowStart  time.Time
+	windowCount  int
+}
+
+// ProgressGate decides whether a notifications/progress for a token at a given
+// progress value may be sent. *Server implements it; Service.EmitProgress
+// consults it so non-increasing or flooding progress is dropped at the source.
+type ProgressGate interface {
+	AllowProgress(token any, progress float64) bool
+}
+
+// AllowProgress reports whether a progress notification for token at the given
+// progress value should be emitted. It returns false when the token is not
+// registered (the call finished or was cancelled), when progress does not
+// strictly increase, or when the per-second flood cap is exceeded.
+func (s *Server) AllowProgress(token any, progress float64) bool {
+	key := progressTokenKey(token)
+	s.inflightMu.Lock()
+	defer s.inflightMu.Unlock()
+	st, ok := s.activeProgressTokens[key]
+	if !ok {
+		return false
+	}
+	if st.hasProgress && progress <= st.lastProgress {
+		return false
+	}
+	now := time.Now()
+	if st.windowStart.IsZero() || now.Sub(st.windowStart) >= time.Second {
+		st.windowStart = now
+		st.windowCount = 0
+	}
+	if st.windowCount >= maxProgressNotificationsPerSecond {
+		return false
+	}
+	st.windowCount++
+	st.lastProgress = progress
+	st.hasProgress = true
+	return true
+}
+
+// ConfigureToolLimits installs the per-risk-family concurrency caps (always on)
+// and, when ratePerMinute > 0, a per-process tool-invocation rate limiter.
+func (s *Server) ConfigureToolLimits(ratePerMinute int) {
+	s.toolFamilyCaps = newFamilyLimiter()
+	s.toolRateLimiter = newTokenBucket(ratePerMinute)
 }
 
 // validateRequest checks JSON-RPC 2.0 version and id type per spec.

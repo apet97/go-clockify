@@ -1,6 +1,12 @@
 package tools
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
+)
 
 func TestUpdateDemoResourceEmitsListChanged(t *testing.T) {
 	var count int
@@ -21,5 +27,19 @@ func TestUpdateDemoResourceEmitsListChanged(t *testing.T) {
 	svc.updateDemoResource(defaultDemoResourceRunID, "prefix", "seeded", ToolResult{})
 	if count != 1 {
 		t.Fatalf("default run count=%d want 1", count)
+	}
+}
+
+func TestDemoResourcesListIsCappedAt50(t *testing.T) {
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "ws1")
+	for i := 0; i < 70; i++ {
+		svc.updateDemoResource(fmt.Sprintf("run-%03d", i), "p", "ok", ToolResult{})
+	}
+	got := len(svc.demoResourcesList())
+	if got > maxDemoResourcesListed {
+		t.Fatalf("demoResourcesList returned %d resources, want <= %d", got, maxDemoResourcesListed)
+	}
+	if got != maxDemoResourcesListed {
+		t.Fatalf("demoResourcesList returned %d resources, want exactly %d", got, maxDemoResourcesListed)
 	}
 }

@@ -390,6 +390,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -669,6 +672,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -1000,6 +1006,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -1405,6 +1414,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -1799,6 +1811,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -2077,6 +2092,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -2388,6 +2406,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -3411,6 +3432,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -4438,6 +4462,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -5440,6 +5467,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -5760,6 +5790,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -6069,6 +6102,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -6359,6 +6395,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -6682,6 +6721,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -6977,6 +7019,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -7269,6 +7314,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -7548,6 +7596,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -7895,6 +7946,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -8173,6 +8227,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -8593,6 +8650,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -9100,6 +9160,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -9495,6 +9558,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -9840,6 +9906,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -10159,6 +10228,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -10422,6 +10494,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -10850,6 +10925,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -11244,6 +11322,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -11881,6 +11962,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -12556,6 +12640,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -12811,6 +12898,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -14124,6 +14214,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -15457,6 +15550,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -15712,6 +15808,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -17010,6 +17109,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -17297,6 +17399,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -17943,6 +18048,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -18627,6 +18735,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -18892,6 +19003,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -19188,6 +19302,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -19455,6 +19572,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -19732,6 +19852,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -19987,6 +20110,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -20782,6 +20908,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -21622,6 +21751,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -21873,6 +22005,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -22218,6 +22353,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -22561,6 +22699,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -22952,6 +23093,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -23271,6 +23415,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -23524,6 +23671,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -23845,6 +23995,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -24177,6 +24330,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -24434,6 +24590,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -24689,6 +24848,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -24950,6 +25112,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -25207,6 +25372,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -25508,6 +25676,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -25769,6 +25940,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -26039,6 +26213,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -26296,6 +26473,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -26564,6 +26744,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -26953,6 +27136,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -27327,6 +27513,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -27650,6 +27839,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -27905,6 +28097,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -28219,6 +28414,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -28539,6 +28737,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -28795,6 +28996,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -29058,6 +29262,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -29336,6 +29543,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -29625,6 +29835,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -29881,6 +30094,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -30141,6 +30357,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -30391,6 +30610,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -30704,6 +30926,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -31023,6 +31248,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -31279,6 +31507,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -31570,6 +31801,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -31848,6 +32082,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -32106,6 +32343,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -32393,6 +32633,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -32670,6 +32913,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -32932,6 +33178,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -33199,6 +33448,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -33465,6 +33717,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -33752,6 +34007,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -34006,6 +34264,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -34289,6 +34550,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -34578,6 +34842,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -34845,6 +35112,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -35129,6 +35399,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -35419,6 +35692,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -35693,6 +35969,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -35746,7 +36025,7 @@
     {
       "name": "clockify_scheduling_assignments_create",
       "title": "Create Assignment",
-      "description": "Create a recurring scheduling assignment for a user on a project. Retrying after a network timeout can create a duplicate assignment; check with clockify_list_assignments before retrying.",
+      "description": "Create a recurring scheduling assignment for a user on a project. Retrying after a network timeout can create a duplicate assignment; check with clockify_scheduling_assignments_list before retrying.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -36005,6 +36284,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -36311,6 +36593,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -36571,6 +36856,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -36846,6 +37134,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -37138,6 +37429,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -37408,6 +37702,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -37687,6 +37984,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -37953,6 +38253,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -38225,6 +38528,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -38502,6 +38808,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -38764,6 +39073,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -39017,6 +39329,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -39317,6 +39632,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -39621,6 +39939,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -39878,6 +40199,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -40132,6 +40456,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -40373,6 +40700,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -40664,6 +40994,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -40917,6 +41250,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -41180,6 +41516,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -41450,6 +41789,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -41706,6 +42048,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -41970,6 +42315,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -42236,6 +42584,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -42482,6 +42833,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -42749,6 +43103,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -43030,6 +43387,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -43281,6 +43641,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -43539,6 +43902,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -43886,6 +44252,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -44141,6 +44510,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -44436,6 +44808,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -44729,6 +45104,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -45021,6 +45399,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -45323,6 +45704,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -45591,6 +45975,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -45886,6 +46273,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -46180,6 +46570,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -46448,6 +46841,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -46730,6 +47126,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -46994,6 +47393,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -47253,6 +47655,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -47516,6 +47921,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -47782,6 +48190,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -48076,6 +48487,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -48327,6 +48741,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -48609,6 +49026,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -48885,6 +49305,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -49157,6 +49580,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -49499,6 +49925,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -49820,6 +50249,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -49872,7 +50304,7 @@
     {
       "name": "clockify_invoices_info",
       "title": "Invoices Info",
-      "description": "Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_invoice_report (money aggregates).",
+      "description": "Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_reports_money (money aggregates).",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -50136,6 +50568,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -50412,6 +50847,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -50665,6 +51103,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -51471,6 +51912,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -51740,6 +52184,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -51990,6 +52437,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -52258,6 +52708,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -52571,6 +53024,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -52882,6 +53338,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
@@ -53222,6 +53681,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -53274,7 +53736,7 @@
     {
       "name": "clockify_api_get",
       "title": "Raw Clockify API GET",
-      "description": "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.",
+      "description": "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.",
       "category": "raw",
       "handler_kind": "native handler",
       "read_only": true,
@@ -53288,7 +53750,7 @@
         "additionalProperties": false,
         "properties": {
           "path": {
-            "description": "Clockify API path, e.g. /workspaces/{id}/projects.",
+            "description": "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
             "type": "string"
           },
           "query": {
@@ -53470,6 +53932,9 @@
               "hint": {
                 "type": "string"
               },
+              "retryable": {
+                "type": "boolean"
+              },
               "tool": {
                 "type": "string"
               }
@@ -53522,7 +53987,7 @@
     {
       "name": "clockify_api_request",
       "title": "Raw Clockify API Request",
-      "description": "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.",
+      "description": "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.",
       "category": "raw",
       "handler_kind": "native handler",
       "read_only": false,
@@ -53552,7 +54017,7 @@
             "type": "string"
           },
           "path": {
-            "description": "Clockify API path, e.g. /workspaces/{id}/projects.",
+            "description": "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
             "type": "string"
           },
           "query": {
@@ -53734,6 +54199,9 @@
               },
               "hint": {
                 "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
               },
               "tool": {
                 "type": "string"
