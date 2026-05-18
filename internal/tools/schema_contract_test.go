@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -72,5 +73,29 @@ func TestSchedulingCapacityUserIDsOptional(t *testing.T) {
 	}
 	if requiredSet(tool.InputSchema)["user_ids"] {
 		t.Error("clockify_scheduling_capacity must not require user_ids")
+	}
+}
+
+func TestEveryToolParameterHasADescription(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	for _, d := range svc.FullAccessRegistry() {
+		schema := d.Tool.InputSchema
+		if schema == nil {
+			continue
+		}
+		props, ok := schema["properties"].(map[string]any)
+		if !ok {
+			continue
+		}
+		for name, raw := range props {
+			prop, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			desc, _ := prop["description"].(string)
+			if strings.TrimSpace(desc) == "" {
+				t.Errorf("%s: parameter %q has no description", d.Tool.Name, name)
+			}
+		}
 	}
 }
