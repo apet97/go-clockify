@@ -1109,6 +1109,17 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 	}
 }
 
+func TestEveryToolHasTitle(t *testing.T) {
+	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+		if strings.TrimSpace(descriptor.Tool.Title) == "" {
+			t.Fatalf("%s missing title", descriptor.Tool.Name)
+		}
+		if titleFor(descriptor.Tool.Name) != titleFor(descriptor.Tool.Name) {
+			t.Fatalf("%s titleFor is not stable", descriptor.Tool.Name)
+		}
+	}
+}
+
 func TestOneUserCoverageLedgerStatusesAreActionable(t *testing.T) {
 	ledger := parseOneUserCoverageLedger(t)
 	allowed := setOf("ready", "raw_fallback_only")

@@ -39,6 +39,7 @@ import (
 // external_side_effect without grep-ing source.
 type catalogTool struct {
 	Name         string         `json:"name"`
+	Title        string         `json:"title,omitempty"`
 	Description  string         `json:"description,omitempty"`
 	Category     string         `json:"category,omitempty"`
 	HandlerKind  string         `json:"handler_kind,omitempty"`
@@ -116,6 +117,7 @@ func toCatalog(ds []mcp.ToolDescriptor) []catalogTool {
 		path, _ := d.Tool.Annotations["path"].(string)
 		out = append(out, catalogTool{
 			Name:         d.Tool.Name,
+			Title:        d.Tool.Title,
 			Description:  d.Tool.Description,
 			Category:     category,
 			HandlerKind:  handlerKind,

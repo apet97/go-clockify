@@ -108,6 +108,7 @@ func ProgressTokenFromContext(ctx context.Context) (ProgressToken, bool) {
 
 type Tool struct {
 	Name         string         `json:"name"`
+	Title        string         `json:"title,omitempty"`
 	Description  string         `json:"description"`
 	InputSchema  map[string]any `json:"inputSchema,omitempty"`
 	OutputSchema map[string]any `json:"outputSchema,omitempty"`

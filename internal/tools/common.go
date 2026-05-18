@@ -317,21 +317,53 @@ func New(client *clockify.Client, workspaceID string) *Service {
 // set instead of a sparse one that spec-strict clients misinterpret.
 func baseAnnotations(name string) map[string]any {
 	return map[string]any{
-		"title":         titleFromName(name),
+		"title":         titleFor(name),
 		"openWorldHint": true,
 	}
 }
 
-// titleFromName converts a snake_case tool name into a human-readable title.
-// "clockify_entries_list" -> "Entries List", "clockify_reports_summary" -> "Quick
-// Report". Custom per-tool titles can be added later by overriding the
-// "title" key after the base annotations are copied.
-func titleFromName(name string) string {
-	stripped := strings.TrimPrefix(name, "clockify_")
-	if stripped == "" {
-		return name
+var toolTitleOverrides = map[string]string{
+	"clockify_status":              "Status Overview",
+	"clockify_tools_guide":         "Tools Guide",
+	"clockify_create_work_package": "Create Work Package",
+	"clockify_log_work":            "Log Finished Work",
+	"clockify_start_work":          "Start Work Timer",
+	"clockify_stop_work":           "Stop Work Timer",
+	"clockify_switch_work":         "Switch Work Timer",
+	"clockify_review_day":          "Review Day",
+	"clockify_review_week":         "Review Week",
+	"clockify_fix_entry":           "Fix Time Entry",
+	"clockify_invoice_client_work": "Invoice Client Work",
+	"clockify_record_expense":      "Record Expense",
+	"clockify_request_time_off":    "Request Time Off",
+	"clockify_schedule_work":       "Schedule Work",
+	"clockify_setup_webhook":       "Set Up Webhook",
+	"clockify_demo_seed":           "Seed Demo Data",
+	"clockify_demo_cleanup":        "Clean Up Demo Data",
+	"clockify_api_get":             "Raw Clockify API GET",
+	"clockify_api_request":         "Raw Clockify API Request",
+}
+
+var titleCRUDVerbs = map[string]bool{
+	"create": true,
+	"update": true,
+	"delete": true,
+	"list":   true,
+	"get":    true,
+}
+
+// titleFor returns a stable, human-readable display title for a tool name.
+// Curated overrides win; otherwise a deterministic transform applies.
+func titleFor(name string) string {
+	if t, ok := toolTitleOverrides[name]; ok {
+		return t
 	}
-	parts := strings.Split(stripped, "_")
+	trimmed := strings.TrimPrefix(name, "clockify_")
+	parts := strings.Split(trimmed, "_")
+	if len(parts) > 1 && titleCRUDVerbs[parts[len(parts)-1]] {
+		verb := parts[len(parts)-1]
+		parts = append([]string{verb}, parts[:len(parts)-1]...)
+	}
 	for i, p := range parts {
 		if p == "" {
 			continue
@@ -385,6 +417,9 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		}
 		if _, ok := in[i].Tool.Annotations["category"]; !ok {
 			in[i].Tool.Annotations["category"] = defaultToolCategory(in[i].Tool.Name)
+		}
+		if in[i].Tool.Title == "" {
+			in[i].Tool.Title = titleFor(in[i].Tool.Name)
 		}
 		if value, ok := in[i].Tool.Annotations["readOnlyHint"].(bool); ok {
 			in[i].ReadOnlyHint = value
