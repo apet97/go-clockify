@@ -1080,3 +1080,19 @@ func TestCreateExpenseRejectsNonPositiveAmount(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateExpenseRejectsNonPositiveAmount(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	for _, amount := range []float64{0, -50} {
+		_, err := svc.updateExpense(context.Background(), map[string]any{
+			"expense_id":    "000000000000000000000001",
+			"change_fields": []any{"AMOUNT"},
+			"amount":        amount,
+		})
+		if err == nil || !strings.Contains(err.Error(), "amount must be greater than 0") {
+			t.Fatalf("amount=%v: want rejection, got err=%v", amount, err)
+		}
+	}
+}
