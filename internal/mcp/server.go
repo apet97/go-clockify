@@ -218,6 +218,11 @@ type Server struct {
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
+	// toolRateLimiter throttles tool invocations process-wide; nil = disabled.
+	// toolFamilyCaps serializes high-risk writes; nil = disabled.
+	toolRateLimiter *tokenBucket
+	toolFamilyCaps  *familyLimiter
+
 	// inflight tracks cancellable contexts for in-flight tools/call
 	// requests, keyed by JSON-RPC request ID. notifications/cancelled
 	// looks up the ID and aborts the in-flight tool handler. Nil IDs
@@ -1282,6 +1287,13 @@ func (s *Server) AllowProgress(token any, progress float64) bool {
 	st.lastProgress = progress
 	st.hasProgress = true
 	return true
+}
+
+// ConfigureToolLimits installs the per-risk-family concurrency caps (always on)
+// and, when ratePerMinute > 0, a per-process tool-invocation rate limiter.
+func (s *Server) ConfigureToolLimits(ratePerMinute int) {
+	s.toolFamilyCaps = newFamilyLimiter()
+	s.toolRateLimiter = newTokenBucket(ratePerMinute)
 }
 
 // validateRequest checks JSON-RPC 2.0 version and id type per spec.

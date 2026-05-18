@@ -197,6 +197,12 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		return nil, &UnknownToolError{Name: params.Name}
 	}
 
+	if s.toolRateLimiter != nil && !s.toolRateLimiter.allow() {
+		outcome = "rate_limited"
+		slog.Warn("tool_call", "tool", params.Name, "error", "rate_limited", "req_id", reqID)
+		return rateLimitedEnvelope(params.Name), nil
+	}
+
 	if params.Arguments == nil {
 		params.Arguments = map[string]any{}
 	}
@@ -217,6 +223,16 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 	}
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	if s.toolFamilyCaps != nil {
+		release, acqErr := s.toolFamilyCaps.acquire(callCtx, d.RiskClass)
+		if acqErr != nil {
+			outcome = "timeout"
+			slog.Warn("tool_call", "tool", params.Name, "error", acqErr.Error(), "req_id", reqID)
+			return nil, acqErr
+		}
+		defer release()
+	}
 
 	result, err := d.Handler(callCtx, params.Arguments)
 	duration := time.Since(start)
