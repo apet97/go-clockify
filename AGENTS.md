@@ -42,6 +42,18 @@ Historical docs explain prior decisions; current work starts from the files
 above plus the code. Do not route users to archived or bannered platform-era
 docs as setup instructions.
 
+## Current State
+
+- `main` is at or beyond `cb470725db34` from the perfect-finalization follow-up.
+- Branch protection requires the 16 current one-user checks in
+  `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
+- `make perfect`, `make perfect-local`, and `make perfect-live` were green for
+  the finalization stack; the latest live run is recorded in `docs/live-tests.md`
+  with a commit column and `Leftovers: 0`.
+- Claude's local binary was rebuilt to `/Users/15x/.local/bin/clockify-mcp`.
+- There is no required follow-up work from the finalization plan. Treat release
+  tagging or new Clockify API drift as new work, not leftover finalization.
+
 ## Safety Rules
 
 - Never print, commit, or log API keys, workspace IDs, or tokens.
@@ -218,6 +230,15 @@ instead of depending on Psych's exact parser wording.
   approvals. `clockify_invoices_payments_delete` supports a `dry_run` preview;
   `clockify_approvals_resubmit` preflights approval state for a precise
   recovery hint.
+- Live Clockify currently accepts direct deletion of a freshly-created expense
+  category; do not preserve older "must archive first" assumptions without a
+  fresh live failure.
+- Report tools may return `totals_summary`, `group_totals_summary`, or
+  `weekly_totals_summary` instead of legacy top-level `totals`; tests should
+  allow the current family-specific total shape.
+- `clockify_status` returns the pinned workspace under `data.workspace`.
+- Prefix cleanup archives clients with the existing `name` before deletion
+  because Clockify validates client `PUT` bodies even for archive-only updates.
 
 ## Testing Discipline
 
