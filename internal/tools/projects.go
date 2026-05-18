@@ -11,33 +11,6 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
-func (s *Service) ListProjects(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	path, err := paths.Workspace(wsID, "projects")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	page, pageSize := paginationFromArgs(args)
-	values, err := projectListQueryValues(args, page, pageSize)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var projects []clockify.Project
-	if err := s.Client.GetValues(ctx, path, values, &projects); err != nil {
-		return ResultEnvelope{}, err
-	}
-	meta := addPaginationMeta(map[string]any{
-		"workspaceId": wsID,
-		"count":       len(projects),
-		"page":        page,
-		"pageSize":    pageSize,
-	}, args, page, pageSize)
-	return ok("clockify_projects_list", compactProjectViewsFromProjects(projects), emptyListMeta(meta, "clockify_projects_create")), nil
-}
-
 func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values, error) {
 	query := pageQuery(page, pageSize)
 	addStringQuery(query, args, "name", "name")
@@ -139,49 +112,6 @@ func (s *Service) ListProjectMemberships(ctx context.Context, args map[string]an
 		"projectId":   projectID,
 		"count":       len(memberships),
 	}), nil
-}
-
-func (s *Service) CreateProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	name := strings.TrimSpace(stringArg(args, "name"))
-	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	payload := map[string]any{"name": name}
-
-	if clientID := strings.TrimSpace(stringArg(args, "client_id")); clientID != "" {
-		payload["clientId"] = clientID
-	} else if clientRef := stringArg(args, "client"); clientRef != "" {
-		clientID, err := s.resolveClientID(ctx, wsID, clientRef)
-		if err != nil {
-			return ResultEnvelope{}, err
-		}
-		payload["clientId"] = clientID
-	}
-	if err := applyProjectRequestFields(payload, args); err != nil {
-		return ResultEnvelope{}, err
-	}
-	if dryrun.Enabled(args) {
-		return ok("clockify_projects_create", dryrun.Preview("clockify_projects_create", payload), map[string]any{"workspaceId": wsID}), nil
-	}
-
-	path, err := paths.Workspace(wsID, "projects")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var project clockify.Project
-	if err := s.Client.Post(ctx, path, payload, &project); err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	s.emitResourceUpdate(ctx, projectResourceURI(wsID, project.ID))
-	meta := map[string]any{"workspaceId": wsID}
-	view, financialMeta := s.enrichProjectView(ctx, wsID, project, args)
-	return ok("clockify_projects_create", view, withFinancialMeta(meta, financialMeta)), nil
 }
 
 // UpdateProject performs a fetch-then-merge update of a project.

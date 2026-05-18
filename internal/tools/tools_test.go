@@ -900,58 +900,6 @@ func TestDeleteEntryDryRun(t *testing.T) {
 	}
 }
 
-func TestListProjects(t *testing.T) {
-	var gotHydrated string
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/workspaces/ws123/projects":
-			gotHydrated = r.URL.Query().Get("hydrated")
-			respondJSON(t, w, []clockify.Project{
-				{ID: "p1", Name: "Backend API", ClientID: "c1", ClientName: "Client", Color: "#0000FF", Archived: false, Billable: true, Public: true, Duration: "PT1H", Note: strings.Repeat("x", 500)},
-				{ID: "p2", Name: "Frontend App", Color: "#FF0000", Archived: false},
-			})
-		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws123")
-	result, err := svc.ListProjects(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("ListProjects failed: %v", err)
-	}
-	if !result.OK {
-		t.Fatalf("expected ok=true")
-	}
-	if result.Action != "clockify_projects_list" {
-		t.Fatalf("expected action clockify_projects_list, got %s", result.Action)
-	}
-	if gotHydrated != "false" {
-		t.Fatalf("hydrated query = %q, want false", gotHydrated)
-	}
-	projects, ok := result.Data.([]CompactProjectView)
-	if !ok {
-		t.Fatalf("expected []CompactProjectView, got %T", result.Data)
-	}
-	if len(projects) != 2 {
-		t.Fatalf("expected 2 projects, got %d", len(projects))
-	}
-	if projects[0].Name != "Backend API" {
-		t.Fatalf("expected first project Backend API, got %s", projects[0].Name)
-	}
-	if projects[1].Name != "Frontend App" {
-		t.Fatalf("expected second project Frontend App, got %s", projects[1].Name)
-	}
-	if projects[0].ClientName != "Client" || projects[0].Duration != "PT1H" || !projects[0].Billable || !projects[0].Public {
-		t.Fatalf("compact project fields not preserved: %+v", projects[0])
-	}
-	count, ok := result.Meta["count"].(int)
-	if !ok || count != 2 {
-		t.Fatalf("expected meta count=2, got %v", result.Meta["count"])
-	}
-}
-
 func TestTimerStatus_NoRunning(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -1351,39 +1299,11 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "clockify_projects_create",
-			call: func() (any, error) {
-				return svc.CreateProject(context.Background(), map[string]any{
-					"name":    "Dry project",
-					"dry_run": true,
-				})
-			},
-		},
-		{
-			name: "clockify_clients_create",
-			call: func() (any, error) {
-				return svc.CreateClient(context.Background(), map[string]any{
-					"name":    "Dry client",
-					"dry_run": true,
-				})
-			},
-		},
-		{
 			name: "clockify_tags_create",
 			call: func() (any, error) {
 				return svc.CreateTag(context.Background(), map[string]any{
 					"name":    "Dry tag",
 					"dry_run": true,
-				})
-			},
-		},
-		{
-			name: "clockify_tasks_create",
-			call: func() (any, error) {
-				return svc.CreateTask(context.Background(), map[string]any{
-					"project_id": "123456789012345678901234",
-					"name":       "Dry task",
-					"dry_run":    true,
 				})
 			},
 		},
@@ -1802,63 +1722,6 @@ func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
 	}
 }
 
-// TestListClientsPagination verifies that page and page_size args are forwarded
-// to the Clockify API as query parameters.
-func TestListClientsPagination(t *testing.T) {
-	var gotPage, gotPageSize string
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/ws1/clients" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-		gotPage = r.URL.Query().Get("page")
-		gotPageSize = r.URL.Query().Get("page-size")
-		respondJSON(t, w, []clockify.ClientEntity{{ID: "c1", Name: "Acme"}})
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.ListClients(context.Background(), map[string]any{
-		"page":      2,
-		"page_size": 100,
-	})
-	if err != nil {
-		t.Fatalf("list clients failed: %v", err)
-	}
-	if gotPage != "2" || gotPageSize != "100" {
-		t.Fatalf("expected page=2 page-size=100, got page=%s page-size=%s", gotPage, gotPageSize)
-	}
-	meta := result.Meta
-	if meta["page"] != 2 || meta["pageSize"] != 100 {
-		t.Fatalf("expected meta page=2 pageSize=100, got %+v", meta)
-	}
-}
-
-// TestListClientsPageSizeCap ensures page_size is capped at 200.
-func TestListClientsPageSizeCap(t *testing.T) {
-	var gotPageSize string
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		gotPageSize = r.URL.Query().Get("page-size")
-		respondJSON(t, w, []clockify.ClientEntity{})
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.ListClients(context.Background(), map[string]any{"page_size": 9999})
-	if err != nil {
-		t.Fatalf("list clients failed: %v", err)
-	}
-	if gotPageSize != "200" {
-		t.Fatalf("expected page-size capped at 200, got %s", gotPageSize)
-	}
-	pagination, ok := result.Meta["pagination"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected structured pagination meta, got %+v", result.Meta)
-	}
-	if pagination["requested_page_size"] != 9999 || pagination["applied_page_size"] != 200 || pagination["clamped"] != true {
-		t.Fatalf("unexpected structured pagination meta: %+v", pagination)
-	}
-}
-
 // TestListTags verifies default pagination (page=1, page_size=50).
 func TestListTags(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -1877,48 +1740,6 @@ func TestListTags(t *testing.T) {
 	tags, ok := result.Data.([]clockify.Tag)
 	if !ok || len(tags) != 1 {
 		t.Fatalf("expected 1 tag, got %+v", result.Data)
-	}
-}
-
-// TestListTasks verifies that project ref is resolved and pagination applied.
-func TestListTasks(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/workspaces/ws1/projects":
-			respondJSON(t, w, []map[string]any{{"id": "p1", "name": "MyProj"}})
-		case "/workspaces/ws1/projects/p1/tasks":
-			respondJSON(t, w, []clockify.Task{{ID: "tk1", Name: "Task A", ProjectID: "p1"}})
-		default:
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	result, err := svc.ListTasks(context.Background(), map[string]any{"project": "MyProj"})
-	if err != nil {
-		t.Fatalf("list tasks failed: %v", err)
-	}
-	if result.Action != "clockify_tasks_list" {
-		t.Fatalf("unexpected action: %s", result.Action)
-	}
-	tasks, ok := result.Data.([]TaskView)
-	if !ok || len(tasks) != 1 || tasks[0].ID != "tk1" {
-		t.Fatalf("unexpected tasks: %+v", result.Data)
-	}
-}
-
-// TestListTasksMissingProject verifies fail-closed on missing project arg.
-func TestListTasksMissingProject(t *testing.T) {
-	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		t.Fatalf("no request expected")
-	})
-	defer cleanup()
-
-	svc := New(client, "ws1")
-	_, err := svc.ListTasks(context.Background(), map[string]any{})
-	if err == nil {
-		t.Fatal("expected error for missing project")
 	}
 }
 

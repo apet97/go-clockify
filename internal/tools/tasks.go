@@ -10,39 +10,6 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
-func (s *Service) ListTasks(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	projectRef := strings.TrimSpace(stringArg(args, "project"))
-	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	path, err := paths.Workspace(wsID, "projects", projectID, "tasks")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	page, pageSize := paginationFromArgs(args)
-	var out []clockify.Task
-	if err := s.Client.Get(ctx, path, taskListQuery(args, page, pageSize), &out); err != nil {
-		return ResultEnvelope{}, err
-	}
-	views, financialMeta := s.enrichTaskViews(ctx, wsID, projectID, out, args)
-	meta := addPaginationMeta(map[string]any{
-		"workspaceId": wsID,
-		"projectId":   projectID,
-		"count":       len(out),
-		"page":        page,
-		"pageSize":    pageSize,
-	}, args, page, pageSize)
-	return ok("clockify_tasks_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_tasks_create")), nil
-}
-
 func taskListQuery(args map[string]any, page, pageSize int) map[string]string {
 	query := pageQuery(page, pageSize)
 	addStringQuery(query, args, "name", "name")
@@ -86,49 +53,6 @@ func (s *Service) GetTask(ctx context.Context, args map[string]any) (ResultEnvel
 	}
 	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, out, args)
 	return ok("clockify_tasks_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}, financialMeta)), nil
-}
-
-func (s *Service) CreateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	projectID := strings.TrimSpace(stringArg(args, "project_id"))
-	projectRef := strings.TrimSpace(stringArg(args, "project"))
-	if projectID == "" && projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required (or project_id)")
-	}
-	name := strings.TrimSpace(stringArg(args, "name"))
-	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	if projectID == "" {
-		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
-		if err != nil {
-			return ResultEnvelope{}, err
-		}
-	}
-
-	payload := map[string]any{"name": name}
-	if err := applyTaskRequestFields(payload, args); err != nil {
-		return ResultEnvelope{}, err
-	}
-	if dryrun.Enabled(args) {
-		return ok("clockify_tasks_create", dryrun.Preview("clockify_tasks_create", payload), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
-	}
-
-	path, err := paths.Workspace(wsID, "projects", projectID, "tasks")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	var task clockify.Task
-	query := map[string]string{}
-	addBoolQuery(query, args, "contains_assignee", "contains-assignee")
-	if err := s.Client.PostWithQuery(ctx, path, query, payload, &task); err != nil {
-		return ResultEnvelope{}, err
-	}
-	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, task, args)
-	return ok("clockify_tasks_create", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
 // UpdateTask performs a fetch-then-merge update of a task.
