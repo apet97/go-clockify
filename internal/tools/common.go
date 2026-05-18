@@ -577,6 +577,14 @@ func tightenInputSchema(schema map[string]any) {
 // property schema based on its name and description. Only untouched keys
 // are added — explicit values stay as declared.
 func applyPropertyConstraints(name string, prop map[string]any) {
+	// Fill a canonical description for any parameter that lacks one. An
+	// explicit (non-empty) per-descriptor description is left untouched.
+	if canonical, ok := paramDescriptions[name]; ok {
+		if existing, _ := prop["description"].(string); strings.TrimSpace(existing) == "" {
+			prop["description"] = canonical
+		}
+	}
+
 	switch name {
 	case "page":
 		if _, set := prop["minimum"]; !set {
@@ -657,6 +665,131 @@ var freeTextMaxLength = map[string]int{
 	"url":                  2048,
 	"webhook_url":          2048,
 	"redirect_url":         2048,
+}
+
+// paramDescriptions is the canonical description for every tool input
+// parameter name in the Clockify domain. applyPropertyConstraints fills it
+// into any property that has no description of its own, so descriptors
+// need not repeat boilerplate and new tools inherit documentation for
+// free. An explicit per-descriptor description always wins.
+var paramDescriptions = map[string]string{
+	// Entity identifiers.
+	"project_id":    "Project ID.",
+	"task_id":       "Task ID.",
+	"entry_id":      "Time entry ID.",
+	"client_id":     "Client ID.",
+	"invoice_id":    "Invoice ID.",
+	"expense_id":    "Expense ID.",
+	"category_id":   "Expense category ID.",
+	"field_id":      "Custom field ID.",
+	"policy_id":     "Time-off policy ID.",
+	"request_id":    "Time-off request ID.",
+	"holiday_id":    "Holiday ID.",
+	"group_id":      "User group ID.",
+	"user_id":       "User ID.",
+	"approval_id":   "Approval request ID.",
+	"assignment_id": "Scheduling assignment ID.",
+	"payment_id":    "Invoice payment ID.",
+	"currency_id":   "Currency ID.",
+	// Name-or-ID references.
+	"project": "Project name or ID.",
+	"task":    "Task name or ID.",
+	"tag":     "Tag name or ID.",
+	// Identifier and value collections.
+	"tag_ids":        "Tag IDs.",
+	"tags":           "Tag names or IDs.",
+	"time_entry_ids": "Time entry IDs.",
+	"excluded_ids":   "IDs to exclude from the results.",
+	"assignee_ids":   "User IDs to assign.",
+	"emails":         "Email addresses.",
+	"cc_emails":      "CC email addresses for the invoice.",
+	"clients":        "Client IDs to filter by.",
+	"users":          "User IDs to filter by.",
+	"user_groups":    "User group IDs.",
+	"allowed_values": "Allowed values for a dropdown custom field.",
+	"memberships":    "Full membership list to set on the project.",
+	// Dates and times.
+	"start":      flexibleDatetimeDescription,
+	"end":        flexibleDatetimeDescription,
+	"since":      "Effective date of the rate (YYYY-MM-DD).",
+	"start_time": "Start time of day in HH:MM format.",
+	// Boolean flags.
+	"billable":                 "Whether the work is billable.",
+	"archived":                 "Whether the item is archived.",
+	"is_public":                "Whether the project is visible to the whole workspace.",
+	"is_template":              "Filter to template projects only.",
+	"is_active":                "Filter to active items only.",
+	"include_entries":          "Include the underlying time entries in the response.",
+	"include_non_working_days": "Include non-working days when distributing scheduled hours.",
+	"include_roles":            "Include each user's role assignments in the response.",
+	"strict_name_search":       "When true, match the name exactly instead of as a substring.",
+	"contains_assignee":        "Filter to tasks that have an assignee.",
+	"contains_client":          "Filter to projects that have a client.",
+	"contains_user":            "Filter to projects assigned to a given user.",
+	"contains_group":           "Filter to projects assigned to a given user group.",
+	"half_day":                 "Whether the time-off request covers a half day.",
+	"repeat":                   "Whether the scheduled assignment repeats.",
+	"hydrated":                 "Return the fully hydrated record, including nested related objects.",
+	"in_progress":              "Filter to time entries that are currently running.",
+	"project_required":         "Return only entries that have a project.",
+	"task_required":            "Return only entries that have a task.",
+	"get_week_before":          "Also include the week before the requested range.",
+	"archive_projects":         "Also archive the client's projects.",
+	"mark_tasks_as_done":       "Mark the client's tasks as done.",
+	"requires_approval":        "Whether time-off requests under this policy require approval.",
+	"auto_approve":             "Whether matching requests are approved automatically.",
+	"accrual":                  "Whether the policy accrues balance over time.",
+	"negative_balance":         "Whether the policy allows a negative balance.",
+	"invoiced":                 "Whether the time entries are marked as invoiced.",
+	// Text fields.
+	"name":                 "Name.",
+	"note":                 "Optional note.",
+	"notes":                "Optional notes.",
+	"description":          "Free-text description.",
+	"description_contains": "Match items whose description contains this text.",
+	"exact_description":    "Match items whose description exactly equals this text.",
+	"new_description":      "Replacement description.",
+	"email":                "Email address.",
+	"address":              "Postal address.",
+	"url":                  "URL.",
+	"color":                "Hex color code, e.g. #4caf50.",
+	"number":               "Invoice number.",
+	"currency":             "Three-letter currency code, e.g. USD.",
+	// Enums and filters.
+	"status":                   "Status value.",
+	"sort_column":              "Field to sort the results by.",
+	"sort_order":               "Sort direction: ASCENDING or DESCENDING.",
+	"rate_kind":                "Rate type: hourly or cost.",
+	"access":                   "Project access level: PUBLIC or PRIVATE.",
+	"client_status":            "Filter projects by their client's status.",
+	"user_status":              "Filter projects by member status.",
+	"membership_status":        "Filter by membership status.",
+	"account_statuses":         "Filter users by account status.",
+	"time_unit":                "Time unit for the policy: DAYS or HOURS.",
+	"time_entry_group_type":    "How imported time entries are grouped: SINGLE_ITEM, GROUPED, or DETAILED.",
+	"custom_field_entity_type": "Entity type the custom field value applies to.",
+	"estimate_reset":           "How the estimate resets over time.",
+	"expense_limit":            "Clockify expense-limit query filter.",
+	"attendance_filter":        "Clockify attendance-report filter object.",
+	"detailed_filter":          "Clockify detailed-report filter object.",
+	"summary_filter":           "Clockify summary-report filter object.",
+	// Numbers.
+	"amount":          "Amount.",
+	"quantity":        "Quantity; must be greater than 0.",
+	"min_gap_minutes": "Minimum gap, in minutes, to flag between time entries.",
+	"days_per_year":   "Days granted per year by the policy.",
+	"budget_estimate": "Budget estimate amount.",
+	"time_estimate":   "Time estimate, e.g. an ISO-8601 duration.",
+	// Miscellaneous.
+	"timezone":            "IANA timezone name; defaults to the configured or local timezone.",
+	"trigger_source":      "Webhook trigger source IDs.",
+	"trigger_source_type": "Webhook trigger source type.",
+	"required":            "Whether the custom field is required.",
+	// Raw API fallback.
+	"body":   "Raw JSON request body forwarded to the Clockify API.",
+	"path":   "Clockify API path, e.g. /workspaces/{id}/projects.",
+	"query":  "Query-string parameters as a key/value object.",
+	"method": "HTTP method: GET, POST, PUT, PATCH, or DELETE.",
 }
 
 // descriptionAdvertisesFlexibleTime reports whether a property's

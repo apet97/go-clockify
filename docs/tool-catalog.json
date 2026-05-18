@@ -743,6 +743,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "client": {
@@ -750,12 +751,16 @@
             "type": "string"
           },
           "client_id": {
+            "description": "Client ID.",
             "type": "string"
           },
           "color": {
+            "description": "Hex color code, e.g. #4caf50.",
+            "pattern": "^#[0-9a-fA-F]{6}$",
             "type": "string"
           },
           "is_public": {
+            "description": "Whether the project is visible to the whole workspace.",
             "type": "boolean"
           },
           "project": {
@@ -763,6 +768,7 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "tag": {
@@ -770,12 +776,14 @@
             "type": "string"
           },
           "tag_ids": {
+            "description": "Tag IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "tags": {
+            "description": "Tag names or IDs.",
             "items": {
               "type": "string"
             },
@@ -786,6 +794,7 @@
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "upsert": {
@@ -1070,6 +1079,7 @@
             "type": "boolean"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
@@ -1082,9 +1092,11 @@
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "start": {
@@ -1092,18 +1104,22 @@
             "type": "string"
           },
           "tag": {
+            "description": "Tag name or ID.",
             "type": "string"
           },
           "tag_ids": {
+            "description": "Tag IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "task": {
+            "description": "Task name or ID.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           }
         },
@@ -1464,6 +1480,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
@@ -1472,9 +1489,11 @@
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "start": {
@@ -1482,18 +1501,22 @@
             "type": "string"
           },
           "tag": {
+            "description": "Tag name or ID.",
             "type": "string"
           },
           "tag_ids": {
+            "description": "Tag IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "task": {
+            "description": "Task name or ID.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           }
         },
@@ -2123,6 +2146,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
@@ -2131,9 +2155,11 @@
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "start": {
@@ -2141,18 +2167,22 @@
             "type": "string"
           },
           "tag": {
+            "description": "Tag name or ID.",
             "type": "string"
           },
           "tag_ids": {
+            "description": "Tag IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "task": {
+            "description": "Task name or ID.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           }
         },
@@ -2436,6 +2466,7 @@
             "type": "string"
           },
           "include_entries": {
+            "description": "Include the underlying time entries in the response.",
             "type": "boolean"
           },
           "max_rows": {
@@ -2444,6 +2475,7 @@
             "type": "integer"
           },
           "min_gap_minutes": {
+            "description": "Minimum gap, in minutes, to flag between time entries.",
             "type": "integer"
           },
           "start": {
@@ -2451,6 +2483,7 @@
             "type": "string"
           },
           "timezone": {
+            "description": "IANA timezone name; defaults to the configured or local timezone.",
             "type": "string"
           },
           "workday_end": {
@@ -3454,6 +3487,7 @@
             "type": "string"
           },
           "include_entries": {
+            "description": "Include the underlying time entries in the response.",
             "type": "boolean"
           },
           "max_rows": {
@@ -3462,6 +3496,7 @@
             "type": "integer"
           },
           "min_gap_minutes": {
+            "description": "Minimum gap, in minutes, to flag between time entries.",
             "type": "integer"
           },
           "start": {
@@ -3469,6 +3504,7 @@
             "type": "string"
           },
           "timezone": {
+            "description": "IANA timezone name; defaults to the configured or local timezone.",
             "type": "string"
           },
           "week_start": {
@@ -4468,6 +4504,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
@@ -4476,6 +4513,7 @@
             "type": "string"
           },
           "description_contains": {
+            "description": "Match items whose description contains this text.",
             "maxLength": 2000,
             "type": "string"
           },
@@ -4484,20 +4522,25 @@
             "type": "string"
           },
           "entry_id": {
+            "description": "Time entry ID.",
             "type": "string"
           },
           "exact_description": {
+            "description": "Match items whose description exactly equals this text.",
             "maxLength": 2000,
             "type": "string"
           },
           "new_description": {
+            "description": "Replacement description.",
             "maxLength": 2000,
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "start": {
@@ -5463,11 +5506,11 @@
         "additionalProperties": false,
         "properties": {
           "client": {
-            "description": "Client name or ID (this or client_id is required).",
+            "description": "Client name or ID. Required.",
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID (this or client is required).",
+            "description": "Optional ID-only alias for client; prefer client, which already accepts an ID.",
             "type": "string"
           },
           "currency": {
@@ -5491,10 +5534,12 @@
             "type": "string"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
           "number": {
+            "description": "Invoice number.",
             "type": "string"
           },
           "project_ids": {
@@ -5505,6 +5550,7 @@
             "type": "array"
           },
           "time_entry_group_type": {
+            "description": "How imported time entries are grouped: SINGLE_ITEM, GROUPED, or DETAILED.",
             "type": "string"
           },
           "to": {
@@ -5513,7 +5559,8 @@
           }
         },
         "required": [
-          "currency"
+          "currency",
+          "client"
         ],
         "type": "object"
       },
@@ -5777,9 +5824,11 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
+            "description": "Amount.",
             "type": "number"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "category": {
@@ -5795,18 +5844,23 @@
             "type": "string"
           },
           "notes": {
+            "description": "Optional notes.",
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "user_id": {
+            "description": "User ID.",
             "type": "string"
           }
         },
@@ -6077,12 +6131,15 @@
         "additionalProperties": false,
         "properties": {
           "end": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           },
           "half_day": {
+            "description": "Whether the time-off request covers a half day.",
             "type": "boolean"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
@@ -6095,6 +6152,7 @@
             "type": "string"
           },
           "start": {
+            "description": "Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
           }
         },
@@ -6363,6 +6421,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "end": {
@@ -6376,21 +6435,24 @@
             "type": "number"
           },
           "include_non_working_days": {
+            "description": "Include non-working days when distributing scheduled hours.",
             "type": "boolean"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
           "project": {
-            "description": "Project name or ID. Provide either project or project_id (one is required).",
+            "description": "Project name or ID. Required.",
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID. Provide either project or project_id (one is required).",
+            "description": "Optional ID-only alias for project; prefer project, which already accepts an ID.",
             "type": "string"
           },
           "repeat": {
+            "description": "Whether the scheduled assignment repeats.",
             "type": "boolean"
           },
           "start": {
@@ -6398,17 +6460,19 @@
             "type": "string"
           },
           "start_time": {
+            "description": "Start time of day in HH:MM format.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "user": {
-            "description": "User name, email, or ID. Provide either user or user_id (one is required).",
+            "description": "User name, email, or ID. Required.",
             "type": "string"
           },
           "user_id": {
-            "description": "User ID. Provide either user or user_id (one is required).",
+            "description": "Optional ID-only alias for user; prefer user, which already accepts an ID.",
             "type": "string"
           },
           "weeks": {
@@ -6421,7 +6485,9 @@
         "required": [
           "start",
           "end",
-          "hours_per_day"
+          "hours_per_day",
+          "user",
+          "project"
         ],
         "type": "object"
       },
@@ -6680,34 +6746,39 @@
             "type": "boolean"
           },
           "event": {
-            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Alias for webhook_event; provide either event or webhook_event (one is required).",
+            "description": "Optional alias for webhook_event.",
             "type": "string"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
           "trigger_source": {
+            "description": "Webhook trigger source IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "trigger_source_type": {
+            "description": "Webhook trigger source type.",
             "type": "string"
           },
           "url": {
+            "description": "URL.",
             "maxLength": 2048,
             "type": "string"
           },
           "webhook_event": {
-            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Provide either webhook_event or event (one is required).",
+            "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Required.",
             "type": "string"
           }
         },
         "required": [
           "name",
-          "url"
+          "url",
+          "webhook_event"
         ],
         "type": "object"
       },
@@ -7539,17 +7610,21 @@
         "additionalProperties": false,
         "properties": {
           "address": {
+            "description": "Postal address.",
             "maxLength": 256,
             "type": "string"
           },
           "archived": {
+            "description": "Whether the item is archived.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
@@ -7867,6 +7942,7 @@
         "additionalProperties": false,
         "properties": {
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           }
@@ -8144,6 +8220,7 @@
         "additionalProperties": false,
         "properties": {
           "access": {
+            "description": "Project access level: PUBLIC or PRIVATE.",
             "enum": [
               "PUBLIC",
               "PRIVATE"
@@ -8151,12 +8228,15 @@
             "type": "string"
           },
           "archived": {
+            "description": "Whether the item is archived.",
             "type": "boolean"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "client_status": {
+            "description": "Filter projects by their client's status.",
             "enum": [
               "ACTIVE",
               "ARCHIVED",
@@ -8165,18 +8245,22 @@
             "type": "string"
           },
           "clients": {
+            "description": "Client IDs to filter by.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "contains_client": {
+            "description": "Filter to projects that have a client.",
             "type": "boolean"
           },
           "contains_group": {
+            "description": "Filter to projects assigned to a given user group.",
             "type": "boolean"
           },
           "contains_user": {
+            "description": "Filter to projects assigned to a given user.",
             "type": "boolean"
           },
           "expense_date": {
@@ -8184,6 +8268,7 @@
             "type": "string"
           },
           "expense_limit": {
+            "description": "Clockify expense-limit query filter.",
             "type": "integer"
           },
           "hydrated": {
@@ -8191,9 +8276,11 @@
             "type": "boolean"
           },
           "is_template": {
+            "description": "Filter to template projects only.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -8209,6 +8296,7 @@
             "type": "integer"
           },
           "sort_column": {
+            "description": "Field to sort the results by.",
             "enum": [
               "ID",
               "NAME",
@@ -8220,6 +8308,7 @@
             "type": "string"
           },
           "sort_order": {
+            "description": "Sort direction: ASCENDING or DESCENDING.",
             "enum": [
               "ASCENDING",
               "DESCENDING"
@@ -8227,6 +8316,7 @@
             "type": "string"
           },
           "strict_name_search": {
+            "description": "When true, match the name exactly instead of as a substring.",
             "type": "boolean"
           },
           "user_groups": {
@@ -8237,6 +8327,7 @@
             "type": "array"
           },
           "user_status": {
+            "description": "Filter projects by member status.",
             "enum": [
               "PENDING",
               "ACTIVE",
@@ -8247,6 +8338,7 @@
             "type": "string"
           },
           "users": {
+            "description": "User IDs to filter by.",
             "items": {
               "type": "string"
             },
@@ -8547,6 +8639,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "client": {
@@ -8554,6 +8647,7 @@
             "type": "string"
           },
           "client_id": {
+            "description": "Client ID.",
             "type": "string"
           },
           "color": {
@@ -8562,9 +8656,11 @@
             "type": "string"
           },
           "is_public": {
+            "description": "Whether the project is visible to the whole workspace.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           }
@@ -9048,9 +9144,11 @@
         "additionalProperties": false,
         "properties": {
           "is_active": {
+            "description": "Filter to active items only.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -9070,9 +9168,11 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "sort_column": {
+            "description": "Field to sort the results by.",
             "enum": [
               "ID",
               "NAME"
@@ -9080,6 +9180,7 @@
             "type": "string"
           },
           "sort_order": {
+            "description": "Sort direction: ASCENDING or DESCENDING.",
             "enum": [
               "ASCENDING",
               "DESCENDING"
@@ -9087,9 +9188,13 @@
             "type": "string"
           },
           "strict_name_search": {
+            "description": "When true, match the name exactly instead of as a substring.",
             "type": "boolean"
           }
         },
+        "required": [
+          "project"
+        ],
         "type": "object"
       },
       "output_schema": {
@@ -9433,12 +9538,15 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "contains_assignee": {
+            "description": "Filter to tasks that have an assignee.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -9447,11 +9555,13 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           }
         },
         "required": [
-          "name"
+          "name",
+          "project"
         ],
         "type": "object"
       },
@@ -9772,15 +9882,18 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
+            "description": "Whether the item is archived.",
             "type": "boolean"
           },
           "excluded_ids": {
+            "description": "IDs to exclude from the results.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -9804,6 +9917,7 @@
             "type": "string"
           },
           "strict_name_search": {
+            "description": "When true, match the name exactly instead of as a substring.",
             "type": "boolean"
           }
         },
@@ -10086,6 +10200,7 @@
         "additionalProperties": false,
         "properties": {
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           }
@@ -10348,6 +10463,7 @@
         "additionalProperties": false,
         "properties": {
           "description": {
+            "description": "Free-text description.",
             "maxLength": 2000,
             "type": "string"
           },
@@ -10356,12 +10472,15 @@
             "type": "string"
           },
           "get_week_before": {
+            "description": "Also include the week before the requested range.",
             "type": "string"
           },
           "hydrated": {
+            "description": "Return the fully hydrated record, including nested related objects.",
             "type": "boolean"
           },
           "in_progress": {
+            "description": "Filter to time entries that are currently running.",
             "type": "string"
           },
           "page": {
@@ -10380,9 +10499,11 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "project_required": {
+            "description": "Return only entries that have a project.",
             "type": "boolean"
           },
           "start": {
@@ -10390,15 +10511,18 @@
             "type": "string"
           },
           "tags": {
+            "description": "Tag names or IDs.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "task": {
+            "description": "Task name or ID.",
             "type": "string"
           },
           "task_required": {
+            "description": "Return only entries that have a task.",
             "type": "boolean"
           }
         },
@@ -10765,9 +10889,11 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
+            "description": "Free-text description.",
             "maxLength": 2000,
             "type": "string"
           },
@@ -10784,6 +10910,7 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "start": {
@@ -10795,6 +10922,7 @@
             "type": "string"
           },
           "tag_ids": {
+            "description": "Tag IDs.",
             "items": {
               "type": "string"
             },
@@ -10805,6 +10933,7 @@
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "type": {
@@ -11790,16 +11919,20 @@
         "additionalProperties": false,
         "properties": {
           "address": {
+            "description": "Postal address.",
             "maxLength": 256,
             "type": "string"
           },
           "archive_projects": {
+            "description": "Also archive the client's projects.",
             "type": "boolean"
           },
           "archived": {
+            "description": "Whether the item is archived.",
             "type": "boolean"
           },
           "cc_emails": {
+            "description": "CC email addresses for the invoice.",
             "items": {
               "type": "string"
             },
@@ -11814,20 +11947,25 @@
             "type": "string"
           },
           "currency_id": {
+            "description": "Currency ID.",
             "type": "string"
           },
           "email": {
+            "description": "Email address.",
             "maxLength": 254,
             "type": "string"
           },
           "mark_tasks_as_done": {
+            "description": "Mark the client's tasks as done.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           }
@@ -12709,6 +12847,7 @@
         "additionalProperties": false,
         "properties": {
           "custom_field_entity_type": {
+            "description": "Entity type the custom field value applies to.",
             "type": "string"
           },
           "expense_date": {
@@ -12716,6 +12855,7 @@
             "type": "string"
           },
           "expense_limit": {
+            "description": "Clockify expense-limit query filter.",
             "type": "integer"
           },
           "hydrated": {
@@ -14019,9 +14159,11 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
+            "description": "Whether the item is archived.",
             "type": "boolean"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "client": {
@@ -14029,19 +14171,25 @@
             "type": "string"
           },
           "client_id": {
+            "description": "Client ID.",
             "type": "string"
           },
           "color": {
+            "description": "Hex color code, e.g. #4caf50.",
+            "pattern": "^#[0-9a-fA-F]{6}$",
             "type": "string"
           },
           "is_public": {
+            "description": "Whether the project is visible to the whole workspace.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
@@ -16910,9 +17058,11 @@
             "type": "boolean"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "rate_kind": {
+            "description": "Rate type: hourly or cost.",
             "enum": [
               "hourly",
               "cost"
@@ -16920,9 +17070,11 @@
             "type": "string"
           },
           "since": {
+            "description": "Effective date of the rate (YYYY-MM-DD).",
             "type": "string"
           },
           "user_id": {
+            "description": "User ID.",
             "type": "string"
           }
         },
@@ -17821,18 +17973,22 @@
         "additionalProperties": false,
         "properties": {
           "assignee_ids": {
+            "description": "User IDs to assign.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "contains_assignee": {
+            "description": "Filter to tasks that have an assignee.",
             "type": "boolean"
           },
           "membership_status": {
+            "description": "Filter by membership status.",
             "enum": [
               "PENDING",
               "ACTIVE",
@@ -17843,6 +17999,7 @@
             "type": "string"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -17855,6 +18012,7 @@
             "type": "string"
           },
           "status": {
+            "description": "Status value.",
             "enum": [
               "ACTIVE",
               "DONE"
@@ -18782,9 +18940,11 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "rate_kind": {
+            "description": "Rate type: hourly or cost.",
             "enum": [
               "hourly",
               "cost"
@@ -18792,6 +18952,7 @@
             "type": "string"
           },
           "since": {
+            "description": "Effective date of the rate (YYYY-MM-DD).",
             "type": "string"
           },
           "task": {
@@ -18799,12 +18960,15 @@
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           }
         },
         "required": [
           "rate_kind",
-          "amount"
+          "amount",
+          "project",
+          "task"
         ],
         "type": "object"
       },
@@ -19317,9 +19481,11 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
+            "description": "Whether the item is archived.",
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -19845,6 +20011,7 @@
         "additionalProperties": false,
         "properties": {
           "entry_id": {
+            "description": "Time entry ID.",
             "type": "string"
           }
         },
@@ -20638,9 +20805,11 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
+            "description": "Free-text description.",
             "maxLength": 2000,
             "type": "string"
           },
@@ -20649,6 +20818,7 @@
             "type": "string"
           },
           "entry_id": {
+            "description": "Time entry ID.",
             "type": "string"
           },
           "project": {
@@ -20656,6 +20826,7 @@
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "start": {
@@ -20667,6 +20838,7 @@
             "type": "string"
           },
           "tag_ids": {
+            "description": "Tag IDs.",
             "items": {
               "type": "string"
             },
@@ -20677,6 +20849,7 @@
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           }
         },
@@ -21474,6 +21647,7 @@
             "type": "boolean"
           },
           "entry_id": {
+            "description": "Time entry ID.",
             "type": "string"
           }
         },
@@ -21723,16 +21897,20 @@
         "additionalProperties": false,
         "properties": {
           "account_statuses": {
+            "description": "Filter users by account status.",
             "type": "string"
           },
           "email": {
+            "description": "Email address.",
             "maxLength": 254,
             "type": "string"
           },
           "include_roles": {
+            "description": "Include each user's role assignments in the response.",
             "type": "boolean"
           },
           "memberships": {
+            "description": "Full membership list to set on the project.",
             "enum": [
               "ALL",
               "NONE",
@@ -21743,6 +21921,7 @@
             "type": "string"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -21758,9 +21937,11 @@
             "type": "integer"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "sort_column": {
+            "description": "Field to sort the results by.",
             "enum": [
               "ID",
               "EMAIL",
@@ -21773,6 +21954,7 @@
             "type": "string"
           },
           "sort_order": {
+            "description": "Sort direction: ASCENDING or DESCENDING.",
             "enum": [
               "ASCENDING",
               "DESCENDING"
@@ -21780,6 +21962,7 @@
             "type": "string"
           },
           "status": {
+            "description": "Status value.",
             "enum": [
               "PENDING",
               "ACTIVE",
@@ -23108,6 +23291,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           }
         },
@@ -23691,9 +23875,11 @@
             "type": "string"
           },
           "client_id": {
+            "description": "Client ID.",
             "type": "string"
           },
           "currency": {
+            "description": "Three-letter currency code, e.g. USD.",
             "type": "string"
           },
           "discount_percent": {
@@ -23709,6 +23895,7 @@
             "type": "string"
           },
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           },
           "issued_date": {
@@ -23716,10 +23903,12 @@
             "type": "string"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
           "number": {
+            "description": "Invoice number.",
             "type": "string"
           },
           "status": {
@@ -24010,6 +24199,7 @@
             "type": "boolean"
           },
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           }
         },
@@ -24262,6 +24452,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           }
         },
@@ -24520,6 +24711,7 @@
             "type": "boolean"
           },
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           }
         },
@@ -24772,6 +24964,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           }
         },
@@ -25043,6 +25236,7 @@
             "type": "string"
           },
           "description": {
+            "description": "Free-text description.",
             "maxLength": 2000,
             "type": "string"
           },
@@ -25051,6 +25245,7 @@
             "type": "boolean"
           },
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           },
           "item_type": {
@@ -25058,6 +25253,7 @@
             "type": "string"
           },
           "quantity": {
+            "description": "Quantity; must be greater than 0.",
             "type": "number"
           },
           "unit_price": {
@@ -25331,6 +25527,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           }
         },
@@ -25591,6 +25788,7 @@
             "type": "boolean"
           },
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           },
           "item_id": {
@@ -26104,6 +26302,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "client_id": {
@@ -26116,6 +26315,7 @@
             "type": "string"
           },
           "is_public": {
+            "description": "Whether the project is visible to the whole workspace.",
             "type": "boolean"
           },
           "name": {
@@ -26370,6 +26570,7 @@
         "properties": {
           "budget_estimate": {
             "additionalProperties": false,
+            "description": "Budget estimate amount.",
             "properties": {
               "active": {
                 "type": "boolean"
@@ -26401,6 +26602,7 @@
           },
           "estimate_reset": {
             "additionalProperties": false,
+            "description": "How the estimate resets over time.",
             "properties": {
               "active": {
                 "type": "boolean"
@@ -26436,6 +26638,7 @@
                 "type": "string"
               },
               "is_active": {
+                "description": "Filter to active items only.",
                 "type": "boolean"
               },
               "month": {
@@ -26471,10 +26674,12 @@
             "type": "number"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "time_estimate": {
             "additionalProperties": false,
+            "description": "Time estimate, e.g. an ISO-8601 duration.",
             "properties": {
               "active": {
                 "type": "boolean"
@@ -26767,6 +26972,7 @@
             "type": "number"
           },
           "memberships": {
+            "description": "Full membership list to set on the project.",
             "items": {
               "additionalProperties": false,
               "properties": {
@@ -26809,6 +27015,7 @@
                   "type": "object"
                 },
                 "membership_status": {
+                  "description": "Filter by membership status.",
                   "enum": [
                     "PENDING",
                     "ACTIVE",
@@ -26827,6 +27034,7 @@
                   "type": "string"
                 },
                 "user_id": {
+                  "description": "User ID.",
                   "type": "string"
                 }
               },
@@ -26835,10 +27043,12 @@
             "type": "array"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "user_groups": {
             "additionalProperties": false,
+            "description": "User group IDs.",
             "properties": {
               "contains": {
                 "enum": [
@@ -26855,6 +27065,7 @@
                 "type": "array"
               },
               "status": {
+                "description": "Status value.",
                 "enum": [
                   "ALL",
                   "ACTIVE",
@@ -27444,6 +27655,7 @@
         "additionalProperties": false,
         "properties": {
           "expense_id": {
+            "description": "Expense ID.",
             "type": "string"
           }
         },
@@ -28028,9 +28240,11 @@
             "type": "string"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "category_id": {
+            "description": "Expense category ID.",
             "type": "string"
           },
           "change_fields": {
@@ -28055,15 +28269,19 @@
             "type": "string"
           },
           "expense_id": {
+            "description": "Expense ID.",
             "type": "string"
           },
           "notes": {
+            "description": "Optional notes.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "user_id": {
@@ -28328,6 +28546,7 @@
             "type": "boolean"
           },
           "expense_id": {
+            "description": "Expense ID.",
             "type": "string"
           }
         },
@@ -29127,6 +29346,7 @@
             "type": "boolean"
           },
           "category_id": {
+            "description": "Expense category ID.",
             "type": "string"
           },
           "dry_run": {
@@ -29138,6 +29358,7 @@
             "type": "boolean"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -29403,6 +29624,7 @@
         "additionalProperties": false,
         "properties": {
           "category_id": {
+            "description": "Expense category ID.",
             "type": "string"
           },
           "dry_run": {
@@ -29911,6 +30133,7 @@
         "additionalProperties": false,
         "properties": {
           "field_id": {
+            "description": "Custom field ID.",
             "type": "string"
           }
         },
@@ -30479,12 +30702,14 @@
         "additionalProperties": false,
         "properties": {
           "allowed_values": {
+            "description": "Allowed values for a dropdown custom field.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "field_id": {
+            "description": "Custom field ID.",
             "type": "string"
           },
           "field_type": {
@@ -30500,10 +30725,12 @@
             "type": "string"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
           "required": {
+            "description": "Whether the custom field is required.",
             "type": "boolean"
           },
           "status": {
@@ -30794,6 +31021,7 @@
             "type": "boolean"
           },
           "field_id": {
+            "description": "Custom field ID.",
             "type": "string"
           }
         },
@@ -31610,9 +31838,11 @@
         "additionalProperties": false,
         "properties": {
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "request_id": {
+            "description": "Time-off request ID.",
             "type": "string"
           }
         },
@@ -31887,6 +32117,7 @@
             "type": "string"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "start": {
@@ -32159,9 +32390,11 @@
             "type": "boolean"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "request_id": {
+            "description": "Time-off request ID.",
             "type": "string"
           },
           "status": {
@@ -32429,9 +32662,11 @@
             "type": "boolean"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "request_id": {
+            "description": "Time-off request ID.",
             "type": "string"
           }
         },
@@ -32691,9 +32926,11 @@
             "type": "string"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "request_id": {
+            "description": "Time-off request ID.",
             "type": "string"
           }
         },
@@ -32955,9 +33192,11 @@
             "type": "string"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "request_id": {
+            "description": "Time-off request ID.",
             "type": "string"
           }
         },
@@ -33496,6 +33735,7 @@
         "additionalProperties": false,
         "properties": {
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           }
         },
@@ -33760,9 +34000,11 @@
             "type": "boolean"
           },
           "days_per_year": {
+            "description": "Days granted per year by the policy.",
             "type": "number"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -33771,6 +34013,7 @@
             "type": "boolean"
           },
           "requires_approval": {
+            "description": "Whether time-off requests under this policy require approval.",
             "type": "boolean"
           },
           "time_unit": {
@@ -34032,28 +34275,36 @@
         "additionalProperties": false,
         "properties": {
           "accrual": {
+            "description": "Whether the policy accrues balance over time.",
             "type": "boolean"
           },
           "auto_approve": {
+            "description": "Whether matching requests are approved automatically.",
             "type": "boolean"
           },
           "days_per_year": {
+            "description": "Days granted per year by the policy.",
             "type": "number"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
           "negative_balance": {
+            "description": "Whether the policy allows a negative balance.",
             "type": "boolean"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "requires_approval": {
+            "description": "Whether time-off requests under this policy require approval.",
             "type": "boolean"
           },
           "time_unit": {
+            "description": "Time unit for the policy: DAYS or HOURS.",
             "type": "string"
           }
         },
@@ -34587,6 +34838,7 @@
             "type": "string"
           },
           "policy_id": {
+            "description": "Time-off policy ID.",
             "type": "string"
           },
           "user_ids": {
@@ -35144,6 +35396,7 @@
         "additionalProperties": false,
         "properties": {
           "assignment_id": {
+            "description": "Scheduling assignment ID.",
             "type": "string"
           },
           "end": {
@@ -35413,6 +35666,7 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "end": {
@@ -35426,9 +35680,11 @@
             "type": "number"
           },
           "include_non_working_days": {
+            "description": "Include non-working days when distributing scheduled hours.",
             "type": "boolean"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
@@ -35449,6 +35705,7 @@
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "timezone": {
@@ -35720,9 +35977,11 @@
         "additionalProperties": false,
         "properties": {
           "assignment_id": {
+            "description": "Scheduling assignment ID.",
             "type": "string"
           },
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "end": {
@@ -35736,9 +35995,11 @@
             "type": "number"
           },
           "include_non_working_days": {
+            "description": "Include non-working days when distributing scheduled hours.",
             "type": "boolean"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
@@ -35760,6 +36021,7 @@
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           },
           "timezone": {
@@ -36019,6 +36281,7 @@
         "additionalProperties": false,
         "properties": {
           "assignment_id": {
+            "description": "Scheduling assignment ID.",
             "type": "string"
           },
           "dry_run": {
@@ -36846,6 +37109,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
+            "description": "Approval request ID.",
             "type": "string"
           },
           "page_size": {
@@ -37394,6 +37658,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
+            "description": "Approval request ID.",
             "type": "string"
           },
           "dry_run": {
@@ -37660,6 +37925,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
+            "description": "Approval request ID.",
             "type": "string"
           },
           "dry_run": {
@@ -37930,6 +38196,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
+            "description": "Approval request ID.",
             "type": "string"
           },
           "dry_run": {
@@ -37937,6 +38204,7 @@
             "type": "boolean"
           },
           "note": {
+            "description": "Optional note.",
             "maxLength": 500,
             "type": "string"
           },
@@ -40089,6 +40357,7 @@
             "type": "string"
           },
           "sort_column": {
+            "description": "Field to sort the results by.",
             "enum": [
               "ID",
               "NAME"
@@ -40096,6 +40365,7 @@
             "type": "string"
           },
           "sort_order": {
+            "description": "Sort direction: ASCENDING or DESCENDING.",
             "enum": [
               "ASCENDING",
               "DESCENDING"
@@ -40352,6 +40622,7 @@
         "additionalProperties": false,
         "properties": {
           "group_id": {
+            "description": "User group ID.",
             "type": "string"
           }
         },
@@ -40868,9 +41139,11 @@
         "additionalProperties": false,
         "properties": {
           "group_id": {
+            "description": "User group ID.",
             "type": "string"
           },
           "name": {
+            "description": "Name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -41137,6 +41410,7 @@
             "type": "boolean"
           },
           "group_id": {
+            "description": "User group ID.",
             "type": "string"
           }
         },
@@ -42705,6 +42979,7 @@
             "type": "boolean"
           },
           "holiday_id": {
+            "description": "Holiday ID.",
             "type": "string"
           }
         },
@@ -43768,6 +44043,7 @@
         "properties": {
           "attendance_filter": {
             "additionalProperties": true,
+            "description": "Clockify attendance-report filter object.",
             "type": "object"
           },
           "date_range_end": {
@@ -43780,6 +44056,7 @@
           },
           "detailed_filter": {
             "additionalProperties": true,
+            "description": "Clockify detailed-report filter object.",
             "type": "object"
           },
           "end": {
@@ -43809,6 +44086,7 @@
           },
           "summary_filter": {
             "additionalProperties": true,
+            "description": "Clockify summary-report filter object.",
             "type": "object"
           }
         },
@@ -44057,6 +44335,7 @@
         "properties": {
           "attendance_filter": {
             "additionalProperties": true,
+            "description": "Clockify attendance-report filter object.",
             "type": "object"
           },
           "date_range_end": {
@@ -44069,6 +44348,7 @@
           },
           "detailed_filter": {
             "additionalProperties": true,
+            "description": "Clockify detailed-report filter object.",
             "type": "object"
           },
           "end": {
@@ -44098,6 +44378,7 @@
           },
           "summary_filter": {
             "additionalProperties": true,
+            "description": "Clockify summary-report filter object.",
             "type": "object"
           }
         },
@@ -44346,6 +44627,7 @@
         "properties": {
           "attendance_filter": {
             "additionalProperties": true,
+            "description": "Clockify attendance-report filter object.",
             "type": "object"
           },
           "date_range_end": {
@@ -44358,6 +44640,7 @@
           },
           "detailed_filter": {
             "additionalProperties": true,
+            "description": "Clockify detailed-report filter object.",
             "type": "object"
           },
           "end": {
@@ -44387,6 +44670,7 @@
           },
           "summary_filter": {
             "additionalProperties": true,
+            "description": "Clockify summary-report filter object.",
             "type": "object"
           }
         },
@@ -44635,6 +44919,7 @@
         "properties": {
           "attendance_filter": {
             "additionalProperties": true,
+            "description": "Clockify attendance-report filter object.",
             "type": "object"
           },
           "date_range_end": {
@@ -44647,6 +44932,7 @@
           },
           "detailed_filter": {
             "additionalProperties": true,
+            "description": "Clockify detailed-report filter object.",
             "type": "object"
           },
           "end": {
@@ -44676,6 +44962,7 @@
           },
           "summary_filter": {
             "additionalProperties": true,
+            "description": "Clockify summary-report filter object.",
             "type": "object"
           }
         },
@@ -46343,9 +46630,11 @@
             "type": "boolean"
           },
           "invoice_id": {
+            "description": "Invoice ID.",
             "type": "string"
           },
           "payment_id": {
+            "description": "Invoice payment ID.",
             "type": "string"
           }
         },
@@ -46600,7 +46889,7 @@
         "additionalProperties": false,
         "properties": {
           "archived": {
-            "description": "Default: true. Omit or pass true to archive the policy; pass false to reactivate it.",
+            "description": "Required. Pass true to archive the policy; pass false to reactivate it.",
             "type": "boolean"
           },
           "policy_id": {
@@ -46609,7 +46898,8 @@
           }
         },
         "required": [
-          "policy_id"
+          "policy_id",
+          "archived"
         ],
         "type": "object"
       },
@@ -47101,7 +47391,7 @@
     },
     {
       "name": "clockify_scheduling_capacity",
-      "description": "Get workspace capacity totals.",
+      "description": "Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -47126,16 +47416,13 @@
             "type": "string"
           },
           "user_ids": {
-            "description": "User IDs to scope the capacity totals (required).",
+            "description": "Optional. User IDs to scope the capacity totals; omit to include all workspace users.",
             "items": {
               "type": "string"
             },
             "type": "array"
           }
         },
-        "required": [
-          "user_ids"
-        ],
         "type": "object"
       },
       "output_schema": {
@@ -47676,6 +47963,7 @@
         "additionalProperties": false,
         "properties": {
           "holiday_id": {
+            "description": "Holiday ID.",
             "type": "string"
           }
         },
@@ -48210,12 +48498,15 @@
         "properties": {
           "body": {
             "additionalProperties": true,
+            "description": "Raw JSON request body forwarded to the Clockify API.",
             "type": "object"
           },
           "invoiced": {
+            "description": "Whether the time entries are marked as invoiced.",
             "type": "boolean"
           },
           "time_entry_ids": {
+            "description": "Time entry IDs.",
             "items": {
               "type": "string"
             },
@@ -48490,11 +48781,13 @@
         "additionalProperties": false,
         "properties": {
           "email": {
+            "description": "Email address.",
             "format": "email",
             "maxLength": 254,
             "type": "string"
           },
           "emails": {
+            "description": "Email addresses.",
             "items": {
               "format": "email",
               "type": "string"
@@ -50254,13 +50547,16 @@
             "type": "boolean"
           },
           "description": {
+            "description": "Free-text description.",
             "maxLength": 2000,
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "project_id": {
+            "description": "Project ID.",
             "type": "string"
           }
         },
@@ -51569,16 +51865,20 @@
         "additionalProperties": false,
         "properties": {
           "billable": {
+            "description": "Whether the work is billable.",
             "type": "boolean"
           },
           "description": {
+            "description": "Free-text description.",
             "maxLength": 2000,
             "type": "string"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "task_id": {
+            "description": "Task ID.",
             "type": "string"
           }
         },
@@ -51836,6 +52136,7 @@
             "type": "string"
           },
           "include_entries": {
+            "description": "Include the underlying time entries in the response.",
             "type": "boolean"
           },
           "max_entries": {
@@ -51849,6 +52150,7 @@
             "type": "integer"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "start": {
@@ -51856,6 +52158,7 @@
             "type": "string"
           },
           "timezone": {
+            "description": "IANA timezone name; defaults to the configured or local timezone.",
             "type": "string"
           },
           "week_start": {
@@ -52144,6 +52447,7 @@
             "type": "string"
           },
           "include_entries": {
+            "description": "Include the underlying time entries in the response.",
             "type": "boolean"
           },
           "max_entries": {
@@ -52157,6 +52461,7 @@
             "type": "integer"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "start": {
@@ -52164,6 +52469,7 @@
             "type": "string"
           },
           "timezone": {
+            "description": "IANA timezone name; defaults to the configured or local timezone.",
             "type": "string"
           },
           "week_start": {
@@ -52452,6 +52758,7 @@
             "type": "string"
           },
           "include_entries": {
+            "description": "Include the underlying time entries in the response.",
             "type": "boolean"
           },
           "max_entries": {
@@ -52465,6 +52772,7 @@
             "type": "integer"
           },
           "project": {
+            "description": "Project name or ID.",
             "type": "string"
           },
           "start": {
@@ -52472,6 +52780,7 @@
             "type": "string"
           },
           "timezone": {
+            "description": "IANA timezone name; defaults to the configured or local timezone.",
             "type": "string"
           },
           "week_start": {
@@ -52783,10 +53092,12 @@
         "additionalProperties": false,
         "properties": {
           "path": {
+            "description": "Clockify API path, e.g. /workspaces/{id}/projects.",
             "type": "string"
           },
           "query": {
             "additionalProperties": true,
+            "description": "Query-string parameters as a key/value object.",
             "type": "object"
           }
         },
@@ -53029,9 +53340,11 @@
         "properties": {
           "body": {
             "additionalProperties": true,
+            "description": "Raw JSON request body forwarded to the Clockify API.",
             "type": "object"
           },
           "method": {
+            "description": "HTTP method: GET, POST, PUT, PATCH, or DELETE.",
             "enum": [
               "GET",
               "POST",
@@ -53042,10 +53355,12 @@
             "type": "string"
           },
           "path": {
+            "description": "Clockify API path, e.g. /workspaces/{id}/projects.",
             "type": "string"
           },
           "query": {
             "additionalProperties": true,
+            "description": "Query-string parameters as a key/value object.",
             "type": "object"
           }
         },

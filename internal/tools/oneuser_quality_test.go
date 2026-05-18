@@ -618,7 +618,7 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 	callAndValidate("clockify_record_expense", map[string]any{"amount": float64(10), "category_id": "65b382b606de527a7ee2b60b", "date": "2026-01-02T00:00:00Z"})
 	callAndValidate("clockify_request_time_off", map[string]any{"policy_id": "65b382b606de527a7ee2b60c", "start": "2026-01-05", "end": "2026-01-06", "note": "Schema coverage"})
 	callAndValidate("clockify_schedule_work", map[string]any{"user_id": "65b382b606de527a7ee2b60e", "project_id": "65b382b606de527a7ee2b60d", "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(6)})
-	callAndValidate("clockify_setup_webhook", map[string]any{"name": "Schema webhook", "url": "https://example.com/clockify", "event": "NEW_TIME_ENTRY"})
+	callAndValidate("clockify_setup_webhook", map[string]any{"name": "Schema webhook", "url": "https://example.com/clockify", "webhook_event": "NEW_TIME_ENTRY"})
 	seed := callAndValidate("clockify_demo_seed", map[string]any{"run_id": "schema", "prefix": "SCHEMA", "date": "2026-01-02"})
 	if seed.IDs["entryId"] == "" || started.IDs["entryId"] == "" {
 		t.Fatalf("schema smoke missing workflow IDs: seed=%+v started=%+v", seed.IDs, started.IDs)
@@ -1768,7 +1768,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 	requireChanged(t, scheduled, "created")
 	requireNext(t, scheduled)
 
-	webhook := callToolOK(t, server, "clockify_setup_webhook", map[string]any{"name": "Fake webhook", "url": "https://example.com/clockify", "event": "NEW_TIME_ENTRY"})
+	webhook := callToolOK(t, server, "clockify_setup_webhook", map[string]any{"name": "Fake webhook", "url": "https://example.com/clockify", "webhook_event": "NEW_TIME_ENTRY"})
 	requireID(t, webhook, "workspaceId")
 	requireID(t, webhook, "webhookId")
 	requireChanged(t, webhook, "created")

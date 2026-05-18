@@ -9,7 +9,22 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/clockify"
 )
+
+func TestSchedulingCapacityHandlerAllowsMissingUserIDs(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	// The unreachable client URL makes the upstream call fail; we only
+	// assert the handler no longer rejects a missing user_ids up front.
+	_, err := svc.schedulingCapacityOneUser(context.Background(), map[string]any{
+		"start": "2026-05-01",
+		"end":   "2026-05-07",
+	})
+	if err != nil && strings.Contains(err.Error(), "user_ids is required") {
+		t.Fatalf("user_ids should be optional: %v", err)
+	}
+}
 
 func TestAssignmentReportJoinsScheduledAndTrackedMoney(t *testing.T) {
 	var sawUserTotals, sawProjectTotals, sawReports bool

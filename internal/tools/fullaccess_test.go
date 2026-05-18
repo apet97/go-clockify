@@ -773,7 +773,7 @@ func TestPaidFeatureErrorEnvelopeCode(t *testing.T) {
 	}
 }
 
-func TestSchedulingCapacityRequiresUserIds(t *testing.T) {
+func TestSchedulingCapacityDoesNotRequireUserIds(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
 	for _, descriptor := range svc.FullAccessRegistry() {
 		if descriptor.Tool.Name != "clockify_scheduling_capacity" {
@@ -782,10 +782,10 @@ func TestSchedulingCapacityRequiresUserIds(t *testing.T) {
 		required := inputSchemaRequiredFields(descriptor.Tool.InputSchema)
 		for _, field := range required {
 			if field == "user_ids" {
-				return
+				t.Fatalf("clockify_scheduling_capacity required=%v, user_ids must be optional", required)
 			}
 		}
-		t.Fatalf("clockify_scheduling_capacity required=%v, want user_ids", required)
+		return
 	}
 	t.Fatal("clockify_scheduling_capacity not found")
 }

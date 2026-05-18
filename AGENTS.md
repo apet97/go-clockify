@@ -155,6 +155,16 @@ descriptor, schema, or order change, run `make gen-tool-catalog` then
 - `clockify_time_off_approve` / `_deny` re-hydrate their response with a
   follow-up read because the Clockify PATCH body is sparse; a failed
   re-hydration is reported in `meta` and does not fail the approve/deny.
+- `clockify_time_off_requests_update` re-hydrates its result with a
+  follow-up read because the Clockify PATCH body is sparse, mirroring
+  `clockify_time_off_approve` / `_deny`; a failed re-hydration is reported
+  in `meta` and does not fail the update.
+- `clockify_scheduling_capacity` accepts an optional `user_ids`; omitting
+  it returns capacity totals for every workspace user.
+- Expense-category lookups (`clockify_expenses_categories_*`,
+  `clockify_record_expense` category resolution) page through every
+  server page of `GET /expenses/categories`; the endpoint caps a single
+  response, so an un-paginated read silently drops categories.
 - Recoverable `error.message` carries the cleaned upstream message — the HTTP
   method/path prefix and internal `clockify_error_code` suffix are stripped,
   while `clockify.APIError.Error()` keeps the full diagnostic for server logs.

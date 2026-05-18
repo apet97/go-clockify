@@ -328,7 +328,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "task", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.DeleteTask(ctx, aliasArgs(args, map[string]string{"project_id": "project", "task_id": "task"}))
 		}),
-		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount"}, "properties": map[string]any{
+		nativeDomainTool(45, toolRWIdem("clockify_tasks_rates_update", "Set a task hourly or cost rate. Billing impact: changes the billable amount on every future time entry charged to this task.", objectSchema(map[string]any{"required": []string{"rate_kind", "amount", "project", "task"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string"},
 			"task":       map[string]any{"type": "string", "description": "Task name or ID."},
@@ -534,10 +534,10 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
 	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
-		"required": []string{"policy_id"},
+		"required": []string{"policy_id", "archived"},
 		"properties": map[string]any{
 			"policy_id": map[string]any{"type": "string", "description": "Time-off policy ID"},
-			"archived":  map[string]any{"type": "boolean", "description": "Default: true. Omit or pass true to archive the policy; pass false to reactivate it."},
+			"archived":  map[string]any{"type": "boolean", "description": "Required. Pass true to archive the policy; pass false to reactivate it."},
 		},
 	})), "time_off", "updated", s.archiveTimeOffPolicy))
 	out = append(out, s.explicitPostTimeOffNativeDescriptors()...)
@@ -615,12 +615,11 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 				"end":     map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			},
 		})), "scheduling", "", s.schedulingUserTotalsOneUser),
-		nativeDomainTool(607, toolRO("clockify_scheduling_capacity", "Get workspace capacity totals.", objectSchema(map[string]any{
-			"required": []string{"user_ids"},
+		nativeDomainTool(607, toolRO("clockify_scheduling_capacity", "Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users.", objectSchema(map[string]any{
 			"properties": map[string]any{
 				"start":    map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 				"end":      map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "User IDs to scope the capacity totals (required)."},
+				"user_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional. User IDs to scope the capacity totals; omit to include all workspace users."},
 			},
 		})), "scheduling", "", s.schedulingCapacityOneUser),
 		nativeDomainTool(704, toolRW("clockify_approvals_resubmit", "Resubmit rejected or withdrawn entries and expenses and update approval state.", objectSchema(map[string]any{

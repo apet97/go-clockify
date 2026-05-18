@@ -184,7 +184,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_payments_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
 | `clockify_time_off_archive` | `domain` | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
 | `clockify_scheduling_user_totals` | `domain` | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
-| `clockify_scheduling_capacity` | `domain` | yes | no | yes | no | `read` | Get workspace capacity totals. |
+| `clockify_scheduling_capacity` | `domain` | yes | no | yes | no | `read` | Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users. |
 | `clockify_approvals_resubmit` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
 | `clockify_holidays_get` | `domain` | yes | no | yes | no | `read` | Get one holiday. |
 | `clockify_holidays_update` | `domain` | no | no | yes | no | `write` | Update a holiday. |

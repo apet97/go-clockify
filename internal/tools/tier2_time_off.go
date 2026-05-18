@@ -437,11 +437,21 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
-	return ok("clockify_update_time_off_request", timeOffRequestViewFromRaw(result), map[string]any{
+	// Clockify's PATCH response is sparse (no policy/user names). Mirror
+	// approveTimeOff/denyTimeOff: read the request back and return the
+	// enriched body. A failed re-hydration is surfaced in meta, not fatal.
+	meta := map[string]any{
 		"workspaceId":   wsID,
 		"policyId":      policyID,
 		"changedFields": changed,
-	}), nil
+	}
+	if hydrated, fetchErr := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID); fetchErr == nil {
+		result = hydrated
+	} else {
+		meta["hydration"] = "unavailable"
+	}
+
+	return ok("clockify_update_time_off_request", timeOffRequestViewFromRaw(result), meta), nil
 }
 
 func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
