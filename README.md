@@ -86,7 +86,7 @@ low-level domain tools:
 
 - `clockify_status` - confirm the pinned workspace, user, feature plan, and
   optional feature visibility
-- `clockify_start_timer` / `clockify_stop_timer` - day-to-day time tracking
+- `clockify_start_work` / `clockify_stop_work` - day-to-day time tracking
 - `clockify_review_day` - summarize and check a workday
 - `clockify_create_work_package` - create a client/project/task/tag bundle
 - `clockify_invoice_client_work`, `clockify_record_expense`,
