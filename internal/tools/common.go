@@ -1089,10 +1089,6 @@ func parseFlexibleDateTime(raw string, loc *time.Location) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("expected RFC3339 or YYYY-MM-DD date, got %q", raw)
 }
 
-func parseRange(args map[string]any) (time.Time, time.Time, error) {
-	return parseRangeInLocation(args, time.UTC)
-}
-
 func parseRangeInLocation(args map[string]any, loc *time.Location) (time.Time, time.Time, error) {
 	if loc == nil {
 		loc = time.UTC

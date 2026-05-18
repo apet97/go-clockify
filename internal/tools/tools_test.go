@@ -1467,10 +1467,10 @@ func TestAggregateEntriesRangeRequestsHydratedEntries(t *testing.T) {
 }
 
 func TestParseRangeSameBareDateEndMeansNextMidnight(t *testing.T) {
-	start, end, err := parseRange(map[string]any{
+	start, end, err := parseRangeInLocation(map[string]any{
 		"start": "2026-05-04",
 		"end":   "2026-05-04",
-	})
+	}, time.UTC)
 	if err != nil {
 		t.Fatalf("parseRange: %v", err)
 	}
