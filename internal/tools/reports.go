@@ -215,6 +215,7 @@ func (s *Service) resolveAggregateProjectBuckets(ctx context.Context, wsID strin
 	if s == nil || s.Client == nil || result == nil {
 		return
 	}
+	toResolve := make(map[string]*projectBucket)
 	for _, bucket := range result.ByProject {
 		if bucket == nil || strings.TrimSpace(bucket.ID) == "" {
 			continue
@@ -222,17 +223,25 @@ func (s *Service) resolveAggregateProjectBuckets(ctx context.Context, wsID strin
 		if strings.TrimSpace(bucket.Name) != "" && bucket.Name != "(no project)" {
 			continue
 		}
-		path, err := paths.Workspace(wsID, "projects", bucket.ID)
-		if err != nil {
+		toResolve[strings.TrimSpace(bucket.ID)] = bucket
+	}
+	if len(toResolve) == 0 {
+		return
+	}
+	path, err := paths.Workspace(wsID, "projects")
+	if err != nil {
+		return
+	}
+	projects, err := clockify.ListAll[clockify.Project](ctx, s.Client, path, map[string]string{"hydrated": "true"})
+	if err != nil {
+		return
+	}
+	for _, project := range projects {
+		bucket := toResolve[strings.TrimSpace(project.ID)]
+		if bucket == nil {
 			continue
 		}
-		var project clockify.Project
-		if err := s.Client.Get(ctx, path, map[string]string{"hydrated": "true"}, &project); err != nil {
-			continue
-		}
-		if name := strings.TrimSpace(project.Name); name != "" {
-			bucket.Name = name
-		}
+		bucket.Name = firstNonEmptyString(strings.TrimSpace(project.Name), bucket.Name)
 		clientID, clientName := projectClientRef(project)
 		bucket.ClientID = firstNonEmptyString(bucket.ClientID, clientID)
 		bucket.ClientName = firstNonEmptyString(bucket.ClientName, clientName)

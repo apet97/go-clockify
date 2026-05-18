@@ -63,8 +63,8 @@ func TestQuickReportProjectResolverHydratesMissingProjectName(t *testing.T) {
 			respondJSON(t, w, clockify.User{ID: "u1"})
 		case "/workspaces/ws1/user/u1/time-entries":
 			respondJSON(t, w, []clockify.TimeEntry{{ID: "e1", ProjectID: "p1", TimeInterval: clockify.TimeInterval{Start: time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), End: time.Now().UTC().Format(time.RFC3339)}}})
-		case "/workspaces/ws1/projects/p1":
-			respondJSON(t, w, clockify.Project{ID: "p1", Name: "Named Project", ClientID: "c1", ClientName: "Client A"})
+		case "/workspaces/ws1/projects":
+			respondJSON(t, w, []clockify.Project{{ID: "p1", Name: "Named Project", ClientID: "c1", ClientName: "Client A"}})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
