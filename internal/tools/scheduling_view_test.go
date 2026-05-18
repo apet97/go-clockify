@@ -249,31 +249,6 @@ func TestAssignmentGroupByAcceptsSupportedGroups(t *testing.T) {
 	}
 }
 
-func TestAssignmentReportCSVColumnParity(t *testing.T) {
-	want := []string{
-		"User",
-		"Project",
-		"Client",
-		"Task",
-		"Scheduled",
-		"Available",
-		"Amount Scheduled (USD)",
-		"Cost Scheduled (USD)",
-		"Expected Profit (USD)",
-		"Tracked",
-		"Amount Tracked (USD)",
-		"Cost Tracked (USD)",
-		"Difference",
-		"Amount Difference (USD)",
-		"Cost Difference (USD)",
-		"Realized Profit (USD)",
-		"Status",
-	}
-	if got := assignmentReportCSVColumns(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("assignment export columns = %#v, want %#v", got, want)
-	}
-}
-
 func TestAssignmentDurationDisplay(t *testing.T) {
 	view := durationView(int64((2*time.Hour + 5*time.Minute) / time.Second))
 	if view.Display != "2:05" || view.Hours != 2+float64(5)/60 {

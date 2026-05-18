@@ -15,28 +15,6 @@ var assignmentReportGroups = []string{"USER", "PROJECT", "CLIENT", "TASK", "DATE
 
 type AssignmentView map[string]any
 
-func assignmentReportCSVColumns() []string {
-	return []string{
-		"User",
-		"Project",
-		"Client",
-		"Task",
-		"Scheduled",
-		"Available",
-		"Amount Scheduled (USD)",
-		"Cost Scheduled (USD)",
-		"Expected Profit (USD)",
-		"Tracked",
-		"Amount Tracked (USD)",
-		"Cost Tracked (USD)",
-		"Difference",
-		"Amount Difference (USD)",
-		"Cost Difference (USD)",
-		"Realized Profit (USD)",
-		"Status",
-	}
-}
-
 type AssignmentDurationView struct {
 	Seconds int64   `json:"seconds"`
 	Hours   float64 `json:"hours"`
