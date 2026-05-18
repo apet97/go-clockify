@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-05-18
+
+Version re-baseline. `0.1.0` restarts the version line for the one-user
+Clockify MCP. It continues directly from the `1.3.x` one-user series — the
+platform-era `1.0`–`1.2` history below is retained for audit only. The
+product shape is unchanged: local, single-user, full-access, stdio, with
+156 tools loaded at startup.
+
 ### Added
 
 - **`clockify_audit_logs_search`** — typed tool for the Clockify Audit Log
@@ -17,7 +25,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Entity Changes feed (`GET /v1/workspaces/{ws}/entities/{created,updated,
   deleted}`), selected by a `change_type` enum. Its output schema follows
   the live-verified bare-array response shape rather than the stale
-  documented envelope. Registry grows 152 → 154 tools.
+  documented envelope.
+- **`clockify_invoices_info`** and **`clockify_scheduling_publish`** —
+  invoice-status and schedule-publish coverage. The startup registry is now
+  156 tools (152 at v1.3.0).
+
+### Fixed
+
+- **`json.Number` numeric handling.** JSON-RPC decoding uses `UseNumber`, so
+  large numeric IDs and tool arguments survive end-to-end; schema validation
+  and argument extraction no longer assume `float64`.
+- Clockify MCP contract gaps — schema `required` arrays, list pagination,
+  sparse-response re-hydration, and parameter descriptions.
+- Boundary validation on write tools — positive expense amount and
+  invoice-item quantity, dropdown custom-field values, and email format —
+  plus honest pagination metadata on list tools.
+
+### Changed
+
+- Repository cleanup and hardening pass: dead code removed, concurrency and
+  performance fixes (binary-search result-size guard, resolve-cache expiry
+  reclamation, batched report name resolution), MCP-contract schema repairs,
+  and a new OpenAPI artifact drift gate in CI.
 
 ## [1.3.0] - 2026-05-15
 
