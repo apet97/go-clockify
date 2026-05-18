@@ -125,13 +125,12 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 		t.Fatal("slow handler did not exit within 2s of cancellation")
 	}
 
-	// The tools/call response is written by the async stdout writer; wait for
-	// it before closing stdin/cancelling the server context, otherwise the test
-	// can race shutdown and drop the cancellation envelope.
+	// MCP cancellation contract: an explicitly cancelled request should not
+	// receive a JSON-RPC response when the server can suppress it.
 	select {
 	case <-output.id42Ch:
-	case <-time.After(2 * time.Second):
-		t.Fatalf("expected response for id=42 in output, got: %s", output.String())
+		t.Fatalf("cancelled request unexpectedly produced a response: %s", output.String())
+	case <-time.After(500 * time.Millisecond):
 	}
 
 	// Drain Run by closing the pipe and ctx.
@@ -148,10 +147,81 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 		t.Fatalf("expected inflight to be empty after cancellation, got %d", got)
 	}
 
-	// The cancelled response should be an MCP isError envelope (tool returned err).
 	out := output.String()
-	if !strings.Contains(out, `"isError":true`) {
-		t.Fatalf("expected isError:true in cancellation response, got: %s", out)
+	if strings.Contains(out, `"id":42`) {
+		t.Fatalf("cancelled response was not suppressed: %s", out)
+	}
+}
+
+func TestCancellation_ResponseSuppressed_NewRequest(t *testing.T) {
+	started := make(chan struct{}, 1)
+	finished := make(chan error, 1)
+
+	handler := func(ctx context.Context, _ map[string]any) (any, error) {
+		started <- struct{}{}
+		select {
+		case <-ctx.Done():
+			finished <- ctx.Err()
+			return nil, ctx.Err()
+		case <-time.After(5 * time.Second):
+			return map[string]any{"ok": true}, nil
+		}
+	}
+
+	srv := NewServer("test", []ToolDescriptor{
+		{
+			Tool:         Tool{Name: "slow", Description: "slow", InputSchema: map[string]any{"type": "object"}},
+			Handler:      handler,
+			ReadOnlyHint: true,
+		},
+		{
+			Tool:         Tool{Name: "fast", Description: "fast", InputSchema: map[string]any{"type": "object"}},
+			Handler:      func(context.Context, map[string]any) (any, error) { return map[string]any{"ok": true}, nil },
+			ReadOnlyHint: true,
+		},
+	})
+
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	output := &responseSignalWriter{id42Ch: make(chan struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() { done <- srv.Run(ctx, pr, output) }()
+
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`+"\n")
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":42,"method":"tools/call","params":{"name":"slow","arguments":{}}}`+"\n")
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for slow handler to start")
+	}
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":42}}`+"\n")
+	select {
+	case err := <-finished:
+		if err != context.Canceled {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("slow handler did not exit")
+	}
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":43,"method":"tools/call","params":{"name":"fast","arguments":{}}}`+"\n")
+	time.Sleep(500 * time.Millisecond)
+
+	_ = pw.Close()
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not exit")
+	}
+	out := output.String()
+	if strings.Contains(out, `"id":42`) {
+		t.Fatalf("cancelled response was not suppressed: %s", out)
+	}
+	if !strings.Contains(out, `"id":43`) {
+		t.Fatalf("subsequent request did not receive a response: %s", out)
 	}
 }
 

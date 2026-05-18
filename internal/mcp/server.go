@@ -224,6 +224,15 @@ type Server struct {
 	// (notifications) are not tracked.
 	inflightMu sync.Mutex
 	inflight   map[any]context.CancelFunc
+	// cancelledRequests records JSON-RPC ids explicitly cancelled via
+	// notifications/cancelled while their tools/call handler was still
+	// in-flight. Run consults this set and skips writing a response for such
+	// ids. Guarded by inflightMu. Bounded by the number of in-flight requests.
+	cancelledRequests map[any]struct{}
+	// activeProgressTokens tracks progress tokens of in-flight tools/call
+	// requests so a duplicate token across concurrent requests is rejected.
+	// Keyed by the token's canonical string form. Guarded by inflightMu.
+	activeProgressTokens map[string]struct{}
 }
 
 // AddNotifier registers a notification sink and returns a function that
@@ -334,12 +343,43 @@ func (s *Server) cancelInflight(id any) bool {
 	cancel, ok := s.inflight[key]
 	if ok {
 		delete(s.inflight, key)
+		if s.cancelledRequests == nil {
+			s.cancelledRequests = make(map[any]struct{})
+		}
+		s.cancelledRequests[key] = struct{}{}
 	}
 	s.inflightMu.Unlock()
 	if ok {
 		cancel()
 	}
 	return ok
+}
+
+// consumeCancelled reports whether id was explicitly cancelled via
+// notifications/cancelled and clears the mark so the set stays bounded.
+func (s *Server) consumeCancelled(id any) bool {
+	if id == nil {
+		return false
+	}
+	key := rpcIDKey(id)
+	s.inflightMu.Lock()
+	_, ok := s.cancelledRequests[key]
+	if ok {
+		delete(s.cancelledRequests, key)
+	}
+	s.inflightMu.Unlock()
+	return ok
+}
+
+// writeResponseUnlessCancelled writes resp unless id was explicitly cancelled
+// via notifications/cancelled, in which case the response is dropped per the
+// MCP cancellation spec.
+func (s *Server) writeResponseUnlessCancelled(id any, resp Response) error {
+	if s.consumeCancelled(id) {
+		slog.Info("cancelled_response_suppressed", "request_id", id)
+		return nil
+	}
+	return s.writeResponse(resp)
 }
 
 func rpcIDKey(id any) any {
@@ -354,6 +394,65 @@ func rpcIDKey(id any) any {
 	default:
 		return id
 	}
+}
+
+// validateProgressToken enforces the MCP rule that a progress token is a
+// string or an integer. Wire values arrive json-decoded with UseNumber, so
+// numbers are json.Number; a non-integral number, a boolean, an object, an
+// array, or null are all rejected.
+func validateProgressToken(token any) error {
+	switch v := token.(type) {
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return fmt.Errorf("progressToken string must not be empty")
+		}
+		return nil
+	case json.Number:
+		if _, err := v.Int64(); err != nil {
+			return fmt.Errorf("progressToken number must be an integer")
+		}
+		return nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return nil
+	case float64, float32:
+		return fmt.Errorf("progressToken number must be an integer, not a float")
+	default:
+		return fmt.Errorf("progressToken must be a string or integer")
+	}
+}
+
+func progressTokenKey(token any) string {
+	switch v := token.(type) {
+	case string:
+		return "s:" + v
+	case json.Number:
+		return "n:" + v.String()
+	default:
+		return fmt.Sprintf("v:%v", v)
+	}
+}
+
+// registerProgressToken records token as active. It returns an error when
+// the token is already in use by another in-flight request.
+func (s *Server) registerProgressToken(token any) error {
+	key := progressTokenKey(token)
+	s.inflightMu.Lock()
+	defer s.inflightMu.Unlock()
+	if s.activeProgressTokens == nil {
+		s.activeProgressTokens = make(map[string]struct{})
+	}
+	if _, dup := s.activeProgressTokens[key]; dup {
+		return fmt.Errorf("progressToken is already in use by another in-flight request")
+	}
+	s.activeProgressTokens[key] = struct{}{}
+	return nil
+}
+
+func (s *Server) releaseProgressToken(token any) {
+	key := progressTokenKey(token)
+	s.inflightMu.Lock()
+	delete(s.activeProgressTokens, key)
+	s.inflightMu.Unlock()
 }
 
 // cancelAllInflight cancels and untracks every in-flight request. It is used
@@ -536,13 +635,13 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 					// stable JSON-RPC tool-error envelope to the sink
 					// for delivery.
 					defer RecoverDispatch(r.ID, "stdio_tool_dispatch", toolNameFromRequest(r), func(resp Response) {
-						if err := s.writeResponse(resp); err != nil {
+						if err := s.writeResponseUnlessCancelled(r.ID, resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
 						}
 					})
 					resp := s.handle(ctx, r)
 					if r.ID != nil {
-						if err := s.writeResponse(resp); err != nil {
+						if err := s.writeResponseUnlessCancelled(r.ID, resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
 						}
 					}
@@ -849,6 +948,15 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 		// from the inflight map before this case returns regardless of
 		// outcome.
 		if params.Meta != nil && params.Meta.ProgressToken != nil {
+			if err := validateProgressToken(params.Meta.ProgressToken); err != nil {
+				resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params: " + err.Error()}
+				return resp
+			}
+			if err := s.registerProgressToken(params.Meta.ProgressToken); err != nil {
+				resp.Error = &RPCError{Code: -32602, Message: "invalid tools/call params: " + err.Error()}
+				return resp
+			}
+			defer s.releaseProgressToken(params.Meta.ProgressToken)
 			ctx = WithProgressToken(ctx, params.Meta.ProgressToken)
 		}
 		callCtx, cancel := context.WithCancel(ctx)
@@ -1020,8 +1128,8 @@ func decodeParams(raw any, out any) error {
 //     spec says null arguments behave identically to no arguments),
 //     matching json.Unmarshal which leaves the destination at its zero value.
 //   - Extra keys in m are ignored, matching json.Unmarshal's default.
-//   - Progress token is taken verbatim so clients supplying a string
-//     or number both round-trip untouched.
+//   - Progress token type is validated by validateProgressToken in handle; a
+//     present null token is rejected here.
 //
 // See FuzzToolCallParamsFromMap for the equivalence guard against
 // json.Unmarshal on random maps.
@@ -1050,6 +1158,9 @@ func toolCallParamsFromMap(m map[string]any) (ToolCallParams, error) {
 		}
 		p.Meta = &RequestMeta{}
 		if tok, ok := meta["progressToken"]; ok {
+			if tok == nil {
+				return p, fmt.Errorf("_meta.progressToken must not be null")
+			}
 			p.Meta.ProgressToken = tok
 		}
 	}
