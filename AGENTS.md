@@ -33,6 +33,10 @@ product definition.
    and external-side-effect tools plus dry-run coverage.
 8. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
 9. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
+10. `docs/protocol-notes.md` - pagination, progress, resources, and rate-control
+    posture.
+11. `docs/release-checklist.md` - deterministic and live release gate sequence.
+12. `docs/branch-protection-required-checks.md` - required `main` CI checks.
 
 Historical docs explain prior decisions; current work starts from the files
 above plus the code. Do not route users to archived or bannered platform-era
@@ -57,6 +61,9 @@ docs as setup instructions.
 | Goal | Command |
 | --- | --- |
 | Full tests | `go test -count=1 ./...` |
+| Perfect deterministic gate | `make perfect` |
+| Perfect live gate | `make perfect-live` |
+| Build Claude binary | `go build -o /Users/15x/.local/bin/clockify-mcp ./cmd/clockify-mcp` |
 | Race/check gate | `make check` |
 | Diff hygiene | `git diff --check` |
 | Local lint | `golangci-lint run` |
@@ -71,6 +78,12 @@ The default command must stay free of controlplane/oidc/grpc/vault/policy/
 postgres/auth dependencies; check with
 `go list -deps ./cmd/clockify-mcp` (`internal/runtime/...` and Go `runtime`
 hits are expected, not regressions).
+
+Claude's global MCP config on this workstation points the `clockify` server at
+`/Users/15x/.local/bin/clockify-mcp`. After any runtime change that should be
+available to Claude, rebuild exactly to that path and verify the config still
+references it. Do not print the env block from the Claude config; it contains
+live credentials.
 
 ## Live Tests
 
@@ -220,5 +233,7 @@ instead of depending on Psych's exact parser wording.
 - Do not use destructive git commands unless explicitly asked.
 - Do not commit ignored local files unless the user requests it.
 - Keep commits atomic and evidence-backed.
+- Keep `main` as the only maintained branch unless the maintainer explicitly
+  asks for a work branch; delete/prune merged branches after landing.
 - When pushing direct to `main`, watch GitHub checks and report their final
   status, including any branch-protection bypass notice.
