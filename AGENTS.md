@@ -102,9 +102,7 @@ real entity; a useful recovery envelope is protocol/recovery evidence only.
 `Service.FullAccessRegistry()` composes the registry in order:
 `workflowDescriptors` → `FirstSliceRegistry` → `nativeCoreDescriptors` →
 `nativeHighValueDescriptors` → `nativeDomainExtras` → `timerAndReportDescriptors`
-→ `rawAPIDescriptors`. `routeTool` and its route helpers are currently unused
-(the registry is fully native) and retained as `//nolint:unused` scaffolding;
-removing them also means deleting the route tests in `oneuser_domains_test.go`.
+→ `rawAPIDescriptors`. The registry is fully native.
 
 `docs/tool-catalog.{md,json}` are generated from the registry. After any
 descriptor, schema, or order change, run `make gen-tool-catalog` then
