@@ -1384,8 +1384,13 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 	case "PATCH":
 		err = s.Client.Patch(ctx, path, body, &data)
 	case "DELETE":
-		err = s.Client.DeleteWithQuery(ctx, path, query)
-		data = map[string]any{"deleted": true}
+		var deleted any
+		err = s.Client.DeleteWithQueryCapture(ctx, path, query, &deleted)
+		if deleted != nil {
+			data = deleted
+		} else {
+			data = map[string]any{"deleted": true}
+		}
 	default:
 		return nil, fmt.Errorf("unsupported method %s", method)
 	}

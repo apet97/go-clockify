@@ -125,6 +125,59 @@ func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
 	}
 }
 
+func TestRawAPIDeletePreservesBody(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/deletions/body" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		respondJSON(t, w, map[string]any{"id": "deleted-123", "status": "DELETED"})
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/deletions/body",
+	})
+	if err != nil {
+		t.Fatalf("raw DELETE failed: %v", err)
+	}
+	envelope := result.(ToolResult)
+	data := envelope.Data.(map[string]any)
+	if data["id"] != "deleted-123" || data["status"] != "DELETED" {
+		t.Fatalf("raw DELETE data = %+v", data)
+	}
+	if data["deleted"] == true {
+		t.Fatalf("raw DELETE discarded upstream body: %+v", data)
+	}
+}
+
+func TestRawAPIDeleteEmptyBody(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/workspaces/ws1/deletions/empty" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawWrites = true
+	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/deletions/empty",
+	})
+	if err != nil {
+		t.Fatalf("raw DELETE failed: %v", err)
+	}
+	envelope := result.(ToolResult)
+	data := envelope.Data.(map[string]any)
+	if data["deleted"] != true {
+		t.Fatalf("raw DELETE empty data = %+v", data)
+	}
+}
+
 func TestRawFallbackRecoveryHintsPreferTypedTools(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("raw fallback reached upstream before recovery: %s %s", r.Method, r.URL.Path)

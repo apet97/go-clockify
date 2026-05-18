@@ -1047,6 +1047,44 @@ func TestClientNoOutputSuccessDrainsResponseBodyBounded(t *testing.T) {
 	}
 }
 
+func TestDeleteWithQueryCaptureBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/items/deleted-123" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": "deleted-123", "status": "DELETED"})
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	var out map[string]any
+	if err := c.DeleteWithQueryCapture(context.Background(), "/items/deleted-123", nil, &out); err != nil {
+		t.Fatalf("delete capture: %v", err)
+	}
+	if out["id"] != "deleted-123" || out["status"] != "DELETED" {
+		t.Fatalf("captured body = %+v", out)
+	}
+}
+
+func TestDeleteWithQueryCaptureEmpty(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/items/deleted-123" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	var out any
+	if err := c.DeleteWithQueryCapture(context.Background(), "/items/deleted-123", nil, &out); err != nil {
+		t.Fatalf("delete capture empty: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("empty body populated out: %#v", out)
+	}
+}
+
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
