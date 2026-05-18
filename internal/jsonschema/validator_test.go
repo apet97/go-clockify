@@ -347,6 +347,18 @@ func TestValidateFormatDate(t *testing.T) {
 	}
 }
 
+func TestValidateFormatEmail(t *testing.T) {
+	schema := map[string]any{"type": "string", "format": "email"}
+	if err := Validate(schema, "x@y.com"); err != nil {
+		t.Fatalf("want pass, got %v", err)
+	}
+	for _, value := range []string{"notanemail", "a@"} {
+		if err := Validate(schema, value); err == nil {
+			t.Fatalf("Validate(format=email, %q) succeeded, want error", value)
+		}
+	}
+}
+
 func TestValidateUnknownFormatIsNoOp(t *testing.T) {
 	schema := map[string]any{"type": "string", "format": "uri"}
 	if err := Validate(schema, "not-a-uri"); err != nil {

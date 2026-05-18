@@ -12,7 +12,7 @@
 //   - minimum / maximum (integer and number)
 //   - minLength / maxLength (string)
 //   - pattern (regexp; anchored via ^...$ if not already)
-//   - format: date / date-time (lenient time.Parse)
+//   - format: date / date-time (lenient time.Parse) / email (minimal shape)
 //   - enum (array of any; exact JSON-equal match)
 //   - anyOf (array of schemas; at least one must validate)
 //
@@ -354,10 +354,22 @@ func checkFormat(format, s, ptr string) error {
 		if _, err := time.Parse("2006-01-02", s); err != nil {
 			return &ValidationError{Pointer: ptr, Message: "string is not a valid YYYY-MM-DD date"}
 		}
+	case "email":
+		if !isSimpleEmail(s) {
+			return &ValidationError{Pointer: ptr, Message: "string is not a valid email address"}
+		}
 	default:
 		// Unknown format — spec says this is annotation-only, so no-op.
 	}
 	return nil
+}
+
+func isSimpleEmail(s string) bool {
+	local, domain, ok := strings.Cut(s, "@")
+	if !ok || local == "" || domain == "" || strings.Contains(domain, "@") {
+		return false
+	}
+	return strings.Contains(domain, ".")
 }
 
 func checkEnum(enum, value any, ptr string) error {
