@@ -192,6 +192,33 @@ func BenchmarkDispatchToolsCall(b *testing.B) {
 	}
 }
 
+func BenchmarkDispatchToolsCallAliasArgument(b *testing.B) {
+	quietSlogForBenchmark(b)
+
+	server := newAliasBenchServer(b)
+	server.initialized.Store(true)
+
+	msg := mustMarshalRequest(b, Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+		Params: ToolCallParams{
+			Name:      "bench_tool",
+			Arguments: map[string]any{"client_id": "client-1"},
+		},
+	})
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := server.DispatchMessage(ctx, msg)
+		if err != nil {
+			b.Fatalf("DispatchMessage: %v", err)
+		}
+	}
+}
+
 func BenchmarkDispatchToolsCallLargePayload(b *testing.B) {
 	quietSlogForBenchmark(b)
 
@@ -259,6 +286,29 @@ func newPayloadBenchServer(b *testing.B, payload any) *Server {
 		ReadOnlyHint: true,
 	}})
 
+}
+
+func newAliasBenchServer(b *testing.B) *Server {
+	b.Helper()
+	return NewServer("bench", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "bench_tool",
+			Description: "bench-only alias schema",
+			InputSchema: map[string]any{
+				"type":     "object",
+				"required": []any{"client"},
+				"properties": map[string]any{
+					"client":    map[string]any{"type": "string"},
+					"client_id": map[string]any{"type": "string"},
+				},
+				"additionalProperties": false,
+			},
+		},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			return map[string]any{"ok": true}, nil
+		},
+		ReadOnlyHint: true,
+	}})
 }
 
 func largeToolPayload() map[string]any {

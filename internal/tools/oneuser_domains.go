@@ -73,6 +73,9 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	return normalizeDescriptors(dedupeToolDescriptors(out))
 }
 
+// cloneToolDescriptors protects the cached registry slice header from caller
+// mutation. Descriptor internals such as InputSchema and Annotations maps remain
+// shared by reference, so callers must treat descriptors as read-only.
 func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, len(in))
 	copy(out, in)

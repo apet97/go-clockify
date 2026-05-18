@@ -263,6 +263,8 @@ func schemaValidationArguments(schema map[string]any, args map[string]any) map[s
 			continue
 		}
 		if out == nil {
+			// Measured by BenchmarkDispatchToolsCallAliasArgument; the small
+			// copy keeps jsonschema validation unchanged while supporting _id aliases.
 			out = make(map[string]any, len(args)+1)
 			for key, value := range args {
 				out[key] = value
