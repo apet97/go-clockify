@@ -1218,14 +1218,30 @@ func shrinkListToBudget(envelope map[string]any, items []any, budget int, set fu
 		return false
 	}
 	total := len(items)
-	for kept := total - 1; kept >= 1; kept-- {
+	if total == 1 {
+		return false
+	}
+	best := 0
+	low, high := 1, total-1
+	for low <= high {
+		kept := low + (high-low)/2
 		set(items[:kept])
 		addSizeCapMeta(envelope, kept, total-kept)
 		raw, err := json.Marshal(envelope)
 		if err == nil && len(raw) <= budget {
-			return true
+			best = kept
+			low = kept + 1
+			continue
 		}
+		high = kept - 1
 	}
+	if best > 0 {
+		set(items[:best])
+		addSizeCapMeta(envelope, best, total-best)
+		return true
+	}
+	set(items[:1])
+	addSizeCapMeta(envelope, 1, total-1)
 	return false
 }
 

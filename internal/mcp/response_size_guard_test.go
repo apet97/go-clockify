@@ -148,6 +148,30 @@ func TestToolsCallResultSizeGuardLeavesUnderBudgetResponseByteIdentical(t *testi
 	}
 }
 
+func BenchmarkShrinkListToBudgetLargeList(b *testing.B) {
+	items := make([]any, 5_000)
+	for i := range items {
+		items[i] = map[string]any{"id": i, "name": "row", "note": strings.Repeat("x", 24)}
+	}
+	budget := 4_000
+
+	b.ReportAllocs()
+	for b.Loop() {
+		envelope := map[string]any{
+			"ok":     true,
+			"action": "large_list",
+			"data":   append([]any(nil), items...),
+			"meta":   map[string]any{"page": 1, "pageSize": len(items)},
+		}
+		data := envelope["data"].([]any)
+		if !shrinkListToBudget(envelope, data, budget, func(kept []any) {
+			envelope["data"] = kept
+		}) {
+			b.Fatal("shrinkListToBudget returned false")
+		}
+	}
+}
+
 func toolCallResultText(t *testing.T, resp Response) string {
 	t.Helper()
 	result, ok := resp.Result.(map[string]any)
