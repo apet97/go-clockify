@@ -117,6 +117,28 @@ func TestToolsCallResultSizeGuardReturnsToolErrorForNonTruncatableData(t *testin
 	}
 }
 
+func TestResultTooLargeEnvelopeSchemaConformance(t *testing.T) {
+	env := resultTooLargeEnvelope("clockify_projects_list", 100_000, 50_000)
+	if env["ok"] != false {
+		t.Fatalf("ok=%v want false", env["ok"])
+	}
+	if env["action"] != "clockify_projects_list" {
+		t.Fatalf("action=%v", env["action"])
+	}
+	errObj, ok := env["error"].(map[string]any)
+	if !ok || errObj["code"] != "result_too_large" {
+		t.Fatalf("error object = %+v", env["error"])
+	}
+	recovery, ok := env["recovery"].(map[string]any)
+	if !ok || recovery["hint"] == "" || recovery["retryable"] != true {
+		t.Fatalf("recovery object = %+v", env["recovery"])
+	}
+	meta, ok := env["meta"].(map[string]any)
+	if !ok || meta["size_capped"] != true || meta["truncationSuccessful"] != false {
+		t.Fatalf("meta object = %+v", env["meta"])
+	}
+}
+
 func TestToolsCallResultSizeGuardLeavesUnderBudgetResponseByteIdentical(t *testing.T) {
 	descriptor := ToolDescriptor{
 		Tool: Tool{Name: "small_result", InputSchema: map[string]any{"type": "object"}},

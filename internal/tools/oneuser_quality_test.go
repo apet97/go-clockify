@@ -1120,6 +1120,47 @@ func TestEveryToolHasTitle(t *testing.T) {
 	}
 }
 
+func TestEveryToolHasOutputSchema(t *testing.T) {
+	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+		if len(descriptor.Tool.OutputSchema) == 0 {
+			t.Fatalf("%s missing output schema", descriptor.Tool.Name)
+		}
+	}
+}
+
+func TestRecoveryEnvelopeConformsToOutputSchema(t *testing.T) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	initializeServer(t, server)
+
+	descriptors := map[string]mcp.ToolDescriptor{}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		descriptors[descriptor.Tool.Name] = descriptor
+	}
+	for _, name := range []string{
+		"clockify_invoices_send",
+		"clockify_webhooks_test",
+		"clockify_invoices_items_update",
+	} {
+		t.Run(name, func(t *testing.T) {
+			errResult := callToolError(t, server, name, oneUserCoverageArgs(descriptors[name].Tool))
+			raw, err := json.Marshal(errResult)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var jsonValue any
+			if err := json.Unmarshal(raw, &jsonValue); err != nil {
+				t.Fatal(err)
+			}
+			if err := jsonschema.Validate(descriptors[name].Tool.OutputSchema, jsonValue); err != nil {
+				t.Fatalf("%s recovery envelope failed advertised output schema: %v\nvalue=%s", name, err, raw)
+			}
+		})
+	}
+}
+
 func TestOneUserCoverageLedgerStatusesAreActionable(t *testing.T) {
 	ledger := parseOneUserCoverageLedger(t)
 	allowed := setOf("ready", "raw_fallback_only")
