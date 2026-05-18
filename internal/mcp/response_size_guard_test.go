@@ -194,6 +194,29 @@ func BenchmarkShrinkListToBudgetLargeList(b *testing.B) {
 	}
 }
 
+func BenchmarkResultSizeGuardLargeList(b *testing.B) {
+	items := make([]map[string]any, 5_000)
+	for i := range items {
+		items[i] = map[string]any{"id": i, "name": "row", "note": strings.Repeat("x", 24)}
+	}
+	server := NewServer("bench", nil)
+	server.MaxToolResultBytes = 4_000
+
+	b.ReportAllocs()
+	for b.Loop() {
+		envelope := map[string]any{
+			"ok":     true,
+			"action": "large_list",
+			"data":   append([]map[string]any(nil), items...),
+			"meta":   map[string]any{"page": 1, "pageSize": len(items)},
+		}
+		_, tooLarge := server.applyToolResultSizeGuard("large_list", envelope)
+		if tooLarge != nil {
+			b.Fatal("expected truncation instead of too-large envelope")
+		}
+	}
+}
+
 func toolCallResultText(t *testing.T, resp Response) string {
 	t.Helper()
 	result, ok := resp.Result.(map[string]any)

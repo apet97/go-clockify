@@ -564,6 +564,24 @@ func BenchmarkClockifyReviewDayDispatch(b *testing.B) {
 	}
 }
 
+func BenchmarkReportNameResolution(b *testing.B) {
+	upstream := newOneUserCoverageUpstream()
+	defer upstream.Close()
+	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("bench", svc.FullAccessRegistry())
+	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
+	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_reports_detailed","arguments":{"start":"2026-01-01","end":"2026-01-02","project":"Project One"}}}`)
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := server.DispatchMessage(ctx, msg); err != nil {
+			b.Fatalf("report name resolution: %v", err)
+		}
+	}
+}
+
 func assertWorkflowAnnotations(t *testing.T, tool mcp.Tool) {
 	t.Helper()
 	ann := tool.Annotations
