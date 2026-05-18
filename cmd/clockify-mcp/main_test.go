@@ -450,7 +450,7 @@ func TestRunDoctorLiveRoleVerdicts(t *testing.T) {
 					respondDoctorJSON(t, w, map[string]any{"id": wsID, "name": "Pinned"})
 				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
 					respondDoctorJSON(t, w, []map[string]any{})
-				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "ADMIN":
+				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "WORKSPACE_ADMIN":
 					respondDoctorJSON(t, w, []map[string]any{{"id": wsID}})
 				default:
 					http.NotFound(w, r)

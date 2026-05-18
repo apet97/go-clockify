@@ -276,14 +276,15 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 		}
 	}
 	// Best-effort workspace-admin probe. The owner probe above uses
-	// roles=OWNER; ADMIN is the symmetric admin filter. If Clockify rejects
-	// this role value the call simply errors and doctor degrades to the
-	// member_or_unknown verdict — the admin probe never fails doctor.
+	// roles=OWNER; WORKSPACE_ADMIN is the documented admin role filter. If
+	// Clockify rejects this role value the call simply errors and doctor
+	// degrades to the member_or_unknown verdict — the admin probe never fails
+	// doctor.
 	var adminWorkspaces []clockify.Workspace
-	if err := client.Get(ctx, "/workspaces", map[string]string{"roles": "ADMIN"}, &adminWorkspaces); err == nil {
+	if err := client.Get(ctx, "/workspaces", map[string]string{"roles": "WORKSPACE_ADMIN"}, &adminWorkspaces); err == nil {
 		for _, ws := range adminWorkspaces {
 			if ws.ID == cfg.WorkspaceID {
-				_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=ADMIN       OK (workspace_admin)\n")
+				_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=WORKSPACE_ADMIN OK (workspace_admin)\n")
 				return 0
 			}
 		}
