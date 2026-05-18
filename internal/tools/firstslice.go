@@ -66,9 +66,10 @@ type ErrorInfo struct {
 }
 
 type RecoveryHint struct {
-	Hint string         `json:"hint"`
-	Tool string         `json:"tool,omitempty"`
-	Args map[string]any `json:"args,omitempty"`
+	Hint      string         `json:"hint"`
+	Tool      string         `json:"tool,omitempty"`
+	Args      map[string]any `json:"args,omitempty"`
+	Retryable bool           `json:"retryable,omitempty"`
 }
 
 type statusData struct {
