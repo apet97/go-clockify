@@ -83,7 +83,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_get` | `domain` | yes | no | yes | no | `read` | Get one project by name or ID. |
 | `clockify_projects_update` | `domain` | no | no | yes | no | `write` | Update a project by name or ID. |
 | `clockify_projects_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a project by name or ID. Destructive; supports dry_run preview. |
-| `clockify_projects_archive` | `domain` | no | no | yes | no | `write` | Archive a project by name or ID. |
+| `clockify_projects_archive` | `domain` | no | yes | yes | no | `destructive` | Archive a project by name or ID. Destructive safety hint: archiving removes the project from active work. |
 | `clockify_projects_rates_update` | `domain` | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project. |
 | `clockify_tasks_get` | `domain` | yes | no | yes | no | `read` | Get one task by name or ID within a project. |
 | `clockify_tasks_update` | `domain` | no | no | yes | no | `write` | Update a task by name or ID within a project. |
@@ -103,7 +103,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_create` | `domain` | no | no | no | yes | `write`, `billing` | Create a new invoice for a client. Supports dry_run:true. |
 | `clockify_invoices_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true. |
 | `clockify_invoices_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an invoice permanently by ID. Supports dry_run preview. |
-| `clockify_invoices_send` | `domain` | no | no | no | no | `write`, `billing`, `external_side_effect` | Explain that this Clockify API surface does not expose an invoice send-email endpoint; no external side effect occurs and the Clockify UI must send email delivery. |
+| `clockify_invoices_send` | `domain` | no | yes | no | no | `billing`, `external_side_effect`, `destructive` | Explain that this Clockify API surface does not expose an invoice send-email endpoint; no destructive or external side effect occurs and the Clockify UI must send email delivery. |
 | `clockify_invoices_mark_paid` | `domain` | no | no | no | yes | `write`, `billing` | Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create. |
 | `clockify_invoices_items_list` | `domain` | yes | no | yes | no | `read` | List the line items on an invoice, paginated via page and page_size. |
 | `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:"major" to enter the value in major currency units and let the MCP multiply by 100 before the POST. |
@@ -184,18 +184,18 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List the payments recorded against an invoice, paginated via page and page_size. |
 | `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
 | `clockify_invoices_payments_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
-| `clockify_time_off_archive` | `domain` | no | no | yes | no | `write`, `admin` | Archive or reactivate a time off policy. |
+| `clockify_time_off_archive` | `domain` | no | yes | yes | no | `admin`, `destructive` | Archive or reactivate a time off policy. Destructive safety hint: archived policies leave active use. |
 | `clockify_scheduling_user_totals` | `domain` | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | `domain` | yes | no | yes | no | `read` | Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users. |
 | `clockify_approvals_resubmit` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
 | `clockify_holidays_get` | `domain` | yes | no | yes | no | `read` | Get one holiday by ID from the pinned workspace. |
 | `clockify_holidays_update` | `domain` | no | no | yes | no | `write` | Update a holiday by ID; unspecified fields merge from the existing record. |
 | `clockify_entries_mark_invoiced` | `domain` | no | no | yes | no | `write`, `billing` | Mark time entries as invoiced or not invoiced. |
-| `clockify_users_invite` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change`, `external_side_effect` | Invite users by email. External side effect when send_email is true; supports dry_run. |
+| `clockify_users_invite` | `domain` | no | yes | no | yes | `admin`, `permission_change`, `external_side_effect`, `destructive` | Invite users by email. Destructive permission-changing external side effect when send_email is true; supports dry_run. |
 | `clockify_audit_logs_search` | `domain` | yes | no | yes | no | `read` | Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API. Results paginate via page and page_size, though Clockify caps the effective page size server-side. |
 | `clockify_entity_changes_list` | `domain` | yes | no | yes | no | `read` | List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type. Results paginate via the page parameter. |
 | `clockify_invoices_info` | `domain` | yes | no | yes | no | `read` | Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_reports_money (money aggregates). |
-| `clockify_scheduling_publish` | `domain` | no | no | yes | yes | `write` | Publish draft scheduling assignments so they take effect. Assignment create/update produce drafts; this is the required separate publish step for the start..end window. Supports dry_run preview. |
+| `clockify_scheduling_publish` | `domain` | no | yes | yes | yes | `destructive` | Publish draft scheduling assignments so they take effect. Destructive external side effect: schedule visibility changes for the start..end window. Supports dry_run preview. |
 | `clockify_entries_running` | `domain` | yes | no | yes | no | `read` | Return the current running timer, if any. |
 | `clockify_entries_timer_start` | `domain` | no | no | no | no | `write` | Start a running time-entry timer for the current user. |
 | `clockify_entries_timer_stop` | `domain` | no | no | yes | no | `write` | Stop the current user's running time-entry timer. |

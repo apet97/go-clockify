@@ -383,7 +383,7 @@ func printHelp() {
 	// are the least of our problems. Explicit _, _ = satisfies the
 	// errcheck linter.
 	w := os.Stderr
-	_, _ = fmt.Fprintf(w, "clockify-mcp v%s — one-user full-access Clockify MCP\n\n", effectiveVersion())
+	_, _ = fmt.Fprintf(w, "clockify-mcp %s — one-user full-access Clockify MCP\n\n", effectiveVersion())
 	_, _ = fmt.Fprintln(w, "Usage:")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp                 Start the stdio MCP server")
 	_, _ = fmt.Fprintln(w, "  clockify-mcp doctor          Validate the one-user configuration")

@@ -58,6 +58,18 @@ func runtimeEnvelopeShapes(toolName string) map[string]map[string]any {
 				"retryable": true,
 			},
 		},
+		"rate_limited": {
+			"ok":     false,
+			"action": toolName,
+			"error": map[string]any{
+				"code":    "rate_limited",
+				"message": "tool invocation rate limit exceeded; retry shortly",
+			},
+			"recovery": map[string]any{
+				"hint":      "The server is rate-limiting tool calls (CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE). Wait a moment and retry.",
+				"retryable": true,
+			},
+		},
 	}
 }
 

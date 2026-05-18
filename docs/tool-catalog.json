@@ -760,7 +760,7 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           },
           "color": {
@@ -777,7 +777,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "tag": {
@@ -785,7 +785,7 @@
             "type": "string"
           },
           "tag_ids": {
-            "description": "Tag IDs.",
+            "description": "Clockify tag IDs.",
             "items": {
               "type": "string"
             },
@@ -803,7 +803,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "upsert": {
@@ -1109,7 +1109,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "start": {
@@ -1121,7 +1121,7 @@
             "type": "string"
           },
           "tag_ids": {
-            "description": "Tag IDs.",
+            "description": "Clockify tag IDs.",
             "items": {
               "type": "string"
             },
@@ -1132,7 +1132,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -1510,7 +1510,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "start": {
@@ -1522,7 +1522,7 @@
             "type": "string"
           },
           "tag_ids": {
-            "description": "Tag IDs.",
+            "description": "Clockify tag IDs.",
             "items": {
               "type": "string"
             },
@@ -1533,7 +1533,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -2184,7 +2184,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "start": {
@@ -2196,7 +2196,7 @@
             "type": "string"
           },
           "tag_ids": {
-            "description": "Tag IDs.",
+            "description": "Clockify tag IDs.",
             "items": {
               "type": "string"
             },
@@ -2207,7 +2207,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -4559,7 +4559,7 @@
             "type": "string"
           },
           "entry_id": {
-            "description": "Time entry ID.",
+            "description": "Clockify time entry ID.",
             "type": "string"
           },
           "exact_description": {
@@ -4577,7 +4577,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "start": {
@@ -5869,7 +5869,7 @@
         "additionalProperties": false,
         "properties": {
           "amount": {
-            "description": "Amount.",
+            "description": "Amount in Clockify's expected unit.",
             "type": "number"
           },
           "billable": {
@@ -5897,15 +5897,15 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "user_id": {
-            "description": "User ID.",
+            "description": "Clockify user ID.",
             "type": "string"
           }
         },
@@ -6517,7 +6517,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "user": {
@@ -6807,7 +6807,7 @@
             "type": "string"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -6823,7 +6823,7 @@
             "type": "string"
           },
           "url": {
-            "description": "URL.",
+            "description": "Callback or request URL.",
             "maxLength": 2048,
             "type": "string"
           },
@@ -7688,7 +7688,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -8015,7 +8015,7 @@
         "additionalProperties": false,
         "properties": {
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           }
@@ -8357,7 +8357,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -8728,7 +8728,7 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           },
           "color": {
@@ -8741,7 +8741,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           }
@@ -9233,7 +9233,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -9253,7 +9253,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "sort_column": {
@@ -9635,7 +9635,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -9644,7 +9644,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -9986,7 +9986,7 @@
             "type": "array"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -10297,7 +10297,7 @@
         "additionalProperties": false,
         "properties": {
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           }
@@ -10600,7 +10600,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "project_required": {
@@ -11015,7 +11015,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "start": {
@@ -11027,7 +11027,7 @@
             "type": "string"
           },
           "tag_ids": {
-            "description": "Tag IDs.",
+            "description": "Clockify tag IDs.",
             "items": {
               "type": "string"
             },
@@ -11038,7 +11038,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "type": {
@@ -11402,7 +11402,7 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           }
         },
@@ -12056,11 +12056,11 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           },
           "currency_id": {
-            "description": "Currency ID.",
+            "description": "Clockify currency ID.",
             "type": "string"
           },
           "email": {
@@ -12073,7 +12073,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -12713,7 +12713,7 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           },
           "dry_run": {
@@ -12988,7 +12988,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -14296,7 +14296,7 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           },
           "color": {
@@ -14309,7 +14309,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -14323,7 +14323,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -15627,7 +15627,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -15864,15 +15864,15 @@
     {
       "name": "clockify_projects_archive",
       "title": "Projects Archive",
-      "description": "Archive a project by name or ID.",
+      "description": "Archive a project by name or ID. Destructive safety hint: archiving removes the project from active work.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
-      "destructive": false,
+      "destructive": true,
       "idempotent": true,
       "dry_run": false,
       "risk_class": [
-        "write"
+        "destructive"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -15882,7 +15882,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -17148,7 +17148,7 @@
       },
       "annotations": {
         "category": "domain",
-        "destructiveHint": false,
+        "destructiveHint": true,
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
@@ -17156,7 +17156,7 @@
         "priority": 35,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "destructive"
         ],
         "title": "Projects Archive"
       }
@@ -17195,7 +17195,7 @@
             "type": "boolean"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "rate_kind": {
@@ -17211,7 +17211,7 @@
             "type": "string"
           },
           "user_id": {
-            "description": "User ID.",
+            "description": "Clockify user ID.",
             "type": "string"
           }
         },
@@ -17475,7 +17475,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "task": {
@@ -17483,7 +17483,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -18144,7 +18144,7 @@
             "type": "string"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -18153,7 +18153,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "status": {
@@ -18169,7 +18169,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -18812,7 +18812,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "task": {
@@ -18820,7 +18820,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -19093,7 +19093,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "rate_kind": {
@@ -19113,7 +19113,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -19376,7 +19376,7 @@
             "type": "string"
           },
           "tag_id": {
-            "description": "Tag ID.",
+            "description": "Clockify tag ID.",
             "type": "string"
           }
         },
@@ -19646,7 +19646,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -19655,7 +19655,7 @@
             "type": "string"
           },
           "tag_id": {
-            "description": "Tag ID.",
+            "description": "Clockify tag ID.",
             "type": "string"
           }
         },
@@ -19929,7 +19929,7 @@
             "type": "string"
           },
           "tag_id": {
-            "description": "Tag ID.",
+            "description": "Clockify tag ID.",
             "type": "string"
           }
         },
@@ -20180,7 +20180,7 @@
         "additionalProperties": false,
         "properties": {
           "entry_id": {
-            "description": "Time entry ID.",
+            "description": "Clockify time entry ID.",
             "type": "string"
           }
         },
@@ -20991,7 +20991,7 @@
             "type": "string"
           },
           "entry_id": {
-            "description": "Time entry ID.",
+            "description": "Clockify time entry ID.",
             "type": "string"
           },
           "project": {
@@ -20999,7 +20999,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "start": {
@@ -21011,7 +21011,7 @@
             "type": "string"
           },
           "tag_ids": {
-            "description": "Tag IDs.",
+            "description": "Clockify tag IDs.",
             "items": {
               "type": "string"
             },
@@ -21022,7 +21022,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },
@@ -21824,7 +21824,7 @@
             "type": "boolean"
           },
           "entry_id": {
-            "description": "Time entry ID.",
+            "description": "Clockify time entry ID.",
             "type": "string"
           }
         },
@@ -22102,7 +22102,7 @@
             "type": "string"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -22118,7 +22118,7 @@
             "type": "integer"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "sort_column": {
@@ -23488,7 +23488,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           }
         },
@@ -24080,7 +24080,7 @@
             "type": "string"
           },
           "client_id": {
-            "description": "Client ID.",
+            "description": "Clockify client ID.",
             "type": "string"
           },
           "currency": {
@@ -24100,7 +24100,7 @@
             "type": "string"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "issued_date": {
@@ -24408,7 +24408,7 @@
             "type": "boolean"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           }
         },
@@ -24646,17 +24646,17 @@
     {
       "name": "clockify_invoices_send",
       "title": "Send Invoice",
-      "description": "Explain that this Clockify API surface does not expose an invoice send-email endpoint; no external side effect occurs and the Clockify UI must send email delivery.",
+      "description": "Explain that this Clockify API surface does not expose an invoice send-email endpoint; no destructive or external side effect occurs and the Clockify UI must send email delivery.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
-      "destructive": false,
+      "destructive": true,
       "idempotent": false,
       "dry_run": false,
       "risk_class": [
-        "write",
         "billing",
-        "external_side_effect"
+        "external_side_effect",
+        "destructive"
       ],
       "audit_keys": [
         "invoice_id"
@@ -24665,7 +24665,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           }
         },
@@ -24888,7 +24888,7 @@
       },
       "annotations": {
         "category": "domain",
-        "destructiveHint": false,
+        "destructiveHint": true,
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": false,
@@ -24896,9 +24896,9 @@
         "priority": 205,
         "readOnlyHint": false,
         "riskClass": [
-          "write",
           "billing",
-          "external_side_effect"
+          "external_side_effect",
+          "destructive"
         ],
         "title": "Send Invoice"
       }
@@ -24928,7 +24928,7 @@
             "type": "boolean"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           }
         },
@@ -25185,7 +25185,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           }
         },
@@ -25470,7 +25470,7 @@
             "type": "boolean"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "item_type": {
@@ -25756,7 +25756,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           }
         },
@@ -26021,7 +26021,7 @@
             "type": "boolean"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "item_id": {
@@ -26919,7 +26919,7 @@
             "type": "number"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "time_estimate": {
@@ -27283,7 +27283,7 @@
                   "type": "string"
                 },
                 "user_id": {
-                  "description": "User ID.",
+                  "description": "Clockify user ID.",
                   "type": "string"
                 }
               },
@@ -27292,7 +27292,7 @@
             "type": "array"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "user_groups": {
@@ -27912,7 +27912,7 @@
         "additionalProperties": false,
         "properties": {
           "expense_id": {
-            "description": "Expense ID.",
+            "description": "Clockify expense ID.",
             "type": "string"
           }
         },
@@ -28509,7 +28509,7 @@
             "type": "boolean"
           },
           "category_id": {
-            "description": "Expense category ID.",
+            "description": "Clockify expense category ID.",
             "type": "string"
           },
           "change_fields": {
@@ -28534,7 +28534,7 @@
             "type": "string"
           },
           "expense_id": {
-            "description": "Expense ID.",
+            "description": "Clockify expense ID.",
             "type": "string"
           },
           "notes": {
@@ -28542,11 +28542,11 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "user_id": {
@@ -28815,7 +28815,7 @@
             "type": "boolean"
           },
           "expense_id": {
-            "description": "Expense ID.",
+            "description": "Clockify expense ID.",
             "type": "string"
           }
         },
@@ -29627,7 +29627,7 @@
             "type": "boolean"
           },
           "category_id": {
-            "description": "Expense category ID.",
+            "description": "Clockify expense category ID.",
             "type": "string"
           },
           "dry_run": {
@@ -29639,7 +29639,7 @@
             "type": "boolean"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -29909,7 +29909,7 @@
         "additionalProperties": false,
         "properties": {
           "category_id": {
-            "description": "Expense category ID.",
+            "description": "Clockify expense category ID.",
             "type": "string"
           },
           "dry_run": {
@@ -30426,7 +30426,7 @@
         "additionalProperties": false,
         "properties": {
           "field_id": {
-            "description": "Custom field ID.",
+            "description": "Clockify custom field ID.",
             "type": "string"
           }
         },
@@ -30704,7 +30704,7 @@
             "type": "string"
           },
           "name": {
-            "description": "Field name",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -31010,7 +31010,7 @@
             "type": "array"
           },
           "field_id": {
-            "description": "Custom field ID.",
+            "description": "Clockify custom field ID.",
             "type": "string"
           },
           "field_type": {
@@ -31026,7 +31026,7 @@
             "type": "string"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -31326,7 +31326,7 @@
             "type": "boolean"
           },
           "field_id": {
-            "description": "Custom field ID.",
+            "description": "Clockify custom field ID.",
             "type": "string"
           }
         },
@@ -32155,11 +32155,11 @@
         "additionalProperties": false,
         "properties": {
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "request_id": {
-            "description": "Time-off request ID.",
+            "description": "Clockify time-off request ID.",
             "type": "string"
           }
         },
@@ -32438,7 +32438,7 @@
             "type": "string"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "start": {
@@ -32715,11 +32715,11 @@
             "type": "boolean"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "request_id": {
-            "description": "Time-off request ID.",
+            "description": "Clockify time-off request ID.",
             "type": "string"
           },
           "status": {
@@ -32991,11 +32991,11 @@
             "type": "boolean"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "request_id": {
-            "description": "Time-off request ID.",
+            "description": "Clockify time-off request ID.",
             "type": "string"
           }
         },
@@ -33259,11 +33259,11 @@
             "type": "string"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "request_id": {
-            "description": "Time-off request ID.",
+            "description": "Clockify time-off request ID.",
             "type": "string"
           }
         },
@@ -33529,11 +33529,11 @@
             "type": "string"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "request_id": {
-            "description": "Time-off request ID.",
+            "description": "Clockify time-off request ID.",
             "type": "string"
           }
         },
@@ -34080,7 +34080,7 @@
         "additionalProperties": false,
         "properties": {
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           }
         },
@@ -34353,7 +34353,7 @@
             "type": "number"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -34640,7 +34640,7 @@
             "type": "number"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -34649,7 +34649,7 @@
             "type": "boolean"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "requires_approval": {
@@ -35199,7 +35199,7 @@
             "type": "string"
           },
           "policy_id": {
-            "description": "Time-off policy ID.",
+            "description": "Clockify time-off policy ID.",
             "type": "string"
           },
           "user_ids": {
@@ -35765,7 +35765,7 @@
         "additionalProperties": false,
         "properties": {
           "assignment_id": {
-            "description": "Scheduling assignment ID.",
+            "description": "Clockify scheduling assignment ID.",
             "type": "string"
           },
           "end": {
@@ -36078,7 +36078,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "timezone": {
@@ -36354,7 +36354,7 @@
         "additionalProperties": false,
         "properties": {
           "assignment_id": {
-            "description": "Scheduling assignment ID.",
+            "description": "Clockify scheduling assignment ID.",
             "type": "string"
           },
           "billable": {
@@ -36398,7 +36398,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           },
           "timezone": {
@@ -36662,7 +36662,7 @@
         "additionalProperties": false,
         "properties": {
           "assignment_id": {
-            "description": "Scheduling assignment ID.",
+            "description": "Clockify scheduling assignment ID.",
             "type": "string"
           },
           "dry_run": {
@@ -37502,7 +37502,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
-            "description": "Approval request ID.",
+            "description": "Clockify approval request ID.",
             "type": "string"
           },
           "page_size": {
@@ -38059,7 +38059,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
-            "description": "Approval request ID.",
+            "description": "Clockify approval request ID.",
             "type": "string"
           },
           "dry_run": {
@@ -38330,7 +38330,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
-            "description": "Approval request ID.",
+            "description": "Clockify approval request ID.",
             "type": "string"
           },
           "dry_run": {
@@ -38605,7 +38605,7 @@
         "additionalProperties": false,
         "properties": {
           "approval_id": {
-            "description": "Approval request ID.",
+            "description": "Clockify approval request ID.",
             "type": "string"
           },
           "dry_run": {
@@ -39146,7 +39146,7 @@
         "additionalProperties": false,
         "properties": {
           "webhook_id": {
-            "description": "Webhook ID",
+            "description": "Clockify webhook ID.",
             "type": "string"
           }
         },
@@ -39755,7 +39755,7 @@
             "type": "string"
           },
           "webhook_id": {
-            "description": "Webhook ID",
+            "description": "Clockify webhook ID.",
             "type": "string"
           }
         },
@@ -41067,7 +41067,7 @@
         "additionalProperties": false,
         "properties": {
           "group_id": {
-            "description": "User group ID.",
+            "description": "Clockify user group ID.",
             "type": "string"
           }
         },
@@ -41325,7 +41325,7 @@
         "additionalProperties": false,
         "properties": {
           "name": {
-            "description": "Group name",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -41592,11 +41592,11 @@
         "additionalProperties": false,
         "properties": {
           "group_id": {
-            "description": "User group ID.",
+            "description": "Clockify user group ID.",
             "type": "string"
           },
           "name": {
-            "description": "Name.",
+            "description": "Display name.",
             "maxLength": 150,
             "type": "string"
           },
@@ -41867,7 +41867,7 @@
             "type": "boolean"
           },
           "group_id": {
-            "description": "User group ID.",
+            "description": "Clockify user group ID.",
             "type": "string"
           }
         },
@@ -43460,7 +43460,7 @@
             "type": "boolean"
           },
           "holiday_id": {
-            "description": "Holiday ID.",
+            "description": "Clockify holiday ID.",
             "type": "string"
           }
         },
@@ -44024,7 +44024,7 @@
                   "type": "string"
                 },
                 "project_id": {
-                  "description": "Project ID.",
+                  "description": "Clockify project ID.",
                   "type": "string"
                 },
                 "role": {
@@ -44067,7 +44067,7 @@
             "type": "string"
           },
           "user_id": {
-            "description": "User ID",
+            "description": "Clockify user ID.",
             "type": "string"
           }
         },
@@ -44326,7 +44326,7 @@
         "additionalProperties": false,
         "properties": {
           "project_id": {
-            "description": "Project ID",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -45783,7 +45783,7 @@
             "type": "string"
           },
           "invoice_id": {
-            "description": "Invoice ID",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "user_locale": {
@@ -46058,7 +46058,7 @@
             "type": "string"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "project_ids": {
@@ -46355,7 +46355,7 @@
             "type": "string"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "project_ids": {
@@ -46643,7 +46643,7 @@
         "additionalProperties": false,
         "properties": {
           "invoice_id": {
-            "description": "Invoice ID",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "page": {
@@ -46934,7 +46934,7 @@
             "type": "string"
           },
           "invoice_id": {
-            "description": "Invoice ID",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "note": {
@@ -47205,11 +47205,11 @@
             "type": "boolean"
           },
           "invoice_id": {
-            "description": "Invoice ID.",
+            "description": "Clockify invoice ID.",
             "type": "string"
           },
           "payment_id": {
-            "description": "Invoice payment ID.",
+            "description": "Clockify invoice payment ID.",
             "type": "string"
           }
         },
@@ -47449,16 +47449,16 @@
     {
       "name": "clockify_time_off_archive",
       "title": "Time Off Archive",
-      "description": "Archive or reactivate a time off policy.",
+      "description": "Archive or reactivate a time off policy. Destructive safety hint: archived policies leave active use.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
-      "destructive": false,
+      "destructive": true,
       "idempotent": true,
       "dry_run": false,
       "risk_class": [
-        "write",
-        "admin"
+        "admin",
+        "destructive"
       ],
       "audit_keys": [
         "policy_id",
@@ -47695,7 +47695,7 @@
       },
       "annotations": {
         "category": "domain",
-        "destructiveHint": false,
+        "destructiveHint": true,
         "dryRun": false,
         "handlerKind": "native handler",
         "idempotentHint": true,
@@ -47703,8 +47703,8 @@
         "priority": 506,
         "readOnlyHint": false,
         "riskClass": [
-          "write",
-          "admin"
+          "admin",
+          "destructive"
         ],
         "title": "Time Off Archive"
       }
@@ -47737,7 +47737,7 @@
             "type": "string"
           },
           "user_id": {
-            "description": "User ID",
+            "description": "Clockify user ID.",
             "type": "string"
           }
         },
@@ -48558,7 +48558,7 @@
         "additionalProperties": false,
         "properties": {
           "holiday_id": {
-            "description": "Holiday ID.",
+            "description": "Clockify holiday ID.",
             "type": "string"
           }
         },
@@ -48815,7 +48815,7 @@
             "type": "string"
           },
           "holiday_id": {
-            "description": "Holiday ID",
+            "description": "Clockify holiday ID.",
             "type": "string"
           },
           "name": {
@@ -49361,18 +49361,18 @@
     {
       "name": "clockify_users_invite",
       "title": "Users Invite",
-      "description": "Invite users by email. External side effect when send_email is true; supports dry_run.",
+      "description": "Invite users by email. Destructive permission-changing external side effect when send_email is true; supports dry_run.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
-      "destructive": false,
+      "destructive": true,
       "idempotent": false,
       "dry_run": true,
       "risk_class": [
-        "write",
         "admin",
         "permission_change",
-        "external_side_effect"
+        "external_side_effect",
+        "destructive"
       ],
       "audit_keys": [
         "email",
@@ -49620,7 +49620,7 @@
       },
       "annotations": {
         "category": "domain",
-        "destructiveHint": false,
+        "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
@@ -49628,10 +49628,10 @@
         "priority": 1102,
         "readOnlyHint": false,
         "riskClass": [
-          "write",
           "admin",
           "permission_change",
-          "external_side_effect"
+          "external_side_effect",
+          "destructive"
         ],
         "title": "Users Invite"
       }
@@ -50624,15 +50624,15 @@
     {
       "name": "clockify_scheduling_publish",
       "title": "Scheduling Publish",
-      "description": "Publish draft scheduling assignments so they take effect. Assignment create/update produce drafts; this is the required separate publish step for the start..end window. Supports dry_run preview.",
+      "description": "Publish draft scheduling assignments so they take effect. Destructive external side effect: schedule visibility changes for the start..end window. Supports dry_run preview.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
-      "destructive": false,
+      "destructive": true,
       "idempotent": true,
       "dry_run": true,
       "risk_class": [
-        "write"
+        "destructive"
       ],
       "input_schema": {
         "additionalProperties": false,
@@ -50886,7 +50886,7 @@
       },
       "annotations": {
         "category": "domain",
-        "destructiveHint": false,
+        "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": true,
@@ -50894,7 +50894,7 @@
         "priority": 1203,
         "readOnlyHint": false,
         "riskClass": [
-          "write"
+          "destructive"
         ],
         "title": "Scheduling Publish"
       }
@@ -51186,7 +51186,7 @@
             "type": "string"
           },
           "project_id": {
-            "description": "Project ID.",
+            "description": "Clockify project ID.",
             "type": "string"
           }
         },
@@ -52520,7 +52520,7 @@
             "type": "string"
           },
           "task_id": {
-            "description": "Task ID.",
+            "description": "Clockify task ID.",
             "type": "string"
           }
         },

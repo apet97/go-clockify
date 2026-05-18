@@ -9,6 +9,7 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | --- | --- | --- | --- |
 | `clockify_clients_delete` | destructive | Deletes a client after the handler checks active projects. | yes |
 | `clockify_projects_delete` | destructive | Deletes a project by ID or name. | yes |
+| `clockify_projects_archive` | destructive | Archives a project and removes it from active work. | no |
 | `clockify_projects_rates_update` | billing, admin | Changes project member hourly or cost rates. | yes |
 | `clockify_tasks_delete` | destructive | Marks a non-DONE task done when required, then deletes it. | yes |
 | `clockify_tasks_rates_update` | billing | Changes task rates used by future billable entries. | yes |
@@ -17,7 +18,7 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | `clockify_invoices_create` | billing | Creates an invoice. | yes |
 | `clockify_invoices_update` | billing | Updates invoice fields or status. | yes |
 | `clockify_invoices_delete` | billing, destructive | Deletes an invoice. | yes |
-| `clockify_invoices_send` | billing, external side effect | Unsupported by Clockify API; returns guidance for UI email send. | no |
+| `clockify_invoices_send` | billing, external side effect, destructive | Unsupported by Clockify API; returns guidance for UI email send. | no |
 | `clockify_invoices_mark_paid` | billing | Checks status and guides payment creation when needed. | yes |
 | `clockify_invoices_items_add` | billing | Adds invoice line items. | yes |
 | `clockify_invoices_items_update` | billing | Unsupported by Clockify API; delete and re-add the line instead. | no |
@@ -44,10 +45,10 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | `clockify_time_off_deny` | admin, permission change | Denies a pending time-off request. | no |
 | `clockify_time_off_policies_create` | admin | Creates a simplified time-off policy. | no |
 | `clockify_time_off_policies_update` | admin | Updates a time-off policy by merging supplied fields. | no |
-| `clockify_time_off_archive` | admin | Archives or reactivates a time-off policy. | no |
+| `clockify_time_off_archive` | admin, destructive | Archives or reactivates a time-off policy. | no |
 | `clockify_time_off_balances_update` | billing, admin | Adjusts user balances under a policy. | yes |
 | `clockify_scheduling_assignments_delete` | destructive | Deletes a recurring scheduling assignment. | yes |
-| `clockify_scheduling_publish` | write | Publishes schedule changes for a date range. | yes |
+| `clockify_scheduling_publish` | destructive | Publishes schedule changes for a date range. | yes |
 | `clockify_approvals_submit` | admin | Submits the caller's timesheet for approval. | yes |
 | `clockify_approvals_approve` | admin, permission change | Approves an approval request. | yes |
 | `clockify_approvals_reject` | admin, permission change | Rejects an approval request. | yes |
@@ -65,7 +66,7 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | `clockify_holidays_delete` | destructive | Deletes a holiday. | yes |
 | `clockify_users_deactivate` | admin | Deactivates a workspace user and removes access. | yes |
 | `clockify_users_role` | admin, permission change | Updates a user's workspace role. | yes |
-| `clockify_users_invite` | admin, permission change, external side effect | Invites users by email when `send_email` is true. | yes |
+| `clockify_users_invite` | admin, permission change, external side effect, destructive | Invites users by email when `send_email` is true. | yes |
 | `clockify_entries_mark_invoiced` | billing | Marks time entries invoiced or not invoiced. | no |
 
 Unsupported tools with risky labels do not call upstream; they return clean

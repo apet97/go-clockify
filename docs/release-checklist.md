@@ -4,25 +4,45 @@ Run these in order before tagging a release.
 
 ## Deterministic gates
 
-- [ ] `make perfect` — tests (race), all drift checks, clean diff
-- [ ] `make perfect-local` — adds `golangci-lint run` and the benchmark baseline check
+- [ ] `make perfect` - tests (race) and all drift checks (catalog, API parity,
+      OpenAPI, raw allowlist, self-inspection, module tidy), plus a clean diff
+- [ ] `make perfect-local` - adds `golangci-lint run` and the benchmark
+      baseline check
+- [ ] `make mod-tidy-drift` produces no diff - `go mod tidy` would not change
+      `go.mod` or `go.sum` (this also runs inside `make perfect`)
 
 ## Live verification (sacrificial workspace only)
 
 - [ ] Export the live env vars from `docs/live-tests.md`
-- [ ] `make perfect-live` — runs `live-contract-local` then `live-clean-prefix`
-- [ ] Confirm `make live-clean-prefix` reported `Leftovers: 0`
+- [ ] `make perfect-live` - runs `live-contract-local` then `live-clean-prefix`
+- [ ] Confirm `make live-clean-prefix` reported `Leftovers: 0` after its
+      post-delete rescan
 
 ## Documentation
 
-- [ ] Update `docs/live-tests.md` "Recorded Runs" with the new live run
-- [ ] Move the `## [Unreleased]` section of `CHANGELOG.md` under the new version number
+- [ ] Update `docs/live-tests.md` "Recorded Runs" with the new live run,
+      including the tested commit SHA, then run `make sync-selfinspect-assets`
+      so `internal/tools/selfinspect_assets/live-tests.md` stays in sync
+- [ ] Move the `## [Unreleased]` section of `CHANGELOG.md` under the new
+      version number
+
+## GitHub Actions verification
+
+The release commit must have a visible, green Actions run before it is tagged.
+
+- [ ] `gh run list --commit <release-commit>` lists a workflow run for the
+      exact commit being tagged
+- [ ] `gh api repos/apet97/go-clockify/commits/<release-commit>/status`
+      reports `"state": "success"`
+- [ ] **Do not tag a commit that has no visible workflow run.** A missing run
+      means CI never executed for that exact commit - push it, wait for CI to
+      finish green, and only then tag.
 
 ## Branch protection
 
-`main` must require the CI checks listed in
-`docs/branch-protection-required-checks.md`. Verify they are all enforced before merging
-release commits.
+`main` must require every CI check listed in
+`docs/branch-protection-required-checks.md`, including `Module tidy drift`.
+Verify they are all enforced before merging release commits.
 
 ## Tag
 

@@ -435,6 +435,7 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		if in[i].Tool.Title == "" {
 			in[i].Tool.Title = titleFor(in[i].Tool.Name)
 		}
+		applyMCPContractSafetyHints(&in[i])
 		if value, ok := in[i].Tool.Annotations["readOnlyHint"].(bool); ok {
 			in[i].ReadOnlyHint = value
 		}
@@ -451,6 +452,20 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		applyAgentToolMetadata(&in[i])
 	}
 	return in
+}
+
+var mcpContractDestructiveHintOverrides = map[string]bool{
+	"clockify_invoices_send":      true,
+	"clockify_projects_archive":   true,
+	"clockify_scheduling_publish": true,
+	"clockify_time_off_archive":   true,
+	"clockify_users_invite":       true,
+}
+
+func applyMCPContractSafetyHints(d *mcp.ToolDescriptor) {
+	if mcpContractDestructiveHintOverrides[d.Tool.Name] {
+		d.Tool.Annotations["destructiveHint"] = true
+	}
 }
 
 func defaultToolCategory(name string) string {
@@ -632,6 +647,8 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 	if canonical, ok := paramDescriptions[name]; ok {
 		if existing, _ := prop["description"].(string); strings.TrimSpace(existing) == "" {
 			prop["description"] = canonical
+		} else if len(strings.TrimSpace(existing)) < 12 {
+			prop["description"] = canonical
 		}
 	}
 
@@ -724,29 +741,31 @@ var freeTextMaxLength = map[string]int{
 // free. An explicit per-descriptor description always wins.
 var paramDescriptions = map[string]string{
 	// Entity identifiers.
-	"project_id":    "Project ID.",
-	"task_id":       "Task ID.",
-	"entry_id":      "Time entry ID.",
-	"client_id":     "Client ID.",
-	"invoice_id":    "Invoice ID.",
-	"expense_id":    "Expense ID.",
-	"category_id":   "Expense category ID.",
-	"field_id":      "Custom field ID.",
-	"policy_id":     "Time-off policy ID.",
-	"request_id":    "Time-off request ID.",
-	"holiday_id":    "Holiday ID.",
-	"group_id":      "User group ID.",
-	"user_id":       "User ID.",
-	"approval_id":   "Approval request ID.",
-	"assignment_id": "Scheduling assignment ID.",
-	"payment_id":    "Invoice payment ID.",
-	"currency_id":   "Currency ID.",
+	"project_id":    "Clockify project ID.",
+	"task_id":       "Clockify task ID.",
+	"entry_id":      "Clockify time entry ID.",
+	"client_id":     "Clockify client ID.",
+	"invoice_id":    "Clockify invoice ID.",
+	"expense_id":    "Clockify expense ID.",
+	"category_id":   "Clockify expense category ID.",
+	"field_id":      "Clockify custom field ID.",
+	"policy_id":     "Clockify time-off policy ID.",
+	"request_id":    "Clockify time-off request ID.",
+	"holiday_id":    "Clockify holiday ID.",
+	"group_id":      "Clockify user group ID.",
+	"tag_id":        "Clockify tag ID.",
+	"user_id":       "Clockify user ID.",
+	"webhook_id":    "Clockify webhook ID.",
+	"approval_id":   "Clockify approval request ID.",
+	"assignment_id": "Clockify scheduling assignment ID.",
+	"payment_id":    "Clockify invoice payment ID.",
+	"currency_id":   "Clockify currency ID.",
 	// Name-or-ID references.
 	"project": "Project name or ID.",
 	"task":    "Task name or ID.",
 	"tag":     "Tag name or ID.",
 	// Identifier and value collections.
-	"tag_ids":        "Tag IDs.",
+	"tag_ids":        "Clockify tag IDs.",
 	"tags":           "Tag names or IDs.",
 	"time_entry_ids": "Time entry IDs.",
 	"excluded_ids":   "IDs to exclude from the results.",
@@ -792,7 +811,7 @@ var paramDescriptions = map[string]string{
 	"negative_balance":         "Whether the policy allows a negative balance.",
 	"invoiced":                 "Whether the time entries are marked as invoiced.",
 	// Text fields.
-	"name":                 "Name.",
+	"name":                 "Display name.",
 	"note":                 "Optional note.",
 	"notes":                "Optional notes.",
 	"description":          "Free-text description.",
@@ -801,7 +820,7 @@ var paramDescriptions = map[string]string{
 	"new_description":      "Replacement description.",
 	"email":                "Email address.",
 	"address":              "Postal address.",
-	"url":                  "URL.",
+	"url":                  "Callback or request URL.",
 	"color":                "Hex color code, e.g. #4caf50.",
 	"number":               "Invoice number.",
 	"currency":             "Three-letter currency code, e.g. USD.",
@@ -824,7 +843,7 @@ var paramDescriptions = map[string]string{
 	"detailed_filter":          "Clockify detailed-report filter object.",
 	"summary_filter":           "Clockify summary-report filter object.",
 	// Numbers.
-	"amount":          "Amount.",
+	"amount":          "Amount in Clockify's expected unit.",
 	"quantity":        "Quantity; must be greater than 0.",
 	"min_gap_minutes": "Minimum gap, in minutes, to flag between time entries.",
 	"days_per_year":   "Days granted per year by the policy.",

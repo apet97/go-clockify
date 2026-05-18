@@ -16,6 +16,7 @@ protection matches.
 - OpenAPI drift
 - Raw allowlist drift
 - Self-inspection drift
+- Module tidy drift
 - Shellcheck
 - Actionlint
 - Secret scan (gitleaks)
@@ -33,7 +34,7 @@ gh api -X PUT repos/apet97/go-clockify/branches/main/protection \
     "contexts": [
       "Format", "Vet", "Lint", "Vulncheck", "Build", "Test", "Stdio smoke",
       "Tool-catalog drift", "API parity matrix drift", "OpenAPI drift",
-      "Raw allowlist drift", "Self-inspection drift",
+      "Raw allowlist drift", "Self-inspection drift", "Module tidy drift",
       "Shellcheck", "Actionlint", "Secret scan (gitleaks)"
     ]
   },

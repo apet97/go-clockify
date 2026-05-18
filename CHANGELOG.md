@@ -22,15 +22,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `make perfect` / `perfect-local` / `perfect-live` release gates.
 - Docs-lint tests for tool-name, dangerous-tool, env-var, and raw-path-placeholder
   drift, and a consolidated product-contract regression test.
+- `make mod-tidy-drift` gate (run by `make perfect` and CI) fails when
+  `go mod tidy` would change `go.mod` / `go.sum`.
+- A dependency-allowlist test pins the root module to its single justified
+  direct dependency (`gopkg.in/yaml.v3`).
+- `live-clean-prefix` supports a `CLOCKIFY_LIVE_CLEAN_DRY_RUN=1` dry-run mode,
+  performs a paginated post-delete rescan, and prints a machine-readable JSON
+  summary.
+
+### Changed
+
+- `go.mod` / `go.sum` tidied; the dynamic demo resource listing is capped at 50.
+- Per-risk-family concurrency caps are installed by `mcp.NewServer` itself, so
+  every server serializes high-risk writes even when `ConfigureToolLimits` runs
+  with rate limiting disabled.
 
 ### Fixed
 
 - Raw-fallback docs and tool descriptions advertise the `{workspaceId}` placeholder
   that `safeRawPath` actually substitutes.
-
-### Changed
-
-- `go.mod` / `go.sum` tidied; the dynamic demo resource listing is capped at 50.
 
 ## [0.1.0] - 2026-05-18
 

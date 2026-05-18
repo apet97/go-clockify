@@ -219,7 +219,10 @@ type Server struct {
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
 	// toolRateLimiter throttles tool invocations process-wide; nil = disabled.
-	// toolFamilyCaps serializes high-risk writes; nil = disabled.
+	// Installed by ConfigureToolLimits only when the configured rate is > 0.
+	// toolFamilyCaps serializes high-risk writes. NewServer always installs it;
+	// it is nil only for a Server built by direct struct literal (some tests),
+	// which is why callTool keeps a nil guard.
 	toolRateLimiter *tokenBucket
 	toolFamilyCaps  *familyLimiter
 
@@ -296,10 +299,11 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 		toolMap[d.Tool.Name] = d
 	}
 	s := &Server{
-		Version:  version,
-		tools:    toolMap,
-		inflight: make(map[any]context.CancelCauseFunc),
-		prompts:  newPromptRegistry(),
+		Version:        version,
+		tools:          toolMap,
+		inflight:       make(map[any]context.CancelCauseFunc),
+		prompts:        newPromptRegistry(),
+		toolFamilyCaps: newFamilyLimiter(),
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
 	return s
@@ -1289,10 +1293,12 @@ func (s *Server) AllowProgress(token any, progress float64) bool {
 	return true
 }
 
-// ConfigureToolLimits installs the per-risk-family concurrency caps (always on)
-// and, when ratePerMinute > 0, a per-process tool-invocation rate limiter.
+// ConfigureToolLimits installs the optional per-process tool-invocation rate
+// limiter when ratePerMinute > 0. The per-risk-family concurrency caps are
+// installed unconditionally by NewServer and are intentionally not touched
+// here, so a Server always serializes high-risk writes even when rate limiting
+// is disabled (CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE defaults to 0).
 func (s *Server) ConfigureToolLimits(ratePerMinute int) {
-	s.toolFamilyCaps = newFamilyLimiter()
 	s.toolRateLimiter = newTokenBucket(ratePerMinute)
 }
 
