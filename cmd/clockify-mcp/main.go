@@ -272,10 +272,24 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 			return 0
 		}
 	}
-	_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=OWNER       WARN\n")
-	_, _ = fmt.Fprintf(stdout, "    note: this API key does not own the configured workspace.\n")
-	_, _ = fmt.Fprintf(stdout, "    The MCP works with an owner OR admin key; owner-only operations will fail.\n")
-	_, _ = fmt.Fprintf(stdout, "    Tool families that may be denied without owner/admin rights:\n")
+	// Best-effort workspace-admin probe. The owner probe above uses
+	// roles=OWNER; ADMIN is the symmetric admin filter. If Clockify rejects
+	// this role value the call simply errors and doctor degrades to the
+	// member_or_unknown verdict — the admin probe never fails doctor.
+	var adminWorkspaces []clockify.Workspace
+	if err := client.Get(ctx, "/workspaces", map[string]string{"roles": "ADMIN"}, &adminWorkspaces); err == nil {
+		for _, ws := range adminWorkspaces {
+			if ws.ID == cfg.WorkspaceID {
+				_, _ = fmt.Fprintf(stdout, "  GET /workspaces?roles=ADMIN       OK (workspace_admin)\n")
+				return 0
+			}
+		}
+	}
+	_, _ = fmt.Fprintf(stdout, "  GET /workspaces roles probe       OK with warning (member_or_unknown)\n")
+	_, _ = fmt.Fprintf(stdout, "    note: this API key is neither the owner of the configured workspace\n")
+	_, _ = fmt.Fprintf(stdout, "    nor confirmed as a workspace admin. Read and own-time-entry tools\n")
+	_, _ = fmt.Fprintf(stdout, "    work; owner/admin-only operations may be denied by Clockify.\n")
+	_, _ = fmt.Fprintf(stdout, "    Tool families that may be denied:\n")
 	_, _ = fmt.Fprintf(stdout, "      admin    - clockify_users_role, clockify_users_deactivate, clockify_users_invite, clockify_groups_*\n")
 	_, _ = fmt.Fprintf(stdout, "      billing  - clockify_invoices_*, clockify_expenses_* (workspace plan dependent)\n")
 	_, _ = fmt.Fprintf(stdout, "      settings - clockify_workspace_settings (write paths)\n")
