@@ -230,6 +230,33 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	}
 }
 
+func TestCloneToolDescriptorsDeepCopy(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	first := svc.FullAccessRegistry()
+	if len(first) == 0 {
+		t.Fatal("empty registry")
+	}
+
+	first[0].Tool.InputSchema["x-mutated"] = true
+	if props, ok := first[0].Tool.InputSchema["properties"].(map[string]any); ok {
+		props["x-nested-mutated"] = true
+	}
+	first[0].Tool.Annotations["x-mutated"] = true
+
+	second := svc.FullAccessRegistry()
+	if _, ok := second[0].Tool.InputSchema["x-mutated"]; ok {
+		t.Fatal("input schema sentinel leaked into cached registry")
+	}
+	if props, ok := second[0].Tool.InputSchema["properties"].(map[string]any); ok {
+		if _, leaked := props["x-nested-mutated"]; leaked {
+			t.Fatal("nested input schema sentinel leaked into cached registry")
+		}
+	}
+	if _, ok := second[0].Tool.Annotations["x-mutated"]; ok {
+		t.Fatal("annotation sentinel leaked into cached registry")
+	}
+}
+
 func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	tests := []struct {
