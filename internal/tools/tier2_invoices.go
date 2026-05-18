@@ -598,7 +598,11 @@ func buildInvoiceImportBody(s *Service, args map[string]any, importExpenses bool
 		return nil, fmt.Errorf("time_entry_group_type \"GROUPED\" requires time_entry_primary_group_by (one of USER, PROJECT, DATE)")
 	}
 	projectFilter := map[string]any{"contains": "CONTAINS", "status": "ALL"}
-	if projectIDs := stringSliceArg(args, "project_ids"); len(projectIDs) > 0 {
+	projectIDs, _, err := strictStringSliceArg(args, "project_ids")
+	if err != nil {
+		return nil, err
+	}
+	if len(projectIDs) > 0 {
 		projectFilter["ids"] = projectIDs
 	}
 	body := map[string]any{

@@ -1753,7 +1753,10 @@ func (s *Service) projectIDFromArgs(ctx context.Context, args map[string]any) (s
 }
 
 func (s *Service) tagIDsFromArgs(ctx context.Context, args map[string]any) ([]string, error) {
-	out := stringSliceArg(args, "tag_ids")
+	out, _, err := strictStringSliceArg(args, "tag_ids")
+	if err != nil {
+		return nil, err
+	}
 	for _, id := range out {
 		if err := resolve.ValidateID(id, "tag_id"); err != nil {
 			return nil, err

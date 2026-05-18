@@ -61,6 +61,13 @@ func TestListWebhookEvents(t *testing.T) {
 	}
 }
 
+func TestWebhookEventArgRejectsNonStringElement(t *testing.T) {
+	_, err := webhookEventArg(map[string]any{"events": []any{"PROJECT", 123}})
+	if err == nil {
+		t.Fatal("expected webhookEventArg to reject non-string events element")
+	}
+}
+
 func TestListWebhooks(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {

@@ -376,53 +376,36 @@ func webhookAddrRejectionReason(addr netip.Addr) string {
 	return ""
 }
 
-// stringSliceArg extracts a []string from args. Handles both []string and
-// []any (as JSON-decoded arrays arrive as []any).
-func stringSliceArg(args map[string]any, key string) []string {
-	v, ok := args[key]
-	if !ok {
-		return nil
-	}
-	switch s := v.(type) {
-	case []string:
-		return s
-	case []any:
-		out := make([]string, 0, len(s))
-		for _, item := range s {
-			if str, ok := item.(string); ok {
-				out = append(out, str)
-			}
-		}
-		return out
-	default:
-		return nil
-	}
-}
-
-func webhookEventArg(args map[string]any) string {
+func webhookEventArg(args map[string]any) (string, error) {
 	if event := stringArg(args, "webhook_event"); event != "" {
-		return event
+		return event, nil
 	}
 	// Backwards-compatible handler path for callers that bypass the MCP
 	// schema and still pass the pre-live-test `events` array. The live API
 	// accepts one webhookEvent string per webhook.
-	events := stringSliceArg(args, "events")
-	if len(events) > 0 {
-		return events[0]
+	events, _, err := strictStringSliceArg(args, "events")
+	if err != nil {
+		return "", err
 	}
-	return ""
+	if len(events) > 0 {
+		return events[0], nil
+	}
+	return "", nil
 }
 
-func webhookTriggerSourceArgs(args map[string]any, workspaceID string) (string, []string) {
+func webhookTriggerSourceArgs(args map[string]any, workspaceID string) (string, []string, error) {
 	sourceType := stringArg(args, "trigger_source_type")
 	if sourceType == "" {
 		sourceType = "WORKSPACE_ID"
 	}
-	source := stringSliceArg(args, "trigger_source")
+	source, _, err := strictStringSliceArg(args, "trigger_source")
+	if err != nil {
+		return "", nil, err
+	}
 	if len(source) == 0 {
 		source = []string{workspaceID}
 	}
-	return sourceType, source
+	return sourceType, source, nil
 }
 
 func webhookUserEventRequiresUserSource(event string) bool {
@@ -639,7 +622,10 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, fmt.Errorf("name is required")
 	}
 
-	webhookEvent := webhookEventArg(args)
+	webhookEvent, err := webhookEventArg(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if webhookEvent == "" {
 		return ResultEnvelope{}, fmt.Errorf("webhook_event is required (the webhook event type, e.g. NEW_TIME_ENTRY)")
 	}
@@ -648,7 +634,10 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 	if err != nil {
 		return ResultEnvelope{}, err
 	}
-	triggerSourceType, triggerSource := webhookTriggerSourceArgs(args, wsID)
+	triggerSourceType, triggerSource, err := webhookTriggerSourceArgs(args, wsID)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if err := validateWebhookUserEventTriggerSource(webhookEvent, triggerSourceType, triggerSource); err != nil {
 		return ResultEnvelope{}, err
 	}
@@ -716,7 +705,11 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 		payload["url"] = url
 		changed = true
 	}
-	if event := webhookEventArg(args); event != "" {
+	event, err := webhookEventArg(args)
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if event != "" {
 		payload["webhookEvent"] = event
 		changed = true
 	}
@@ -724,7 +717,11 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 		payload["triggerSourceType"] = sourceType
 		changed = true
 	}
-	if source := stringSliceArg(args, "trigger_source"); len(source) > 0 {
+	source, _, err := strictStringSliceArg(args, "trigger_source")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	if len(source) > 0 {
 		payload["triggerSource"] = source
 		changed = true
 	}
