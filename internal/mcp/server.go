@@ -223,12 +223,7 @@ type Server struct {
 	// looks up the ID and aborts the in-flight tool handler. Nil IDs
 	// (notifications) are not tracked.
 	inflightMu sync.Mutex
-	inflight   map[any]context.CancelFunc
-	// cancelledRequests records JSON-RPC ids explicitly cancelled via
-	// notifications/cancelled while their tools/call handler was still
-	// in-flight. Run consults this set and skips writing a response for such
-	// ids. Guarded by inflightMu. Bounded by the number of in-flight requests.
-	cancelledRequests map[any]struct{}
+	inflight   map[any]context.CancelCauseFunc
 	// activeProgressTokens tracks progress tokens of in-flight tools/call
 	// requests so a duplicate token across concurrent requests is rejected.
 	// Keyed by the token's canonical string form. Guarded by inflightMu.
@@ -298,7 +293,7 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 	s := &Server{
 		Version:  version,
 		tools:    toolMap,
-		inflight: make(map[any]context.CancelFunc),
+		inflight: make(map[any]context.CancelCauseFunc),
 		prompts:  newPromptRegistry(),
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
@@ -308,14 +303,14 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 // registerInflight stores a cancel func keyed by JSON-RPC request ID so
 // notifications/cancelled can abort the in-flight tool handler. Nil IDs
 // (notifications) and zero-value uninitialised maps are no-ops.
-func (s *Server) registerInflight(id any, cancel context.CancelFunc) {
+func (s *Server) registerInflight(id any, cancel context.CancelCauseFunc) {
 	if id == nil {
 		return
 	}
 	key := rpcIDKey(id)
 	s.inflightMu.Lock()
 	if s.inflight == nil {
-		s.inflight = make(map[any]context.CancelFunc)
+		s.inflight = make(map[any]context.CancelCauseFunc)
 	}
 	s.inflight[key] = cancel
 	s.inflightMu.Unlock()
@@ -343,44 +338,23 @@ func (s *Server) cancelInflight(id any) bool {
 	cancel, ok := s.inflight[key]
 	if ok {
 		delete(s.inflight, key)
-		if s.cancelledRequests == nil {
-			s.cancelledRequests = make(map[any]struct{})
-		}
-		s.cancelledRequests[key] = struct{}{}
 	}
 	s.inflightMu.Unlock()
 	if ok {
-		cancel()
+		cancel(errExplicitCancellation)
 	}
 	return ok
 }
 
-// consumeCancelled reports whether id was explicitly cancelled via
-// notifications/cancelled and clears the mark so the set stays bounded.
-func (s *Server) consumeCancelled(id any) bool {
-	if id == nil {
-		return false
-	}
-	key := rpcIDKey(id)
-	s.inflightMu.Lock()
-	_, ok := s.cancelledRequests[key]
-	if ok {
-		delete(s.cancelledRequests, key)
-	}
-	s.inflightMu.Unlock()
-	return ok
-}
-
-// writeResponseUnlessCancelled writes resp unless id was explicitly cancelled
-// via notifications/cancelled, in which case the response is dropped per the
-// MCP cancellation spec.
-func (s *Server) writeResponseUnlessCancelled(id any, resp Response) error {
-	if s.consumeCancelled(id) {
-		slog.Info("cancelled_response_suppressed", "request_id", id)
-		return nil
-	}
-	return s.writeResponse(resp)
-}
+// errExplicitCancellation is the context cancellation cause set by
+// cancelInflight when a client sends notifications/cancelled. handle compares
+// context.Cause against this sentinel to decide whether to suppress the
+// response per the MCP cancellation spec. Because the cause is bound to the
+// individual request's context, a later request that reuses the same JSON-RPC
+// id is never affected by an earlier cancellation. The repeat-initialize reset
+// path (cancelAllInflight) uses context.Canceled instead, so its late
+// responses are still delivered.
+var errExplicitCancellation = errors.New("request cancelled via notifications/cancelled")
 
 func rpcIDKey(id any) any {
 	switch v := id.(type) {
@@ -464,15 +438,18 @@ func (s *Server) releaseProgressToken(token any) {
 // responses by ID.
 func (s *Server) cancelAllInflight() int {
 	s.inflightMu.Lock()
-	cancels := make([]context.CancelFunc, 0, len(s.inflight))
+	cancels := make([]context.CancelCauseFunc, 0, len(s.inflight))
 	for id, cancel := range s.inflight {
 		delete(s.inflight, id)
 		cancels = append(cancels, cancel)
 	}
 	s.inflightMu.Unlock()
 
+	// Use context.Canceled, not errExplicitCancellation: an initialize/reset
+	// is not a client cancellation, so these handlers' late responses are
+	// still delivered rather than suppressed.
 	for _, cancel := range cancels {
-		cancel()
+		cancel(context.Canceled)
 	}
 	return len(cancels)
 }
@@ -635,13 +612,16 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 					// stable JSON-RPC tool-error envelope to the sink
 					// for delivery.
 					defer RecoverDispatch(r.ID, "stdio_tool_dispatch", toolNameFromRequest(r), func(resp Response) {
-						if err := s.writeResponseUnlessCancelled(r.ID, resp); err != nil {
+						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
 						}
 					})
 					resp := s.handle(ctx, r)
-					if r.ID != nil {
-						if err := s.writeResponseUnlessCancelled(r.ID, resp); err != nil {
+					// A zero-value Response (empty JSONRPC) means handle
+					// suppressed the reply for an explicitly cancelled
+					// tools/call per the MCP cancellation spec; write nothing.
+					if r.ID != nil && resp.JSONRPC != "" {
+						if err := s.writeResponse(resp); err != nil {
 							slog.Warn("async_response_failed", "error", err.Error())
 						}
 					}
@@ -709,7 +689,10 @@ func (s *Server) DispatchMessage(ctx context.Context, msg []byte) ([]byte, error
 		return out, err
 	}
 	resp := s.handle(ctx, req)
-	if req.ID == nil {
+	// req.ID == nil is a notification; an empty JSONRPC means handle
+	// suppressed the reply for an explicitly cancelled tools/call. Either
+	// way there is nothing to send on the wire.
+	if req.ID == nil || resp.JSONRPC == "" {
 		return nil, nil
 	}
 	return json.Marshal(resp)
@@ -959,13 +942,22 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			defer s.releaseProgressToken(params.Meta.ProgressToken)
 			ctx = WithProgressToken(ctx, params.Meta.ProgressToken)
 		}
-		callCtx, cancel := context.WithCancel(ctx)
+		callCtx, cancel := context.WithCancelCause(ctx)
 		s.registerInflight(req.ID, cancel)
 		defer s.unregisterInflight(req.ID)
-		defer cancel()
+		defer cancel(nil)
 
 		result, err := s.callTool(callCtx, params)
 		if err != nil {
+			// MCP cancellation spec: when the client explicitly cancelled this
+			// request via notifications/cancelled, send no response at all. A
+			// zero-value Response signals Run and DispatchMessage to write
+			// nothing. context.Cause is read from this request's own context,
+			// so a later request that reuses the same JSON-RPC id is
+			// unaffected by this cancellation.
+			if errors.Is(context.Cause(callCtx), errExplicitCancellation) {
+				return Response{}
+			}
 			// W2-01: schema-validation failures are protocol-level errors
 			// (JSON-RPC -32602), not tool-errors. The JSON Pointer to the
 			// failing field goes in error.data.pointer so clients can

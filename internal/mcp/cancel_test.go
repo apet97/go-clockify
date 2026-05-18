@@ -225,6 +225,85 @@ func TestCancellation_ResponseSuppressed_NewRequest(t *testing.T) {
 	}
 }
 
+// TestCancellation_IDReuseDoesNotSuppressNewRequest pins that cancelling a
+// request never suppresses a later request that reuses the same JSON-RPC id.
+// The cancellation cause is bound to the original request's own context, so a
+// fresh request with a recycled id is unaffected.
+func TestCancellation_IDReuseDoesNotSuppressNewRequest(t *testing.T) {
+	started := make(chan struct{}, 1)
+	finished := make(chan error, 1)
+	handler := func(ctx context.Context, _ map[string]any) (any, error) {
+		started <- struct{}{}
+		select {
+		case <-ctx.Done():
+			finished <- ctx.Err()
+			return nil, ctx.Err()
+		case <-time.After(5 * time.Second):
+			return map[string]any{"result": "slow"}, nil
+		}
+	}
+	srv := NewServer("test", []ToolDescriptor{
+		{
+			Tool:         Tool{Name: "slow", Description: "slow", InputSchema: map[string]any{"type": "object"}},
+			Handler:      handler,
+			ReadOnlyHint: true,
+		},
+		{
+			Tool:         Tool{Name: "fast", Description: "fast", InputSchema: map[string]any{"type": "object"}},
+			Handler:      func(context.Context, map[string]any) (any, error) { return map[string]any{"result": "fast"}, nil },
+			ReadOnlyHint: true,
+		},
+	})
+
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	output := &responseSignalWriter{id42Ch: make(chan struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- srv.Run(ctx, pr, output) }()
+
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`+"\n")
+	// Slow tools/call with id=7, then cancel id=7.
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"slow","arguments":{}}}`+"\n")
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("slow handler did not start")
+	}
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":7}}`+"\n")
+	select {
+	case err := <-finished:
+		if err != context.Canceled {
+			t.Fatalf("expected context.Canceled, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("slow handler did not exit after cancellation")
+	}
+	// Reuse id=7 for a new, fast request that must still receive a response.
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"fast","arguments":{}}}`+"\n")
+	time.Sleep(500 * time.Millisecond)
+
+	_ = pw.Close()
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not exit")
+	}
+
+	out := output.String()
+	if got := strings.Count(out, `"id":7`); got != 1 {
+		t.Fatalf("reused id=7 should yield exactly one response, got %d: %s", got, out)
+	}
+	if !strings.Contains(out, `"fast"`) {
+		t.Fatalf("reused id=7 did not return the fast result: %s", out)
+	}
+	if strings.Contains(out, `"slow"`) {
+		t.Fatalf("cancelled request leaked a response: %s", out)
+	}
+}
+
 func TestToolHandlerCancelledOnWriterFailure(t *testing.T) {
 	started := make(chan struct{}, 1)
 	cancelled := make(chan error, 1)
@@ -405,7 +484,7 @@ func TestCancellationPreservesLargeNumericRequestID(t *testing.T) {
 	const requestID = "9007199254740993"
 	srv := NewServer("test", nil)
 	var cancelled atomic.Bool
-	srv.registerInflight(json.Number(requestID), func() { cancelled.Store(true) })
+	srv.registerInflight(json.Number(requestID), func(error) { cancelled.Store(true) })
 
 	srv.handleCancelled(map[string]any{
 		"requestId": json.Number(requestID),
@@ -459,7 +538,7 @@ func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
 	srv := NewServer("test", nil)
 
 	// Nil ID is a no-op for all helpers.
-	srv.registerInflight(nil, func() {})
+	srv.registerInflight(nil, func(error) {})
 	srv.unregisterInflight(nil)
 	if srv.cancelInflight(nil) {
 		t.Fatal("cancelInflight(nil) must return false")
@@ -467,7 +546,7 @@ func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
 
 	// Register, then cancel via cancelInflight: counter+presence.
 	var fired atomic.Bool
-	srv.registerInflight("req-1", func() { fired.Store(true) })
+	srv.registerInflight("req-1", func(error) { fired.Store(true) })
 	if got := srv.InflightCount(); got != 1 {
 		t.Fatalf("expected 1 entry after register, got %d", got)
 	}
@@ -487,7 +566,7 @@ func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
 	}
 
 	// Register and unregister via the explicit helper.
-	srv.registerInflight("req-2", func() {})
+	srv.registerInflight("req-2", func(error) {})
 	srv.unregisterInflight("req-2")
 	if got := srv.InflightCount(); got != 0 {
 		t.Fatalf("expected 0 entries after unregister, got %d", got)
@@ -497,7 +576,7 @@ func TestCancellation_RegisterUnregisterHelpers(t *testing.T) {
 	srv.inflightMu.Lock()
 	srv.inflight = nil
 	srv.inflightMu.Unlock()
-	srv.registerInflight("req-3", func() {})
+	srv.registerInflight("req-3", func(error) {})
 	if got := srv.InflightCount(); got != 1 {
 		t.Fatalf("expected lazy init to recreate map, got %d", got)
 	}
@@ -508,8 +587,8 @@ func TestRepeatInitialize_CancelsInflight(t *testing.T) {
 	srv.handleInitialize(map[string]any{})
 
 	var cancelled atomic.Int32
-	srv.registerInflight("req-1", func() { cancelled.Add(1) })
-	srv.registerInflight("req-2", func() { cancelled.Add(1) })
+	srv.registerInflight("req-1", func(error) { cancelled.Add(1) })
+	srv.registerInflight("req-2", func(error) { cancelled.Add(1) })
 	if got := srv.InflightCount(); got != 2 {
 		t.Fatalf("expected 2 entries before repeat initialize, got %d", got)
 	}
