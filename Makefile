@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift api-parity-matrix-drift live-contract-local
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift api-parity-matrix-drift live-contract-local
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
@@ -79,6 +79,16 @@ raw-allowlist-drift:
 	 diff -q internal/tools/raw_allowlist_gen.go "$$tmpdir/raw_allowlist_gen.go.before" >/dev/null \
 	  || { echo "[raw-allowlist-drift] internal/tools/raw_allowlist_gen.go is stale; run make gen-raw-allowlist"; \
 	       diff -u "$$tmpdir/raw_allowlist_gen.go.before" internal/tools/raw_allowlist_gen.go | head -120; exit 1; }
+
+sync-selfinspect-assets:
+	cp docs/api-parity-matrix.md internal/tools/selfinspect_assets/api-parity-matrix.md
+	cp docs/live-tests.md internal/tools/selfinspect_assets/live-tests.md
+
+selfinspect-drift:
+	@diff -q docs/api-parity-matrix.md internal/tools/selfinspect_assets/api-parity-matrix.md >/dev/null \
+	  || { echo "[selfinspect-drift] api parity asset is stale; run make sync-selfinspect-assets"; exit 1; }
+	@diff -q docs/live-tests.md internal/tools/selfinspect_assets/live-tests.md >/dev/null \
+	  || { echo "[selfinspect-drift] live tests asset is stale; run make sync-selfinspect-assets"; exit 1; }
 
 # api-parity-matrix-drift fails when docs/api-parity-matrix.md no longer
 # matches the regenerated output of check-api-parity-matrix.sh. The script

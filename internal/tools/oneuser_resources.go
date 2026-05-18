@@ -59,6 +59,24 @@ func oneUserResources() []mcp.Resource {
 			MimeType:    "application/json",
 		},
 		{
+			URI:         "clockify://mcp/tool-catalog",
+			Name:        "MCP tool catalog",
+			Description: "Live tool catalog generated from the startup registry.",
+			MimeType:    "application/json",
+		},
+		{
+			URI:         "clockify://mcp/api-parity",
+			Name:        "MCP API parity matrix",
+			Description: "Committed API parity matrix for the current MCP surface.",
+			MimeType:    "text/markdown",
+		},
+		{
+			URI:         "clockify://mcp/live-evidence",
+			Name:        "MCP live-test evidence",
+			Description: "Committed live-test evidence and gates for the current MCP surface.",
+			MimeType:    "text/markdown",
+		},
+		{
 			URI:         "clockify://workflows",
 			Name:        "Workflows",
 			Description: "Workflow-first guide for common Clockify MCP tasks.",
@@ -170,6 +188,13 @@ func (s *Service) readOneUserResource(ctx context.Context, uri string) ([]mcp.Re
 	case uri == "clockify://tools":
 		contents, err := encodeResource(uri, s.toolsResourceData())
 		return contents, true, err
+	case uri == "clockify://mcp/tool-catalog":
+		contents, err := encodeResource(uri, s.toolsResourceData())
+		return contents, true, err
+	case uri == "clockify://mcp/api-parity":
+		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectAPIParityMatrix}}, true, nil
+	case uri == "clockify://mcp/live-evidence":
+		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectLiveTests}}, true, nil
 	case uri == "clockify://workflows":
 		out, err := s.ClockifyToolsGuide(ctx, nil)
 		if err != nil {

@@ -29,6 +29,9 @@ func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
 		"clockify://user",
 		"clockify://features",
 		"clockify://tools",
+		"clockify://mcp/tool-catalog",
+		"clockify://mcp/api-parity",
+		"clockify://mcp/live-evidence",
 		"clockify://workflows",
 		"clockify://demo/phase1",
 		"clockify://recent/entries",
@@ -66,6 +69,30 @@ func TestOneUserResourcesReadStatusWorkspaceToolsWorkflows(t *testing.T) {
 				t.Fatalf("content: %+v", contents[0])
 			}
 		})
+	}
+}
+
+func TestSelfInspectionResources(t *testing.T) {
+	fake := testclockify.NewServer("ws1")
+	defer fake.Close()
+	client := clockify.NewClient("test-key", fake.URL, 5*time.Second, 0)
+	svc := New(client, fake.WorkspaceID)
+
+	catalog, err := svc.ReadResource(context.Background(), "clockify://mcp/tool-catalog")
+	if err != nil {
+		t.Fatalf("read tool catalog: %v", err)
+	}
+	if len(catalog) != 1 || catalog[0].MimeType != "application/json" || !strings.Contains(catalog[0].Text, `"count":156`) {
+		t.Fatalf("tool catalog content: %+v", catalog)
+	}
+	for _, uri := range []string{"clockify://mcp/api-parity", "clockify://mcp/live-evidence"} {
+		contents, err := svc.ReadResource(context.Background(), uri)
+		if err != nil {
+			t.Fatalf("read %s: %v", uri, err)
+		}
+		if len(contents) != 1 || contents[0].MimeType != "text/markdown" || strings.TrimSpace(contents[0].Text) == "" {
+			t.Fatalf("%s content: %+v", uri, contents)
+		}
 	}
 }
 
