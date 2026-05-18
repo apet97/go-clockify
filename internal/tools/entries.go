@@ -270,7 +270,10 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		changedFields = append(changedFields, "taskId")
 	}
 	if _, ok := args["tag_ids"]; ok {
-		tagIDs := stringSliceArg(args, "tag_ids")
+		tagIDs, _, err := strictStringSliceArg(args, "tag_ids")
+		if err != nil {
+			return ResultEnvelope{}, err
+		}
 		if !stringSlicesEqual(tagIDs, existing.TagIDs) {
 			existing.TagIDs = tagIDs
 			changedFields = append(changedFields, "tagIds")

@@ -544,6 +544,9 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		form.Add("changeFields", token)
 	}
 	if v, ok := numberArg(args, "amount"); ok {
+		if v <= 0 {
+			return ResultEnvelope{}, fmt.Errorf("amount must be greater than 0")
+		}
 		normalized, err := expenseAmountForClockify(args, v)
 		if err != nil {
 			return ResultEnvelope{}, err

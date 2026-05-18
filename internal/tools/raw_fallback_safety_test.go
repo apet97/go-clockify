@@ -32,6 +32,21 @@ func TestSafeRawPathRejectsEscapingAttempts(t *testing.T) {
 	}
 }
 
+func TestSafeRawPathRejectsControlBytes(t *testing.T) {
+	cases := []string{
+		"/workspaces/{workspaceId}/projects%0d%0aX",
+		"/workspaces/{workspaceId}/projects\x00",
+	}
+	for _, path := range cases {
+		if got, err := safeRawPath("ws1", path); err == nil {
+			t.Fatalf("safeRawPath(%q) = %q, want rejection", path, got)
+		}
+	}
+	if got, err := safeRawPath("ws1", "/user"); err != nil || got != "/user" {
+		t.Fatalf("safeRawPath(/user) = %q, %v; want /user, nil", got, err)
+	}
+}
+
 func TestSafeRawPathAllowsPinnedWorkspaceAndUserPaths(t *testing.T) {
 	cases := map[string]string{
 		"/user":                                  "/user",

@@ -202,7 +202,7 @@ func TestListUserGroupsAdminForwardsDocumentedFilters(t *testing.T) {
 
 func TestCreateHolidayInputSchemaRequiresAssignment(t *testing.T) {
 	svc := New(nil, "ws1")
-	descriptors, ok := tier2Handlers(svc, "groups_holidays")
+	descriptors, ok := domainHandlers(svc, "groups_holidays")
 	if !ok {
 		t.Fatal("missing groups_holidays handlers")
 	}
@@ -244,7 +244,7 @@ func TestCreateHolidayInputSchemaRequiresAssignment(t *testing.T) {
 
 func TestListHolidaysInPeriodSchemaAllowsUserIDAlias(t *testing.T) {
 	svc := New(nil, "ws1")
-	descriptors, ok := tier2Handlers(svc, "groups_holidays")
+	descriptors, ok := domainHandlers(svc, "groups_holidays")
 	if !ok {
 		t.Fatal("missing groups_holidays handlers")
 	}

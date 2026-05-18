@@ -1764,7 +1764,7 @@ func TestRequestTimeOffSchemaNoteOptionalAndPolicyOneOfDocumented(t *testing.T) 
 
 func TestUpdateTimeOffRequestSchemaRequiresStatus(t *testing.T) {
 	svc := New(nil, "ws1")
-	handlers, ok := tier2Handlers(svc, "time_off")
+	handlers, ok := domainHandlers(svc, "time_off")
 	if !ok {
 		t.Fatal("time_off group not registered")
 	}

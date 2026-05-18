@@ -2,6 +2,7 @@ package e2e_test
 
 import (
 	"bufio"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -141,7 +142,9 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 	}
 }
 
-func TestGeneratedOpenAPIContractKeepsOwnerModeCoverage(t *testing.T) {
+// Floor check only; artifact-vs-generator drift is gated by make openapi-drift
+// in CI.
+func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	contract := readOpenAPIContract(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 
 	if got, want := len(contract.paths), 125; got < want {
@@ -221,6 +224,50 @@ func TestReadmeToolsetCountsMatchRegistry(t *testing.T) {
 	}
 }
 
+func TestApiCoverageDocCountsMatchRegistry(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "docs", "api-coverage.md"))
+	if err != nil {
+		t.Fatalf("read api-coverage.md: %v", err)
+	}
+	counts := scanApiCoverageCounts(string(raw))
+	for _, key := range []string{"Workflow tools", "Domain tools", "Total"} {
+		if _, ok := counts[key]; !ok {
+			t.Fatalf("api-coverage.md missing %q count in summary table: %#v", key, counts)
+		}
+	}
+
+	catalogRaw, err := os.ReadFile(filepath.Join("..", "docs", "tool-catalog.json"))
+	if err != nil {
+		t.Fatalf("read tool-catalog.json: %v", err)
+	}
+	var catalog struct {
+		Tools []struct {
+			Category string `json:"category"`
+		} `json:"tools"`
+	}
+	if err := json.Unmarshal(catalogRaw, &catalog); err != nil {
+		t.Fatalf("parse tool-catalog.json: %v", err)
+	}
+	wantWorkflow, wantDomain := 0, 0
+	for _, tool := range catalog.Tools {
+		switch tool.Category {
+		case "workflow":
+			wantWorkflow++
+		case "domain":
+			wantDomain++
+		}
+	}
+	if counts["Workflow tools"] != wantWorkflow {
+		t.Fatalf("api-coverage workflow count = %d, catalog has %d", counts["Workflow tools"], wantWorkflow)
+	}
+	if counts["Domain tools"] != wantDomain {
+		t.Fatalf("api-coverage domain count = %d, catalog has %d", counts["Domain tools"], wantDomain)
+	}
+	if counts["Total"] != len(catalog.Tools) {
+		t.Fatalf("api-coverage total count = %d, catalog has %d", counts["Total"], len(catalog.Tools))
+	}
+}
+
 // TestReadmeRawFallbackBehaviorMatchesImplementation guards the README
 // section that documents the raw-API escape hatch: the two raw tools must
 // be present in the catalog and the env-var name and HTTP method list
@@ -282,6 +329,24 @@ func scanReadmeStartupCount(readme string) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+func scanApiCoverageCounts(markdown string) map[string]int {
+	counts := map[string]int{}
+	lineRE := regexp.MustCompile(`^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|`)
+	scanner := bufio.NewScanner(strings.NewReader(markdown))
+	for scanner.Scan() {
+		match := lineRE.FindStringSubmatch(scanner.Text())
+		if len(match) != 3 {
+			continue
+		}
+		n, err := strconv.Atoi(match[2])
+		if err != nil {
+			continue
+		}
+		counts[strings.TrimSpace(match[1])] = n
+	}
+	return counts
 }
 
 func currentProductDocPaths() []string {

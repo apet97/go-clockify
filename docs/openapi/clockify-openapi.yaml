@@ -7865,18 +7865,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools:
-      - clockify_reports_attendance
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - Tool catalog maps clockify_reports_attendance to POST /workspaces/{workspaceId}/reports/attendance
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8007,18 +8004,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools:
-      - clockify_reports_export
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - Tool catalog maps clockify_reports_export to POST /workspaces/{workspaceId}/reports/detailed
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8069,21 +8063,18 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
-      - mcp-catalog
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: documented
-      x-clockify-mcp-tools:
-      - clockify_reports_expense
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Expense create/update uses multipart form-data in live Clockify.
       - Reports and shared-reports use the reports API host, not the main API host.
-      - Tool catalog maps clockify_reports_expense to POST /workspaces/{workspaceId}/reports/expenses/detailed
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
         probes.
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -8198,18 +8189,15 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
-      - mcp-catalog
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
       x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools:
-      - clockify_reports_money
+      x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
-      - Tool catalog maps clockify_reports_money to POST /workspaces/{workspaceId}/reports/summary
       x-clockify-risk:
-      - read
+      - write
       x-clockify-security-aliases:
         AddonTokenAuth:
           headers:
@@ -24345,32 +24333,23 @@ x-clockify-generation:
     - x-addon-token
 x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi-fragments/expenses-a.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/expenses-a.yaml): mapping values
-    are not allowed in this context at line 21 column 57"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/policies-a.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/policies-a.yaml): mapping values
-    are not allowed in this context at line 49 column 87"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/policies-b.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/policies-b.yaml): mapping values
-    are not allowed in this context at line 21 column 40"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/projects-a.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/projects-a.yaml): did not find
-    expected key while parsing a block mapping at line 122 column 9"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/projects-b.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/projects-b.yaml): found unexpected
-    ':' while scanning a plain scalar at line 145 column 31"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml): found unexpected
-    ':' while scanning a plain scalar at line 7 column 18"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml): did not
-    find expected ',' or '}' while parsing a flow mapping at line 45 column 16"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/time-off-a.yaml
-  reason: "(clockify-api-probe-lab/openapi-fragments/time-off-a.yaml): mapping values
-    are not allowed in this context at line 61 column 53"
+  reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
-  reason: "(clockify-api-probe-lab/openapi_scheduling.yaml): mapping values are not
-    allowed in this context at line 4 column 154"
+  reason: invalid YAML source quarantined

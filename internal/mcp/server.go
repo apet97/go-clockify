@@ -100,7 +100,9 @@ func notifierFromContext(ctx context.Context) (Notifier, bool) {
 
 // encoderNotifier adapts the stdio JSON encoder (and its mutex) to the
 // Notifier interface so notification delivery does not require the server
-// core to hold raw I/O state.
+// core to hold raw I/O state. Notifications intentionally bypass outChan: the
+// shared encoder mutex prevents byte interleaving, but response/notification
+// ordering is not guaranteed and does not need to be.
 type encoderNotifier struct {
 	mu      *sync.Mutex
 	encoder **json.Encoder
@@ -131,33 +133,6 @@ type errorTranslator interface {
 }
 
 type ToolHandler func(context.Context, map[string]any) (any, error)
-
-// RiskClass categorises tools beyond the three MCP boolean hints. It is a
-// bitmask so a tool can carry multiple attributes (for example a billing
-// action that also triggers an external side effect). Consumers can
-// pattern-match against bits for logging, filtering, or UX hints.
-type RiskClass uint32
-
-const (
-	RiskRead               RiskClass = 1 << iota // safe, idempotent reads
-	RiskWrite                                    // ordinary mutating writes
-	RiskSensitiveRead                            // reads users, invoices, balances, webhooks, or similar sensitive state
-	RiskBilling                                  // touches invoices / payments
-	RiskAdmin                                    // workspace-admin scope (deactivate, group/user mgmt)
-	RiskPermissionChange                         // role / permission changes
-	RiskExternalSideEffect                       // triggers outbound delivery (email, webhook test)
-	RiskDestructive                              // irreversible delete-style operations
-)
-
-// Has reports whether the receiver carries every bit in mask.
-func (r RiskClass) Has(mask RiskClass) bool { return r&mask == mask }
-
-// RiskHighMask is retained as metadata for clients that want to visually
-// distinguish billing, admin, external-side-effect, and destructive tools.
-const RiskHighMask = RiskBilling | RiskAdmin | RiskPermissionChange | RiskExternalSideEffect | RiskDestructive
-
-// IsHighRisk reports whether any high-risk metadata bit is set.
-func (r RiskClass) IsHighRisk() bool { return r&RiskHighMask != 0 }
 
 type ToolDescriptor struct {
 	Tool            Tool
@@ -383,7 +358,11 @@ func rpcIDKey(id any) any {
 
 // cancelAllInflight cancels and untracks every in-flight request. It is used
 // when a client repeats initialize: the session negotiation is being reset, so
-// request IDs from the previous negotiated session must not remain cancellable.
+// cancelAllInflight is a best-effort initialize/reset boundary: request IDs
+// from the previous negotiated session must not remain cancellable. Handlers are
+// cancelled but not joined here, so a handler that wins the race to return may
+// still emit a late response for its original request ID; clients must match
+// responses by ID.
 func (s *Server) cancelAllInflight() int {
 	s.inflightMu.Lock()
 	cancels := make([]context.CancelFunc, 0, len(s.inflight))
@@ -407,9 +386,10 @@ func (s *Server) InflightCount() int {
 	return len(s.inflight)
 }
 
-// Run processes JSON-RPC requests from r and writes responses to w.
-// It respects ctx cancellation for graceful shutdown — when ctx is
-// cancelled, the loop exits even if stdin is blocking.
+// Run processes newline-delimited JSON-RPC requests from r and writes responses
+// to w. The reader must reach EOF when the stdio session ends; a reader that
+// signals logical end-of-input without EOF can leave the scan goroutine blocked
+// in Read. Scanner errors are returned on the EOF path.
 func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr error) {
 	if s.MaxInFlightToolCalls > 0 && s.toolCallSem == nil {
 		s.toolCallSem = make(chan struct{}, s.MaxInFlightToolCalls)
@@ -1150,118 +1130,6 @@ func jsonObjectRaw(raw []byte) bool {
 		}
 	}
 	return false
-}
-
-func (s *Server) applyToolResultSizeGuard(toolName string, result any) (any, map[string]any) {
-	budget := s.MaxToolResultBytes
-	if budget <= 0 {
-		return result, nil
-	}
-	raw, err := json.Marshal(result)
-	if err != nil || len(raw) <= budget {
-		return result, nil
-	}
-	var envelope map[string]any
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return result, resultTooLargeEnvelope(toolName, len(raw), budget)
-	}
-	if truncateEnvelopeDataToBudget(envelope, budget) {
-		return envelope, nil
-	}
-	return result, resultTooLargeEnvelope(toolName, len(raw), budget)
-}
-
-func truncateEnvelopeDataToBudget(envelope map[string]any, budget int) bool {
-	data, ok := envelope["data"]
-	if !ok {
-		return false
-	}
-	switch value := data.(type) {
-	case []any:
-		return shrinkListToBudget(envelope, value, budget, func(items []any) {
-			envelope["data"] = items
-		})
-	case map[string]any:
-		key, items := largestArrayField(value)
-		if key == "" {
-			return false
-		}
-		return shrinkListToBudget(envelope, items, budget, func(kept []any) {
-			value[key] = kept
-			if _, ok := value["count"]; ok {
-				value["count"] = len(kept)
-			}
-		})
-	default:
-		return false
-	}
-}
-
-func largestArrayField(value map[string]any) (string, []any) {
-	var key string
-	var items []any
-	for k, raw := range value {
-		candidate, ok := raw.([]any)
-		if !ok || len(candidate) == 0 {
-			continue
-		}
-		if len(candidate) > len(items) {
-			key = k
-			items = candidate
-		}
-	}
-	return key, items
-}
-
-func shrinkListToBudget(envelope map[string]any, items []any, budget int, set func([]any)) bool {
-	if len(items) == 0 {
-		return false
-	}
-	total := len(items)
-	for kept := total - 1; kept >= 1; kept-- {
-		set(items[:kept])
-		addSizeCapMeta(envelope, kept, total-kept)
-		raw, err := json.Marshal(envelope)
-		if err == nil && len(raw) <= budget {
-			return true
-		}
-	}
-	return false
-}
-
-func addSizeCapMeta(envelope map[string]any, returned, dropped int) {
-	meta, _ := envelope["meta"].(map[string]any)
-	if meta == nil {
-		meta = map[string]any{}
-		envelope["meta"] = meta
-	}
-	meta["truncated"] = true
-	meta["size_capped"] = true
-	meta["returned"] = returned
-	meta["dropped"] = dropped
-	meta["next_hint"] = "Response was size-capped by CLOCKIFY_MAX_TOOL_RESULT_BYTES; narrow filters, lower page_size or max_rows, or page through results to continue."
-}
-
-func resultTooLargeEnvelope(toolName string, actualBytes, budget int) map[string]any {
-	return map[string]any{
-		"ok":     false,
-		"action": toolName,
-		"error": map[string]any{
-			"code":    "result_too_large",
-			"message": fmt.Sprintf("%s produced a %d-byte result, exceeding CLOCKIFY_MAX_TOOL_RESULT_BYTES=%d, and the payload could not be safely truncated.", toolName, actualBytes, budget),
-		},
-		"recovery": map[string]any{
-			"hint":      "Retry with narrower filters, a lower page_size or max_rows value, or a more specific get/list tool.",
-			"retryable": true,
-		},
-		"meta": map[string]any{
-			"resultBytes":          actualBytes,
-			"maxToolResultBytes":   budget,
-			"size_capped":          true,
-			"truncationAttempted":  true,
-			"truncationSuccessful": false,
-		},
-	}
 }
 
 // validateRequest checks JSON-RPC 2.0 version and id type per spec.

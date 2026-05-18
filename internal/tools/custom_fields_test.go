@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -430,5 +431,43 @@ func TestListCustomFields_PaginationMeta(t *testing.T) {
 	}
 	if items[0]["id"] == secondItems[0]["id"] {
 		t.Fatalf("page 2 did not advance: page1=%#v page2=%#v", items, secondItems)
+	}
+}
+
+func TestGetCustomFieldFindsFieldOnSecondPage(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/workspaces/ws1/custom-fields" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		page := r.URL.Query().Get("page")
+		switch page {
+		case "1":
+			fields := make([]map[string]any, 50)
+			for i := range fields {
+				fields[i] = map[string]any{"id": "page1-" + strconv.Itoa(i), "name": "Page 1"}
+			}
+			respondJSON(t, w, fields)
+		case "2":
+			respondJSON(t, w, []map[string]any{{"id": "target-field", "name": "Target", "type": "TXT"}})
+		default:
+			respondJSON(t, w, []map[string]any{})
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	got, err := svc.GetCustomField(context.Background(), map[string]any{"field_id": "target-field"})
+	if err != nil {
+		t.Fatalf("GetCustomField: %v", err)
+	}
+	field, ok := got.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("data = %T, want map[string]any", got.Data)
+	}
+	if field["id"] != "target-field" {
+		t.Fatalf("field id = %v, want target-field", field["id"])
+	}
+	if got.Meta["scanned"] != 51 {
+		t.Fatalf("scanned = %v, want 51", got.Meta["scanned"])
 	}
 }

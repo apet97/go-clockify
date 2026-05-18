@@ -109,36 +109,41 @@ func (s *Server) toolsListResultJSONBytes() ([]byte, error) {
 }
 
 func (s *Server) buildToolListLocked() []Tool {
-	keys := make([]string, 0, len(s.tools))
+	items := make([]struct {
+		name string
+		tool Tool
+		prio int
+	}, 0, len(s.tools))
 	priorityAware := false
-	for k := range s.tools {
-		keys = append(keys, k)
-		if _, ok := toolPriority(s.tools[k].Tool); ok {
+	for name, descriptor := range s.tools {
+		prio, ok := toolPriority(descriptor.Tool)
+		if !ok {
+			prio = 50
+		} else {
 			priorityAware = true
 		}
+		items = append(items, struct {
+			name string
+			tool Tool
+			prio int
+		}{name: name, tool: descriptor.Tool, prio: prio})
 	}
 	if priorityAware {
-		sort.Slice(keys, func(i, j int) bool {
-			left, lok := toolPriority(s.tools[keys[i]].Tool)
-			right, rok := toolPriority(s.tools[keys[j]].Tool)
-			if !lok {
-				left = 50
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].prio != items[j].prio {
+				return items[i].prio < items[j].prio
 			}
-			if !rok {
-				right = 50
-			}
-			if left != right {
-				return left < right
-			}
-			return keys[i] < keys[j]
+			return items[i].name < items[j].name
 		})
 	} else {
-		sort.Strings(keys)
+		sort.Slice(items, func(i, j int) bool {
+			return items[i].name < items[j].name
+		})
 	}
 
-	tools := make([]Tool, 0, len(keys))
-	for _, key := range keys {
-		tools = append(tools, s.tools[key].Tool)
+	tools := make([]Tool, 0, len(items))
+	for _, item := range items {
+		tools = append(tools, item.tool)
 	}
 	return tools
 }
@@ -258,6 +263,8 @@ func schemaValidationArguments(schema map[string]any, args map[string]any) map[s
 			continue
 		}
 		if out == nil {
+			// Measured by BenchmarkDispatchToolsCallAliasArgument; the small
+			// copy keeps jsonschema validation unchanged while supporting _id aliases.
 			out = make(map[string]any, len(args)+1)
 			for key, value := range args {
 				out[key] = value

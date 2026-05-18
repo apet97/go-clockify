@@ -1035,7 +1035,10 @@ func (s *Service) updateTimeOffBalance(ctx context.Context, args map[string]any)
 		return ResultEnvelope{}, err
 	}
 
-	userRefs := stringSliceArg(args, "user_ids")
+	userRefs, _, err := strictStringSliceArg(args, "user_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if len(userRefs) == 0 {
 		return ResultEnvelope{}, fmt.Errorf("user_ids is required")
 	}

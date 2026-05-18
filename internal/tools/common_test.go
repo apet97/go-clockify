@@ -131,6 +131,24 @@ func TestIntArgFloat64Overflow(t *testing.T) {
 	}
 }
 
+func TestInt64ArgRejectsNonFiniteValue(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   any
+	}{
+		{"NaN", math.NaN()},
+		{"+Inf", math.Inf(1)},
+		{"overflow", 9.99e30},
+	} {
+		if got, ok := int64Arg(map[string]any{"x": tc.in}, "x"); ok {
+			t.Fatalf("%s: int64Arg = %d, true; want 0, false", tc.name, got)
+		}
+	}
+	if got, ok := int64Arg(map[string]any{"x": int64(42)}, "x"); !ok || got != 42 {
+		t.Fatalf("int64Arg(int64(42)) = %d, %v; want 42, true", got, ok)
+	}
+}
+
 func TestIntArgMissing(t *testing.T) {
 	got := intArg(map[string]any{}, "page", 42)
 	if got != 42 {

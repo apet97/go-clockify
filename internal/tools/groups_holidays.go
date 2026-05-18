@@ -511,8 +511,14 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 		return ResultEnvelope{}, fmt.Errorf("could not parse end_date %q - use YYYY-MM-DD", endDate)
 	}
 
-	userIDs := stringSliceArg(args, "user_ids")
-	groupIDs := stringSliceArg(args, "user_group_ids")
+	userIDs, _, err := strictStringSliceArg(args, "user_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
+	groupIDs, _, err := strictStringSliceArg(args, "user_group_ids")
+	if err != nil {
+		return ResultEnvelope{}, err
+	}
 	if len(userIDs) == 0 && len(groupIDs) == 0 {
 		return ResultEnvelope{}, fmt.Errorf("at least one of user_ids or user_group_ids is required")
 	}

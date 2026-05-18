@@ -15,25 +15,6 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-type routeTool struct {
-	Name        string
-	Description string
-	Method      string
-	Path        string
-	Entity      string
-	Required    []string
-	Properties  map[string]any
-	Query       []string
-	Body        []string
-	Defaults    map[string]any
-	Reports     bool
-	ReadOnly    bool
-	Idempotent  bool
-	Destructive bool
-	Change      string
-	Priority    int
-}
-
 // FullAccessRegistry is the one-user product registry: every supported tool is
 // visible from startup, with workflows first and raw API fallback last.
 func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
@@ -73,6 +54,9 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	return normalizeDescriptors(dedupeToolDescriptors(out))
 }
 
+// cloneToolDescriptors protects the cached registry slice header from caller
+// mutation. Descriptor internals such as InputSchema and Annotations maps remain
+// shared by reference, so callers must treat descriptors as read-only.
 func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, len(in))
 	copy(out, in)
@@ -508,11 +492,11 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(65, toolRWIdem("clockify_entries_mark_invoiced", "Mark time entries as invoiced or not invoiced.", objectSchema(map[string]any{"required": []string{"time_entry_ids", "invoiced"}, "properties": map[string]any{
 			"time_entry_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 			"invoiced":       map[string]any{"type": "boolean"},
-			"body":           map[string]any{"type": "object", "additionalProperties": true},
 		}})), "entry", "updated", s.EntriesMarkInvoiced),
 		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite users by email. External side effect when send_email is true; supports dry_run.", objectSchema(map[string]any{"properties": map[string]any{
 			"email":      map[string]any{"type": "string", "format": "email"},
 			"emails":     map[string]any{"type": "array", "items": map[string]any{"type": "string", "format": "email"}},
+			"dry_run":    map[string]any{"type": "boolean"},
 			"send_email": map[string]any{"type": "boolean", "description": "Whether Clockify should send invitation email. Defaults to true."},
 		}})), "user", "created", s.UsersInvite),
 	)
@@ -652,13 +636,6 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 	}
 }
 
-//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
-func (s *Service) nativeRouteDescriptor(spec routeTool) mcp.ToolDescriptor {
-	descriptor := s.routeDescriptor(spec)
-	descriptor.Tool.Annotations["handlerKind"] = "native handler"
-	return descriptor
-}
-
 func (s *Service) updateProjectMembershipsOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	if _, ok := args["memberships"]; ok {
 		return s.UpdateProjectMemberships(ctx, args)
@@ -782,92 +759,6 @@ func aliasHandler(action, entity, change string, handler func(context.Context, m
 	}
 }
 
-//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
-func (s *Service) routeDescriptor(spec routeTool) mcp.ToolDescriptor {
-	schema := objectSchema(map[string]any{
-		"required":   spec.Required,
-		"properties": spec.Properties,
-	})
-	var tool mcp.Tool
-	switch {
-	case spec.Destructive:
-		tool = toolDestructive(spec.Name, spec.Description, schema)
-	case spec.ReadOnly:
-		tool = toolRO(spec.Name, spec.Description, schema)
-	case spec.Idempotent:
-		tool = toolRWIdem(spec.Name, spec.Description, schema)
-	default:
-		tool = toolRW(spec.Name, spec.Description, schema)
-	}
-	if tool.Annotations == nil {
-		tool.Annotations = map[string]any{}
-	}
-	tool.Annotations["handlerKind"] = "route descriptor"
-	tool.Annotations["method"] = spec.Method
-	tool.Annotations["path"] = "/workspaces/{workspaceId}/" + spec.Path
-	return firstSliceDescriptor(spec.Priority, tool, func(ctx context.Context, args map[string]any) (any, error) {
-		return s.callRouteTool(ctx, spec, args)
-	})
-}
-
-//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
-func (s *Service) callRouteTool(ctx context.Context, spec routeTool, args map[string]any) (any, error) {
-	for _, key := range spec.Required {
-		if _, ok := args[key]; !ok {
-			return nil, fmt.Errorf("%s is required", key)
-		}
-		if value, ok := args[key].(string); ok && strings.TrimSpace(value) == "" {
-			return nil, fmt.Errorf("%s is required", key)
-		}
-	}
-	path, ids, err := routePath(s.WorkspaceID, spec, args)
-	if err != nil {
-		return nil, err
-	}
-	query := routeQuery(spec, args)
-	body := routeBody(spec, args)
-	var data any
-	switch strings.ToUpper(spec.Method) {
-	case "GET":
-		if spec.Reports {
-			err = s.Client.GetReports(ctx, path, query, &data)
-		} else {
-			err = s.Client.Get(ctx, path, query, &data)
-		}
-	case "POST":
-		if spec.Reports {
-			err = s.Client.PostReports(ctx, path, body, &data)
-		} else {
-			err = s.Client.Post(ctx, path, body, &data)
-		}
-	case "PUT":
-		if spec.Reports {
-			err = s.Client.PutReports(ctx, path, body, &data)
-		} else {
-			err = s.Client.Put(ctx, path, body, &data)
-		}
-	case "PATCH":
-		err = s.Client.Patch(ctx, path, body, &data)
-	case "DELETE":
-		if spec.Reports {
-			err = s.Client.DeleteReports(ctx, path)
-		} else {
-			err = s.Client.Delete(ctx, path)
-		}
-		data = map[string]any{"deleted": true}
-	default:
-		return nil, fmt.Errorf("unsupported method %s", spec.Method)
-	}
-	if err != nil {
-		return nil, err
-	}
-	for key, value := range idsFromData(data, spec.Entity) {
-		ids[key] = value
-	}
-	changed := changedFor(spec.Change, spec.Entity, data, ids)
-	return result(spec.Name, spec.Entity, ids, data, changed, nil, nil), nil
-}
-
 func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 	entryIDs, found, err := strictStringSliceArg(args, "time_entry_ids")
 	if err != nil {
@@ -948,119 +839,6 @@ func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultE
 		"invitations": invitations,
 		"count":       len(invitations),
 	}, map[string]any{"workspaceId": wsID}), nil
-}
-
-//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
-func routePath(workspaceID string, spec routeTool, args map[string]any) (string, map[string]string, error) {
-	ids := map[string]string{"workspaceId": workspaceID}
-	segments := strings.Split(strings.Trim(spec.Path, "/"), "/")
-	for i, segment := range segments {
-		resolved, segmentIDs, err := resolveRouteSegment(segment, args)
-		if err != nil {
-			return "", nil, err
-		}
-		segments[i] = resolved
-		for key, value := range segmentIDs {
-			ids[key] = value
-		}
-	}
-	if spec.Reports {
-		return "/workspaces/" + workspaceID + "/" + strings.Join(segments, "/"), ids, nil
-	}
-	path, err := paths.Workspace(workspaceID, segments...)
-	return path, ids, err
-}
-
-//nolint:unused // Retained for route-based native descriptors; the registry is currently fully native.
-func resolveRouteSegment(segment string, args map[string]any) (string, map[string]string, error) {
-	ids := map[string]string{}
-	for {
-		start := strings.IndexByte(segment, '{')
-		if start < 0 {
-			return segment, ids, nil
-		}
-		end := strings.IndexByte(segment[start:], '}')
-		if end < 0 {
-			return "", nil, fmt.Errorf("unclosed route parameter in %q", segment)
-		}
-		end += start
-		key := segment[start+1 : end]
-		value := strings.TrimSpace(stringArg(args, key))
-		if value == "" {
-			return "", nil, fmt.Errorf("%s is required", key)
-		}
-		if strings.HasSuffix(key, "_id") || strings.HasSuffix(key, "Id") || key == "id" {
-			if err := resolve.ValidateID(value, key); err != nil {
-				return "", nil, err
-			}
-		}
-		if key == "rate_kind" {
-			value = strings.ToLower(value)
-			if value != "hourly" && value != "cost" {
-				return "", nil, fmt.Errorf("rate_kind must be hourly or cost")
-			}
-		}
-		segment = segment[:start] + value + segment[end+1:]
-		ids[idKey(key)] = value
-	}
-}
-
-func routeQuery(spec routeTool, args map[string]any) map[string]string {
-	query := map[string]string{}
-	for _, key := range spec.Query {
-		if value, ok := spec.Defaults[key]; ok {
-			query[wireQueryName(key)] = fmt.Sprint(value)
-		}
-		if raw, ok := args[key]; ok {
-			query[wireQueryName(key)] = scalarToString(raw)
-		}
-	}
-	if len(query) == 0 {
-		return nil
-	}
-	return query
-}
-
-func routeBody(spec routeTool, args map[string]any) map[string]any {
-	body := map[string]any{}
-	if raw, ok := args["body"].(map[string]any); ok {
-		for key, value := range raw {
-			body[key] = value
-		}
-	}
-	for key, value := range spec.Defaults {
-		body[bodyName(key)] = value
-	}
-	for _, key := range spec.Body {
-		if key == "body" {
-			continue
-		}
-		if value, ok := args[key]; ok {
-			wireKey := routeBodyName(spec, key)
-			if spec.Reports && (key == "start" || key == "end") {
-				if _, exists := body[wireKey]; exists {
-					continue
-				}
-			}
-			body[wireKey] = value
-		}
-	}
-	if len(body) == 0 {
-		return nil
-	}
-	return body
-}
-
-func routeBodyName(spec routeTool, key string) string {
-	if spec.Reports {
-		switch key {
-		case "start":
-			return "dateRangeStart"
-		case "end":
-			return "dateRangeEnd"
-		}
-	}
-	return bodyName(key)
 }
 
 func requirePresentArgs(args map[string]any, keys ...string) error {
@@ -1429,21 +1207,6 @@ func bodyName(name string) string {
 	}
 }
 
-func wireQueryName(name string) string {
-	switch name {
-	case "page_size":
-		return "page-size"
-	case "is_template":
-		return "is-template"
-	case "send_email":
-		return "send-email"
-	case "user_ids":
-		return "user-ids"
-	default:
-		return strings.ReplaceAll(name, "_", "-")
-	}
-}
-
 func scalarToString(value any) string {
 	switch typed := value.(type) {
 	case string:
@@ -1463,16 +1226,6 @@ func scalarToString(value any) string {
 	}
 }
 
-// rawBodyField is the fenced raw-passthrough escape hatch. A few tools
-// (invoice imports, report export) accept Clockify request fields this MCP
-// does not model individually; they carry this field. Tools that fully
-// model their input do not — the raw API tools are the general escape
-// hatch. Each caller gets a fresh map so tightenInputSchema cannot mutate
-// a shared instance.
-func rawBodyField() map[string]any {
-	return map[string]any{"type": "object", "additionalProperties": true, "description": "Optional raw Clockify request body fields merged with the typed fields above."}
-}
-
 func reportHelperSchema() map[string]any {
 	return objectSchema(map[string]any{"properties": map[string]any{
 		"start":           map[string]any{"type": "string", "description": flexibleDatetimeDescription},
@@ -1484,50 +1237,6 @@ func reportHelperSchema() map[string]any {
 		"week_start":      map[string]any{"type": "string", "description": "YYYY-MM-DD or RFC3339 week start."},
 		"timezone":        map[string]any{"type": "string"},
 	}})
-}
-
-func rt(priority int, method, name, desc, path, entity string, required []string, props map[string]any, query, body []string, readOnly, idempotent, destructive bool, change string) routeTool {
-	if props == nil {
-		props = map[string]any{}
-	}
-	for _, key := range required {
-		if _, ok := props[key]; !ok {
-			props[key] = map[string]any{"type": "string"}
-		}
-	}
-	return routeTool{
-		Name:        name,
-		Description: desc,
-		Method:      method,
-		Path:        path,
-		Entity:      entity,
-		Required:    required,
-		Properties:  props,
-		Query:       query,
-		Body:        body,
-		ReadOnly:    readOnly,
-		Idempotent:  idempotent,
-		Destructive: destructive,
-		Change:      change,
-		Priority:    priority,
-	}
-}
-
-func reportRT(priority int, name, desc, reportPath string) routeTool {
-	props := map[string]any{
-		"date_range_start": map[string]any{"type": "string", "description": "Report range start"},
-		"date_range_end":   map[string]any{"type": "string", "description": "Report range end"},
-		"start":            map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"end":              map[string]any{"type": "string", "description": flexibleDatetimeDescription},
-		"export_type":      map[string]any{"type": "string", "enum": []string{"JSON", "JSON_V1", "PDF", "CSV", "XLSX", "ZIP"}, "description": "Report export type"},
-		"body":             rawBodyField(),
-	}
-	return rt(priority, "POST", name, desc, reportPath, "report", nil, props, nil, []string{"date_range_start", "date_range_end", "start", "end", "export_type"}, true, false, false, "").withReports()
-}
-
-func (r routeTool) withReports() routeTool {
-	r.Reports = true
-	return r
 }
 
 func (s *Service) EntriesRunning(ctx context.Context, _ map[string]any) (any, error) {
@@ -1583,11 +1292,11 @@ func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
-		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback within the pinned workspace or Clockify API path.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
+		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
 			"path":  map[string]any{"type": "string"},
 			"query": map[string]any{"type": "object", "additionalProperties": true},
 		}})), s.RawAPIGet),
-		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback within the pinned workspace or Clockify API path.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
 			"method": map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
 			"path":   map[string]any{"type": "string"},
 			"query":  map[string]any{"type": "object", "additionalProperties": true},
@@ -1669,6 +1378,11 @@ func safeRawPath(workspaceID, raw string) (string, error) {
 	path, err := url.PathUnescape(u.EscapedPath())
 	if err != nil {
 		return "", fmt.Errorf("raw API path must be a valid escaped path: %w", err)
+	}
+	for _, r := range path {
+		if r < 0x20 || r == 0x7F {
+			return "", fmt.Errorf("raw API path must not contain control characters")
+		}
 	}
 	if strings.Contains(path, "\\") {
 		return "", fmt.Errorf("raw API path must be a relative Clockify API path")

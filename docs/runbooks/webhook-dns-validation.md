@@ -49,7 +49,7 @@ additional layer that catches hostnames that resolve to one.
 | `localhost-mirror.example.com` | `127.0.0.1` | Loopback |
 | `private.example.com` | `192.168.1.1` | Private RFC 1918 |
 
-`isPublicWebhookAddr` in `internal/tools/tier2_webhooks.go` is the
+`isPublicWebhookAddr` in `internal/tools/webhooks.go` is the
 classifier; it mirrors the literal-IP check exactly so both paths
 speak the same language.
 
@@ -132,11 +132,11 @@ separate hardening item.
 - [ ] Local profile (no override) still accepts both — literal-IP
       check unchanged.
 - [ ] `isPublicWebhookAddr` test cases in
-      `internal/tools/tier2_admin_test.go` cover every blocked range.
+      `internal/tools/admin_test.go` cover every blocked range.
 
 ## 7. Related
 
-- `internal/tools/tier2_webhooks.go` — `validateWebhookURL` (literal
+- `internal/tools/webhooks.go` — `validateWebhookURL` (literal
   path) and `validateWebhookURLForService` (DNS-aware wrapper).
 - `internal/tools/common.go` — `Service.WebhookValidateDNS`,
   `Service.WebhookHostResolver` (test injection point).

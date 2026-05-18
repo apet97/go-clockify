@@ -346,6 +346,16 @@ func BenchmarkFullAccessRegistry(b *testing.B) {
 	}
 }
 
+func BenchmarkRegistryForToolset(b *testing.B) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	b.ReportAllocs()
+	for b.Loop() {
+		if got := len(svc.RegistryForToolset("business")); got == 0 || got >= 156 {
+			b.Fatalf("business registry size=%d, want filtered non-empty registry", got)
+		}
+	}
+}
+
 func descriptorNames(descriptors []mcp.ToolDescriptor) []string {
 	names := make([]string, 0, len(descriptors))
 	for _, descriptor := range descriptors {

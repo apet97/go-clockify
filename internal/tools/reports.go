@@ -215,6 +215,7 @@ func (s *Service) resolveAggregateProjectBuckets(ctx context.Context, wsID strin
 	if s == nil || s.Client == nil || result == nil {
 		return
 	}
+	toResolve := make(map[string]*projectBucket)
 	for _, bucket := range result.ByProject {
 		if bucket == nil || strings.TrimSpace(bucket.ID) == "" {
 			continue
@@ -222,17 +223,25 @@ func (s *Service) resolveAggregateProjectBuckets(ctx context.Context, wsID strin
 		if strings.TrimSpace(bucket.Name) != "" && bucket.Name != "(no project)" {
 			continue
 		}
-		path, err := paths.Workspace(wsID, "projects", bucket.ID)
-		if err != nil {
+		toResolve[strings.TrimSpace(bucket.ID)] = bucket
+	}
+	if len(toResolve) == 0 {
+		return
+	}
+	path, err := paths.Workspace(wsID, "projects")
+	if err != nil {
+		return
+	}
+	projects, err := clockify.ListAll[clockify.Project](ctx, s.Client, path, map[string]string{"hydrated": "true"})
+	if err != nil {
+		return
+	}
+	for _, project := range projects {
+		bucket := toResolve[strings.TrimSpace(project.ID)]
+		if bucket == nil {
 			continue
 		}
-		var project clockify.Project
-		if err := s.Client.Get(ctx, path, map[string]string{"hydrated": "true"}, &project); err != nil {
-			continue
-		}
-		if name := strings.TrimSpace(project.Name); name != "" {
-			bucket.Name = name
-		}
+		bucket.Name = firstNonEmptyString(strings.TrimSpace(project.Name), bucket.Name)
 		clientID, clientName := projectClientRef(project)
 		bucket.ClientID = firstNonEmptyString(bucket.ClientID, clientID)
 		bucket.ClientName = firstNonEmptyString(bucket.ClientName, clientName)
@@ -250,19 +259,13 @@ func projectClientRef(project clockify.Project) (string, string) {
 }
 
 type reportLimitState struct {
-	AppliedMaxEntries   int
-	ServerMaxEntries    int
+	MaxEntries          int
 	RequestedMaxEntries int
 	MaxEntriesRequested bool
-	MaxEntriesClamped   bool
 }
 
 func (s *Service) reportLimitsForArgs(args map[string]any) reportLimitState {
-	serverCap := s.ReportMaxEntries
-	state := reportLimitState{
-		AppliedMaxEntries: serverCap,
-		ServerMaxEntries:  serverCap,
-	}
+	state := reportLimitState{}
 	_, ok := args["max_entries"]
 	if !ok {
 		return state
@@ -274,16 +277,9 @@ func (s *Service) reportLimitsForArgs(args map[string]any) reportLimitState {
 		return state
 	}
 	if n == 0 {
-		// Explicit 0 means "no extra cap" from the caller; still bounded by
-		// the server-wide cap.
 		return state
 	}
-	if serverCap > 0 && n > serverCap {
-		state.AppliedMaxEntries = serverCap
-		state.MaxEntriesClamped = true
-		return state
-	}
-	state.AppliedMaxEntries = n
+	state.MaxEntries = n
 	return state
 }
 
@@ -305,15 +301,11 @@ func paginationMeta(agg *aggregateResult, pageSize int, limits reportLimitState)
 		pagination["clamped"] = true
 	}
 	limitMeta := map[string]any{
-		"max_entries":         limits.AppliedMaxEntries,
-		"applied_max_entries": limits.AppliedMaxEntries,
-		"server_max_entries":  limits.ServerMaxEntries,
+		"max_entries":         limits.MaxEntries,
+		"applied_max_entries": limits.MaxEntries,
 	}
 	if limits.MaxEntriesRequested {
 		limitMeta["requested_max_entries"] = limits.RequestedMaxEntries
-		if limits.MaxEntriesClamped {
-			limitMeta["clamped"] = true
-		}
 	}
 	meta := map[string]any{
 		"pagination": pagination,
@@ -383,7 +375,6 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	endUTC := end.UTC()
 	includeEntries := boolArg(args, "include_entries")
 	limits := s.reportLimitsForArgs(args)
-	effectiveMax := limits.AppliedMaxEntries
 	wsID, projectID, err := s.reportProjectFilterID(ctx, args, "")
 	if err != nil {
 		return ResultEnvelope{}, err
@@ -391,7 +382,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, startUTC, endUTC, loc, aggregateOptions{
 		PageSize:              reportPageSize,
 		IncludeEntries:        includeEntries,
-		MaxEntries:            effectiveMax,
+		MaxEntries:            limits.MaxEntries,
 		SampleEntries:         5,
 		CollectRunningEntries: true,
 		ProjectID:             projectID,

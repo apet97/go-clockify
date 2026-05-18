@@ -4,37 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 	"github.com/apet97/go-clockify/internal/paths"
 )
-
-func (s *Service) ListClients(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	path, err := paths.Workspace(wsID, "clients")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	page, pageSize := paginationFromArgs(args)
-	query := clientListQuery(args, page, pageSize)
-	var out []clockify.ClientEntity
-	if err := s.Client.Get(ctx, path, query, &out); err != nil {
-		return ResultEnvelope{}, err
-	}
-	views, financialMeta := s.enrichClientViews(ctx, wsID, out, args, false)
-	meta := addPaginationMeta(map[string]any{
-		"workspaceId": wsID,
-		"count":       len(out),
-		"page":        page,
-		"pageSize":    pageSize,
-	}, args, page, pageSize)
-	return ok("clockify_clients_list", views, emptyListMeta(withFinancialMeta(meta, financialMeta), "clockify_clients_create")), nil
-}
 
 func clientListQuery(args map[string]any, page, pageSize int) map[string]string {
 	query := map[string]string{
@@ -48,10 +22,6 @@ func clientListQuery(args map[string]any, page, pageSize int) map[string]string 
 	addStringQuery(query, args, "sort_column", "sort-column")
 	addStringQuery(query, args, "sort_order", "sort-order")
 	return query
-}
-
-func (s *Service) GetClient(ctx context.Context, clientRef string) (ResultEnvelope, error) {
-	return s.GetClientWithArgs(ctx, map[string]any{"client": clientRef})
 }
 
 func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -77,41 +47,6 @@ func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (R
 	}
 	view, financialMeta := s.enrichClientView(ctx, wsID, out, args, false)
 	return ok("clockify_clients_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, financialMeta)), nil
-}
-
-func (s *Service) CreateClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
-	name := strings.TrimSpace(stringArg(args, "name"))
-	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
-	}
-	wsID, err := s.ResolveWorkspaceID(ctx)
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-	payload := map[string]any{"name": name}
-	if v := strings.TrimSpace(stringArg(args, "address")); v != "" {
-		payload["address"] = v
-	}
-	if v := strings.TrimSpace(stringArg(args, "email")); v != "" {
-		payload["email"] = v
-	}
-	if v := strings.TrimSpace(stringArg(args, "note")); v != "" {
-		payload["note"] = v
-	}
-	if dryrun.Enabled(args) {
-		return ok("clockify_clients_create", dryrun.Preview("clockify_clients_create", payload), map[string]any{"workspaceId": wsID}), nil
-	}
-	path, err := paths.Workspace(wsID, "clients")
-	if err != nil {
-		return ResultEnvelope{}, err
-	}
-
-	var client clockify.ClientEntity
-	if err := s.Client.Post(ctx, path, payload, &client); err != nil {
-		return ResultEnvelope{}, err
-	}
-	view, financialMeta := s.enrichClientView(ctx, wsID, client, args, false)
-	return ok("clockify_clients_create", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
 }
 
 // UpdateClient performs a fetch-then-merge update of a client.

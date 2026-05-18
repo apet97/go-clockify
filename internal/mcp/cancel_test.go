@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -33,6 +34,26 @@ func (w *responseSignalWriter) String() string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.buf.String()
+}
+
+type failAfterWrites struct {
+	mu        sync.Mutex
+	allowed   int
+	writes    int
+	failError error
+}
+
+func (w *failAfterWrites) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.writes >= w.allowed {
+		if w.failError == nil {
+			w.failError = errors.New("writer closed")
+		}
+		return 0, w.failError
+	}
+	w.writes++
+	return len(p), nil
 }
 
 // TestCancellation_AbortsInflightHandler verifies that a notifications/cancelled
@@ -131,6 +152,69 @@ func TestCancellation_AbortsInflightHandler(t *testing.T) {
 	out := output.String()
 	if !strings.Contains(out, `"isError":true`) {
 		t.Fatalf("expected isError:true in cancellation response, got: %s", out)
+	}
+}
+
+func TestToolHandlerCancelledOnWriterFailure(t *testing.T) {
+	started := make(chan struct{}, 1)
+	cancelled := make(chan error, 1)
+
+	handler := func(ctx context.Context, _ map[string]any) (any, error) {
+		started <- struct{}{}
+		select {
+		case <-ctx.Done():
+			cancelled <- ctx.Err()
+			return nil, ctx.Err()
+		case <-time.After(5 * time.Second):
+			cancelled <- nil
+			return map[string]any{"ok": true}, nil
+		}
+	}
+
+	srv := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "slow",
+			Description: "slow",
+			InputSchema: map[string]any{"type": "object"},
+		},
+		Handler:      handler,
+		ReadOnlyHint: true,
+	}})
+
+	pr, pw := io.Pipe()
+	defer pw.Close()
+
+	output := &failAfterWrites{allowed: 1}
+	done := make(chan error, 1)
+	go func() { done <- srv.Run(context.Background(), pr, output) }()
+
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}`+"\n")
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":42,"method":"tools/call","params":{"name":"slow","arguments":{}}}`+"\n")
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for slow handler to start")
+	}
+
+	_, _ = io.WriteString(pw, `{"jsonrpc":"2.0","id":99,"method":"tools/list","params":{}}`+"\n")
+
+	select {
+	case err := <-cancelled:
+		if err != context.Canceled {
+			t.Fatalf("expected context.Canceled after writer failure, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("handler context was not cancelled promptly after writer failure")
+	}
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, output.failError) {
+			t.Fatalf("Run error = %v, want writer failure %v", err, output.failError)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not exit after writer failure")
 	}
 }
 

@@ -183,13 +183,20 @@ func (s *Service) ClockifyCreateWorkPackage(ctx context.Context, args map[string
 		addChanged(&changed, reused, taskRef(task))
 	}
 
-	tagIDs := append([]string(nil), stringSliceArg(args, "tag_ids")...)
+	rawTagIDs, _, err := strictStringSliceArg(args, "tag_ids")
+	if err != nil {
+		return nil, err
+	}
+	tagIDs := append([]string(nil), rawTagIDs...)
 	for _, id := range tagIDs {
 		if err := resolve.ValidateID(id, "tag_id"); err != nil {
 			return nil, err
 		}
 	}
-	tagNames := workflowStringList(args, "tags")
+	tagNames, err := workflowStringList(args, "tags")
+	if err != nil {
+		return nil, err
+	}
 	if tag := strings.TrimSpace(stringArg(args, "tag")); tag != "" {
 		tagNames = append(tagNames, tag)
 	}
@@ -585,7 +592,11 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 			"to":                    importTo,
 			"time_entry_group_type": firstNonEmpty([]string{stringArg(invoiceArgs, "time_entry_group_type"), "DETAILED"}),
 		}
-		if projectIDs := stringSliceArg(invoiceArgs, "project_ids"); len(projectIDs) > 0 {
+		projectIDs, _, err := strictStringSliceArg(invoiceArgs, "project_ids")
+		if err != nil {
+			return nil, err
+		}
+		if len(projectIDs) > 0 {
 			importArgs["project_ids"] = projectIDs
 		}
 		imported, importErr := s.importInvoiceTimeOneUser(ctx, importArgs)
@@ -1178,8 +1189,11 @@ func copyArgs(args map[string]any) map[string]any {
 	return out
 }
 
-func workflowStringList(args map[string]any, key string) []string {
-	values := stringSliceArg(args, key)
+func workflowStringList(args map[string]any, key string) ([]string, error) {
+	values, _, err := strictStringSliceArg(args, key)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]string, 0, len(values))
 	for _, value := range values {
 		value = strings.TrimSpace(value)
@@ -1188,7 +1202,7 @@ func workflowStringList(args map[string]any, key string) []string {
 		}
 	}
 	sort.Strings(out)
-	return out
+	return out, nil
 }
 
 func refsFromToolResult(value any) []EntityRef {

@@ -144,7 +144,7 @@ rotated, revoked, or expired. Mitigation:
 > workspace role is too narrow for the tool. See
 > [`docs/policy/production-tool-scope.md`](../policy/production-tool-scope.md)
 > for the minimum role per tool family — `update_user_role`,
-> webhooks, shared reports, and most Tier 2 admin tools need a key
+> webhooks, shared reports, and most admin/domain tools need a key
 > owned by a Workspace Admin.
 
 ```sh

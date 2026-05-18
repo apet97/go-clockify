@@ -220,16 +220,38 @@ func (s *Service) findCustomFieldByID(ctx context.Context, wsID, fieldID string)
 	if err != nil {
 		return nil, 0, err
 	}
-	var fields []map[string]any
-	if err := s.Client.Get(ctx, path, nil, &fields); err != nil {
-		return nil, 0, err
-	}
-	for _, field := range fields {
-		if id, _ := field["id"].(string); id == fieldID {
-			return field, len(fields), nil
+	const pageSize = 50
+	seen := make(map[string]bool)
+	scanned := 0
+	for page := 1; page <= 200; page++ {
+		var fields []map[string]any
+		query := map[string]string{
+			"page":      strconv.Itoa(page),
+			"page-size": strconv.Itoa(pageSize),
+		}
+		if err := s.Client.Get(ctx, path, query, &fields); err != nil {
+			return nil, scanned, err
+		}
+		added := 0
+		for _, field := range fields {
+			id, _ := field["id"].(string)
+			if id != "" && seen[id] {
+				continue
+			}
+			if id != "" {
+				seen[id] = true
+			}
+			scanned++
+			added++
+			if id == fieldID {
+				return field, scanned, nil
+			}
+		}
+		if added < pageSize {
+			break
 		}
 	}
-	return nil, len(fields), fmt.Errorf("custom field %s not found", fieldID)
+	return nil, scanned, fmt.Errorf("custom field %s not found", fieldID)
 }
 
 // validCustomFieldTypes lists the upstream-accepted enum for the

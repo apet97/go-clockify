@@ -32,7 +32,7 @@ func TestScheduleWorkRequiresUserUpfront(t *testing.T) {
 // documented list/create/resubmit/PATCH approval surface.
 func TestApprovalHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	descriptors, ok := tier2Handlers(svc, "approvals")
+	descriptors, ok := domainHandlers(svc, "approvals")
 	if !ok {
 		t.Fatal("approvals group not found")
 	}

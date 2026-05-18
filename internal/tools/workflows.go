@@ -241,7 +241,11 @@ func parseFindAndUpdateArgs(args map[string]any, loc *time.Location) (findAndUpd
 		DryRun:              boolArg(args, "dry_run"),
 	}
 	if _, ok := args["tag_ids"]; ok {
-		out.TagIDs = stringSliceArg(args, "tag_ids")
+		tagIDs, _, err := strictStringSliceArg(args, "tag_ids")
+		if err != nil {
+			return out, err
+		}
+		out.TagIDs = tagIDs
 	}
 	if v, ok := args["billable"].(bool); ok {
 		out.Billable = &v

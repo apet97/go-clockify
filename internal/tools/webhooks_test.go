@@ -10,7 +10,7 @@ import (
 )
 
 // Note: webhook group registration is already covered by
-// TestWebhookHandlersCount in tier2_admin_test.go. This file pins the
+// TestWebhookHandlersCount in admin_test.go. This file pins the
 // list-webhooks shape (envelope unwrap) and the static webhook-events
 // enum which had no unit coverage.
 
@@ -58,6 +58,13 @@ func TestListWebhookEvents(t *testing.T) {
 	}
 	if result.Meta["count"] != len(events) {
 		t.Fatalf("expected meta count=%d, got %v", len(events), result.Meta["count"])
+	}
+}
+
+func TestWebhookEventArgRejectsNonStringElement(t *testing.T) {
+	_, err := webhookEventArg(map[string]any{"events": []any{"PROJECT", 123}})
+	if err == nil {
+		t.Fatal("expected webhookEventArg to reject non-string events element")
 	}
 }
 

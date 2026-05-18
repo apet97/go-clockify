@@ -66,6 +66,27 @@ func BenchmarkDispatchToolsListLarge(b *testing.B) {
 	}
 }
 
+func BenchmarkBuildToolList(b *testing.B) {
+	server := newBenchServer(b, 156)
+	for name, descriptor := range server.tools {
+		if descriptor.Tool.Annotations == nil {
+			descriptor.Tool.Annotations = map[string]any{}
+		}
+		descriptor.Tool.Annotations["priority"] = len(name) % 100
+		server.tools[name] = descriptor
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		server.mu.Lock()
+		tools := server.buildToolListLocked()
+		server.mu.Unlock()
+		if len(tools) != 156 {
+			b.Fatalf("buildToolListLocked returned %d tools", len(tools))
+		}
+	}
+}
+
 func TestToolsListRepeatedCallsReuseSerializedResult(t *testing.T) {
 	server := NewServer("test", []ToolDescriptor{{
 		Tool: Tool{Name: "bench_tool", Description: "bench-only no-op"},
@@ -171,6 +192,33 @@ func BenchmarkDispatchToolsCall(b *testing.B) {
 	}
 }
 
+func BenchmarkDispatchToolsCallAliasArgument(b *testing.B) {
+	quietSlogForBenchmark(b)
+
+	server := newAliasBenchServer(b)
+	server.initialized.Store(true)
+
+	msg := mustMarshalRequest(b, Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+		Params: ToolCallParams{
+			Name:      "bench_tool",
+			Arguments: map[string]any{"client_id": "client-1"},
+		},
+	})
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := server.DispatchMessage(ctx, msg)
+		if err != nil {
+			b.Fatalf("DispatchMessage: %v", err)
+		}
+	}
+}
+
 func BenchmarkDispatchToolsCallLargePayload(b *testing.B) {
 	quietSlogForBenchmark(b)
 
@@ -238,6 +286,29 @@ func newPayloadBenchServer(b *testing.B, payload any) *Server {
 		ReadOnlyHint: true,
 	}})
 
+}
+
+func newAliasBenchServer(b *testing.B) *Server {
+	b.Helper()
+	return NewServer("bench", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "bench_tool",
+			Description: "bench-only alias schema",
+			InputSchema: map[string]any{
+				"type":     "object",
+				"required": []any{"client"},
+				"properties": map[string]any{
+					"client":    map[string]any{"type": "string"},
+					"client_id": map[string]any{"type": "string"},
+				},
+				"additionalProperties": false,
+			},
+		},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			return map[string]any{"ok": true}, nil
+		},
+		ReadOnlyHint: true,
+	}})
 }
 
 func largeToolPayload() map[string]any {

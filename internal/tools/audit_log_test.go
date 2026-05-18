@@ -161,11 +161,40 @@ func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
 	if got, _ := env.Meta["count"].(int); got != 1 {
 		t.Fatalf("meta count = %v, want 1", env.Meta["count"])
 	}
-	if _, ok := env.Meta["has_more"]; !ok {
-		t.Fatalf("meta missing has_more: %+v", env.Meta)
-	}
 	if env.Meta["page"] == nil || env.Meta["limit"] == nil {
 		t.Fatalf("meta missing page/limit pagination signal: %+v", env.Meta)
+	}
+}
+
+func TestEntityChangesListDoesNotFabricateHasMore(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("limit"); got != "" {
+			t.Fatalf("limit query = %q, want omitted", got)
+		}
+		changes := make([]map[string]any, 50)
+		for i := range changes {
+			changes[i] = map[string]any{"id": i}
+		}
+		respondJSON(t, w, changes)
+	}))
+	defer ts.Close()
+
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc.DefaultTimezone = time.UTC
+	env, err := svc.EntityChangesList(context.Background(), map[string]any{
+		"change_type":  "created",
+		"entity_types": []any{"TIME_ENTRY"},
+		"start":        "2026-05-01",
+		"end":          "2026-05-15",
+	})
+	if err != nil {
+		t.Fatalf("EntityChangesList: %v", err)
+	}
+	if _, ok := env.Meta["has_more"]; ok {
+		t.Fatalf("meta should not fabricate has_more without an upstream limit: %+v", env.Meta)
+	}
+	if env.Meta["total_min"] != 50 || env.Meta["total_is_lower_bound"] != true {
+		t.Fatalf("meta missing lower-bound signal: %+v", env.Meta)
 	}
 }
 

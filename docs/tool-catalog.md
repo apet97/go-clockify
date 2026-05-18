@@ -189,7 +189,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_holidays_get` | `domain` | yes | no | yes | no | `read` | Get one holiday. |
 | `clockify_holidays_update` | `domain` | no | no | yes | no | `write` | Update a holiday. |
 | `clockify_entries_mark_invoiced` | `domain` | no | no | yes | no | `write`, `billing` | Mark time entries as invoiced or not invoiced. |
-| `clockify_users_invite` | `domain` | no | no | no | no | `write`, `admin`, `permission_change`, `external_side_effect` | Invite users by email. External side effect when send_email is true; supports dry_run. |
+| `clockify_users_invite` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change`, `external_side_effect` | Invite users by email. External side effect when send_email is true; supports dry_run. |
 | `clockify_audit_logs_search` | `domain` | yes | no | yes | no | `read` | Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API. |
 | `clockify_entity_changes_list` | `domain` | yes | no | yes | no | `read` | List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type. |
 | `clockify_invoices_info` | `domain` | yes | no | yes | no | `read` | Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_invoice_report (money aggregates). |
@@ -202,8 +202,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_detailed` | `domain` | yes | no | yes | no | `read` | Run the local detailed time report helper. |
 | `clockify_reports_summary` | `domain` | yes | no | yes | no | `read` | Run the local summary report helper. |
 | `clockify_reports_weekly` | `domain` | yes | no | yes | no | `read` | Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. |
-| `clockify_api_get` | `raw` | yes | no | yes | no | `read` | Raw GET fallback within the pinned workspace or Clockify API path. |
-| `clockify_api_request` | `raw` | no | no | no | no | `write` | Raw method fallback within the pinned workspace or Clockify API path. |
+| `clockify_api_get` | `raw` | yes | no | yes | no | `read` | Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected. |
+| `clockify_api_request` | `raw` | no | no | no | no | `write` | Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{id}/...); other workspaces and hosts are rejected. |
 
 ## Audit-tracked argument capture
 
