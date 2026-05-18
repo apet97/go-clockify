@@ -33,8 +33,6 @@ product definition.
    and external-side-effect tools plus dry-run coverage.
 8. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
 9. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
-10. `docs/launch-readiness-review-may-8.md` - launch disposition ledger; do not
-   mark launch-ready while it shows open external-evidence or approval gates.
 
 Historical docs explain prior decisions; current work starts from the files
 above plus the code. Do not route users to archived or bannered platform-era
