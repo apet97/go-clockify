@@ -53,7 +53,7 @@ func (s *Service) nativeDomainExtras() []mcp.ToolDescriptor {
 		), "entity_change", "", s.EntityChangesList),
 		nativeDomainTool(1202, toolRO(
 			"clockify_invoices_info",
-			"Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_invoice_report (money aggregates).",
+			"Bulk, paged invoice query via POST /invoices/info. Returns the workspace total so a caller can compute has_more. Distinct from clockify_invoices_list (simple list) and clockify_reports_money (money aggregates).",
 			invoicesInfoSchema(),
 		), "invoice", "", s.InvoicesInfo),
 		nativeDomainTool(1203, toolRWIdem(

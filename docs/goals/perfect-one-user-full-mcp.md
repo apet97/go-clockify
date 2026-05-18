@@ -294,7 +294,7 @@ Every recoverable failure should return:
   },
   "recovery": {
     "hint": "List projects and reuse the existing project ID, or retry with a different name.",
-    "tool": "clockify_list_projects",
+    "tool": "clockify_projects_list",
     "args": {
       "name": "Example"
     }

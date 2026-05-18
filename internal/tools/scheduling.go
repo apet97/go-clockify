@@ -66,7 +66,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 4. clockify_create_assignment (RW)
 		{
 			Tool: toolRW("clockify_create_assignment",
-				"Create a recurring scheduling assignment for a user on a project. Retrying after a network timeout can create a duplicate assignment; check with clockify_list_assignments before retrying.",
+				"Create a recurring scheduling assignment for a user on a project. Retrying after a network timeout can create a duplicate assignment; check with clockify_scheduling_assignments_list before retrying.",
 				map[string]any{"type": "object", "required": []string{"user_id", "project_id", "start", "end", "hours_per_day"}, "properties": map[string]any{
 					"user_id":                  map[string]any{"type": "string", "description": "User ID or name/email"},
 					"project_id":               map[string]any{"type": "string", "description": "Project ID or name"},
