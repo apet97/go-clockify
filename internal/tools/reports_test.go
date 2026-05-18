@@ -273,7 +273,6 @@ func TestQuickReportLargeRangeStreamsBoundedSample(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	svc.ReportMaxEntries = 100
 
 	result, err := svc.QuickReport(context.Background(), map[string]any{"days": 2})
 	if err != nil {
@@ -291,12 +290,16 @@ func TestQuickReportLargeRangeStreamsBoundedSample(t *testing.T) {
 		t.Fatalf("unexpected pagination meta: %+v", pagination)
 	}
 
-	_, err = svc.QuickReport(context.Background(), map[string]any{
+	result2, err := svc.QuickReport(context.Background(), map[string]any{
 		"days":            2,
 		"include_entries": true,
 	})
-	if err == nil || !strings.Contains(err.Error(), "entry cap of 100 exceeded") {
-		t.Fatalf("expected cap error for include_entries=true, got %v", err)
+	if err != nil {
+		t.Fatalf("quick report include_entries failed: %v", err)
+	}
+	data2 := result2.Data.(QuickReportData)
+	if len(data2.EntriesSample) != 250 {
+		t.Fatalf("expected full include_entries result, got %d", len(data2.EntriesSample))
 	}
 }
 

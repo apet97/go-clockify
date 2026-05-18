@@ -102,9 +102,6 @@ type Service struct {
 	// emitResourceUpdate short-circuits before the ReadResource round-trip
 	// so unsubscribed mutations don't pay for a redundant fetch.
 	SubscriptionGate func(uri string) bool
-	// ReportMaxEntries is the hard cap on the number of time entries a report
-	// tool will aggregate. 0 disables the cap. Wired from CLOCKIFY_REPORT_MAX_ENTRIES.
-	ReportMaxEntries int
 	// EntryFinancialReports forces entry financial enrichment to call the
 	// reports host even when the client is pointed at a non-canonical base URL.
 	// Production Clockify calls auto-enable this path; tests and local proxies

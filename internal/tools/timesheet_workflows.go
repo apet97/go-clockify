@@ -88,11 +88,10 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 	}
 
 	limits := s.reportLimitsForArgs(args)
-	effectiveMax := limits.AppliedMaxEntries
 	agg, wsID, userID, err := s.aggregateEntriesRange(ctx, start, end, loc, aggregateOptions{
 		PageSize:            reportPageSize,
 		IncludeEntries:      true,
-		MaxEntries:          effectiveMax,
+		MaxEntries:          limits.MaxEntries,
 		ResolveProjectNames: true,
 	})
 	if err != nil {
