@@ -1,7 +1,7 @@
 # One-User Tool Scope
 
 The current product is a local, one-user, full-access Clockify MCP for a single
-pinned workspace. There are no runtime allow lists to configure: all 154 tools
+pinned workspace. There are no runtime allow lists to configure: all 156 tools
 are registered at startup and visible in `tools/list`.
 
 ## Scope Rules
