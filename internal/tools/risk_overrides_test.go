@@ -15,12 +15,12 @@ func TestRiskOverridesApplyToRenamedOneUserTools(t *testing.T) {
 	tests := map[string]mcp.RiskClass{
 		"clockify_invoices_create":             mcp.RiskWrite | mcp.RiskBilling,
 		"clockify_invoices_delete":             mcp.RiskDestructive | mcp.RiskBilling,
-		"clockify_invoices_send":               mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,
+		"clockify_invoices_send":               mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskExternalSideEffect,
 		"clockify_invoices_payments_create":    mcp.RiskWrite | mcp.RiskBilling,
 		"clockify_expenses_categories_delete":  mcp.RiskDestructive | mcp.RiskBilling,
 		"clockify_projects_rates_update":       mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
 		"clockify_webhooks_test":               mcp.RiskWrite | mcp.RiskExternalSideEffect,
-		"clockify_users_invite":                mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		"clockify_users_invite":                mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
 		"clockify_groups_remove_user":          mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange,
 		"clockify_projects_memberships_update": mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
 		"clockify_time_off_approve":            mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
@@ -66,7 +66,7 @@ func TestRiskOverridesCoverSideEffectToolFamilies(t *testing.T) {
 		{"clockify_invoices_mark_paid", mcp.RiskWrite | mcp.RiskBilling},
 		{"clockify_invoices_payments_create", mcp.RiskWrite | mcp.RiskBilling},
 		{"clockify_invoices_payments_delete", mcp.RiskDestructive | mcp.RiskBilling},
-		{"clockify_invoices_send", mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect},
+		{"clockify_invoices_send", mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskExternalSideEffect},
 
 		// Expenses and expense categories affect billable money.
 		{"clockify_expenses_create", mcp.RiskWrite | mcp.RiskBilling},
@@ -77,7 +77,7 @@ func TestRiskOverridesCoverSideEffectToolFamilies(t *testing.T) {
 		{"clockify_expenses_categories_delete", mcp.RiskDestructive | mcp.RiskBilling},
 
 		// Admin and permission-changing surfaces.
-		{"clockify_users_invite", mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect},
+		{"clockify_users_invite", mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect},
 		{"clockify_users_deactivate", mcp.RiskWrite | mcp.RiskAdmin},
 		{"clockify_users_role", mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange},
 		{"clockify_groups_create", mcp.RiskWrite | mcp.RiskAdmin},
@@ -110,7 +110,7 @@ func TestRiskOverridesCoverSideEffectToolFamilies(t *testing.T) {
 		{"clockify_time_off_deny", mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange},
 		{"clockify_time_off_policies_create", mcp.RiskWrite | mcp.RiskAdmin},
 		{"clockify_time_off_policies_update", mcp.RiskWrite | mcp.RiskAdmin},
-		{"clockify_time_off_archive", mcp.RiskWrite | mcp.RiskAdmin},
+		{"clockify_time_off_archive", mcp.RiskDestructive | mcp.RiskAdmin},
 		// Balance writes adjust accrued PTO; admin scope plus billing
 		// because the balance drives future paid-time-off liability.
 		{"clockify_time_off_balances_update", mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskBilling},

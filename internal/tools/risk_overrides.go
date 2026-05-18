@@ -75,13 +75,13 @@ var riskOverrides = map[string]riskOverride{
 
 	// Billing plus external delivery.
 	"clockify_invoices_send": {
-		class:     mcp.RiskWrite | mcp.RiskBilling | mcp.RiskExternalSideEffect,
+		class:     mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"invoice_id"},
 	},
 
 	// Admin and permission changes.
 	"clockify_users_invite": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
+		class:     mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"email", "emails", "send_email"},
 	},
 	"clockify_users_deactivate": {
@@ -161,7 +161,7 @@ var riskOverrides = map[string]riskOverride{
 		auditKeys: []string{"policy_id", "name", "assignee_ids", "user_group_ids"},
 	},
 	"clockify_time_off_archive": {
-		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		class:     mcp.RiskDestructive | mcp.RiskAdmin,
 		auditKeys: []string{"policy_id", "archived"},
 	},
 	"clockify_time_off_balances_update": {

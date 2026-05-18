@@ -58,7 +58,7 @@ func (s *Service) nativeDomainExtras() []mcp.ToolDescriptor {
 		), "invoice", "", s.InvoicesInfo),
 		nativeDomainTool(1203, toolRWIdem(
 			"clockify_scheduling_publish",
-			"Publish draft scheduling assignments so they take effect. Assignment create/update produce drafts; this is the required separate publish step for the start..end window. Supports dry_run preview.",
+			"Publish draft scheduling assignments so they take effect. Destructive external side effect: schedule visibility changes for the start..end window. Supports dry_run preview.",
 			schedulingPublishSchema(),
 		), "scheduling", "updated", s.SchedulingPublish),
 	}

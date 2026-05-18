@@ -87,6 +87,58 @@ func TestOneUserWorkflowAnnotationsGiveActionableRoutingHints(t *testing.T) {
 	}
 }
 
+func TestOneUserInputParameterDescriptionsAreUseful(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		props, _ := descriptor.Tool.InputSchema["properties"].(map[string]any)
+		for name, raw := range props {
+			prop, _ := raw.(map[string]any)
+			desc, _ := prop["description"].(string)
+			if len(strings.TrimSpace(desc)) < 12 {
+				t.Fatalf("%s.%s description is not useful enough for MCP contract audit: %q", descriptor.Tool.Name, name, desc)
+			}
+		}
+	}
+}
+
+func TestOneUserDestructiveLookingToolsAdvertiseDestructiveHint(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		if !contractAuditDestructiveName(descriptor.Tool.Name) {
+			continue
+		}
+		if descriptor.Tool.Annotations["destructiveHint"] != true {
+			t.Fatalf("%s looks destructive to MCP contract audit but destructiveHint=%v", descriptor.Tool.Name, descriptor.Tool.Annotations["destructiveHint"])
+		}
+	}
+}
+
+func contractAuditDestructiveName(name string) bool {
+	destructiveTerms := map[string]bool{
+		"delete":  true,
+		"remove":  true,
+		"destroy": true,
+		"archive": true,
+		"purge":   true,
+		"send":    true,
+		"publish": true,
+		"invite":  true,
+		"revoke":  true,
+		"charge":  true,
+		"bill":    true,
+		"grant":   true,
+		"disable": true,
+		"cancel":  true,
+		"close":   true,
+	}
+	for _, part := range strings.Fields(strings.ReplaceAll(name, "_", " ")) {
+		if destructiveTerms[part] {
+			return true
+		}
+	}
+	return false
+}
+
 func TestOneUserSuggestedActionsReferenceRegisteredTools(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	registered := map[string]bool{}

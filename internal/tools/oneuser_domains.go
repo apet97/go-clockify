@@ -304,7 +304,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 		}})), "project", "deleted", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
 			return s.DeleteProject(ctx, aliasArg(args, "project_id", "project"))
 		}),
-		nativeDomainTool(35, toolRWIdem("clockify_projects_archive", "Archive a project by name or ID.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
+		nativeDomainTool(35, toolRWIdem("clockify_projects_archive", "Archive a project by name or ID. Destructive safety hint: archiving removes the project from active work.", objectSchema(map[string]any{"required": []string{"project"}, "properties": map[string]any{
 			"project":    map[string]any{"type": "string", "description": "Project name or ID."},
 			"project_id": map[string]any{"type": "string", "description": "Project ID."},
 		}})), "project", "updated", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
@@ -539,7 +539,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 			"time_entry_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 			"invoiced":       map[string]any{"type": "boolean"},
 		}})), "entry", "updated", s.EntriesMarkInvoiced),
-		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite users by email. External side effect when send_email is true; supports dry_run.", objectSchema(map[string]any{"properties": map[string]any{
+		nativeDomainTool(1102, toolRW("clockify_users_invite", "Invite users by email. Destructive permission-changing external side effect when send_email is true; supports dry_run.", objectSchema(map[string]any{"properties": map[string]any{
 			"email":      map[string]any{"type": "string", "format": "email"},
 			"emails":     map[string]any{"type": "array", "items": map[string]any{"type": "string", "format": "email"}},
 			"dry_run":    map[string]any{"type": "boolean"},
@@ -563,7 +563,7 @@ func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {
 		nativeDomainTool(103, toolRO("clockify_reports_export", "Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:\"file\" and path. Amounts are minor units.", reportInputSchema()), "report", "", s.DetailedReport),
 	)
 	out = append(out, s.explicitInvoiceNativeDescriptors()...)
-	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy.", objectSchema(map[string]any{
+	out = append(out, nativeDomainTool(506, toolRWIdem("clockify_time_off_archive", "Archive or reactivate a time off policy. Destructive safety hint: archived policies leave active use.", objectSchema(map[string]any{
 		"required": []string{"policy_id", "archived"},
 		"properties": map[string]any{
 			"policy_id": map[string]any{"type": "string", "description": "Time-off policy ID"},
