@@ -110,6 +110,12 @@ def yaml_files(dir)
   Dir[File.join(dir, "*")].select { |path| path.match?(/\.(ya?ml)\z/i) }.sort
 end
 
+def load_yaml_file(path)
+  YAML.load_file(path, aliases: true)
+rescue ArgumentError
+  YAML.load_file(path)
+end
+
 def source_manifest(root)
   path = File.join(root, "manifest.json")
   return nil unless File.exist?(path)
@@ -680,7 +686,7 @@ class Merger
   end
 
   def add_yaml_file(path, kind)
-    doc = YAML.load_file(path)
+    doc = load_yaml_file(path)
     return unless doc.is_a?(Hash)
 
     label = source_label(path, @options)
@@ -1333,7 +1339,7 @@ def write_yaml(path, doc)
 end
 
 if options[:validate_only]
-  doc = YAML.load_file(options[:out])
+  doc = load_yaml_file(options[:out])
   errors = validate_document(doc, options[:repo_root])
   abort(errors.join("\n")) unless errors.empty?
   puts "validated #{options[:out]}"
