@@ -28,7 +28,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 		// 2. Get user group by ID
 		{
 			Tool: toolRO("clockify_get_user_group",
-				"Get a user group by ID",
+				"Get a user group by ID from the pinned workspace.",
 				requiredSchema("group_id")),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -91,7 +91,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 		// 6. List holidays
 		{
 			Tool: toolRO("clockify_list_holidays",
-				"List holidays configured in the workspace",
+				"List holidays configured in the workspace; the full set is returned on a single page.",
 				map[string]any{"type": "object"}),
 			ReadOnlyHint: true, IdempotentHint: true,
 			Handler: func(ctx context.Context, _ map[string]any) (any, error) {
@@ -101,7 +101,7 @@ func groupsHolidaysHandlers(s *Service) []mcp.ToolDescriptor {
 		// 7. List holidays in period
 		{
 			Tool: toolRO("clockify_list_holidays_in_period",
-				"List holidays assigned to a user in a date period",
+				"List holidays assigned to a user across a date period; the full set is returned on a single page.",
 				map[string]any{
 					"type": "object",
 					// assigned_to is not in required: user_id is an accepted

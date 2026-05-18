@@ -17,7 +17,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 1. clockify_list_time_off_requests (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_list_time_off_requests",
-				"List time off requests with optional status filter",
+				"List time off requests with an optional status filter, paginated via page and page_size.",
 				map[string]any{"type": "object", "properties": map[string]any{
 					"status":    map[string]any{"type": "string", "enum": []string{"PENDING", "APPROVED", "REJECTED", "DENIED", "ALL"}, "description": "Filter by status: PENDING, APPROVED, REJECTED, ALL (default ALL). DENIED is accepted as a legacy alias for REJECTED and is translated before the upstream POST."},
 					"user_id":   map[string]any{"type": "string", "description": "Filter by user ID or name/email"},
@@ -125,7 +125,7 @@ func timeOffHandlers(s *Service) []mcp.ToolDescriptor {
 		// 8. clockify_list_time_off_policies (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_list_time_off_policies",
-				"List time off policies for the workspace",
+				"List time off policies for the workspace, paginated via page and page_size.",
 				map[string]any{"type": "object", "properties": map[string]any{
 					"page":      map[string]any{"type": "integer"},
 					"page_size": map[string]any{"type": "integer"},

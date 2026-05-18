@@ -28,7 +28,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 2. clockify_list_assignments (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_list_assignments",
-				"List scheduling assignments within a date range",
+				"List scheduling assignments within a date range, paginated via page and page_size.",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"start", "end"},
@@ -50,7 +50,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 3. clockify_get_assignment (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_get_assignment",
-				"Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward.",
+				"Get a scheduling assignment by ID by scanning the supported date-range list endpoint page by page until found. If start/end are omitted, scans one year back through one year forward.",
 				map[string]any{"type": "object", "required": []string{"assignment_id"}, "properties": map[string]any{
 					"assignment_id": map[string]any{"type": "string"},
 					"start":         map[string]any{"type": "string", "description": "Optional range start used to locate the assignment. " + flexibleDatetimeDescription + ". Defaults to now minus 1 year"},
@@ -127,7 +127,7 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 		// 7. clockify_get_project_schedule_totals (RO)
 		{
 			Tool: withOutputSchema(toolRO("clockify_get_project_schedule_totals",
-				"Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available",
+				"Get scheduling totals per project across a date range, paginated via page_size, with tracked amount/cost/profit comparison when Reports API enrichment is available",
 				map[string]any{
 					"type":     "object",
 					"required": []string{"start", "end"},

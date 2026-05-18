@@ -91,7 +91,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 	// annotated) copy, so registering them here too only wasted a cold-
 	// start allocation.
 	descriptors := []mcp.ToolDescriptor{
-		firstSliceDescriptor(20, toolRO("clockify_clients_list", "List clients in the pinned workspace.", paginationSchema(map[string]any{
+		firstSliceDescriptor(20, toolRO("clockify_clients_list", "List clients in the pinned workspace, paginated via page and page_size.", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"name":        map[string]any{"type": "string"},
 				"archived":    map[string]any{"type": "boolean"},
@@ -107,7 +107,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"name": map[string]any{"type": "string"},
 			},
 		})), s.ClientsCreate),
-		firstSliceDescriptor(30, toolRO("clockify_projects_list", "List projects in the pinned workspace.", paginationSchema(map[string]any{
+		firstSliceDescriptor(30, toolRO("clockify_projects_list", "List projects in the pinned workspace, paginated via page and page_size.", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"name":               map[string]any{"type": "string"},
 				"strict_name_search": map[string]any{"type": "boolean"},
@@ -141,7 +141,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"is_public": map[string]any{"type": "boolean"},
 			},
 		})), s.ProjectsCreate),
-		firstSliceDescriptor(40, toolRO("clockify_tasks_list", "List tasks for a project.", paginationSchema(map[string]any{
+		firstSliceDescriptor(40, toolRO("clockify_tasks_list", "List tasks for a project, paginated via page and page_size.", paginationSchema(map[string]any{
 			"required": []string{"project"},
 			"properties": map[string]any{
 				"project_id":         map[string]any{"type": "string"},
@@ -163,7 +163,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"contains_assignee": map[string]any{"type": "boolean"},
 			},
 		})), s.TasksCreate),
-		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace.", paginationSchema(map[string]any{
+		firstSliceDescriptor(50, toolRO("clockify_tags_list", "List tags in the pinned workspace, paginated via page and page_size.", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"name":               map[string]any{"type": "string"},
 				"strict_name_search": map[string]any{"type": "boolean"},
@@ -179,7 +179,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"name": map[string]any{"type": "string"},
 			},
 		})), s.TagsCreate),
-		firstSliceDescriptor(60, toolRO("clockify_entries_list", "List current-user time entries in the pinned workspace.", paginationSchema(map[string]any{
+		firstSliceDescriptor(60, toolRO("clockify_entries_list", "List current-user time entries in the pinned workspace, paginated via page and page_size.", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"start":            map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 				"end":              map[string]any{"type": "string", "description": flexibleDatetimeDescription},

@@ -7614,7 +7614,7 @@
     {
       "name": "clockify_clients_list",
       "title": "List Clients",
-      "description": "List clients in the pinned workspace with pagination.",
+      "description": "List clients in the pinned workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -8226,7 +8226,7 @@
     {
       "name": "clockify_projects_list",
       "title": "List Projects",
-      "description": "List projects in the pinned workspace with pagination.",
+      "description": "List projects in the pinned workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -9152,7 +9152,7 @@
     {
       "name": "clockify_tasks_list",
       "title": "List Tasks",
-      "description": "List tasks for a project with pagination.",
+      "description": "List tasks for a project, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -9892,7 +9892,7 @@
     {
       "name": "clockify_tags_list",
       "title": "List Tags",
-      "description": "List tags in the pinned workspace with pagination.",
+      "description": "List tags in the pinned workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -10475,7 +10475,7 @@
     {
       "name": "clockify_entries_list",
       "title": "List Entries",
-      "description": "List current-user time entries in the pinned workspace with pagination.",
+      "description": "List current-user time entries in the pinned workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -21926,7 +21926,7 @@
     {
       "name": "clockify_users_list",
       "title": "List Users",
-      "description": "List users in the pinned workspace with pagination.",
+      "description": "List users in the pinned workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -25003,7 +25003,7 @@
     {
       "name": "clockify_invoices_items_list",
       "title": "List Invoice Items",
-      "description": "List items for an invoice with pagination.",
+      "description": "List the line items on an invoice, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -28849,7 +28849,7 @@
     {
       "name": "clockify_expenses_categories_list",
       "title": "List Expense Categories",
-      "description": "List expense categories in the workspace with pagination.",
+      "description": "List expense categories in the workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -30193,7 +30193,7 @@
     {
       "name": "clockify_custom_fields_get",
       "title": "Get Custom Field",
-      "description": "Get a custom field by ID in the pinned workspace.",
+      "description": "Get a custom field definition by ID from the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -31623,7 +31623,7 @@
     {
       "name": "clockify_time_off_requests_list",
       "title": "List Time Off Requests",
-      "description": "List time off requests with optional status filter with pagination.",
+      "description": "List time off requests with an optional status filter, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -33520,7 +33520,7 @@
     {
       "name": "clockify_time_off_policies_list",
       "title": "List Time Off Policies",
-      "description": "List time off policies for the workspace with pagination.",
+      "description": "List time off policies for the workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -35184,7 +35184,7 @@
     {
       "name": "clockify_scheduling_assignments_list",
       "title": "List Assignments",
-      "description": "List scheduling assignments within a date range with pagination.",
+      "description": "List scheduling assignments within a date range, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -35472,7 +35472,7 @@
     {
       "name": "clockify_scheduling_assignments_get",
       "title": "Get Assignment",
-      "description": "Get a scheduling assignment by ID by paging through the supported date-range list endpoint until found. If start/end are omitted, scans one year back through one year forward with pagination.",
+      "description": "Get a scheduling assignment by ID by scanning the supported date-range list endpoint page by page until found. If start/end are omitted, scans one year back through one year forward.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -36624,7 +36624,7 @@
     {
       "name": "clockify_scheduling_project_totals",
       "title": "Get Project Schedule Totals",
-      "description": "Get scheduling totals per project across a date range, with tracked amount/cost/profit comparison when Reports API enrichment is available with pagination.",
+      "description": "Get scheduling totals per project across a date range, paginated via page_size, with tracked amount/cost/profit comparison when Reports API enrichment is available",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -37191,7 +37191,7 @@
     {
       "name": "clockify_approvals_get",
       "title": "Get Approval Request",
-      "description": "Get a single approval request by ID by scanning the documented approval-requests list endpoint with pagination.",
+      "description": "Get a single approval request by ID by scanning the documented approval-requests list endpoint page by page.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -38556,7 +38556,7 @@
     {
       "name": "clockify_webhooks_list",
       "title": "List Webhooks",
-      "description": "List webhooks in the workspace with pagination.",
+      "description": "List webhooks in the workspace, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -38817,7 +38817,7 @@
     {
       "name": "clockify_webhooks_get",
       "title": "Get Webhook",
-      "description": "Get a webhook by ID in the pinned workspace.",
+      "description": "Get a webhook by ID from the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -40185,7 +40185,7 @@
     {
       "name": "clockify_webhooks_events",
       "title": "List Webhook Events",
-      "description": "List available webhook event types with pagination.",
+      "description": "List available webhook event types",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -40717,7 +40717,7 @@
     {
       "name": "clockify_groups_get",
       "title": "Get User Group",
-      "description": "Get a user group by ID in the pinned workspace.",
+      "description": "Get a user group by ID from the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -42290,7 +42290,7 @@
     {
       "name": "clockify_holidays_list",
       "title": "List Holidays",
-      "description": "List holidays configured in the workspace with pagination.",
+      "description": "List holidays configured in the workspace; the full set is returned on a single page.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -42535,7 +42535,7 @@
     {
       "name": "clockify_holidays_list_for_user_period",
       "title": "List Holidays In Period",
-      "description": "List holidays assigned to a user in a date period with pagination.",
+      "description": "List holidays assigned to a user across a date period; the full set is returned on a single page.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -43940,7 +43940,7 @@
     {
       "name": "clockify_projects_memberships_list",
       "title": "List Projects Memberships",
-      "description": "List project memberships from the hydrated project record with pagination.",
+      "description": "List project memberships read from the hydrated project record; the full membership set is returned on a single page.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44195,7 +44195,7 @@
     {
       "name": "clockify_reports_attendance",
       "title": "Reports Attendance",
-      "description": "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency; large responses use truncation or file envelopes.",
+      "description": "Run the attendance report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. Large results truncate to the size cap.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44488,7 +44488,7 @@
     {
       "name": "clockify_reports_money",
       "title": "Reports Money",
-      "description": "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals; large responses use truncation or file envelopes.",
+      "description": "Run money summary for billing-rate breakdowns by user or project. Use clockify_reports_summary for simple time totals. Raw amounts are minor units; meta.totalAmount gives major-unit totals. Large results truncate to the size cap.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -44781,7 +44781,7 @@
     {
       "name": "clockify_reports_expense",
       "title": "Reports Expense",
-      "description": "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency; large responses use truncation or file envelopes.",
+      "description": "Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. Large results truncate to the size cap.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -46233,7 +46233,7 @@
     {
       "name": "clockify_invoices_payments_list",
       "title": "List Invoices Payments",
-      "description": "List invoice payments in the pinned workspace with pagination.",
+      "description": "List the payments recorded against an invoice, paginated via page and page_size.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -48130,7 +48130,7 @@
     {
       "name": "clockify_holidays_get",
       "title": "Get Holidays",
-      "description": "Get one holiday in the pinned workspace.",
+      "description": "Get one holiday by ID from the pinned workspace.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -48380,7 +48380,7 @@
     {
       "name": "clockify_holidays_update",
       "title": "Update Holidays",
-      "description": "Update a holiday in the pinned workspace.",
+      "description": "Update a holiday by ID; unspecified fields merge from the existing record.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -49213,7 +49213,7 @@
     {
       "name": "clockify_audit_logs_search",
       "title": "Audit Logs Search",
-      "description": "Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API with pagination.",
+      "description": "Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API. Results paginate via page and page_size, though Clockify caps the effective page size server-side.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -49551,7 +49551,7 @@
     {
       "name": "clockify_entity_changes_list",
       "title": "List Entity Changes",
-      "description": "List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type with pagination.",
+      "description": "List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type. Results paginate via the page parameter.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -50718,7 +50718,7 @@
     {
       "name": "clockify_entries_timer_start",
       "title": "Entries Timer Start",
-      "description": "Start a timer in the pinned workspace.",
+      "description": "Start a running time-entry timer for the current user.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -51523,7 +51523,7 @@
     {
       "name": "clockify_entries_timer_stop",
       "title": "Entries Timer Stop",
-      "description": "Stop the current timer in the pinned workspace.",
+      "description": "Stop the current user's running time-entry timer.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": false,
@@ -51792,7 +51792,7 @@
     {
       "name": "clockify_entries_timer_status",
       "title": "Entries Timer Status",
-      "description": "Show timer status in the pinned workspace.",
+      "description": "Show whether the current user has a running timer.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -52311,7 +52311,7 @@
     {
       "name": "clockify_reports_detailed",
       "title": "Reports Detailed",
-      "description": "Run the local detailed time report helper; large responses use truncation or file envelopes.",
+      "description": "Run the local detailed time report helper. Large results truncate to the size cap.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -52623,7 +52623,7 @@
     {
       "name": "clockify_reports_summary",
       "title": "Reports Summary",
-      "description": "Run the local summary report helper; large responses use truncation or file envelopes.",
+      "description": "Run the local summary report helper. Large results truncate to the size cap.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,
@@ -52935,7 +52935,7 @@
     {
       "name": "clockify_reports_weekly",
       "title": "Reports Weekly",
-      "description": "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end; large responses use truncation or file envelopes.",
+      "description": "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. Large results truncate to the size cap.",
       "category": "domain",
       "handler_kind": "native handler",
       "read_only": true,

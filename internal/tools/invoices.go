@@ -163,7 +163,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 11. List invoice items
-		{Tool: withOutputSchema(toolRO("clockify_list_invoice_items", "List items for an invoice", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_list_invoice_items", "List the line items on an invoice, paginated via page and page_size.", map[string]any{
 			"type":     "object",
 			"required": []string{"invoice_id"},
 			"properties": map[string]any{

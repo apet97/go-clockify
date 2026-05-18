@@ -43,12 +43,12 @@ func (s *Service) nativeDomainExtras() []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		nativeDomainTool(1200, toolRO(
 			"clockify_audit_logs_search",
-			"Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API.",
+			"Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API. Results paginate via page and page_size, though Clockify caps the effective page size server-side.",
 			auditLogsSearchSchema(),
 		), "audit_log", "", s.AuditLogsSearch),
 		nativeDomainTool(1201, toolRO(
 			"clockify_entity_changes_list",
-			"List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type.",
+			"List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type. Results paginate via the page parameter.",
 			entityChangesListSchema(),
 		), "entity_change", "", s.EntityChangesList),
 		nativeDomainTool(1202, toolRO(

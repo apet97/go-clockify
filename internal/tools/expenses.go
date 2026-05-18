@@ -97,7 +97,7 @@ func expenseHandlers(s *Service) []mcp.ToolDescriptor {
 		}},
 
 		// 6. List expense categories
-		{Tool: withOutputSchema(toolRO("clockify_list_expense_categories", "List expense categories in the workspace", map[string]any{
+		{Tool: withOutputSchema(toolRO("clockify_list_expense_categories", "List expense categories in the workspace, paginated via page and page_size.", map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"page":      map[string]any{"type": "integer", "description": "Page number (default 1)"},
