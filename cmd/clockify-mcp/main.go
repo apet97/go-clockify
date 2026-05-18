@@ -135,6 +135,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	service.EmitResourceUpdate = server.NotifyResourceUpdated
 	service.EmitResourceListChanged = server.NotifyResourcesListChanged
 	service.SubscriptionGate = server.HasResourceSubscription
+	service.Notifier = server
 
 	slog.Info("one_user_server_start",
 		"version", effective,
