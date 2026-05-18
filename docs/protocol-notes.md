@@ -17,3 +17,11 @@ Long-running tools emit `notifications/progress` when the client supplies a
 `progressToken`. The server enforces the MCP rules: progress values must strictly
 increase per token, and emissions are capped at 10 per second per token. Progress
 stops once the originating call is cancelled or times out.
+
+## `tools/list` is intentionally single-page
+
+The full tool registry (156 tools) is fixed at startup and never changes during a
+session, so `tools/list` returns every tool in one response with no `nextCursor`.
+`TestToolsListPayloadWithinByteBudget` pins the serialized payload under a fixed
+512 KiB budget, far below the 4 MiB default message size, so a single-page response
+is always safe to deliver.
