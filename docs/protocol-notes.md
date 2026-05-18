@@ -25,3 +25,20 @@ session, so `tools/list` returns every tool in one response with no `nextCursor`
 `TestToolsListPayloadWithinByteBudget` pins the serialized payload under a fixed
 512 KiB budget, far below the 4 MiB default message size, so a single-page response
 is always safe to deliver.
+
+## Rate-control model
+
+This local one-user MCP controls tool throughput with several layers:
+
+- **`CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS`** — global cap on concurrently-running
+  `tools/call` handlers (default 4).
+- **Per-risk-family concurrency caps** — ordinary writes are capped at 2 concurrent,
+  and destructive / billing / admin / permission-change / external-side-effect tools at
+  1 concurrent, so high-risk writes are serialized. Reads are bounded only by the
+  global cap.
+- **`CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE`** — optional token-bucket rate cap on tool
+  invocations. `0` (the default) disables it. When exceeded, a call returns a
+  recoverable `ok:false` envelope with `error.code = "rate_limited"`.
+- **`CLOCKIFY_TOOL_TIMEOUT`** — per-call deadline.
+- The Clockify HTTP client adds retry/backoff and a circuit breaker, and tool results
+  are size-capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES`.
