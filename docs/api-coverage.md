@@ -10,9 +10,9 @@ authoritative tool list is generated in `docs/tool-catalog.md` and
 | Class | Count | Notes |
 |------|------:|-------|
 | Workflow tools | 17 | Preferred agent-facing tools for common work |
-| Domain tools | 135 | Direct Clockify domain operations |
+| Domain tools | 137 | Direct Clockify domain operations |
 | Raw fallback tools | 2 | Last-resort pinned-workspace API access |
-| Total | 154 | All loaded at startup |
+| Total | 156 | All loaded at startup |
 
 The runtime order is intentional: workflow tools first, domain tools second,
 raw fallback tools last.
