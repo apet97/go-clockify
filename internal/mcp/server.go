@@ -100,7 +100,9 @@ func notifierFromContext(ctx context.Context) (Notifier, bool) {
 
 // encoderNotifier adapts the stdio JSON encoder (and its mutex) to the
 // Notifier interface so notification delivery does not require the server
-// core to hold raw I/O state.
+// core to hold raw I/O state. Notifications intentionally bypass outChan: the
+// shared encoder mutex prevents byte interleaving, but response/notification
+// ordering is not guaranteed and does not need to be.
 type encoderNotifier struct {
 	mu      *sync.Mutex
 	encoder **json.Encoder
@@ -383,7 +385,11 @@ func rpcIDKey(id any) any {
 
 // cancelAllInflight cancels and untracks every in-flight request. It is used
 // when a client repeats initialize: the session negotiation is being reset, so
-// request IDs from the previous negotiated session must not remain cancellable.
+// cancelAllInflight is a best-effort initialize/reset boundary: request IDs
+// from the previous negotiated session must not remain cancellable. Handlers are
+// cancelled but not joined here, so a handler that wins the race to return may
+// still emit a late response for its original request ID; clients must match
+// responses by ID.
 func (s *Server) cancelAllInflight() int {
 	s.inflightMu.Lock()
 	cancels := make([]context.CancelFunc, 0, len(s.inflight))
@@ -407,9 +413,10 @@ func (s *Server) InflightCount() int {
 	return len(s.inflight)
 }
 
-// Run processes JSON-RPC requests from r and writes responses to w.
-// It respects ctx cancellation for graceful shutdown — when ctx is
-// cancelled, the loop exits even if stdin is blocking.
+// Run processes newline-delimited JSON-RPC requests from r and writes responses
+// to w. The reader must reach EOF when the stdio session ends; a reader that
+// signals logical end-of-input without EOF can leave the scan goroutine blocked
+// in Read. Scanner errors are returned on the EOF path.
 func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr error) {
 	if s.MaxInFlightToolCalls > 0 && s.toolCallSem == nil {
 		s.toolCallSem = make(chan struct{}, s.MaxInFlightToolCalls)
