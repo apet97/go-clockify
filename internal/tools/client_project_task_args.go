@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ func int64Arg(args map[string]any, key string) (int64, bool) {
 		return 0, false
 	}
 	f, ok := numberFromAny(v)
-	if !ok {
+	if !ok || math.IsNaN(f) || math.IsInf(f, 0) || f < math.MinInt64 || f > math.MaxInt64 {
 		return 0, false
 	}
 	return int64(f), true
