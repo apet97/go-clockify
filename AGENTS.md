@@ -11,8 +11,11 @@ Read this first. This is the tracked, binding agent contract for the repo.
 - One `CLOCKIFY_API_KEY`.
 - One required `CLOCKIFY_WORKSPACE_ID`.
 - Stdio transport only.
-- Full access from startup.
-- Exactly 156 tools loaded at startup.
+- Full access from startup. The default `CLOCKIFY_TOOLSET=all` loads the
+  complete registry; an operator may set `CLOCKIFY_TOOLSET` to `core`,
+  `business`, or `admin` to narrow the startup surface to a documented subset.
+  Narrowing never widens the registry and never reorders it.
+- Exactly 156 tools loaded at startup under the default `CLOCKIFY_TOOLSET=all`.
 - Workflow tools first, domain tools second, raw API fallback last.
 - Every write returns useful IDs.
 - Recoverable failures return `ok:false`, an error code, and recovery guidance.
