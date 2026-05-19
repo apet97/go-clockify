@@ -676,6 +676,21 @@ func applyPropertyConstraints(name string, prop map[string]any) {
 				prop["pattern"] = "^#[0-9a-fA-F]{6}$"
 			}
 		}
+	case "currency":
+		// Invoice currency is an ISO 4217 three-letter code (USD, EUR, ...).
+		// Bounding it centrally rejects malformed values at JSON-schema
+		// validation before the handler reaches the live invoice API.
+		if typ, _ := prop["type"].(string); typ == "string" {
+			if _, set := prop["minLength"]; !set {
+				prop["minLength"] = 3
+			}
+			if _, set := prop["maxLength"]; !set {
+				prop["maxLength"] = 3
+			}
+			if _, set := prop["pattern"]; !set {
+				prop["pattern"] = "^[A-Za-z]{3}$"
+			}
+		}
 	}
 	// Generic RFC3339 timestamp detection — any string property whose
 	// description calls out an RFC3339 timestamp gains format: date-time,
@@ -727,6 +742,9 @@ var freeTextMaxLength = map[string]int{
 	"new_description":      2000, // update form
 	"name":                 150,
 	"note":                 500,
+	"notes":                2000, // expense free-form notes
+	"number":               150,  // invoice number
+	"path":                 2048, // raw API fallback path
 	"address":              256,
 	"email":                254, // RFC 5321 max localpart+domain
 	"url":                  2048,

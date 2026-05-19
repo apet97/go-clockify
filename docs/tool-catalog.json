@@ -5556,6 +5556,9 @@
           },
           "currency": {
             "description": "Currency code, e.g. USD or EUR (required).",
+            "maxLength": 3,
+            "minLength": 3,
+            "pattern": "^[A-Za-z]{3}$",
             "type": "string"
           },
           "dry_run": {
@@ -5581,6 +5584,7 @@
           },
           "number": {
             "description": "Invoice number.",
+            "maxLength": 150,
             "type": "string"
           },
           "project_ids": {
@@ -5890,6 +5894,7 @@
           },
           "notes": {
             "description": "Optional notes.",
+            "maxLength": 2000,
             "type": "string"
           },
           "project": {
@@ -23763,6 +23768,9 @@
           },
           "currency": {
             "description": "Currency code (required; e.g. USD, EUR)",
+            "maxLength": 3,
+            "minLength": 3,
+            "pattern": "^[A-Za-z]{3}$",
             "type": "string"
           },
           "discount_percent": {
@@ -23788,6 +23796,7 @@
           },
           "number": {
             "description": "Invoice number (required by live API)",
+            "maxLength": 150,
             "type": "string"
           },
           "subject": {
@@ -24085,6 +24094,9 @@
           },
           "currency": {
             "description": "Three-letter currency code, e.g. USD.",
+            "maxLength": 3,
+            "minLength": 3,
+            "pattern": "^[A-Za-z]{3}$",
             "type": "string"
           },
           "discount_percent": {
@@ -24114,6 +24126,7 @@
           },
           "number": {
             "description": "Invoice number.",
+            "maxLength": 150,
             "type": "string"
           },
           "status": {
@@ -28216,6 +28229,7 @@
           },
           "notes": {
             "description": "Free-form notes",
+            "maxLength": 2000,
             "type": "string"
           },
           "project_id": {
@@ -28539,6 +28553,7 @@
           },
           "notes": {
             "description": "Optional notes.",
+            "maxLength": 2000,
             "type": "string"
           },
           "project_id": {
@@ -53751,6 +53766,7 @@
         "properties": {
           "path": {
             "description": "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
+            "maxLength": 2048,
             "type": "string"
           },
           "query": {
@@ -54018,6 +54034,7 @@
           },
           "path": {
             "description": "Clockify API path, e.g. /workspaces/{workspaceId}/projects.",
+            "maxLength": 2048,
             "type": "string"
           },
           "query": {
