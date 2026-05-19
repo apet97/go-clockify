@@ -7,8 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-19
+
+Hardening and guardrail release: a source MCP surface audit, a single-marshal
+`tools/call` hot path, centralized input-schema bounds, a quieter stdio default,
+and a reworked live-cleanup sweeper. The 156-tool product contract is unchanged.
+
 ### Added
 
+- The stdio smoke test runs a source MCP surface audit: every tool and input
+  property must have a description, every tool must carry
+  `annotations.riskClass`, `destructiveHint:true` must imply a `destructive`
+  risk class, and the known destructive tools are pinned.
+- Live happy-path coverage for the domain timer tools (`clockify_entries_running`,
+  `clockify_entries_timer_start` / `_stop` / `_status` / `_switch`, and
+  `clockify_projects_memberships_list`); the coverage ledger moves from 130 to
+  135 live happy-path tools.
+- `live-clean-prefix` sweeps time-off requests through the POST-only search
+  endpoint, matches scheduling assignments by their linked prefixed project,
+  and fails a collection whose endpoint ignores pagination; full fake-server
+  end-to-end tests cover every object family.
+- A reverse env-var lint fails when the config parser reads a variable that
+  `README.md` does not document.
 - CI now gates `raw-allowlist-drift` and `selfinspect-drift` on every PR.
 - `doctor --live` reports a truthful owner / workspace_admin / member_or_unknown
   role verdict.
@@ -32,6 +52,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The stdio runtime defaults `MCP_LOG_LEVEL` to `warn`, so a clean MCP session
+  leaves stderr empty; startup and configuration failures still print, and
+  `info` / `debug` remain available explicitly.
+- A successful `tools/call` marshals its result once on the default
+  size-guarded path instead of twice.
+- Common input fields are bounded centrally: `notes`, the invoice `number`, and
+  the raw-fallback `path` gain a `maxLength`, and `currency` is constrained to an
+  ISO 4217 three-letter code.
+- `README.md` documents every operator-tunable environment variable; `AGENTS.md`
+  clarifies that the 156-tool invariant holds under the default
+  `CLOCKIFY_TOOLSET=all` while narrowed toolsets load a documented subset.
 - `go.mod` / `go.sum` tidied; the dynamic demo resource listing is capped at 50.
 - Per-risk-family concurrency caps are installed by `mcp.NewServer` itself, so
   every server serializes high-risk writes even when `ConfigureToolLimits` runs
@@ -39,6 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `live-clean-prefix` deleted scheduling assignments through a route that does
+  not exist (`/scheduling/assignments/{id}`, HTTP 404 `No static resource`); it
+  now uses the recurring-assignment route with `seriesUpdateOption=ALL`.
 - Raw-fallback docs and tool descriptions advertise the `{workspaceId}` placeholder
   that `safeRawPath` actually substitutes.
 
