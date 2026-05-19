@@ -27,9 +27,21 @@ only; they are not setup instructions for this product.
 
 ## Start from zero
 
-You need a Clockify account. A prebuilt binary (option A below) needs nothing
-else; building it yourself (B or C) needs a Go toolchain
-([go.dev/dl](https://go.dev/dl/)).
+You need a Clockify account. The npm launcher (0A below) and prebuilt binary
+(option A) need nothing else; building it yourself (B or C) needs a Go
+toolchain ([go.dev/dl](https://go.dev/dl/)).
+
+### 0A. Use the npm launcher
+
+For MCP clients that can run `npx`, use
+[`npm/clockify-mcp-launcher/README.md`](npm/clockify-mcp-launcher/README.md):
+
+```bash
+npx -y @apet97/clockify-mcp
+```
+
+The npm package bundles the Go server binary for supported platforms, so you do
+not need to install Go, download a release asset, or set a binary path override.
 
 ### 1. Get the binary
 
@@ -100,6 +112,10 @@ Point your MCP client at the binary. For a Claude `.mcp.json`:
 The client launches `clockify-mcp` as a stdio subprocess. That is the whole
 setup. Start with `clockify_status`, then use workflow tools before raw or
 low-level domain tools:
+
+An npm launcher is also available as an alternative install path for clients
+that prefer `npx`. It remains a thin stdio launcher around the same Go binary;
+see [npm/clockify-mcp-launcher/README.md](npm/clockify-mcp-launcher/README.md).
 
 - `clockify_status` - confirm the pinned workspace, user, feature plan, and
   optional feature visibility

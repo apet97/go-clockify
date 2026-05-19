@@ -1,0 +1,30 @@
+{
+  "name": "@apet97/clockify-mcp",
+  "version": "0.0.0",
+  "description": "npm launcher for the Go Clockify MCP stdio server",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "clockify-mcp": "bin/clockify-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "vendor/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --import tsx ./test/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
