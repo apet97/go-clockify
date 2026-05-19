@@ -27,18 +27,35 @@ only; they are not setup instructions for this product.
 
 ## Start from zero
 
-You need a Go toolchain ([go.dev/dl](https://go.dev/dl/)) and a Clockify
-account.
+You need a Clockify account. A prebuilt binary (option A below) needs nothing
+else; building it yourself (B or C) needs a Go toolchain
+([go.dev/dl](https://go.dev/dl/)).
 
-### 1. Build the binary
+### 1. Get the binary
+
+All three options produce the same `clockify-mcp` binary — pick one.
+
+**A. Download a prebuilt binary** — no toolchain needed. From the
+[latest release](https://github.com/apet97/go-clockify/releases/latest),
+download the asset for your platform (`clockify-mcp_<version>_<os>_<arch>`),
+check it against the `SHA256SUMS` asset, and — on macOS/Linux — make it
+executable with `chmod +x`.
+
+**B. Install with Go:**
+
+```bash
+go install github.com/apet97/go-clockify/cmd/clockify-mcp@latest
+```
+
+This installs `clockify-mcp` into `$(go env GOPATH)/bin`.
+
+**C. Build from source:**
 
 ```bash
 git clone https://github.com/apet97/go-clockify.git
 cd go-clockify
 go build -o clockify-mcp ./cmd/clockify-mcp
 ```
-
-That produces a `clockify-mcp` binary in the current directory.
 
 ### 2. Get your Clockify credentials
 
