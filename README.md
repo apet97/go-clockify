@@ -147,11 +147,18 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
 | `CLOCKIFY_TOOLSET` | `all` | Tool surface: `core`, `business`, `admin`, or `all` |
 | `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `0` | Optional tool-invocation rate cap per minute; `0` disables it |
+| `CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS` | `4` | Max concurrent `tools/call` handlers |
+| `CLOCKIFY_MAX_MESSAGE_SIZE` | `4194304` | Max inbound JSON-RPC message bytes (`1`..`104857600`) |
+| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation (`1`..`104857600`) |
+| `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout (`5s`..`10m`) |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` |
 | `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY` | `true` | Limit raw writes to documented Clockify routes |
-| `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout |
-| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation |
-| `MCP_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` | none | Comma-separated allowlist of webhook callback domains |
+| `CLOCKIFY_CIRCUIT_BREAKER` | `enabled` | Clockify circuit breaker: `enabled`/`auto`/`on` or `disabled`/`off` |
+| `CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `5` | Consecutive upstream failures before the breaker opens |
+| `CLOCKIFY_CIRCUIT_BREAKER_OPEN_DURATION` | `45s` | How long the breaker stays open before a half-open probe |
+| `CLOCKIFY_CIRCUIT_BREAKER_HALF_OPEN_PROBES` | `1` | Probe requests allowed while the breaker is half-open |
+| `MCP_LOG_LEVEL` | `warn` | Log level: `debug`, `info`, `warn`, `error`; the stdio runtime defaults to `warn` so a clean session leaves stderr quiet |
 
 Run `clockify-mcp doctor` to see every resolved value.
 

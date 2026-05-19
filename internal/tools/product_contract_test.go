@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
@@ -82,6 +83,41 @@ func TestProductContractDoesNotRegress(t *testing.T) {
 	for _, d := range reg {
 		if !catalogNames[d.Tool.Name] {
 			t.Errorf("registry tool %q is missing from docs/tool-catalog.json (run make gen-tool-catalog)", d.Tool.Name)
+		}
+	}
+}
+
+// TestDefaultToolsetEnvLoadsExactly156 proves the binding invariant from
+// AGENTS.md end-to-end: with no CLOCKIFY_TOOLSET in the environment, the
+// startup registry the command wires — RegistryForToolset(cfg.Toolset),
+// exactly as cmd/clockify-mcp does — is the full 156-tool surface. Operator
+// toolsets narrow that surface to a non-empty documented subset and never
+// widen it, so CLOCKIFY_TOOLSET=core cannot be read as a contract violation.
+func TestDefaultToolsetEnvLoadsExactly156(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_TOOLSET", "")
+
+	cfg, err := config.LoadOneUser()
+	if err != nil {
+		t.Fatalf("LoadOneUser with default env: %v", err)
+	}
+	if cfg.Toolset != "all" {
+		t.Fatalf("default CLOCKIFY_TOOLSET resolved to %q, want \"all\"", cfg.Toolset)
+	}
+
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), cfg.WorkspaceID)
+	if got := len(svc.RegistryForToolset(cfg.Toolset)); got != 156 {
+		t.Fatalf("default toolset loaded %d tools, want exactly 156", got)
+	}
+	if got := len(svc.RegistryForToolset("all")); got != 156 {
+		t.Fatalf("CLOCKIFY_TOOLSET=all loaded %d tools, want exactly 156", got)
+	}
+
+	for _, toolset := range []string{"core", "business", "admin"} {
+		got := len(svc.RegistryForToolset(toolset))
+		if got <= 0 || got >= 156 {
+			t.Errorf("CLOCKIFY_TOOLSET=%s loaded %d tools, want a non-empty documented subset below 156", toolset, got)
 		}
 	}
 }

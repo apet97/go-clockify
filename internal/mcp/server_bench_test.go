@@ -192,6 +192,41 @@ func BenchmarkDispatchToolsCall(b *testing.B) {
 	}
 }
 
+// BenchmarkDispatchToolsCallWithDefaultSizeGuard measures the production
+// tools/call path: MaxToolResultBytes carries the default 50000-byte budget,
+// so the result-size guard is active. Before the single-marshal refactor an
+// under-budget call marshalled the tool result twice — once to size-check it,
+// once to assemble the envelope. This bench is the regression guard for that
+// hot-path allocation; compare it against BenchmarkDispatchToolsCall (guard
+// disabled) — the two should now sit close together.
+func BenchmarkDispatchToolsCallWithDefaultSizeGuard(b *testing.B) {
+	quietSlogForBenchmark(b)
+
+	server := newBenchServer(b, 1)
+	server.MaxToolResultBytes = 50_000
+	server.initialized.Store(true)
+
+	msg := mustMarshalRequest(b, Request{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+		Params: ToolCallParams{
+			Name:      "bench_tool",
+			Arguments: map[string]any{"k": "v"},
+		},
+	})
+
+	ctx := context.Background()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := server.DispatchMessage(ctx, msg)
+		if err != nil {
+			b.Fatalf("DispatchMessage: %v", err)
+		}
+	}
+}
+
 func BenchmarkDispatchToolsCallAliasArgument(b *testing.B) {
 	quietSlogForBenchmark(b)
 

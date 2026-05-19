@@ -5,23 +5,49 @@ import (
 	"fmt"
 )
 
-func (s *Server) applyToolResultSizeGuard(toolName string, result any) (any, map[string]any) {
-	budget := s.MaxToolResultBytes
-	if budget <= 0 {
-		return result, nil
-	}
+// toolResultEnvelopeGuarded builds the final MCP tools/call success envelope
+// from a single marshal of result on the common path. The pre-refactor flow
+// marshalled result twice with a positive budget — once to size-check it, once
+// to assemble the envelope; this reuses the first marshal's bytes for both
+// content[0].text and structuredContent.
+//
+// budget <= 0 disables the size cap. Over budget, result is unmarshalled once,
+// truncated in place, and the truncated envelope marshalled once; a payload
+// that cannot be safely truncated yields the result_too_large recovery
+// envelope. The cold over-budget path keeps the original marshal count.
+func toolResultEnvelopeGuarded(toolName string, result any, budget int) map[string]any {
 	raw, err := json.Marshal(result)
-	if err != nil || len(raw) <= budget {
-		return result, nil
+	if err != nil {
+		// Mirror marshalToolResult's error fallback: text-only content,
+		// no structuredContent.
+		return map[string]any{"content": []map[string]any{{
+			"type": "text",
+			"text": fmt.Sprintf(`{"error":%q}`, err.Error()),
+		}}}
+	}
+	if budget <= 0 || len(raw) <= budget {
+		return toolResultEnvelopeFromRaw(raw)
 	}
 	var envelope map[string]any
 	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return result, resultTooLargeEnvelope(toolName, len(raw), budget)
+		return toolResultEnvelope(resultTooLargeEnvelope(toolName, len(raw), budget))
 	}
 	if truncateEnvelopeDataToBudget(envelope, budget) {
-		return envelope, nil
+		return toolResultEnvelope(envelope)
 	}
-	return result, resultTooLargeEnvelope(toolName, len(raw), budget)
+	return toolResultEnvelope(resultTooLargeEnvelope(toolName, len(raw), budget))
+}
+
+// toolResultEnvelopeFromRaw assembles the success envelope from already
+// marshalled result bytes, reusing them for content[0].text and — when the
+// result is a JSON object — structuredContent. This keeps the under-budget
+// content[0].text byte-identical to the pre-refactor marshalToolResult path.
+func toolResultEnvelopeFromRaw(raw []byte) map[string]any {
+	out := map[string]any{"content": []map[string]any{{"type": "text", "text": string(raw)}}}
+	if jsonObjectRaw(raw) {
+		out["structuredContent"] = json.RawMessage(raw)
+	}
+	return out
 }
 
 func truncateEnvelopeDataToBudget(envelope map[string]any, budget int) bool {

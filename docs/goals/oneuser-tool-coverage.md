@@ -9,7 +9,7 @@ Summary:
 - Raw fallback tools: 2
 - Fake-smoke yes: 156
 - Live protocol/recovery tested yes: 154
-- Live happy-path tested yes: 130
+- Live happy-path tested yes: 135
 
 Remaining honest gaps:
 - Fake smoke means the fake server asserts envelope, ID, and recovery shape; it is not a claim that every Clockify plan enables the feature.
@@ -148,7 +148,7 @@ Remaining honest gaps:
 | `clockify_users_deactivate` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_users_role` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_workspace_settings` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_projects_memberships_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_projects_memberships_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_entries_mark_invoiced` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_attendance` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_money` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
@@ -167,11 +167,11 @@ Remaining honest gaps:
 | `clockify_holidays_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_holidays_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_users_invite` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_entries_running` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_entries_running` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_entries_timer_start` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_entries_timer_stop` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_entries_timer_status` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
-| `clockify_entries_timer_switch` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_entries_timer_stop` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_entries_timer_status` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
+| `clockify_entries_timer_switch` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_detailed` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_summary` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_reports_weekly` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |

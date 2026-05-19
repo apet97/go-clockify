@@ -136,3 +136,62 @@ func walkSchemaFields(schema map[string]any, path string, visit func(path, name 
 		}
 	}
 }
+
+// TestApplyPropertyConstraintsCurrencyPattern asserts the central tightener
+// bounds a currency property to an ISO 4217 three-letter code.
+func TestApplyPropertyConstraintsCurrencyPattern(t *testing.T) {
+	prop := map[string]any{"type": "string"}
+	applyPropertyConstraints("currency", prop)
+	if prop["minLength"] != 3 || prop["maxLength"] != 3 {
+		t.Fatalf("currency should be bounded to exactly 3 characters, got %+v", prop)
+	}
+	if prop["pattern"] != "^[A-Za-z]{3}$" {
+		t.Fatalf("currency should carry the three-letter pattern, got %v", prop["pattern"])
+	}
+}
+
+// TestApplyPropertyConstraintsCurrencyPreservesExplicit asserts an explicit
+// per-descriptor currency constraint is never clobbered by the central rule.
+func TestApplyPropertyConstraintsCurrencyPreservesExplicit(t *testing.T) {
+	prop := map[string]any{"type": "string", "pattern": "^CUSTOM$", "maxLength": 12}
+	applyPropertyConstraints("currency", prop)
+	if prop["pattern"] != "^CUSTOM$" || prop["maxLength"] != 12 {
+		t.Fatalf("explicit currency constraints were clobbered: %+v", prop)
+	}
+}
+
+// TestApplyPropertyConstraintsCurrencySkipsNonString asserts the currency rule
+// only fires on string properties.
+func TestApplyPropertyConstraintsCurrencySkipsNonString(t *testing.T) {
+	prop := map[string]any{"type": "integer"}
+	applyPropertyConstraints("currency", prop)
+	if _, ok := prop["pattern"]; ok {
+		t.Fatalf("currency pattern applied to a non-string property: %+v", prop)
+	}
+}
+
+// TestRegistryCurrencyFieldsCarryThreeLetterPattern walks every startup
+// descriptor and asserts each string currency input property inherits the
+// three-letter bound after normalization.
+func TestRegistryCurrencyFieldsCarryThreeLetterPattern(t *testing.T) {
+	svc := &Service{}
+	for _, d := range svc.FullAccessRegistry() {
+		if d.Tool.InputSchema == nil {
+			continue
+		}
+		walkSchemaFields(d.Tool.InputSchema, "$", func(path, name string, prop map[string]any) {
+			if name != "currency" {
+				return
+			}
+			if typ, _ := prop["type"].(string); typ != "string" {
+				return
+			}
+			if prop["pattern"] != "^[A-Za-z]{3}$" {
+				t.Errorf("%s: %s.currency missing the three-letter pattern, got %v", d.Tool.Name, path, prop["pattern"])
+			}
+			if prop["maxLength"] != 3 || prop["minLength"] != 3 {
+				t.Errorf("%s: %s.currency missing the 3-character bound, got min=%v max=%v", d.Tool.Name, path, prop["minLength"], prop["maxLength"])
+			}
+		})
+	}
+}

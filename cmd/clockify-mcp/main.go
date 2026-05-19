@@ -52,11 +52,15 @@ func main() {
 		}
 	}
 
-	// Configure log level
+	// Configure log level. The stdio runtime defaults to warn so a clean
+	// session emits nothing on stderr — MCP clients and contract auditors
+	// treat stderr noise as a fault signal. Startup/config failures still
+	// surface: they are written directly via writeStartupError, not slog.
+	// Operators who want startup diagnostics set MCP_LOG_LEVEL=info|debug.
 	rawLevel := os.Getenv("MCP_LOG_LEVEL")
 	logLevel := parseLogLevel(rawLevel)
 	if rawLevel != "" && !isKnownLogLevel(rawLevel) {
-		fmt.Fprintf(os.Stderr, "warning: unknown MCP_LOG_LEVEL %q, defaulting to info\n", rawLevel)
+		fmt.Fprintf(os.Stderr, "warning: unknown MCP_LOG_LEVEL %q, defaulting to warn\n", rawLevel)
 	}
 
 	// Configure slog to stderr. The chosen handler is always wrapped in a
@@ -149,16 +153,22 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	return server.Run(ctx, stdin, stdout)
 }
 
+// parseLogLevel maps MCP_LOG_LEVEL to a slog level. An unset or unrecognised
+// value resolves to warn: the stdio runtime keeps stderr quiet by default so a
+// clean MCP session produces no diagnostic noise. Operators opt into info or
+// debug explicitly.
 func parseLogLevel(s string) slog.Level {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "debug":
 		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
 	case "warn", "warning":
 		return slog.LevelWarn
 	case "error":
 		return slog.LevelError
 	default:
-		return slog.LevelInfo
+		return slog.LevelWarn
 	}
 }
 
@@ -195,7 +205,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WORKSPACE_ID  %s\n", cfg.WorkspaceID)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TIMEZONE      %s\n", optionalValue(cfg.Timezone, "(local/default)"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_BASE_URL      %s\n", cfg.BaseURL)
-	_, _ = fmt.Fprintf(stdout, "MCP_LOG_LEVEL          %s\n", optionalValue(cfg.LogLevel, "info"))
+	_, _ = fmt.Fprintf(stdout, "MCP_LOG_LEVEL          %s\n", optionalValue(cfg.LogLevel, "warn"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOL_TIMEOUT  %s\n", cfg.ToolTimeout)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  %d\n", cfg.MaxInFlightToolCalls)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_MESSAGE_SIZE          %d\n", cfg.MaxMessageSize)
@@ -404,5 +414,5 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_WRITES         optional, defaults to false")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY optional, defaults to true")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   optional comma-separated allowlist")
-	_, _ = fmt.Fprintln(w, "  MCP_LOG_LEVEL          optional: debug, info, warn, error")
+	_, _ = fmt.Fprintln(w, "  MCP_LOG_LEVEL          optional: debug, info, warn, error (default warn)")
 }

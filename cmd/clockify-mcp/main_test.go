@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -78,6 +79,27 @@ func TestParseLogLevel(t *testing.T) {
 
 type slogLevelCase struct {
 	known bool
+}
+
+// TestParseLogLevelDefaultsToWarn pins the stdio runtime log policy: an unset
+// or unrecognised MCP_LOG_LEVEL resolves to warn so a clean MCP session leaves
+// stderr quiet, while explicit known levels are still honoured.
+func TestParseLogLevelDefaultsToWarn(t *testing.T) {
+	cases := map[string]slog.Level{
+		"":        slog.LevelWarn,
+		"   ":     slog.LevelWarn,
+		"garbage": slog.LevelWarn,
+		"debug":   slog.LevelDebug,
+		"info":    slog.LevelInfo,
+		"warn":    slog.LevelWarn,
+		"warning": slog.LevelWarn,
+		"error":   slog.LevelError,
+	}
+	for input, want := range cases {
+		if got := parseLogLevel(input); got != want {
+			t.Errorf("parseLogLevel(%q) = %v, want %v", input, got, want)
+		}
+	}
 }
 
 func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {

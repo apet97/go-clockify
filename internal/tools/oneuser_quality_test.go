@@ -1407,6 +1407,7 @@ func TestOneUserCoverageLedgerLiveReadyRowsHaveNamedGatedEvidence(t *testing.T) 
 		"TestOneUserLiveWorkflow":                    {"CLOCKIFY_RUN_LIVE_E2E"},
 		"TestOneUserLivePaidFeatureWorkflowRecovery": {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS"},
 		"TestOneUserLiveOptionalDomainContracts":     {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS"},
+		"TestOneUserLiveTimerHappyPaths":             {"CLOCKIFY_RUN_LIVE_E2E"},
 		"TestLiveOneUserPaidFeatureHappyPaths":       {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 		"TestOneUserLiveRemainingCoverageProbes":     {"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 	}
@@ -2794,6 +2795,13 @@ func oneUserNamedLiveHappyPathEvidence() map[string]liveCoverageEvidence {
 		"clockify_audit_logs_search",
 		"clockify_entity_changes_list",
 		"clockify_invoices_info",
+	)
+	add("TestOneUserLiveTimerHappyPaths", core,
+		"clockify_entries_running",
+		"clockify_entries_timer_stop",
+		"clockify_entries_timer_status",
+		"clockify_entries_timer_switch",
+		"clockify_projects_memberships_list",
 	)
 	add("TestLiveOneUserPaidFeatureHappyPaths", []string{"CLOCKIFY_RUN_LIVE_E2E", "CLOCKIFY_LIVE_OPTIONAL_DOMAINS", "CLOCKIFY_LIVE_WORKSPACE_CONFIRM", "CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS", "CLOCKIFY_LIVE_ADMIN_ENABLED", "CLOCKIFY_LIVE_BILLING_ENABLED", "CLOCKIFY_LIVE_SETTINGS_ENABLED"},
 		"clockify_invoice_client_work",

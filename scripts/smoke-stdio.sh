@@ -9,6 +9,15 @@
 #       no old activation/policy helper tools in any response,
 #       prompts/list  -> >=1,
 #       resources/list -> >=1.
+#   - source MCP surface audit against tools/list:
+#       every tool has a non-empty description,
+#       every input property has a non-empty description,
+#       every tool carries annotations.riskClass,
+#       destructiveHint:true implies riskClass contains "destructive",
+#       known destructive tools carry destructiveHint:true.
+#
+# The audit runs against the same freshly-built temp binary, so a stale
+# or mis-built binary that drops safety metadata fails before merge.
 #
 # Requires: jq. Installed by default on ubuntu-latest runners and via
 # Homebrew on macOS.
@@ -24,6 +33,15 @@ cleanup() {
     rm -f "$BIN" "$OUT" "$ERR"
 }
 trap cleanup EXIT
+
+# audit_fail reports a source MCP surface-audit failure with the captured
+# stdout for context and exits non-zero.
+audit_fail() {
+    echo "FAIL: $1" >&2
+    echo "--- stdout ---" >&2
+    cat "$OUT" >&2
+    exit 1
+}
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "ERROR: jq is required but not installed" >&2
@@ -94,6 +112,31 @@ for forbidden in clockify_activate_group clockify_activate_tool clockify_deactiv
     fi
 done
 echo "OK: no old activation/policy helper tools surfaced"
+
+# --- Source MCP surface audit -------------------------------------------
+echo "Source MCP surface audit:"
+
+missing_desc=$(jq -r 'select(.id == 2) | [.result.tools[] | select((.description // "") == "") | .name] | join(", ")' "$OUT")
+[ -z "$missing_desc" ] || audit_fail "tools/list has tool(s) with an empty description: $missing_desc"
+
+missing_prop_desc=$(jq -r 'select(.id == 2) | [.result.tools[] as $t | ($t.inputSchema.properties // {}) | to_entries[] | select((.value.description // "") == "") | "\($t.name).\(.key)"] | join(", ")' "$OUT")
+[ -z "$missing_prop_desc" ] || audit_fail "tools/list has input propert(ies) with no description: $missing_prop_desc"
+
+missing_risk=$(jq -r 'select(.id == 2) | [.result.tools[] | select((.annotations.riskClass // [] | length) == 0) | .name] | join(", ")' "$OUT")
+[ -z "$missing_risk" ] || audit_fail "tools/list has tool(s) with no annotations.riskClass: $missing_risk"
+
+bad_destructive=$(jq -r 'select(.id == 2) | [.result.tools[] | select(.annotations.destructiveHint == true) | select((.annotations.riskClass // []) | index("destructive") | not) | .name] | join(", ")' "$OUT")
+[ -z "$bad_destructive" ] || audit_fail "destructiveHint:true tool(s) missing \"destructive\" in riskClass: $bad_destructive"
+
+echo "  OK: every tool and input property has a description; every tool has annotations.riskClass"
+
+for tool in clockify_projects_archive clockify_invoices_send clockify_time_off_archive clockify_users_invite clockify_scheduling_publish; do
+    is_destructive=$(jq -r --arg t "$tool" 'select(.id == 2) | .result.tools[] | select(.name == $t) | .annotations.destructiveHint' "$OUT")
+    if [ "$is_destructive" != "true" ]; then
+        audit_fail "$tool must carry annotations.destructiveHint=true, got \"${is_destructive:-missing}\""
+    fi
+done
+echo "  OK: known destructive tools carry destructiveHint=true"
 
 prompt_count=$(jq -r 'select(.id == 3) | .result.prompts | length // 0' "$OUT")
 if [ -z "$prompt_count" ] || [ "$prompt_count" -lt 1 ]; then
