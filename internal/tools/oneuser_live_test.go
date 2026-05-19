@@ -98,6 +98,88 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 	requireLiveID(t, cleanup, "workspaceId")
 }
 
+// TestOneUserLiveTimerHappyPaths exercises the domain timer tools against the
+// sacrificial workspace: it creates a prefixed project fixture, reads the idle
+// running-timer state, starts and switches a timer, reads running/status,
+// lists the project memberships, then stops and cleans up every created
+// object. It is core-gated (CLOCKIFY_RUN_LIVE_E2E) because timer mutations
+// touch only the caller's own time entries in the pinned workspace.
+func TestOneUserLiveTimerHappyPaths(t *testing.T) {
+	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" {
+		t.Skip("set CLOCKIFY_RUN_LIVE_E2E=1 with CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX to run live Clockify timer tests")
+	}
+	apiKey := strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY"))
+	workspaceID := strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID"))
+	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
+	if apiKey == "" || workspaceID == "" || prefix == "" {
+		t.Fatal("CLOCKIFY_API_KEY, CLOCKIFY_WORKSPACE_ID, and CLOCKIFY_LIVE_PREFIX are required when CLOCKIFY_RUN_LIVE_E2E=1")
+	}
+
+	client := clockify.NewClient(apiKey, defaultLiveBaseURL(), 30*time.Second, 2)
+	defer client.Close()
+	svc := New(client, workspaceID)
+	svc.DefaultTimezone = time.UTC
+	server := mcp.NewServer("live", svc.FullAccessRegistry())
+	initializeServer(t, server)
+	runID := cleanDemoRunID(prefix)
+	if runID == "" {
+		runID = "live"
+	}
+
+	clearLiveRunningTimer(t, svc)
+
+	project := callLiveToolOKOrRecovery(t, server, "clockify_projects_create", map[string]any{
+		"name":     liveOptionalName(prefix, runID, "timer fixture", 80),
+		"billable": false,
+	})
+	projectID := requireLiveID(t, project, "projectId")
+	t.Cleanup(func() {
+		_, _ = svc.DeleteProject(context.Background(), map[string]any{"project_id": projectID})
+	})
+
+	// Idle read before any timer is started.
+	idle := requireLiveOK(t, server, "clockify_entries_running", nil)
+	if data, ok := idle.Data.(map[string]any); ok && data["running"] == true {
+		t.Fatalf("expected no running timer after preflight clear: %+v", data)
+	}
+
+	memberships := requireLiveOK(t, server, "clockify_projects_memberships_list", map[string]any{"project_id": projectID})
+	if memberships.Data == nil {
+		t.Fatalf("clockify_projects_memberships_list returned no data: %+v", memberships)
+	}
+
+	started := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_start", map[string]any{
+		"project_id":  projectID,
+		"description": prefix + " live timer start probe",
+	})
+	startedEntry := requireLiveID(t, started, "entryId")
+	t.Cleanup(func() {
+		_, _ = svc.DeleteEntry(context.Background(), map[string]any{"entry_id": startedEntry})
+	})
+
+	status := requireLiveOK(t, server, "clockify_entries_timer_status", nil)
+	if data, ok := status.Data.(map[string]any); !ok || data["running"] != true {
+		t.Fatalf("clockify_entries_timer_status did not report a running timer: %+v", status.Data)
+	}
+
+	running := requireLiveOK(t, server, "clockify_entries_running", nil)
+	if data, ok := running.Data.(map[string]any); !ok || data["running"] != true {
+		t.Fatalf("clockify_entries_running did not report the started timer: %+v", running.Data)
+	}
+
+	switched := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_switch", map[string]any{
+		"project":     projectID,
+		"description": prefix + " live timer switch probe",
+	})
+	switchedEntry := requireLiveID(t, switched, "entryId")
+	t.Cleanup(func() {
+		_, _ = svc.DeleteEntry(context.Background(), map[string]any{"entry_id": switchedEntry})
+	})
+
+	stopped := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_stop", nil)
+	requireLiveID(t, stopped, "entryId")
+}
+
 func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 	if os.Getenv("CLOCKIFY_RUN_LIVE_E2E") != "1" || os.Getenv("CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS") != "1" {
 		t.Skip("set CLOCKIFY_RUN_LIVE_E2E=1 and CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1 to probe paid/high-risk workflow tools")
