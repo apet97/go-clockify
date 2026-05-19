@@ -115,7 +115,13 @@ identifiers are intentionally omitted — we record only the visible plan from
 | 2026-05-17 | historical | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID`, `CLOCKIFY_MAX_TOOL_RESULT_BYTES=50000`; direct local MCP stdio probe, read-only only | targeted overflow regression: `clockify_projects_list`, `clockify_time_off_policies_list`, `clockify_expenses_list`, `clockify_invoices_info`, `clockify_invoices_list`, `clockify_review_week` (`include_entries:true`) | PASS; all returned `ok:true` below 50 KB (`8662`, `7106`, `10687`, `15520`, `15520`, `36708` envelope bytes); `clockify_review_week` set `meta.truncated:true` | 0; read-only probe created no objects |
 | 2026-05-18 | historical | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_PREFIX=MCP-T4-20260518*` | `TestOneUserLiveOptionalDomainContracts` - exercises the `clockify_invoices_info` and `clockify_scheduling_publish` (dry-run) probes alongside the optional-domain surface | PASS (21.777s `internal/tools`); direct MCP confirmation: `clockify_invoices_info` returned `ok:true` (161 invoices, paged `total`/`has_more`), `clockify_scheduling_publish` dry-run returned `ok:true` ("No changes were made.") | optional-domain contract test leaves prefixed `MCP-T4-*` objects (clients/projects/tasks/tags/invoice/expense/time-off/assignment/group/holiday/webhook) in the sacrificial workspace; the `invoices_info` read and `scheduling_publish` dry-run created nothing |
 | 2026-05-17 | historical | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_API_KEY`, `CLOCKIFY_WORKSPACE_ID`; live MCP stdio sweep of the rebuilt post-test-report-fix binary | json.Number/contract fix verification - `clockify_projects_list` (`page_size:3` honored), `clockify_expenses_categories_create`+`_delete` (`price_in_cents:1850` lands, not 0), `clockify_schedule_work` (upfront `needs a user` error), `clockify_invoices_payments_delete` (`dry_run:true` preview, no mutation), `clockify_entries_list` (same-day `2026-05-17` range returns 26 entries) | PASS; every fix confirmed on the live stdio wire (`json.Number` numeric args, schema/runtime parity, same-day range) | 0 (`MCPFIX-numcheck-20260517` category created then deleted) |
-| 2026-05-18 | `5c7e92bd2e58` | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain `TestLive*` campaign, then `make live-clean-prefix` | PASS (36.965s core `tests`, 57.809s `internal/tools`, 70.178s optional `tests`) | 0 after prefix-scoped sweep; deleted 11 objects, failed 0, post-delete rescan reported `Leftovers: 0` |
+| 2026-05-18 | tested `5c7e92bd2e58`, merged `cb470725` (#131) | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain `TestLive*` campaign, then `make live-clean-prefix` | PASS (36.965s core `tests`, 57.809s `internal/tools`, 70.178s optional `tests`) | 0 after prefix-scoped sweep; deleted 11 objects, failed 0, post-delete rescan reported `Leftovers: 0` |
+| 2026-05-19 | branch `guardrails-and-live-cleanup` (pre-merge) | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*` incl. the new `TestOneUserLiveTimerHappyPaths`, optional-domain `TestLive*` campaign, then `make live-clean-prefix` | PASS (41.0s core `tests`, 64.1s `internal/tools`, 72.3s optional `tests`); `TestOneUserLiveTimerHappyPaths` drove `clockify_entries_running`/`timer_start`/`timer_status`/`timer_switch`/`timer_stop` and `clockify_projects_memberships_list` to `ok:true` | 0 — `live-clean-prefix` deleted 13 objects, failed 0, post-delete rescan `Leftovers: 0`; the scheduling assignment was matched by its linked prefixed project and deleted via the recurring-assignment route. A follow-up `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-` audit sweep cleared 249 objects accumulated from earlier sessions (104 projects, 45 invoices, 35 clients, 18 scheduling assignments, 16 holidays, 16 user-groups, 14 tags, 1 webhook), failed 0, `Leftovers: 0` |
+
+The 2026-05-18 run was executed against PR #131 head `5c7e92bd2e58` and squash-merged as
+`cb470725db340949fe760399d20e67955075e4a7`. The only difference between the tested tree
+and the merge commit is this `docs/live-tests.md` evidence row itself, written after the
+run — there are no code changes between them.
 
 `make live-contract-local` runs all three sub-suites back-to-back; on a
 shared workspace that can trip Clockify's rate budget and surface a
@@ -146,6 +152,24 @@ export CLOCKIFY_LIVE_WORKSPACE_CONFIRM="$CLOCKIFY_WORKSPACE_ID"
 make live-clean-prefix
 ```
 
-`make live-clean-prefix` deletes only objects whose name starts with
-`CLOCKIFY_LIVE_PREFIX`, and refuses to run unless `CLOCKIFY_LIVE_WORKSPACE_CONFIRM`
-matches `CLOCKIFY_WORKSPACE_ID`. It prints `Leftovers: 0` when the sweep is clean.
+`make live-clean-prefix` refuses to run unless `CLOCKIFY_LIVE_WORKSPACE_CONFIRM`
+matches `CLOCKIFY_WORKSPACE_ID`. It sweeps children before parents — scheduling
+assignments and time-off requests first, projects and clients last — and matches each
+object by a prefixed name field, except scheduling assignments, which have no name of
+their own and are matched by their linked prefixed project (by `projectId`, or by the
+embedded `projectName`/`clientName`). Time-off requests are listed through the POST-only
+search endpoint. After deleting it re-lists every collection and prints `Leftovers: 0`
+when the sweep is clean; a non-zero leftover count or any list/delete failure exits
+non-zero. `CLOCKIFY_LIVE_CLEAN_DRY_RUN=1` previews the sweep without mutating, and still
+exits non-zero if a collection list fails so the preview is never silently incomplete.
+
+`clockify_users_invite` does not leave a sweepable object. The optional-domain campaign
+invites `mcp-live-<runID>@example.com` with `send_email:false`, and the test accepts an
+`ok:true` or a recovery envelope. In a workspace already at its subscription seat cap the
+invite returns a clean `ok:false` ("more users than your subscription allows") and
+creates nothing — verified live on 2026-05-19. If the campaign runs against a workspace
+with a free seat, a successful invite can instead create a pending workspace membership;
+that member is not prefixed (`mcp-live-` differs from `CLOCKIFY_LIVE_PREFIX`) and member
+removal is an admin action outside the prefixed-delete sweep, so audit
+`clockify_users_list` with `status:PENDING` for `mcp-live-*@example.com` entries and
+remove them through the Clockify admin UI.

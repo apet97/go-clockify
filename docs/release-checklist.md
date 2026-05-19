@@ -29,11 +29,19 @@ Run these in order before tagging a release.
 ## GitHub Actions verification
 
 The release commit must have a visible, green Actions run before it is tagged.
+This repo reports CI through GitHub Actions check-runs, not the legacy combined
+commit-status API.
 
 - [ ] `gh run list --commit <release-commit>` lists a workflow run for the
       exact commit being tagged
-- [ ] `gh api repos/apet97/go-clockify/commits/<release-commit>/status`
-      reports `"state": "success"`
+- [ ] `gh api repos/apet97/go-clockify/commits/<release-commit>/check-runs
+      --jq '[.check_runs[] | {name, conclusion}]'` shows every required check
+      from `docs/branch-protection-required-checks.md` with
+      `conclusion: "success"`
+- [ ] Ignore the legacy combined-status API
+      (`gh api repos/apet97/go-clockify/commits/<release-commit>/status`): with
+      no legacy commit statuses configured it reports an empty `pending` state
+      that does not reflect the real check-run results
 - [ ] **Do not tag a commit that has no visible workflow run.** A missing run
       means CI never executed for that exact commit - push it, wait for CI to
       finish green, and only then tag.
