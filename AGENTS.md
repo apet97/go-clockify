@@ -47,7 +47,10 @@ docs as setup instructions.
 
 ## Current State
 
-- `main` is at or beyond `cb470725db34` from the perfect-finalization follow-up.
+- `main` is at or beyond `830cc12` from PR #132 (MCP guardrails and live-cleanup
+  rework): the stdio surface audit, single-marshal hot path, schema bounds, the
+  `warn` stdio log default, timer-tool live coverage, and the reworked
+  `live-clean-prefix` sweeper.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect`, `make perfect-local`, and `make perfect-live` were green for
@@ -155,7 +158,11 @@ instead of depending on Psych's exact parser wording.
   separate columns.
 - Do not count bogus-ID or unavailable-feature recovery as happy path.
 - Preserve recovery probes for destructive, noisy, or permission-sensitive paths.
-- Update ledger validation tests when evidence changes.
+- Update ledger validation evidence when coverage changes: a flipped cell needs
+  the row and the summary count in the ledger, the `oneUserNamedLive*Evidence`
+  map in `internal/tools/oneuser_quality_test.go`, and a regenerated API parity
+  matrix plus synced self-inspection assets. The drift gates fail until all of
+  it agrees.
 
 ## Known Clockify API Gotchas
 
@@ -242,6 +249,12 @@ instead of depending on Psych's exact parser wording.
 - `clockify_status` returns the pinned workspace under `data.workspace`.
 - Prefix cleanup archives clients with the existing `name` before deletion
   because Clockify validates client `PUT` bodies even for archive-only updates.
+- Scheduling assignments are deleted via
+  `DELETE /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}`
+  (optionally `seriesUpdateOption=THIS_ONE|THIS_AND_FOLLOWING|ALL`); the bare
+  `/scheduling/assignments/{assignmentId}` route returns a 404 `No static
+  resource`. `clockify_scheduling_assignments_delete` and the
+  `scripts/live-clean-prefix` sweep both use the recurring route.
 
 ## Testing Discipline
 
@@ -256,6 +269,10 @@ instead of depending on Psych's exact parser wording.
 
 - Do not use destructive git commands unless explicitly asked.
 - Do not commit ignored local files unless the user requests it.
+- The repo ships no tracked `.gitignore`: always `go build -o` to a path
+  outside the tree. A bare `go build ./cmd/...` or `./scripts/...` drops a
+  binary named after the package directory into the repo root, so stage
+  explicit paths and never `git add -A` / `git add .`.
 - Keep commits atomic and evidence-backed.
 - Keep `main` as the only maintained branch unless the maintainer explicitly
   asks for a work branch; delete/prune merged branches after landing.
