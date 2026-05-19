@@ -1004,10 +1004,8 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 				result["structuredContent"] = map[string]any{"error_translation": translator.ErrorTranslation()}
 			}
 			resp.Result = result
-		} else if guarded, tooLarge := s.applyToolResultSizeGuard(params.Name, result); tooLarge != nil {
-			resp.Result = toolResultEnvelope(tooLarge)
 		} else {
-			resp.Result = toolResultEnvelope(guarded)
+			resp.Result = toolResultEnvelopeGuarded(params.Name, result, s.MaxToolResultBytes)
 		}
 	default:
 		resp.Error = &RPCError{Code: -32601, Message: fmt.Sprintf("method not found: %s", req.Method)}

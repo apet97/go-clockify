@@ -199,8 +199,7 @@ func BenchmarkResultSizeGuardLargeList(b *testing.B) {
 	for i := range items {
 		items[i] = map[string]any{"id": i, "name": "row", "note": strings.Repeat("x", 24)}
 	}
-	server := NewServer("bench", nil)
-	server.MaxToolResultBytes = 4_000
+	const budget = 4_000
 
 	b.ReportAllocs()
 	for b.Loop() {
@@ -210,11 +209,46 @@ func BenchmarkResultSizeGuardLargeList(b *testing.B) {
 			"data":   append([]map[string]any(nil), items...),
 			"meta":   map[string]any{"page": 1, "pageSize": len(items)},
 		}
-		_, tooLarge := server.applyToolResultSizeGuard("large_list", envelope)
-		if tooLarge != nil {
-			b.Fatal("expected truncation instead of too-large envelope")
+		env := toolResultEnvelopeGuarded("large_list", envelope, budget)
+		if env["structuredContent"] == nil {
+			b.Fatal("expected a structured truncation envelope")
 		}
 	}
+}
+
+func TestToolResultEnvelopeGuardedUnderBudgetReusesMarshal(t *testing.T) {
+	result := map[string]any{
+		"ok":     true,
+		"action": "small_result",
+		"data":   []map[string]any{{"id": "one", "name": "small"}},
+	}
+	plain := toolResultEnvelope(result)
+	guarded := toolResultEnvelopeGuarded("small_result", result, 50_000)
+	disabled := toolResultEnvelopeGuarded("small_result", result, 0)
+
+	for label, env := range map[string]map[string]any{"guarded": guarded, "disabled": disabled} {
+		plainText := envelopeContentText(t, plain)
+		gotText := envelopeContentText(t, env)
+		if gotText != plainText {
+			t.Fatalf("%s content[0].text diverged from the unguarded envelope\nplain:   %s\n%s: %s", label, plainText, label, gotText)
+		}
+		if _, ok := env["structuredContent"]; !ok {
+			t.Fatalf("%s envelope dropped structuredContent for an object result", label)
+		}
+	}
+}
+
+func envelopeContentText(t *testing.T, env map[string]any) string {
+	t.Helper()
+	content, ok := env["content"].([]map[string]any)
+	if !ok || len(content) == 0 {
+		t.Fatalf("envelope content type=%T value=%+v", env["content"], env["content"])
+	}
+	text, ok := content[0]["text"].(string)
+	if !ok {
+		t.Fatalf("envelope content[0].text type=%T", content[0]["text"])
+	}
+	return text
 }
 
 func toolCallResultText(t *testing.T, resp Response) string {
