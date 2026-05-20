@@ -144,6 +144,10 @@ type ToolDescriptor struct {
 	// tools/list responses. Default false: server-side validation still uses
 	// the schema, but it is omitted from the wire to shrink tools/list.
 	AdvertiseOutputSchema bool
+	// Tiers lists advertised toolset tiers this descriptor belongs to. Tier
+	// names: "default" (everyday surface), "core", "business", "admin".
+	// The "all" tier is implicit: every descriptor belongs to it.
+	Tiers []string
 	// RiskClass is the structured risk taxonomy; defaults are derived from
 	// the boolean hints in normalizeDescriptors when this field is zero.
 	// Tier-2 tools that need finer granularity than read/write/destructive

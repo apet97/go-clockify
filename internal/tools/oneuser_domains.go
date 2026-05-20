@@ -56,6 +56,7 @@ func cloneToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 		out[i].Tool.InputSchema = deepCopyAnyMap(out[i].Tool.InputSchema)
 		out[i].Tool.OutputSchema = deepCopyAnyMap(out[i].Tool.OutputSchema)
 		out[i].Tool.Annotations = deepCopyAnyMap(out[i].Tool.Annotations)
+		out[i].Tiers = append([]string(nil), out[i].Tiers...)
 	}
 	return out
 }
