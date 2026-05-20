@@ -224,6 +224,9 @@ make check        # adds the race detector and repo hygiene checks
 
 Live tests run against real Clockify, are opt-in, and must target a sacrificial
 workspace — see [docs/live-tests.md](docs/live-tests.md).
+The `nightly-live` GitHub Actions workflow re-runs the live suite against the
+sacrificial workspace; see
+[docs/live-tests.md](docs/live-tests.md#nightly-drift-detection).
 
 ## License
 

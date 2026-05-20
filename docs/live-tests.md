@@ -69,6 +69,24 @@ Or use the Makefile wrapper after the required environment is set:
 make live-contract-local
 ```
 
+## Nightly drift detection
+
+`.github/workflows/nightly-live.yml` runs `make perfect-live` at 07:00 UTC
+every day. The job uses the same sacrificial workspace credentials as local
+live tests. Test-created data uses a run-specific
+`MCP-LIVE-CI-${run_id}-` prefix, and the unconditional cleanup step sweeps the
+broader `MCP-LIVE-CI-` prefix so stale CI leftovers do not accumulate.
+
+On failure, the workflow opens a single rolling GitHub Issue titled
+"Nightly live drift" (label: `drift`) with the run URL and the last 80 lines
+of redacted output. The same issue is updated on subsequent failures and
+auto-closed on the next green run.
+
+To trigger a manual run: GitHub Actions -> "nightly-live" -> "Run workflow".
+
+This workflow is **not** on the branch-protection required-checks list; it is a
+continuous-detection signal, not a PR gate.
+
 ## Contract Coverage
 
 | Test | What it proves |
