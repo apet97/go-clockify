@@ -125,7 +125,9 @@ func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
 		"CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  4",
 		"CLOCKIFY_MAX_MESSAGE_SIZE          4194304",
 		"CLOCKIFY_MAX_TOOL_RESULT_BYTES     50000",
-		"CLOCKIFY_TOOLSET                   all",
+		"CLOCKIFY_TOOLSET                   default",
+		"Registry loaded:    156 tools",
+		"Advertised surface: 16 tools (toolset=default)",
 		"CLOCKIFY_ENABLE_RAW_WRITES         false",
 		"CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   (none)",
 		"Result: OK",
@@ -175,6 +177,8 @@ func TestRunDoctorLiveSuccess(t *testing.T) {
 	for _, want := range []string{
 		"CLOCKIFY_ENABLE_RAW_WRITES         true",
 		"CLOCKIFY_TOOLSET                   admin",
+		"Registry loaded:    156 tools",
+		"Advertised surface: 150 tools (toolset=admin)",
 		"CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   hooks.example.com,.trusted.test",
 		"GET /user                         OK",
 		"user_id: user1",
@@ -350,8 +354,8 @@ func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
 
 	list := responses[2]
 	tools := arrayField(t, resultObject(t, list, ""), "tools")
-	if len(tools) != 156 {
-		t.Fatalf("tools/list count=%d want 156", len(tools))
+	if len(tools) != 16 {
+		t.Fatalf("tools/list count=%d want 16", len(tools))
 	}
 
 	call := responses[3]

@@ -116,6 +116,9 @@ func (s *Server) buildToolListLocked() []Tool {
 	}, 0, len(s.tools))
 	priorityAware := false
 	for name, descriptor := range s.tools {
+		if s.advertisedTools != nil && !s.advertisedTools[name] {
+			continue
+		}
 		prio, ok := toolPriority(descriptor.Tool)
 		if !ok {
 			prio = 50

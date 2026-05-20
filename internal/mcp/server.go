@@ -187,6 +187,9 @@ type Server struct {
 
 	mu    sync.RWMutex
 	tools map[string]ToolDescriptor
+	// advertisedTools limits tools/list without limiting tools/call. Nil means
+	// every loaded tool is advertised.
+	advertisedTools map[string]bool
 	// toolListCache stores the sorted, filtered tools/list snapshot.
 	// Protected by mu and invalidated when descriptors or visibility changes.
 	toolListCache      []Tool
@@ -315,6 +318,25 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 	}
 	s.hub.onRemove = s.resourceSubs.dropNotifier
 	return s
+}
+
+// SetAdvertisedTools limits tools/list to descriptors in advertised while
+// keeping the full loaded registry dispatch-callable by name. Passing nil
+// advertises every loaded tool.
+func (s *Server) SetAdvertisedTools(advertised []ToolDescriptor) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if advertised == nil {
+		s.advertisedTools = nil
+		s.invalidateToolListCacheLocked()
+		return
+	}
+	visible := make(map[string]bool, len(advertised))
+	for _, d := range advertised {
+		visible[d.Tool.Name] = true
+	}
+	s.advertisedTools = visible
+	s.invalidateToolListCacheLocked()
 }
 
 // registerInflight stores a cancel func keyed by JSON-RPC request ID so

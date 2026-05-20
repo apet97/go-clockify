@@ -129,7 +129,10 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		}
 		service.DefaultTimezone = loc
 	}
-	server := mcp.NewServer(effective, service.RegistryForToolset(cfg.Toolset))
+	fullRegistry := service.FullAccessRegistry()
+	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
+	server := mcp.NewServer(effective, fullRegistry)
+	server.SetAdvertisedTools(advertisedRegistry)
 	server.StaticToolList = true
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
 	server.ConfigureToolLimits(cfg.ToolRateLimitPerMinute)
@@ -200,6 +203,12 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "config error: %v\n", err)
 		return 2
 	}
+	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 0)
+	defer client.Close()
+	service := tools.New(client, cfg.WorkspaceID)
+	registryLoaded := len(service.FullAccessRegistry())
+	advertisedSurface := len(service.RegistryForToolset(cfg.Toolset))
+
 	_, _ = fmt.Fprintf(stdout, "clockify-mcp doctor - one-user configuration\n\n")
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_API_KEY       set (redacted)\n")
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WORKSPACE_ID  %s\n", cfg.WorkspaceID)
@@ -212,6 +221,8 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_TOOL_RESULT_BYTES     %d\n", cfg.MaxToolResultBytes)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE %d\n", cfg.ToolRateLimitPerMinute)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
+	_, _ = fmt.Fprintf(stdout, "Registry loaded:    %d tools\n", registryLoaded)
+	_, _ = fmt.Fprintf(stdout, "Advertised surface: %d tools (toolset=%s)\n", advertisedSurface, cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY %t\n", cfg.RawWriteDocumentedOnly)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   %s\n", optionalList(cfg.WebhookAllowedDomains, "(none)"))
