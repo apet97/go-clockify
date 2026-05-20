@@ -140,6 +140,10 @@ type ToolDescriptor struct {
 	ReadOnlyHint    bool
 	DestructiveHint bool
 	IdempotentHint  bool
+	// AdvertiseOutputSchema controls whether Tool.OutputSchema appears in
+	// tools/list responses. Default false: server-side validation still uses
+	// the schema, but it is omitted from the wire to shrink tools/list.
+	AdvertiseOutputSchema bool
 	// RiskClass is the structured risk taxonomy; defaults are derived from
 	// the boolean hints in normalizeDescriptors when this field is zero.
 	// Tier-2 tools that need finer granularity than read/write/destructive
