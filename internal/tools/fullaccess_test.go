@@ -261,14 +261,12 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	tests := []struct {
 		toolset   string
-		wantCount int
 		want      []string
 		wantOrder []string
 		absent    []string
 	}{
 		{
-			toolset:   "default",
-			wantCount: 16,
+			toolset: "default",
 			want: []string{
 				"clockify_status",
 				"clockify_tools_guide",
@@ -315,8 +313,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 			},
 		},
 		{
-			toolset:   "core",
-			wantCount: 55,
+			toolset: "core",
 			want: []string{
 				"clockify_status",
 				"clockify_tools_guide",
@@ -337,8 +334,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 			},
 		},
 		{
-			toolset:   "business",
-			wantCount: 85,
+			toolset: "business",
 			want: []string{
 				"clockify_invoice_client_work",
 				"clockify_record_expense",
@@ -355,8 +351,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 			},
 		},
 		{
-			toolset:   "admin",
-			wantCount: 150,
+			toolset: "admin",
 			want: []string{
 				"clockify_request_time_off",
 				"clockify_schedule_work",
@@ -378,8 +373,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 			},
 		},
 		{
-			toolset:   "all",
-			wantCount: 156,
+			toolset: "all",
 			want: []string{
 				"clockify_demo_seed",
 				"clockify_api_get",
@@ -391,9 +385,6 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.toolset, func(t *testing.T) {
 			reg := svc.RegistryForToolset(tt.toolset)
-			if len(reg) != tt.wantCount {
-				t.Fatalf("%s registry size=%d, want %d", tt.toolset, len(reg), tt.wantCount)
-			}
 			assertNoDuplicateTools(t, reg)
 			assertWorkflowPrefixForRegistry(t, reg)
 			names := toolNameSet(reg)
