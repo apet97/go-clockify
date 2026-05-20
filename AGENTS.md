@@ -41,9 +41,10 @@ product definition.
 11. `docs/release-checklist.md` - deterministic and live release gate sequence.
 12. `docs/branch-protection-required-checks.md` - required `main` CI checks.
 
-Historical docs explain prior decisions; current work starts from the files
-above plus the code. Do not route users to archived or bannered platform-era
-docs as setup instructions.
+Historical docs explain prior decisions and are preserved off-main; see
+`docs/archive/README.md` for the archive branch pointer. Current work starts
+from the files above plus the code. Do not route users to the archive branch
+as setup instructions.
 
 ## Current State
 

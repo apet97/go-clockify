@@ -12,9 +12,9 @@ of your MCP client.
 
 ## Current docs
 
-Start current one-user setup from this README. Bannered historical pages and
-everything under `docs/archive/platform-era/` are preserved for audit history
-only; they are not setup instructions for this product.
+This README is the setup entry point. The complete tracked doc set lives
+under `docs/`. Pre-one-user platform-era designs are preserved off-main,
+outside the current setup path.
 
 - Setup, build, doctor, Claude config, and first calls: this README
 - Workflow examples: [docs/agent-cookbook.md](docs/agent-cookbook.md)

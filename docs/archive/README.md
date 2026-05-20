@@ -1,12 +1,20 @@
-# Historical Handoffs
+# Archive
 
 > **Historical artifact. Not current one-user MCP product documentation.**
-> Preserved for platform-era audit/history only. Start current one-user work from `README.md`, `docs/agent-cookbook.md`, `docs/tool-catalog.md`, and `docs/goals/oneuser-tool-coverage.md`.
 
+Pre-one-user product docs (the platform-era tenants/OIDC/HTTP/gRPC/Postgres
+designs and one-shot operational records) are preserved on the long-lived
+branch `archive/platform-era`. They are not setup instructions for the
+current product.
 
-Files in this directory are preserved for audit history only. Do not use
-them as active launch-candidate checklists, prompt packets, or branch
-handoffs; start current autonomous work from `docs/agent-handoff.md`.
+To read a historical file:
 
-`platform-era/` contains older hosted/platform launch-readiness material
-that no longer describes the active one-user, stdio-only product path.
+    git show archive/platform-era:docs/archive/platform-era/<filename>
+
+Or check out the branch locally for browsing:
+
+    git fetch origin archive/platform-era
+    git switch archive/platform-era
+
+Current product docs live on `main` and start from `README.md` and
+`AGENTS.md`.
