@@ -24,7 +24,7 @@ const (
 	DefaultMaxToolResultBytes             = 50_000
 	MaxMessageSize                        = 100 * 1024 * 1024
 	MaxToolResultBytes                    = 100 * 1024 * 1024
-	DefaultToolset                        = "all"
+	DefaultToolset                        = "default"
 	DefaultCircuitBreakerFailureThreshold = 5
 	DefaultCircuitBreakerOpenDuration     = 45 * time.Second
 	DefaultCircuitBreakerHalfOpenProbes   = 1
@@ -254,10 +254,10 @@ func parseToolsetEnv() (string, error) {
 		return DefaultToolset, nil
 	}
 	switch raw {
-	case "core", "business", "admin", "all":
+	case "default", "core", "business", "admin", "all":
 		return raw, nil
 	default:
-		return "", fmt.Errorf("CLOCKIFY_TOOLSET must be one of core, business, admin, all")
+		return "", fmt.Errorf("CLOCKIFY_TOOLSET must be one of default, core, business, admin, all")
 	}
 }
 

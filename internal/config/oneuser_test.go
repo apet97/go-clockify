@@ -210,6 +210,16 @@ func TestLoadOneUserAcceptsRuntimeConfigBoundsAndNormalization(t *testing.T) {
 				}
 			},
 		},
+		"trimmed mixed case default toolset": {
+			envName: "CLOCKIFY_TOOLSET",
+			value:   " Default ",
+			assert: func(t *testing.T, cfg OneUserConfig) {
+				t.Helper()
+				if cfg.Toolset != "default" {
+					t.Fatalf("Toolset = %q, want default", cfg.Toolset)
+				}
+			},
+		},
 		"explicit raw writes false": {
 			envName: "CLOCKIFY_ENABLE_RAW_WRITES",
 			value:   "false",
