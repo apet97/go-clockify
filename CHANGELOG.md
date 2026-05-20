@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-21
+
+### Breaking — advertised toolset narrowed
+
+The default `CLOCKIFY_TOOLSET` changes from `all` to `default`. Under the new
+default, `tools/list` advertises 16 daily-time-tracking tools: status, the
+timer workflows (start/stop/switch/log), the daily/weekly review tools,
+fix_entry, create_work_package, tools_guide, plus entry CRUD
+(running/list/get/update/delete) and the summary report.
+
+The startup registry continues to load all 156 tools. Tools not advertised
+under the new default remain dispatch-callable by name. To restore the previous
+behavior, set:
+
+```bash
+export CLOCKIFY_TOOLSET=all
+```
+
+Other tiers continue to behave as before: `core`, `business`, `admin`.
+
 ## [0.2.0] - 2026-05-19
 
 Hardening and guardrail release: a source MCP surface audit, a single-marshal
