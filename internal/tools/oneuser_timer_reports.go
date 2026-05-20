@@ -10,7 +10,7 @@ import (
 func (s *Service) timerAndReportDescriptors() []mcp.ToolDescriptor {
 	out := make([]mcp.ToolDescriptor, 0, 8)
 	out = append(out,
-		firstSliceDescriptor(66, toolRO("clockify_entries_running", "Return the current running timer, if any.", objectSchema(nil)), s.EntriesRunning),
+		defaultTier(firstSliceDescriptor(66, toolRO("clockify_entries_running", "Return the current running timer, if any.", objectSchema(nil)), s.EntriesRunning)),
 		firstSliceDescriptor(67, toolRW("clockify_entries_timer_start", "Start a running time-entry timer for the current user.", objectSchema(map[string]any{"properties": map[string]any{
 			"project_id":  map[string]any{"type": "string"},
 			"project":     map[string]any{"type": "string"},
@@ -28,7 +28,7 @@ func (s *Service) timerAndReportDescriptors() []mcp.ToolDescriptor {
 			"billable":    map[string]any{"type": "boolean"},
 		}})), s.EntriesTimerSwitch),
 		firstSliceDescriptor(104, toolRO("clockify_reports_detailed", "Run the local detailed time report helper. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_detailed", "report", "", s.DetailedReport)),
-		firstSliceDescriptor(105, toolRO("clockify_reports_summary", "Run the local summary report helper. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_summary", "report", "", s.SummaryReport)),
+		defaultTier(firstSliceDescriptor(105, toolRO("clockify_reports_summary", "Run the local summary report helper. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_summary", "report", "", s.SummaryReport))),
 		firstSliceDescriptor(106, toolRO("clockify_reports_weekly", "Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. Large results truncate to the size cap.", reportHelperSchema()), aliasHandler("clockify_reports_weekly", "report", "", s.WeeklySummary)),
 	)
 	return out

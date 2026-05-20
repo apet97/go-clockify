@@ -161,10 +161,10 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			return s.DeleteTag(ctx, aliasArg(args, "tag_id", "tag"))
 		}),
 
-		nativeDomainTool(62, toolRO("clockify_entries_get", "Get one time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+		defaultTier(nativeDomainTool(62, toolRO("clockify_entries_get", "Get one time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
 			"entry_id": map[string]any{"type": "string"},
-		}})), "entry", "", s.GetEntry),
-		nativeDomainTool(63, toolRWIdem("clockify_entries_update", "Update a time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+		}})), "entry", "", s.GetEntry)),
+		defaultTier(nativeDomainTool(63, toolRWIdem("clockify_entries_update", "Update a time entry by ID.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
 			"entry_id":    map[string]any{"type": "string"},
 			"start":       map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 			"end":         map[string]any{"type": "string", "description": flexibleDatetimeDescription},
@@ -176,11 +176,11 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"tag":         map[string]any{"type": "string", "description": "Tag name or ID."},
 			"tag_ids":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 			"billable":    map[string]any{"type": "boolean"},
-		}})), "entry", "updated", s.UpdateEntry),
-		nativeDomainTool(64, toolDestructive("clockify_entries_delete", "Permanently delete a time entry by ID. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
+		}})), "entry", "updated", s.UpdateEntry)),
+		defaultTier(nativeDomainTool(64, toolDestructive("clockify_entries_delete", "Permanently delete a time entry by ID. Destructive; supports dry_run preview.", objectSchema(map[string]any{"required": []string{"entry_id"}, "properties": map[string]any{
 			"entry_id": map[string]any{"type": "string"},
 			"dry_run":  map[string]any{"type": "boolean"},
-		}})), "entry", "deleted", s.DeleteEntry),
+		}})), "entry", "deleted", s.DeleteEntry)),
 
 		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace, paginated via page and page_size.", userListSchema()), "user", "", s.ListUsers),
 		nativeDomainTool(1101, toolRO("clockify_users_profile", "Get the current Clockify user.", objectSchema(nil)), "user", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {

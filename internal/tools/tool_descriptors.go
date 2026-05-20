@@ -109,6 +109,11 @@ func toolDestructive(name, desc string, schema map[string]any) mcp.Tool {
 	return newTool(name, desc, schema, false, true, false)
 }
 
+func defaultTier(d mcp.ToolDescriptor) mcp.ToolDescriptor {
+	d.Tiers = append(d.Tiers, "default", "core")
+	return d
+}
+
 func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 	for i := range in {
 		if in[i].Tool.Annotations == nil {

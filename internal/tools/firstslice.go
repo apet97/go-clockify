@@ -101,7 +101,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"name": map[string]any{"type": "string"},
 			},
 		})), s.TagsCreate),
-		firstSliceDescriptor(60, toolRO("clockify_entries_list", "List current-user time entries in the pinned workspace, paginated via page and page_size.", paginationSchema(map[string]any{
+		defaultTier(firstSliceDescriptor(60, toolRO("clockify_entries_list", "List current-user time entries in the pinned workspace, paginated via page and page_size.", paginationSchema(map[string]any{
 			"properties": map[string]any{
 				"start":            map[string]any{"type": "string", "description": flexibleDatetimeDescription},
 				"end":              map[string]any{"type": "string", "description": flexibleDatetimeDescription},
@@ -116,7 +116,7 @@ func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 				"in_progress":      map[string]any{"type": "string"},
 				"get_week_before":  map[string]any{"type": "string"},
 			},
-		})), s.EntriesList),
+		})), s.EntriesList)),
 		firstSliceDescriptor(61, toolRW("clockify_entries_create", "Create a current-user time entry in the pinned workspace. This is a direct create with no overlap guard; use clockify_log_work for overlap-protected logging.", objectSchema(map[string]any{
 			"required": []string{"start"},
 			"properties": map[string]any{
