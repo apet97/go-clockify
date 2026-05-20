@@ -22,9 +22,19 @@ stops once the originating call is cancelled or times out.
 
 The full tool registry (156 tools) is fixed at startup and never changes during a
 session, so `tools/list` returns every tool in one response with no `nextCursor`.
-`TestToolsListPayloadWithinByteBudget` pins the serialized payload under a fixed
-512 KiB budget, far below the 4 MiB default message size, so a single-page response
-is always safe to deliver.
+`TestToolsListBudgetWire` pins the serialized payload under a fixed 280 KiB
+budget, far below the 4 MiB default message size, so a single-page response is
+always safe to deliver.
+
+## Wire vs. validation: outputSchema
+
+`tools/list` advertises `outputSchema` only for the 14 composed workflow tools
+whose synthesized response shape helps an agent chain calls. Domain CRUD, raw
+fallback, and the non-composed workflows (`clockify_tools_guide`,
+`clockify_demo_seed`, `clockify_demo_cleanup`) omit `outputSchema` on the wire.
+Server-side output validation is unchanged: every tool still validates its result
+against the schema in its `mcp.ToolDescriptor`. The generated dev catalog at
+`clockify://mcp/tool-catalog` exposes full schemas for clients that want them.
 
 ## Rate-control model
 
