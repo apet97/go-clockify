@@ -16,9 +16,9 @@ import (
 
 // TestTier2_Invoices_FullSweep exercises every handler in the invoices
 // domain group via mocked Clockify API responses. The goal is broad
-// coverage of the listInvoices→...→deleteInvoiceItem chain — each handler
-// is otherwise unreachable from the existing test surface and contributes
-// to the internal/tools coverage gap.
+// coverage of invoice read/write/guidance/item paths — each handler is
+// otherwise unreachable from the existing test surface and contributes to the
+// internal/tools coverage gap.
 func TestTier2_Invoices_FullSweep(t *testing.T) {
 	requests := []struct {
 		method string
@@ -92,187 +92,167 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	svc := New(client, "ws1")
 	ctx := context.Background()
 
-	// 1. listInvoices
-	res, err := svc.listInvoices(ctx, map[string]any{"page": 2, "page_size": 25})
-	mustOK(t, res, err, "clockify_list_invoices")
+	t.Run("read and export", func(t *testing.T) {
+		res, err := svc.listInvoices(ctx, map[string]any{"page": 2, "page_size": 25})
+		mustOK(t, res, err, "clockify_list_invoices")
 
-	// 2. getInvoice — happy
-	res, err = svc.getInvoice(ctx, map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_get_invoice")
+		res, err = svc.getInvoice(ctx, map[string]any{"invoice_id": "inv1"})
+		mustOK(t, res, err, "clockify_get_invoice")
 
-	// 2b. exportInvoice — defaults user_locale to en-US
-	res, err = svc.exportInvoice(ctx, map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_export_invoice")
-	raw, ok := res.Data.(map[string]any)
-	if !ok {
-		t.Fatalf("exportInvoice data = %#v", res.Data)
-	}
-	assertRawFileEnvelope(t, raw, "document.pdf", []byte("%PDF invoice"))
-	if raw["contentType"] != "application/pdf" || raw["filename"] != "document.pdf" {
-		t.Fatalf("exportInvoice MIME inference failed: %#v", raw)
-	}
-
-	// 2c. getInvoice — validation error (empty id)
-	if _, err := svc.getInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
-
-	// 3. createInvoice — happy
-	res, err = svc.createInvoice(ctx, map[string]any{
-		"client_id":        "c1",
-		"number":           "INV-NEW",
-		"issued_date":      "2026-04-01T00:00:00Z",
-		"currency":         "USD",
-		"due_date":         "2026-05-01T00:00:00Z",
-		"note":             "Q2 invoice",
-		"subject":          "Design sprint",
-		"bill_from":        "Studio LLC",
-		"client_address":   "Client HQ",
-		"tax_percent":      10.0,
-		"tax2_percent":     2.5,
-		"discount_percent": 5.0,
-		"tax_type":         "SIMPLE",
-	})
-	mustOK(t, res, err, "clockify_create_invoice")
-
-	// 3b. createInvoice — validation
-	if _, err := svc.createInvoice(ctx, map[string]any{"client_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty client_id")
-	}
-
-	// 4. updateInvoice — happy
-	res, err = svc.updateInvoice(ctx, map[string]any{
-		"invoice_id":  "inv1",
-		"client_id":   "c1",
-		"number":      "INV-1A",
-		"issued_date": "2026-04-02T00:00:00Z",
-		"currency":    "EUR",
-		"due_date":    "2026-06-01T00:00:00Z",
-		"note":        "updated",
-		"status":      "SENT",
-	})
-	mustOK(t, res, err, "clockify_update_invoice")
-
-	// 4b. updateInvoice — validation
-	if _, err := svc.updateInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
-
-	// 5a. deleteInvoice dry-run — fetches the invoice for preview
-	res, err = svc.deleteInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true})
-	mustOK(t, res, err, "clockify_delete_invoice")
-
-	// 5b. deleteInvoice executed
-	res, err = svc.deleteInvoice(ctx, map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_delete_invoice")
-
-	// 5c. deleteInvoice validation
-	if _, err := svc.deleteInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
-
-	// 6a. sendInvoice dry-run — API surface is unsupported, so even a preview
-	// returns recovery guidance instead of pretending a send endpoint exists.
-	if _, err = svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true}); err == nil || !strings.Contains(err.Error(), "does not expose") {
-		t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
-	}
-
-	// 6b. sendInvoice executed
-	if _, err = svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "does not expose") {
-		t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
-	}
-
-	// 6c. sendInvoice validation
-	if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
-
-	// 7a. markInvoicePaid dry-run — must GET (preview), not PUT
-	beforePaidDryRun := len(requests)
-	res, err = svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true})
-	mustOK(t, res, err, "clockify_mark_invoice_paid")
-	for _, r := range requests[beforePaidDryRun:] {
-		if r.method == "PUT" {
-			t.Fatalf("markInvoicePaid dry-run must not PUT, got %s %s", r.method, r.path)
+		res, err = svc.exportInvoice(ctx, map[string]any{"invoice_id": "inv1"})
+		mustOK(t, res, err, "clockify_export_invoice")
+		raw, ok := res.Data.(map[string]any)
+		if !ok {
+			t.Fatalf("exportInvoice data = %#v", res.Data)
 		}
-	}
+		assertRawFileEnvelope(t, raw, "document.pdf", []byte("%PDF invoice"))
+		if raw["contentType"] != "application/pdf" || raw["filename"] != "document.pdf" {
+			t.Fatalf("exportInvoice MIME inference failed: %#v", raw)
+		}
 
-	// 7b. markInvoicePaid executed — direct status mutation is not the
-	// documented paid path; guide callers to creating a payment instead.
-	if _, err = svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "clockify_invoices_payments_create") {
-		t.Fatalf("expected payment-create recovery guidance, got %v", err)
-	}
-
-	// 7c. markInvoicePaid validation
-	if _, err := svc.markInvoicePaid(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
-
-	// 8. listInvoiceItems — reads embedded items from getInvoice
-	res, err = svc.listInvoiceItems(ctx, map[string]any{"invoice_id": "inv1"})
-	mustOK(t, res, err, "clockify_list_invoice_items")
-	items, ok := res.Data.([]InvoiceItemView)
-	if !ok {
-		t.Fatalf("listInvoiceItems data: expected []InvoiceItemView, got %T", res.Data)
-	}
-	if len(items) != 1 || items[0]["id"] != "item1" {
-		t.Fatalf("listInvoiceItems items: expected [{id:item1}], got %#v", items)
-	}
-
-	// 8b. listInvoiceItems validation
-	if _, err := svc.listInvoiceItems(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
-
-	// 9. addInvoiceItem
-	res, err = svc.addInvoiceItem(ctx, map[string]any{
-		"invoice_id":  "inv1",
-		"description": "Consulting",
-		"quantity":    8,
-		"unit_price":  150,
-		"item_type":   "NEW DEFAULT",
+		if _, err := svc.getInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
 	})
-	mustOK(t, res, err, "clockify_add_invoice_item")
 
-	// 9b. addInvoiceItem validation
-	if _, err := svc.addInvoiceItem(ctx, map[string]any{"invoice_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
+	t.Run("write invoice", func(t *testing.T) {
+		res, err := svc.createInvoice(ctx, map[string]any{
+			"client_id":        "c1",
+			"number":           "INV-NEW",
+			"issued_date":      "2026-04-01T00:00:00Z",
+			"currency":         "USD",
+			"due_date":         "2026-05-01T00:00:00Z",
+			"note":             "Q2 invoice",
+			"subject":          "Design sprint",
+			"bill_from":        "Studio LLC",
+			"client_address":   "Client HQ",
+			"tax_percent":      10.0,
+			"tax2_percent":     2.5,
+			"discount_percent": 5.0,
+			"tax_type":         "SIMPLE",
+		})
+		mustOK(t, res, err, "clockify_create_invoice")
 
-	// 10. updateInvoiceItem — Clockify exposes no item-update endpoint; the tool errors with recovery guidance.
-	if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "unsupported") {
-		t.Fatalf("expected unsupported-endpoint error from updateInvoiceItem, got %v", err)
-	}
-	// 10c. validation — missing invoice_id
-	if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
+		if _, err := svc.createInvoice(ctx, map[string]any{"client_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty client_id")
+		}
 
-	// 11a. deleteInvoiceItem dry-run
-	res, err = svc.deleteInvoiceItem(ctx, map[string]any{
-		"invoice_id": "inv1", "item_id": "item1", "dry_run": true,
+		res, err = svc.updateInvoice(ctx, map[string]any{
+			"invoice_id":  "inv1",
+			"client_id":   "c1",
+			"number":      "INV-1A",
+			"issued_date": "2026-04-02T00:00:00Z",
+			"currency":    "EUR",
+			"due_date":    "2026-06-01T00:00:00Z",
+			"note":        "updated",
+			"status":      "SENT",
+		})
+		mustOK(t, res, err, "clockify_update_invoice")
+
+		if _, err := svc.updateInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+
+		res, err = svc.deleteInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true})
+		mustOK(t, res, err, "clockify_delete_invoice")
+
+		res, err = svc.deleteInvoice(ctx, map[string]any{"invoice_id": "inv1"})
+		mustOK(t, res, err, "clockify_delete_invoice")
+
+		if _, err := svc.deleteInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
 	})
-	mustOK(t, res, err, "clockify_delete_invoice_item")
 
-	// 11b. deleteInvoiceItem executed
-	res, err = svc.deleteInvoiceItem(ctx, map[string]any{"invoice_id": "inv1", "item_id": "item1"})
-	mustOK(t, res, err, "clockify_delete_invoice_item")
+	t.Run("unsupported send guidance", func(t *testing.T) {
+		if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true}); err == nil || !strings.Contains(err.Error(), "does not expose") {
+			t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
+		}
+		if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "does not expose") {
+			t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
+		}
+		if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+	})
 
-	// 11c. deleteInvoiceItem validation — missing item_index/item_id
-	if _, err := svc.deleteInvoiceItem(ctx, map[string]any{"invoice_id": "inv1", "item_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty item_index/item_id")
-	}
-	// 11d. validation — missing invoice_id
-	if _, err := svc.deleteInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
-		t.Fatal("expected validation error for empty invoice_id")
-	}
+	t.Run("paid guidance", func(t *testing.T) {
+		beforePaidDryRun := len(requests)
+		res, err := svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true})
+		mustOK(t, res, err, "clockify_mark_invoice_paid")
+		for _, r := range requests[beforePaidDryRun:] {
+			if r.method == "PUT" {
+				t.Fatalf("markInvoicePaid dry-run must not PUT, got %s %s", r.method, r.path)
+			}
+		}
 
-	// Sanity: at least 14 upstream requests (deleteInvoiceItem dry-run uses
-	// MinimalResult and does not hit the network; updateInvoiceItem reports an
-	// unsupported endpoint without an upstream call).
-	if len(requests) < 14 {
-		t.Fatalf("expected at least 14 upstream requests, got %d: %+v", len(requests), requests)
-	}
+		if _, err := svc.markInvoicePaid(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "clockify_invoices_payments_create") {
+			t.Fatalf("expected payment-create recovery guidance, got %v", err)
+		}
+		if _, err := svc.markInvoicePaid(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+	})
+
+	t.Run("invoice items", func(t *testing.T) {
+		res, err := svc.listInvoiceItems(ctx, map[string]any{"invoice_id": "inv1"})
+		mustOK(t, res, err, "clockify_list_invoice_items")
+		items, ok := res.Data.([]InvoiceItemView)
+		if !ok {
+			t.Fatalf("listInvoiceItems data: expected []InvoiceItemView, got %T", res.Data)
+		}
+		if len(items) != 1 || items[0]["id"] != "item1" {
+			t.Fatalf("listInvoiceItems items: expected [{id:item1}], got %#v", items)
+		}
+
+		if _, err := svc.listInvoiceItems(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+
+		res, err = svc.addInvoiceItem(ctx, map[string]any{
+			"invoice_id":  "inv1",
+			"description": "Consulting",
+			"quantity":    8,
+			"unit_price":  150,
+			"item_type":   "NEW DEFAULT",
+		})
+		mustOK(t, res, err, "clockify_add_invoice_item")
+
+		if _, err := svc.addInvoiceItem(ctx, map[string]any{"invoice_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+
+		if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "unsupported") {
+			t.Fatalf("expected unsupported-endpoint error from updateInvoiceItem, got %v", err)
+		}
+		if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+
+		res, err = svc.deleteInvoiceItem(ctx, map[string]any{
+			"invoice_id": "inv1", "item_id": "item1", "dry_run": true,
+		})
+		mustOK(t, res, err, "clockify_delete_invoice_item")
+
+		res, err = svc.deleteInvoiceItem(ctx, map[string]any{"invoice_id": "inv1", "item_id": "item1"})
+		mustOK(t, res, err, "clockify_delete_invoice_item")
+
+		if _, err := svc.deleteInvoiceItem(ctx, map[string]any{"invoice_id": "inv1", "item_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty item_index/item_id")
+		}
+		if _, err := svc.deleteInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
+			t.Fatal("expected validation error for empty invoice_id")
+		}
+	})
+
+	t.Run("request coverage", func(t *testing.T) {
+		// deleteInvoiceItem dry-run uses MinimalResult and does not hit the
+		// network; updateInvoiceItem reports an unsupported endpoint without an
+		// upstream call.
+		if len(requests) < 14 {
+			t.Fatalf("expected at least 14 upstream requests, got %d: %+v", len(requests), requests)
+		}
+	})
 }
 
 // TestTier2_Invoices_BuilderShape verifies invoiceHandlers builds the
