@@ -178,7 +178,7 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | --- | --- | --- |
 | `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL |
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
-| `CLOCKIFY_TOOLSET` | `all` | Tool surface: `core`, `business`, `admin`, or `all` |
+| `CLOCKIFY_TOOLSET` | `default` | Tool surface advertised on the wire: `default` (16 everyday tools), `core`, `business`, `admin`, or `all` (156). The full registry of 156 tools is always loaded; `tools/list` advertises a subset. |
 | `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `0` | Optional tool-invocation rate cap per minute; `0` disables it |
 | `CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS` | `4` | Max concurrent `tools/call` handlers |
 | `CLOCKIFY_MAX_MESSAGE_SIZE` | `4194304` | Max inbound JSON-RPC message bytes (`1`..`104857600`) |
@@ -194,6 +194,18 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | `MCP_LOG_LEVEL` | `warn` | Log level: `debug`, `info`, `warn`, `error`; the stdio runtime defaults to `warn` so a clean session leaves stderr quiet |
 
 Run `clockify-mcp doctor` to see every resolved value.
+
+### Restoring the previous default
+
+Earlier versions defaulted to `CLOCKIFY_TOOLSET=all`. To keep that behavior
+after upgrading, set:
+
+```bash
+export CLOCKIFY_TOOLSET=all
+```
+
+The full 156-tool surface remains available; only the *advertised* default has
+narrowed.
 
 ## Compatibility
 

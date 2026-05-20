@@ -21,10 +21,13 @@ stops once the originating call is cancelled or times out.
 ## `tools/list` is intentionally single-page
 
 The full tool registry (156 tools) is fixed at startup and never changes during a
-session, so `tools/list` returns every tool in one response with no `nextCursor`.
-`TestToolsListBudgetWire` pins the serialized payload under a fixed 280 KiB
-budget, far below the 4 MiB default message size, so a single-page response is
-always safe to deliver.
+session. `tools/list` returns the advertised toolset in one response with no
+`nextCursor`: `default` advertises 16 everyday tools, while
+`CLOCKIFY_TOOLSET=all` advertises all 156. The full registry remains
+dispatch-callable by name regardless of advertisement, so a client that already
+knows an unadvertised tool can call it. `TestToolsListBudgetWire` pins both the
+default and all-tool serialized payloads below fixed budgets, far below the 4
+MiB default message size, so a single-page response is always safe to deliver.
 
 ## Wire vs. validation: outputSchema
 
@@ -35,6 +38,16 @@ fallback, and the non-composed workflows (`clockify_tools_guide`,
 Server-side output validation is unchanged: every tool still validates its result
 against the schema in its `mcp.ToolDescriptor`. The generated dev catalog at
 `clockify://mcp/tool-catalog` exposes full schemas for clients that want them.
+
+## Advertised tier vs. loaded registry
+
+`CLOCKIFY_TOOLSET` controls only model-visible advertisement, not startup
+capability. The stdio process always loads the 156-tool registry. The default
+`CLOCKIFY_TOOLSET=default` advertises the daily 16-tool surface; `core`,
+`business`, and `admin` widen that advertised surface; `all` restores the
+previous full `tools/list` behavior. There is no runtime environment reload path
+today, so `notifications/tools/list_changed` is not advertised for toolset
+changes.
 
 ## Rate-control model
 

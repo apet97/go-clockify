@@ -421,7 +421,7 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS  optional, defaults to 4")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_MESSAGE_SIZE          optional, defaults to 4194304, allowed 1..104857600")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_TOOL_RESULT_BYTES     optional, defaults to 50000, allowed 1..104857600")
-	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOLSET                   optional: core, business, admin, all (default)")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOLSET                   optional: default, core, business, admin, all; defaults to default")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_WRITES         optional, defaults to false")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY optional, defaults to true")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   optional comma-separated allowlist")
