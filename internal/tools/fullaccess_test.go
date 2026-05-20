@@ -263,8 +263,57 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 		toolset   string
 		wantCount int
 		want      []string
+		wantOrder []string
 		absent    []string
 	}{
+		{
+			toolset:   "default",
+			wantCount: 16,
+			want: []string{
+				"clockify_status",
+				"clockify_tools_guide",
+				"clockify_create_work_package",
+				"clockify_log_work",
+				"clockify_start_work",
+				"clockify_stop_work",
+				"clockify_switch_work",
+				"clockify_review_day",
+				"clockify_review_week",
+				"clockify_fix_entry",
+				"clockify_entries_running",
+				"clockify_entries_list",
+				"clockify_entries_get",
+				"clockify_entries_update",
+				"clockify_entries_delete",
+				"clockify_reports_summary",
+			},
+			wantOrder: []string{
+				"clockify_status",
+				"clockify_tools_guide",
+				"clockify_create_work_package",
+				"clockify_log_work",
+				"clockify_start_work",
+				"clockify_stop_work",
+				"clockify_switch_work",
+				"clockify_review_day",
+				"clockify_review_week",
+				"clockify_fix_entry",
+				"clockify_entries_list",
+				"clockify_entries_get",
+				"clockify_entries_update",
+				"clockify_entries_delete",
+				"clockify_entries_running",
+				"clockify_reports_summary",
+			},
+			absent: []string{
+				"clockify_demo_seed",
+				"clockify_clients_list",
+				"clockify_entries_create",
+				"clockify_entries_timer_start",
+				"clockify_reports_detailed",
+				"clockify_api_request",
+			},
+		},
 		{
 			toolset:   "core",
 			wantCount: 55,
@@ -356,6 +405,11 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 			for _, absent := range tt.absent {
 				if names[absent] {
 					t.Fatalf("%s registry unexpectedly includes %s", tt.toolset, absent)
+				}
+			}
+			if len(tt.wantOrder) > 0 {
+				if got := descriptorNames(reg); !slicesEqual(got, tt.wantOrder) {
+					t.Fatalf("%s registry order mismatch\n got=%v\nwant=%v", tt.toolset, got, tt.wantOrder)
 				}
 			}
 			assertToolsetToolsListMatchesRegistry(t, reg)
