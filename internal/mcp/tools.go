@@ -122,11 +122,15 @@ func (s *Server) buildToolListLocked() []Tool {
 		} else {
 			priorityAware = true
 		}
+		tool := descriptor.Tool
+		if !descriptor.AdvertiseOutputSchema {
+			tool.OutputSchema = nil
+		}
 		items = append(items, struct {
 			name string
 			tool Tool
 			prio int
-		}{name: name, tool: descriptor.Tool, prio: prio})
+		}{name: name, tool: tool, prio: prio})
 	}
 	if priorityAware {
 		sort.Slice(items, func(i, j int) bool {
