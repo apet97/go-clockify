@@ -28,19 +28,20 @@ product definition.
 ## Start Here
 
 1. `README.md` - setup and product overview.
-2. `docs/agent-cookbook.md` - workflow-first agent examples.
-3. `docs/tool-catalog.md` - generated runtime tool list and order.
-4. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
-5. `docs/live-tests.md` - live-test gates and sacrificial workspace rules.
-6. `docs/permissions.md` - role, plan, and feature requirements by tool family.
-7. `docs/dangerous-tools.md` - destructive, billing, admin, permission-change,
+2. `CONTEXT.md` - compact glossary of repo-specific domain terms.
+3. `docs/agent-cookbook.md` - workflow-first agent examples.
+4. `docs/tool-catalog.md` - generated runtime tool list and order.
+5. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
+6. `docs/live-tests.md` - live-test gates and sacrificial workspace rules.
+7. `docs/permissions.md` - role, plan, and feature requirements by tool family.
+8. `docs/dangerous-tools.md` - destructive, billing, admin, permission-change,
    and external-side-effect tools plus dry-run coverage.
-8. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
-9. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
-10. `docs/protocol-notes.md` - pagination, progress, resources, and rate-control
+9. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
+10. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
+11. `docs/protocol-notes.md` - pagination, progress, resources, and rate-control
     posture.
-11. `docs/release-checklist.md` - deterministic and live release gate sequence.
-12. `docs/branch-protection-required-checks.md` - required `main` CI checks.
+12. `docs/release-checklist.md` - deterministic and live release gate sequence.
+13. `docs/branch-protection-required-checks.md` - required `main` CI checks.
 
 Historical docs explain prior decisions and are preserved off-main; see
 `docs/archive/README.md` for the archive branch pointer. Current work starts
