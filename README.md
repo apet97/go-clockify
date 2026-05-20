@@ -17,6 +17,7 @@ under `docs/`. Pre-one-user platform-era designs are preserved off-main,
 outside the current setup path.
 
 - Setup, build, doctor, Claude config, and first calls: this README
+- Compact domain-language glossary: [CONTEXT.md](CONTEXT.md)
 - Workflow examples: [docs/agent-cookbook.md](docs/agent-cookbook.md)
 - Full generated tool list: [docs/tool-catalog.md](docs/tool-catalog.md)
 - Permissions and plan requirements: [docs/permissions.md](docs/permissions.md)
