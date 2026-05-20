@@ -9,24 +9,26 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
-var supportedSchemaKeywords = map[string]bool{
-	"type":                 true,
-	"required":             true,
-	"additionalProperties": true,
-	"properties":           true,
-	"items":                true,
-	"minItems":             true,
-	"minimum":              true,
-	"maximum":              true,
-	"minLength":            true,
-	"maxLength":            true,
-	"pattern":              true,
-	"format":               true,
-	"enum":                 true,
-	"anyOf":                true,
-	"description":          true,
-	"title":                true,
+var supportedSchemaKeywordFixtures = map[string]any{
+	"additionalProperties": map[string]any{"type": "object", "additionalProperties": false},
+	"anyOf":                map[string]any{"anyOf": []any{map[string]any{"required": []string{"name"}}}},
+	"description":          map[string]any{"description": "accepted schema description"},
+	"enum":                 map[string]any{"enum": []string{"safe", "strict"}},
+	"format":               map[string]any{"type": "string", "format": "date-time"},
+	"items":                map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+	"maximum":              map[string]any{"type": "integer", "maximum": 10},
+	"maxLength":            map[string]any{"type": "string", "maxLength": 64},
+	"minimum":              map[string]any{"type": "integer", "minimum": 1},
+	"minItems":             map[string]any{"type": "array", "minItems": 1},
+	"minLength":            map[string]any{"type": "string", "minLength": 1},
+	"pattern":              map[string]any{"type": "string", "pattern": "^[a-z]+$"},
+	"properties":           map[string]any{"properties": map[string]any{"name": map[string]any{"type": "string"}}},
+	"required":             map[string]any{"required": []string{"name"}},
+	"title":                map[string]any{"title": "Accepted schema title"},
+	"type":                 map[string]any{"type": "object"},
 }
+
+var supportedSchemaKeywords = schemaKeywordSet(supportedSchemaKeywordFixtures)
 
 var forbiddenSchemaKeywords = map[string]bool{
 	"$ref":              true,
@@ -79,57 +81,35 @@ func TestSchemaSupportedKeywordsRejectsForbiddenKeyword(t *testing.T) {
 }
 
 func TestSchemaSupportedKeywordsAcceptsSupportedSubset(t *testing.T) {
-	schema := map[string]any{
-		"type":                 "object",
-		"title":                "Supported schema",
-		"description":          "uses only supported keywords",
-		"required":             []string{"name", "items"},
-		"additionalProperties": false,
-		"properties": map[string]any{
-			"name": map[string]any{
-				"type":      "string",
-				"minLength": 1,
-				"maxLength": 64,
-				"pattern":   "^[a-z]+$",
-			},
-			"kind": map[string]any{
-				"type": "string",
-				"enum": []string{"safe", "strict"},
-			},
-			"count": map[string]any{
-				"type":    "integer",
-				"minimum": 1,
-				"maximum": 10,
-			},
-			"when": map[string]any{
-				"type":   "string",
-				"format": "date-time",
-			},
-			"items": map[string]any{
-				"type":     "array",
-				"minItems": 1,
-				"items": map[string]any{
-					"type":                 "object",
-					"additionalProperties": false,
-					"properties": map[string]any{
-						"id": map[string]any{"type": "string"},
-					},
-				},
-			},
-		},
-		"anyOf": []any{
-			map[string]any{"required": []string{"name"}},
-			map[string]any{"required": []string{"kind"}},
-		},
-	}
-
-	if violations := unsupportedSchemaKeywords("synthetic_tool", schema); len(violations) != 0 {
-		t.Fatalf("supported schema had violations: %v", violations)
+	for _, keyword := range supportedSchemaKeywordNames() {
+		t.Run(keyword, func(t *testing.T) {
+			schema := supportedSchemaKeywordFixtures[keyword]
+			if violations := unsupportedSchemaKeywords("synthetic_tool", schema); len(violations) != 0 {
+				t.Fatalf("supported keyword %q had violations: %v", keyword, violations)
+			}
+		})
 	}
 }
 
 func allToolDescriptorsForSchemaKeywordTest(svc *Service) []mcp.ToolDescriptor {
 	return svc.FullAccessRegistry()
+}
+
+func schemaKeywordSet(fixtures map[string]any) map[string]bool {
+	out := make(map[string]bool, len(fixtures))
+	for keyword := range fixtures {
+		out[keyword] = true
+	}
+	return out
+}
+
+func supportedSchemaKeywordNames() []string {
+	names := make([]string, 0, len(supportedSchemaKeywordFixtures))
+	for keyword := range supportedSchemaKeywordFixtures {
+		names = append(names, keyword)
+	}
+	sort.Strings(names)
+	return names
 }
 
 type schemaKeywordViolation struct {
