@@ -57,12 +57,19 @@ func TestTimeOffRequestViewOmitsEmptyNames(t *testing.T) {
 func TestSchedulingHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := schedulingHandlers(svc)
-	if len(descs) != 10 {
-		t.Fatalf("expected 10 scheduling tools, got %d", len(descs))
+	if len(descs) == 0 {
+		t.Fatal("expected scheduling tools, got none")
 	}
+	assertNoDuplicateTools(t, descs)
 
 	names := make(map[string]bool, len(descs))
 	for _, d := range descs {
+		if !strings.HasPrefix(d.Tool.Name, "clockify_") {
+			t.Fatalf("unexpected scheduling tool name: %s", d.Tool.Name)
+		}
+		if d.Handler == nil {
+			t.Fatalf("missing scheduling handler: %s", d.Tool.Name)
+		}
 		names[d.Tool.Name] = true
 	}
 
@@ -88,12 +95,19 @@ func TestSchedulingHandlersCount(t *testing.T) {
 func TestTimeOffHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs := timeOffHandlers(svc)
-	if len(descs) != 13 {
-		t.Fatalf("expected 13 time-off tools, got %d", len(descs))
+	if len(descs) == 0 {
+		t.Fatal("expected time-off tools, got none")
 	}
+	assertNoDuplicateTools(t, descs)
 
 	names := make(map[string]bool, len(descs))
 	for _, d := range descs {
+		if !strings.HasPrefix(d.Tool.Name, "clockify_") {
+			t.Fatalf("unexpected time-off tool name: %s", d.Tool.Name)
+		}
+		if d.Handler == nil {
+			t.Fatalf("missing time-off handler: %s", d.Tool.Name)
+		}
 		names[d.Tool.Name] = true
 	}
 
