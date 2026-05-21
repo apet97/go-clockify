@@ -47,9 +47,9 @@ make openapi-drift
 
 ## Historical Material
 
-Older launch, deployment, profile, release, and ADR material may still exist for
-audit history. Treat it as historical context, not active product guidance. The
-active product path is the one-user stdio server described by the files above.
+Older non-current material is not kept on `main`. See
+[archive/README.md](archive/README.md) for the archive branch pointer when
+audit archaeology is genuinely needed.
 
 ## Operator references
 

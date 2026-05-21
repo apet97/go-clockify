@@ -24305,8 +24305,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 4b7d527230ea0908601247b08344e8d28d8456f7b45922b34dec0d0972d2567f
-    files: 146
+    sha256: 7d09238303df64292c80e70d78a7f5853bbb7e03c9dcb2aa814c411e57b02f54
+    files: 86
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies

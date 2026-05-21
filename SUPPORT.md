@@ -16,7 +16,7 @@ surprises when taking a dependency on this project.
 
 GitHub Discussions is not enabled today. If the signal-to-noise
 ratio on issues becomes a problem, enabling it is one of the
-Wave L follow-ups.
+future backlog items.
 
 ## Response expectations
 
@@ -67,7 +67,7 @@ What we promise for the `v1.x` series:
   `CLOCKIFY_API_KEY` and `CLOCKIFY_WORKSPACE_ID`; renaming either is a
   major-version change.
 - **Catalog stability.** The generated catalog remains the source of
-  truth for the 154 startup-loaded tools. Descriptor changes should
+  truth for the 156 startup-loaded tools. Descriptor changes should
   regenerate `docs/tool-catalog.md` and `docs/tool-catalog.json`.
 - **No surprise removals.** Deprecations are announced one minor
   version before removal. The `MCP_HTTP_MAX_BODY` alias is the
@@ -91,14 +91,12 @@ the target release's entry. Run `clockify-mcp doctor` before and
 after an upgrade to verify the API key, workspace id, and base URL
 configuration without printing secrets.
 
-## Version support matrix
+## Version support
 
-| Version | Status | Notes |
-|---------|--------|-------|
-| `v1.2.x` | Active — released 2026-04-25; where new features land | Latest minor; the only line receiving non-correctness changes |
-| `v1.1.x` | Released 2026-04-22; superseded by `v1.2.x` | No further releases planned; upgrade to `v1.2.x` for fixes |
-| `v1.0.x` | Released 2026-04-12 through 2026-04-20; latest is `v1.0.3` | Patch fixes land here only for correctness regressions that affect the stable wire format |
-| `v0.x` | Pre-release; not supported | Pre-`v1` releases from March–April 2026; do not deploy |
+The latest tagged `v1` release is the supported release line. Older
+minor releases are superseded when a newer minor is cut; upgrade before
+requesting fixes unless the issue is a high-severity security problem
+or a correctness regression in the stable wire format.
 
 ## Discussion etiquette
 

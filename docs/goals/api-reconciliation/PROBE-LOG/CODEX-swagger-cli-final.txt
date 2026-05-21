@@ -1,1 +1,0 @@
-TRUTH.openapi.yaml is valid

@@ -33,7 +33,6 @@ DEFAULT_REPO_ROOT = File.expand_path("..", __dir__)
 DEFAULT_SOURCE_ROOT = File.join(DEFAULT_REPO_ROOT, "docs/openapi/sources")
 DEFAULT_REAL_DIR = File.join(DEFAULT_SOURCE_ROOT, "realOPENAPI")
 DEFAULT_PROBE_DIR = File.join(DEFAULT_SOURCE_ROOT, "clockify-api-probe-lab")
-DEFAULT_FINDINGS_DIR = File.join(DEFAULT_SOURCE_ROOT, "newfolderwithfindings")
 DEFAULT_AIII_OPENAPI = File.join(DEFAULT_SOURCE_ROOT, "AIII/openapi.yaml")
 DEFAULT_OUT = File.join(DEFAULT_REPO_ROOT, "docs/openapi/clockify-openapi.yaml")
 
@@ -55,7 +54,7 @@ EMAIL_EXAMPLE_RE = /\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b/i
 options = {
   real_dir: ENV.fetch("CLOCKIFY_OPENAPI_REAL_DIR", DEFAULT_REAL_DIR),
   probe_dir: ENV.fetch("CLOCKIFY_OPENAPI_PROBE_DIR", DEFAULT_PROBE_DIR),
-  findings_dir: ENV.fetch("CLOCKIFY_OPENAPI_FINDINGS_DIR", DEFAULT_FINDINGS_DIR),
+  findings_dir: ENV["CLOCKIFY_OPENAPI_FINDINGS_DIR"],
   aiii_openapi: ENV.fetch("CLOCKIFY_OPENAPI_AIII_FILE", DEFAULT_AIII_OPENAPI),
   repo_root: ENV.fetch("CLOCKIFY_OPENAPI_REPO_ROOT", DEFAULT_REPO_ROOT),
   out: DEFAULT_OUT,
@@ -174,10 +173,10 @@ def source_label(path, options)
   roots = {
     "realOPENAPI" => File.expand_path(options[:real_dir]),
     "clockify-api-probe-lab" => File.expand_path(options[:probe_dir]),
-    "newfolderwithfindings" => File.expand_path(options[:findings_dir]),
     "AIII" => File.dirname(File.expand_path(options[:aiii_openapi])),
     "GOCLMCP" => File.expand_path(options[:repo_root])
   }
+  roots["qa-findings"] = File.expand_path(options[:findings_dir]) if options[:findings_dir].to_s != ""
   root_name, root_path = roots.find { |_name, root| expanded.start_with?(root + File::SEPARATOR) || expanded == root }
   return expanded unless root_name
 
@@ -479,7 +478,9 @@ def discover_findings(options)
   files = []
   probe_findings = File.join(options[:probe_dir], "findings")
   files.concat(Dir[File.join(probe_findings, "*.md")]) if Dir.exist?(probe_findings)
-  files.concat(Dir[File.join(options[:findings_dir], "agent-*.md")]) if Dir.exist?(options[:findings_dir])
+  if options[:findings_dir].to_s != "" && Dir.exist?(options[:findings_dir])
+    files.concat(Dir[File.join(options[:findings_dir], "agent-*.md")])
+  end
   files.sort.each do |file|
     label = source_label(file, options)
     File.readlines(file, chomp: true).each do |line|

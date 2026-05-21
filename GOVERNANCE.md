@@ -16,14 +16,11 @@ This matches the reality reflected elsewhere in the repo:
 
 - [`.github/CODEOWNERS`](.github/CODEOWNERS) lists `@apet97` as the
   sole owner for every directory.
-- [`docs/production-readiness.md`](docs/production-readiness.md#governance)
-  labels this a single-maintainer project with self-merge permitted.
-- [`docs/branch-protection.md`](docs/branch-protection.md) documents
-  why the "Restrict who can push to matching branches" rule is
-  disabled (one user; no security benefit from an allow-list of one).
+- [`docs/branch-protection-required-checks.md`](docs/branch-protection-required-checks.md)
+  lists the required CI checks for `main`.
 
 This document is the single source of truth for that decision; the
-alternatives cited above reference back here.
+required-checks document is operational data for the current CI gate.
 
 Operators evaluating whether to depend on `go-clockify`:
 you can read this document, see who is on the hook, and decide
@@ -33,12 +30,12 @@ commit history on `main`) is sufficient for your risk appetite.
 ## Who can merge to `main`
 
 `@apet97` is the only maintainer with merge access to `main`. Branch
-protection on `main` (snapshot in
-[`docs/branch-protection.md`](docs/branch-protection.md)) enforces
-the merge gate via required CI checks, linear history, up-to-date
-branches, and conversation resolution. Required approvals are
-currently set to 0 because GitHub does not let PR authors approve
-their own pull requests, and this repository has one maintainer.
+protection on `main` is expected to enforce the merge gate via required
+CI checks. The required check names are tracked in
+[`docs/branch-protection-required-checks.md`](docs/branch-protection-required-checks.md).
+Required approvals are currently set to 0 because GitHub does not let
+PR authors approve their own pull requests, and this repository has one
+maintainer.
 
 `.github/CODEOWNERS` lists `@apet97` as the owner of every path;
 this is a stylistic declaration today (one-of-one), kept because it
@@ -46,33 +43,15 @@ gives a future co-maintainer a clean diff target: adding a second
 handle to the per-path entries is a one-line PR per path rather
 than a ground-up rewrite.
 
-## Current state — enforced on `main`
-
-The current branch-protection snapshot enforces:
-
-- Required approvals: 0 enforced.
-- Code-owner reviews: disabled.
-- Signed commits: disabled.
-- Admin enforcement: disabled.
-- Required status checks: enabled.
-- Branches up to date before merge: enabled.
-- Conversation resolution: enabled.
-- Linear history: enabled.
-
-The effective merge gate at one-maintainer scale is therefore: CI
-green, branch up to date, linear history, and conversation resolution.
-The branch-protection snapshot remains the canonical record of the
-applied GitHub settings.
-
 ## Merge gate
 
 A PR may merge to `main` only if all of the following are true:
 
 1. CI is green. Specifically, every required check listed in
-   [`docs/branch-protection.md`](docs/branch-protection.md) reports
-   success.
+   [`docs/branch-protection-required-checks.md`](docs/branch-protection-required-checks.md)
+   reports success.
 2. The branch is up-to-date with `main` (linear history is required;
-   see branch-protection.md).
+   verify the live GitHub branch-protection settings before release).
 3. The change does not lower a coverage floor without an explicit
    note in the PR body explaining why
    (see [`docs/coverage-policy.md`](docs/coverage-policy.md)).
@@ -94,8 +73,8 @@ The following controls are target state, not current state:
 - Restrict who can dismiss PR reviews: enabled.
 
 These controls become enforceable when a second maintainer joins.
-Until then, `docs/branch-protection.md` documents the gap honestly
-so downstream consumers can evaluate the trust model.
+Until then, this document names the gap honestly so downstream consumers
+can evaluate the trust model.
 
 ## Tighter self-review expectations on security-sensitive areas
 
@@ -144,17 +123,14 @@ via a public GitHub issue tagged `unreachable-maintainer`.
 If you have been substantially contributing for several months and
 want to take on review responsibility, open a discussion or issue
 and the conversation will start. A second maintainer is an explicit
-goal (tracked in Wave L's second-maintainer-onboarding issue); this
-document gets a mechanical rewrite to "two-maintainer" on that
-event.
+goal; this document gets a mechanical rewrite to "two-maintainer" on
+that event.
 
 ## Changes to this document
 
 Changes to this document follow the normal merge gate. Operators
 who depend on `go-clockify` and want to be notified of governance
 changes should watch the repository for releases and read each
-release's CHANGELOG entry. The rationale for each change lives in
-`docs/adr/` so future readers can trace why the policy is what it
-is — see
-[ADR-0016](docs/adr/0016-single-maintainer-governance.md) for the
-single-maintainer decision.
+release's CHANGELOG entry. The rationale for each governance change
+lives in the reviewing PR, the commit history on `main`, and the
+release notes for shipped changes.

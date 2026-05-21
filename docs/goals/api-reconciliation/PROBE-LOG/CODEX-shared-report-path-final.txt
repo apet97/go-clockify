@@ -1,2 +1,0 @@
-no sharedReportId — good
-DELETE /workspaces/{workspaceId}/shared-reports/{id}

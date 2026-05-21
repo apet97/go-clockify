@@ -1,4 +1,0 @@
-validating docs/goals/api-reconciliation/TRUTH.openapi.yaml...
-docs/goals/api-reconciliation/TRUTH.openapi.yaml: validated in 123ms
-
-Woohoo! Your API description is valid. 🎉

@@ -582,8 +582,7 @@ func TestValidateWebhookURL_DNS_NoFlagSkipsResolution(t *testing.T) {
 // escape hatch: when the host matches WebhookAllowedDomains, the
 // private-IP check is bypassed entirely. Use case is split-horizon
 // DNS where a known-trusted hostname legitimately resolves to a
-// private IP only on the control-plane network. See
-// docs/runbooks/webhook-dns-validation.md §4b.
+// private IP only on a trusted private network.
 func TestValidateWebhookURL_DNS_AllowedDomains(t *testing.T) {
 	cases := []struct {
 		name        string
