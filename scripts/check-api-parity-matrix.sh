@@ -12,6 +12,13 @@ set -euo pipefail
 repo_root="$(pwd)"
 write=0
 
+print_bullets() {
+  local line
+  while IFS= read -r line; do
+    printf '  - %s\n' "$line"
+  done
+}
+
 usage() {
   cat <<'EOF'
 Usage: scripts/check-api-parity-matrix.sh [--write] [--repo-root PATH]
@@ -101,7 +108,7 @@ catalog_contract_errors="$(
 )"
 if [ -n "$catalog_contract_errors" ]; then
   echo "[fail] tool catalog contract drift:" >&2
-  sed 's/^/  - /' <<<"$catalog_contract_errors" >&2
+  print_bullets <<<"$catalog_contract_errors" >&2
   exit 1
 fi
 
@@ -137,7 +144,7 @@ raw_fallback_errors="$(
 )"
 if [ -n "$raw_fallback_errors" ]; then
   echo "[fail] raw fallback catalog drift:" >&2
-  sed 's/^/  - /' <<<"$raw_fallback_errors" >&2
+  print_bullets <<<"$raw_fallback_errors" >&2
   exit 1
 fi
 

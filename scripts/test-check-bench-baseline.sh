@@ -57,18 +57,20 @@ EOF
 
     # Tabs after the bench name are required for benchstat compatibility;
     # write the baseline via printf so escapes survive.
-    printf 'goos: linux\n'                                                                   >  "$dir/baseline.txt"
-    printf 'goarch: amd64\n'                                                                 >> "$dir/baseline.txt"
-    printf 'pkg: github.com/test/example/internal/foo\n'                                     >> "$dir/baseline.txt"
-    printf 'cpu: x86\n'                                                                      >> "$dir/baseline.txt"
-    printf 'BenchmarkOne-2\t100\t10.0 ns/op\t0 B/op\t0 allocs/op\n'                          >> "$dir/baseline.txt"
-    printf 'BenchmarkOne-2\t100\t10.1 ns/op\t0 B/op\t0 allocs/op\n'                          >> "$dir/baseline.txt"
-    printf 'goos: linux\n'                                                                   >> "$dir/baseline.txt"
-    printf 'goarch: amd64\n'                                                                 >> "$dir/baseline.txt"
-    printf 'pkg: github.com/test/example/internal/bar\n'                                     >> "$dir/baseline.txt"
-    printf 'cpu: x86\n'                                                                      >> "$dir/baseline.txt"
-    printf 'BenchmarkTwo-2\t100\t20.0 ns/op\t0 B/op\t0 allocs/op\n'                          >> "$dir/baseline.txt"
-    printf 'BenchmarkTwo-2\t100\t20.1 ns/op\t0 B/op\t0 allocs/op\n'                          >> "$dir/baseline.txt"
+    {
+        printf 'goos: linux\n'
+        printf 'goarch: amd64\n'
+        printf 'pkg: github.com/test/example/internal/foo\n'
+        printf 'cpu: x86\n'
+        printf 'BenchmarkOne-2\t100\t10.0 ns/op\t0 B/op\t0 allocs/op\n'
+        printf 'BenchmarkOne-2\t100\t10.1 ns/op\t0 B/op\t0 allocs/op\n'
+        printf 'goos: linux\n'
+        printf 'goarch: amd64\n'
+        printf 'pkg: github.com/test/example/internal/bar\n'
+        printf 'cpu: x86\n'
+        printf 'BenchmarkTwo-2\t100\t20.0 ns/op\t0 B/op\t0 allocs/op\n'
+        printf 'BenchmarkTwo-2\t100\t20.1 ns/op\t0 B/op\t0 allocs/op\n'
+    } > "$dir/baseline.txt"
 }
 
 # run_case <name> <expected-exit> <expected-pattern> [extra-env-pair ...]
