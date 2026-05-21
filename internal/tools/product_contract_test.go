@@ -10,6 +10,14 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+const (
+	productContractFullRegistryTools      = 156
+	productContractDefaultAdvertisedTools = 16
+	productContractWorkflowTools          = 17
+	productContractDomainTools            = 137
+	productContractRawTools               = 2
+)
+
 // TestProductContractDoesNotRegress pins the binding product invariants from
 // AGENTS.md so an accidental tool add/remove/rename or a missing schema is
 // caught immediately.
@@ -17,8 +25,8 @@ func TestProductContractDoesNotRegress(t *testing.T) {
 	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
 	reg := svc.FullAccessRegistry()
 
-	if len(reg) != 156 {
-		t.Fatalf("registry has %d tools, want exactly 156", len(reg))
+	if len(reg) != productContractFullRegistryTools {
+		t.Fatalf("registry has %d tools, want exactly %d", len(reg), productContractFullRegistryTools)
 	}
 
 	var workflow, domain, raw int
@@ -34,17 +42,17 @@ func TestProductContractDoesNotRegress(t *testing.T) {
 			t.Errorf("tool %q has unexpected category %v", d.Tool.Name, d.Tool.Annotations["category"])
 		}
 	}
-	if workflow != 17 {
-		t.Errorf("workflow tool count = %d, want 17", workflow)
+	if workflow != productContractWorkflowTools {
+		t.Errorf("workflow tool count = %d, want %d", workflow, productContractWorkflowTools)
 	}
-	if domain != 137 {
-		t.Errorf("domain tool count = %d, want 137", domain)
+	if domain != productContractDomainTools {
+		t.Errorf("domain tool count = %d, want %d", domain, productContractDomainTools)
 	}
-	if raw != 2 {
-		t.Errorf("raw fallback tool count = %d, want 2", raw)
+	if raw != productContractRawTools {
+		t.Errorf("raw fallback tool count = %d, want %d", raw, productContractRawTools)
 	}
 
-	for i := 0; i < 17 && i < len(reg); i++ {
+	for i := 0; i < productContractWorkflowTools && i < len(reg); i++ {
 		if reg[i].Tool.Annotations["category"] != "workflow" {
 			t.Errorf("tool %d (%q) should be a workflow tool (workflow-first ordering)", i, reg[i].Tool.Name)
 		}
@@ -107,20 +115,20 @@ func TestDefaultToolsetEnvAdvertises16WhileRegistryLoads156(t *testing.T) {
 	}
 
 	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), cfg.WorkspaceID)
-	if got := len(svc.FullAccessRegistry()); got != 156 {
-		t.Fatalf("full registry loaded %d tools, want exactly 156", got)
+	if got := len(svc.FullAccessRegistry()); got != productContractFullRegistryTools {
+		t.Fatalf("full registry loaded %d tools, want exactly %d", got, productContractFullRegistryTools)
 	}
-	if got := len(svc.RegistryForToolset(cfg.Toolset)); got != 16 {
-		t.Fatalf("default toolset advertised %d tools, want exactly 16", got)
+	if got := len(svc.RegistryForToolset(cfg.Toolset)); got != productContractDefaultAdvertisedTools {
+		t.Fatalf("default toolset advertised %d tools, want exactly %d", got, productContractDefaultAdvertisedTools)
 	}
-	if got := len(svc.RegistryForToolset("all")); got != 156 {
-		t.Fatalf("CLOCKIFY_TOOLSET=all advertised %d tools, want exactly 156", got)
+	if got := len(svc.RegistryForToolset("all")); got != productContractFullRegistryTools {
+		t.Fatalf("CLOCKIFY_TOOLSET=all advertised %d tools, want exactly %d", got, productContractFullRegistryTools)
 	}
 
 	for _, toolset := range []string{"core", "business", "admin"} {
 		got := len(svc.RegistryForToolset(toolset))
-		if got <= 0 || got >= 156 {
-			t.Errorf("CLOCKIFY_TOOLSET=%s loaded %d tools, want a non-empty documented subset below 156", toolset, got)
+		if got <= 0 || got >= productContractFullRegistryTools {
+			t.Errorf("CLOCKIFY_TOOLSET=%s loaded %d tools, want a non-empty documented subset below %d", toolset, got, productContractFullRegistryTools)
 		}
 	}
 }
