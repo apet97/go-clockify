@@ -406,69 +406,35 @@ func TestOneUserDocsAvoidRemovedToolNames(t *testing.T) {
 }
 
 func TestOneUserMarkdownRoutesCurrentDocsAndMarksPlatformHistory(t *testing.T) {
-	currentEntrypoints := map[string][]string{
-		"README.md":                           {"README.md", "../README.md"},
-		"docs/agent-cookbook.md":              {"docs/agent-cookbook.md", "agent-cookbook.md"},
-		"docs/tool-catalog.md":                {"docs/tool-catalog.md", "tool-catalog.md"},
-		"docs/goals/oneuser-tool-coverage.md": {"docs/goals/oneuser-tool-coverage.md", "goals/oneuser-tool-coverage.md"},
-	}
-	for _, path := range []string{"../../docs/README.md", "../../AGENTS.md", "../../SECURITY.md"} {
+	manifest := loadPlatformDocsManifest(t)
+	for _, rel := range manifest.RouteCheckDocs {
+		path := repoTestPath(rel)
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
 		}
 		text := string(raw)
-		for entrypoint, variants := range currentEntrypoints {
+		for entrypoint, variants := range manifest.CurrentEntrypoints {
 			if !slices.ContainsFunc(variants, func(variant string) bool { return strings.Contains(text, variant) }) {
 				t.Fatalf("%s does not route readers to current entrypoint %s", path, entrypoint)
 			}
 		}
 	}
 
-	staleTerms := []string{
-		"clockify_activate_group",
-		"clockify_activate_tool",
-		"clockify_deactivate_group",
-		"clockify_policy_info",
-		"clockify_search_tools",
-		"clockify_list_tools",
-		"confirmation token",
-		"policy mode",
-		"shared-service",
-		"shared service",
-		"multi-tenant",
-		"control-plane",
-		"control plane",
-		"forward_auth",
-		"forward auth",
-		"streamable_http",
-		"prod-postgres",
-	}
-	allowedCurrentDocs := map[string]bool{
-		"../../docs/README.md":                          true,
-		"../../docs/agent-cookbook.md":                  true,
-		"../../docs/agent-handoff.md":                   true,
-		"../../docs/api-coverage.md":                    true,
-		"../../docs/coverage-policy.md":                 true,
-		"../../docs/goals/oneuser-tool-coverage.md":     true,
-		"../../docs/goals/perfect-one-user-full-mcp.md": true,
-		"../../docs/live-tests.md":                      true,
-		"../../docs/performance.md":                     true,
-		"../../docs/policy/production-tool-scope.md":    true,
-		"../../docs/tool-catalog.md":                    true,
-	}
-	err := filepath.WalkDir("../../docs", func(path string, d os.DirEntry, err error) error {
+	allowedCurrentDocs := setOf(manifest.AllowedCurrentDocs...)
+	skippedDirs := setOf(manifest.SkippedDirs...)
+	err := filepath.WalkDir(repoTestPath("docs"), func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+		rel := repoRelativeTestPath(t, path)
 		if d.IsDir() {
-			switch path {
-			case "../../docs/archive", "../../docs/openapi/sources":
+			if skippedDirs[rel] {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if filepath.Ext(path) != ".md" || allowedCurrentDocs[path] {
+		if filepath.Ext(path) != ".md" || allowedCurrentDocs[rel] {
 			return nil
 		}
 		raw, err := os.ReadFile(path)
@@ -477,7 +443,7 @@ func TestOneUserMarkdownRoutesCurrentDocsAndMarksPlatformHistory(t *testing.T) {
 		}
 		text := strings.ToLower(string(raw))
 		matched := ""
-		for _, term := range staleTerms {
+		for _, term := range manifest.StaleTerms {
 			if strings.Contains(text, term) {
 				matched = term
 				break
@@ -487,7 +453,7 @@ func TestOneUserMarkdownRoutesCurrentDocsAndMarksPlatformHistory(t *testing.T) {
 			return nil
 		}
 		head := strings.ToLower(strings.Join(strings.Split(string(raw), "\n")[:min(12, len(strings.Split(string(raw), "\n")))], "\n"))
-		if !strings.Contains(head, "historical") && !strings.Contains(head, "not current one-user") && !strings.Contains(head, "not active product guidance") {
+		if !containsAny(head, manifest.HistoricalBannerMarkers) {
 			t.Fatalf("%s contains platform-era term %q without a historical/current-routing banner", path, matched)
 		}
 		return nil
@@ -495,6 +461,56 @@ func TestOneUserMarkdownRoutesCurrentDocsAndMarksPlatformHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+type platformDocsManifest struct {
+	RouteCheckDocs          []string            `json:"routeCheckDocs"`
+	CurrentEntrypoints      map[string][]string `json:"currentEntrypoints"`
+	StaleTerms              []string            `json:"staleTerms"`
+	AllowedCurrentDocs      []string            `json:"allowedCurrentDocs"`
+	SkippedDirs             []string            `json:"skippedDirs"`
+	HistoricalBannerMarkers []string            `json:"historicalBannerMarkers"`
+}
+
+func loadPlatformDocsManifest(t *testing.T) platformDocsManifest {
+	t.Helper()
+	raw, err := os.ReadFile("testdata/oneuser_platform_docs_manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest platformDocsManifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatalf("parse platform docs manifest: %v", err)
+	}
+	if len(manifest.RouteCheckDocs) == 0 ||
+		len(manifest.CurrentEntrypoints) == 0 ||
+		len(manifest.StaleTerms) == 0 ||
+		len(manifest.HistoricalBannerMarkers) == 0 {
+		t.Fatalf("platform docs manifest is incomplete: %+v", manifest)
+	}
+	return manifest
+}
+
+func repoTestPath(rel string) string {
+	return filepath.Join("..", "..", filepath.FromSlash(rel))
+}
+
+func repoRelativeTestPath(t *testing.T, path string) string {
+	t.Helper()
+	rel, err := filepath.Rel(filepath.Join("..", ".."), path)
+	if err != nil {
+		t.Fatalf("relative path for %s: %v", path, err)
+	}
+	return filepath.ToSlash(rel)
+}
+
+func containsAny(text string, needles []string) bool {
+	for _, needle := range needles {
+		if strings.Contains(text, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {

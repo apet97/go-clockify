@@ -1,0 +1,66 @@
+{
+  "routeCheckDocs": [
+    "docs/README.md",
+    "AGENTS.md",
+    "SECURITY.md"
+  ],
+  "currentEntrypoints": {
+    "README.md": [
+      "README.md",
+      "../README.md"
+    ],
+    "docs/agent-cookbook.md": [
+      "docs/agent-cookbook.md",
+      "agent-cookbook.md"
+    ],
+    "docs/tool-catalog.md": [
+      "docs/tool-catalog.md",
+      "tool-catalog.md"
+    ],
+    "docs/goals/oneuser-tool-coverage.md": [
+      "docs/goals/oneuser-tool-coverage.md",
+      "goals/oneuser-tool-coverage.md"
+    ]
+  },
+  "staleTerms": [
+    "clockify_activate_group",
+    "clockify_activate_tool",
+    "clockify_deactivate_group",
+    "clockify_policy_info",
+    "clockify_search_tools",
+    "clockify_list_tools",
+    "confirmation token",
+    "policy mode",
+    "shared-service",
+    "shared service",
+    "multi-tenant",
+    "control-plane",
+    "control plane",
+    "forward_auth",
+    "forward auth",
+    "streamable_http",
+    "prod-postgres"
+  ],
+  "allowedCurrentDocs": [
+    "docs/README.md",
+    "docs/agent-cookbook.md",
+    "docs/agent-handoff.md",
+    "docs/api-coverage.md",
+    "docs/coverage-policy.md",
+    "docs/goals/oneuser-tool-coverage.md",
+    "docs/goals/perfect-one-user-full-mcp.md",
+    "docs/live-tests.md",
+    "docs/performance.md",
+    "docs/policy/production-tool-scope.md",
+    "docs/tool-catalog.md"
+  ],
+  "skippedDirs": [
+    "docs/archive",
+    "docs/openapi/sources"
+  ],
+  "historicalBannerMarkers": [
+    "historical",
+    "not current one-user",
+    "not active product guidance"
+  ]
+}
