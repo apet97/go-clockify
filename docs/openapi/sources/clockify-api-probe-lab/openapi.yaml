@@ -4,7 +4,7 @@ info:
   version: "2026-05-12"
   description: |
     Comprehensive OpenAPI 3.0.3 specification synthesised from live probes
-    against workspace `65b382b606de527a7ee2b60e` plus the public *DOC.md
+    against workspace `<REDACTED_ID>` plus the public *DOC.md
     files in `clockify-api-probe-lab/`. Every operation listed has at
     least one source of evidence — either a captured fixture under
     `fixtures/<domain>/` or a cross-checked supplementary OpenAPI file
@@ -79,7 +79,7 @@ components:
       name: workspaceId
       in: path
       required: true
-      schema: { type: string, example: 65b382b606de527a7ee2b60e }
+      schema: { type: string, example: <REDACTED_ID> }
     UserId:
       name: userId
       in: path
@@ -3314,9 +3314,9 @@ paths:
           1. POST /workspaces/{ws}/custom-fields
              body `{"name":"mcp-probe-...-cf-user","type":"TXT",
                     "entityType":"USER","status":"VISIBLE"}` -> 201
-             id `6a03289d2568d3d2932f6b74` (cf-create-user-entity.json).
+             id `<REDACTED_ID>` (cf-create-user-entity.json).
           2. PUT /workspaces/{ws}/users/{userId}/custom-field/
-             6a03289d2568d3d2932f6b74/value body `{"value":"hello"}`
+             <REDACTED_ID>/value body `{"value":"hello"}`
              -> 200 returning `{customFieldId, userId, value,
              customFieldName, customFieldType}` (cf-user-value-put.json).
 
@@ -3355,8 +3355,8 @@ paths:
                     type: string
                     enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]
               example:
-                customFieldId: "6a03289d2568d3d2932f6b74"
-                userId: "64621faec4d2cc53b91fce6c"
+                customFieldId: "<REDACTED_ID>"
+                userId: "<REDACTED_ID>"
                 value: "hello"
                 customFieldName: "mcp-probe-1778591892-86ea17-cf-user"
                 customFieldType: "TXT"

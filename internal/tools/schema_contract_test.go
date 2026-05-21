@@ -30,7 +30,7 @@ func requiredSet(schema map[string]any) map[string]bool {
 
 func registryToolsByName(t *testing.T) map[string]mcp.Tool {
 	t.Helper()
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	tools := map[string]mcp.Tool{}
 	for _, d := range svc.FullAccessRegistry() {
 		tools[d.Tool.Name] = d.Tool
@@ -77,7 +77,7 @@ func TestSchedulingCapacityUserIDsOptional(t *testing.T) {
 }
 
 func TestEveryToolParameterHasADescription(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	for _, d := range svc.FullAccessRegistry() {
 		schema := d.Tool.InputSchema
 		if schema == nil {

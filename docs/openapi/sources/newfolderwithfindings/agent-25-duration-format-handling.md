@@ -138,12 +138,12 @@ The function should either:
 ## Cleanup performed
 
 Deleted all test entries created during this run:
-- `6a00f32a284e03fc79325a2f` — qa-agent-25-duration-probe-1 (HTTP 400, already deleted earlier)
-- `6a00f68e2568d3d293061bb8` — qa-agent-25-duration-probe-2 (HTTP 204)
-- `6a00f6edd9647159dc103bc1` — qa-agent-25-duration-probe-3-seconds (HTTP 204)
-- `6a00f70d284e03fc79350628` — qa-agent-25-duration-probe-4-hms (HTTP 204)
-- `6a00fa33d9647159dc1063d2` — qa-agent-25-duration-only-probe (HTTP 204)
-- `6a00fa88d9647159dc10677d` — qa-agent-25-duration-mismatch-probe (HTTP 204)
+- `<REDACTED_ID>` — qa-agent-25-duration-probe-1 (HTTP 400, already deleted earlier)
+- `<REDACTED_ID>` — qa-agent-25-duration-probe-2 (HTTP 204)
+- `<REDACTED_ID>` — qa-agent-25-duration-probe-3-seconds (HTTP 204)
+- `<REDACTED_ID>` — qa-agent-25-duration-probe-4-hms (HTTP 204)
+- `<REDACTED_ID>` — qa-agent-25-duration-only-probe (HTTP 204)
+- `<REDACTED_ID>` — qa-agent-25-duration-mismatch-probe (HTTP 204)
 
 ## Leftover test resources
 

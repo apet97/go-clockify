@@ -1,0 +1,38 @@
+{
+  "endpoint_id": "post.workspaces.audit-log",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/audit-log",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "clockify_audit_logs_search MCP tool (POST with filter body)",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/audit-log",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "actions": ["CREATE_PROJECT"],
+      "author_ids": ["<redacted-id:706f58c94f>"],
+      "start": "2026-05-20",
+      "end": "2026-05-21",
+      "page_size": 5
+    }
+  },
+  "response": {
+    "status": "200 ok:true",
+    "headers_redacted": {},
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_audit_logs_search\",\"entity\":\"audit_log\",\"data\":[{\"action\":\"CREATE_PROJECT\",\"content\":\"{...}\",\"previousContent\":null,\"timestamp\":\"2026-05-20T23:43:40.111Z\",\"userEmail\":\"...\",\"userId\":\"<redacted-id:706f58c94f>\",\"userName\":\"Firstname Lastname\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"},...],\"meta\":{\"count\":7,\"page\":1,\"requested_page_size\":5,\"server_page_size_note\":\"Clockify audit-log API caps results per request and ignores page_size\",\"total_is_lower_bound\":true,\"total_min\":7}}"
+  },
+  "facts_observed": {
+    "endpoint_live": true,
+    "response_ok": true,
+    "returned_records": 7,
+    "entry_fields": ["action", "content", "previousContent", "timestamp", "userEmail", "userId", "userName", "workspaceId"],
+    "content_field_format": "JSON string (stringified object, not nested object)",
+    "previousContent_is_nullable": true,
+    "server_ignores_page_size": true,
+    "meta_fields": ["count", "page", "requested_page_size", "server_page_size_note", "total_is_lower_bound", "total_min", "workspaceId"],
+    "pagination_is_lower_bound": true,
+    "path_confirmed": true
+  },
+  "notes": "The clockify_audit_logs_search MCP tool successfully calls POST /workspaces/{wId}/audit-log and returns audit log entries. Observed entry shape: action (string enum), content (stringified JSON), previousContent (null or string), timestamp (RFC3339), userEmail, userId, userName, workspaceId. Server ignores page_size and returns all matching rows up to its own cap. Marked LIVE-VERIFIED."
+}

@@ -23,7 +23,7 @@
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/PROJECTSDOC.md` — project API documentation
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLAUDE.md` — probe lab rules
 
-All secrets redacted as `****REDACTED****`. Workspace ID: `65b382b606de527a7ee2b60e`.
+All secrets redacted as `****REDACTED****`. Workspace ID: `<REDACTED_ID>`.
 
 ## Commands run
 
@@ -79,7 +79,7 @@ Key: `$CLOCKIFY_API_KEY` and `$CLOCKIFY_WORKSPACE_ID` source from `/tmp/clockify
 | 3 | Get current user | GET | `/user` | 200 | Returns user profile, membership, settings |
 | 4 | List tags | GET | `/workspaces/{ws}/tags?page-size=3` | 200 | Array returned |
 | 5 | List clients | GET | `/workspaces/{ws}/clients?page-size=2` | 200 | Array returned |
-| 6 | Create project | POST | `/workspaces/{ws}/projects` | 201 | Created `qa-agent-34-test-project` (`6a00f755385b9fac085a3cfc`) |
+| 6 | Create project | POST | `/workspaces/{ws}/projects` | 201 | Created `qa-agent-34-test-project` (`<REDACTED_ID>`) |
 | 7 | Auth failure (wrong key) | GET | `/workspaces/{ws}/projects` | 4xx | `{"message":"Api key does not exist","code":4003}` |
 | 8 | Auth failure (no key) | GET | `/workspaces/{ws}/projects` | 4xx | `{"message":"Multiple or none auth tokens present","code":1000}` |
 | 9 | Invalid page-size | GET | `/workspaces/{ws}/projects?page-size=-1` | 400 | `{"message":"Page size must be a positive value","code":501}` |
@@ -173,7 +173,7 @@ go build -o /tmp/clockify-mcp ./cmd/clockify-mcp
 
 | Resource | ID | Action | Result |
 |----------|----|--------|--------|
-| Project `qa-agent-34-test-project` | `6a00f755385b9fac085a3cfc` | Created, archived | Archived successfully; could not delete (API returns 400 "Cannot delete an active project" even after archiving, likely due to active membership) |
+| Project `qa-agent-34-test-project` | `<REDACTED_ID>` | Created, archived | Archived successfully; could not delete (API returns 400 "Cannot delete an active project" even after archiving, likely due to active membership) |
 
 No other resources created during this run.
 
@@ -181,9 +181,9 @@ No other resources created during this run.
 
 | ID | Name | Type | Status |
 |----|------|------|--------|
-| `6a00f755385b9fac085a3cfc` | `qa-agent-34-test-project` | Project | Archived (in workspace `65b382b606de527a7ee2b60e`) |
+| `<REDACTED_ID>` | `qa-agent-34-test-project` | Project | Archived (in workspace `<REDACTED_ID>`) |
 
-This project is archived and named with the `qa-agent-34-` prefix. Could not be deleted because the Clockify API rejects deletion of projects with active memberships even when archived. Safe to leave; does not affect billing or workspace operation. To clean up manually: remove user `64621faec4d2cc53b91fce6c` from project membership via Clockify UI, then delete.
+This project is archived and named with the `qa-agent-34-` prefix. Could not be deleted because the Clockify API rejects deletion of projects with active memberships even when archived. Safe to leave; does not affect billing or workspace operation. To clean up manually: remove user `<REDACTED_ID>` from project membership via Clockify UI, then delete.
 
 ## Severity
 

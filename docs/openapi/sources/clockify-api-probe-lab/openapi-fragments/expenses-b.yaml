@@ -1,4 +1,4 @@
-# Expenses (Agent B — mutations). Verified live against ws 65b382b606de527a7ee2b60e on 2026-05-12.
+# Expenses (Agent B — mutations). Verified live against ws <REDACTED_ID> on 2026-05-12.
 # Base: https://api.clockify.me/api/v1
 openapi: 3.0.3
 info:

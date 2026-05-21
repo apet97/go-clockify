@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -94,6 +95,156 @@ func (h *liveMCPHarness) clearRunningTimer(ctx context.Context) {
 	if _, err := h.Service.DeleteEntry(ctx, map[string]any{"entry_id": entryID}); err != nil {
 		h.t.Fatalf("preflight delete stale running timer: %v", err)
 	}
+}
+
+func (h *liveMCPHarness) requiredTimeEntryCustomFields(ctx context.Context, valuePrefix string) []any {
+	h.t.Helper()
+	wsID, err := h.Service.ResolveWorkspaceID(ctx)
+	if err != nil {
+		h.t.Fatalf("resolve workspace: %v", err)
+	}
+	var fields []map[string]any
+	if err := h.Service.Client.Get(ctx, "/workspaces/"+wsID+"/custom-fields", map[string]string{"page": "1", "page-size": "200"}, &fields); err != nil {
+		h.t.Fatalf("list custom fields: %v", err)
+	}
+	out := make([]any, 0)
+	for _, field := range fields {
+		required, _ := field["required"].(bool)
+		if !required || !liveCustomFieldAppliesToTimeEntry(field) {
+			continue
+		}
+		status := strings.ToUpper(strings.TrimSpace(liveStringFromAny(field["status"])))
+		if status != "" && status != "VISIBLE" {
+			continue
+		}
+		fieldID := liveFirstNonEmptyString(
+			liveStringFromAny(field["id"]),
+			liveStringFromAny(field["_id"]),
+			liveStringFromAny(field["customFieldId"]),
+			liveStringFromAny(field["custom_field_id"]),
+		)
+		if fieldID == "" {
+			h.t.Fatalf("required time-entry custom field is missing an id")
+		}
+		value, ok := liveCustomFieldTestValue(field, valuePrefix)
+		if !ok {
+			h.t.Fatalf("required time-entry custom field %q has unsupported type/allowed values", liveStringFromAny(field["name"]))
+		}
+		out = append(out, map[string]any{"field_id": fieldID, "value": value})
+	}
+	return out
+}
+
+func addRequiredTimeEntryCustomFields(args map[string]any, customFields []any) map[string]any {
+	if len(customFields) > 0 {
+		args["custom_fields"] = customFields
+	}
+	return args
+}
+
+func liveCustomFieldAppliesToTimeEntry(field map[string]any) bool {
+	for _, key := range []string{"entityType", "entity_type", "targetEntityType", "target_entity_type", "resourceType", "resource_type", "documentCode", "document_code"} {
+		if liveScopeIncludesTimeEntry(field[key]) {
+			return true
+		}
+	}
+	for _, key := range []string{"entityTypes", "entity_types", "targetEntityTypes", "target_entity_types", "appliesTo", "applies_to"} {
+		if liveScopeIncludesTimeEntry(field[key]) {
+			return true
+		}
+	}
+	return false
+}
+
+func liveScopeIncludesTimeEntry(raw any) bool {
+	switch v := raw.(type) {
+	case string:
+		return liveIsTimeEntryScope(v)
+	case []any:
+		for _, item := range v {
+			if liveScopeIncludesTimeEntry(item) {
+				return true
+			}
+		}
+	case []string:
+		for _, item := range v {
+			if liveIsTimeEntryScope(item) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func liveIsTimeEntryScope(scope string) bool {
+	switch strings.ToUpper(strings.TrimSpace(scope)) {
+	case "TIME_ENTRY", "TIMEENTRY", "TIME_ENTRIES", "TIMEENTRY_CUSTOM_FIELD_VALUE":
+		return true
+	default:
+		return false
+	}
+}
+
+func liveCustomFieldTestValue(field map[string]any, prefix string) (any, bool) {
+	switch strings.ToUpper(strings.TrimSpace(liveStringFromAny(field["type"]))) {
+	case "TXT":
+		return prefix + " custom field", true
+	case "LINK":
+		return "https://example.com/" + strings.ToLower(strings.ReplaceAll(prefix, " ", "-")), true
+	case "NUMBER":
+		return float64(1), true
+	case "CHECKBOX":
+		return true, true
+	case "DROPDOWN_SINGLE":
+		value, ok := liveFirstAllowedCustomFieldValue(field)
+		return value, ok
+	case "DROPDOWN_MULTIPLE":
+		value, ok := liveFirstAllowedCustomFieldValue(field)
+		if !ok {
+			return nil, false
+		}
+		return []any{value}, true
+	default:
+		return nil, false
+	}
+}
+
+func liveFirstAllowedCustomFieldValue(field map[string]any) (string, bool) {
+	items, _ := field["allowedValues"].([]any)
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			if strings.TrimSpace(v) != "" {
+				return v, true
+			}
+		case map[string]any:
+			if value := liveFirstNonEmptyString(
+				liveStringFromAny(v["id"]),
+				liveStringFromAny(v["_id"]),
+				liveStringFromAny(v["value"]),
+				liveStringFromAny(v["name"]),
+			); value != "" {
+				return value, true
+			}
+		}
+	}
+	return "", false
+}
+
+func liveStringFromAny(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func liveFirstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func liveRunningEntryID(entry any) string {

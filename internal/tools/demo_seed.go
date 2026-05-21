@@ -319,6 +319,9 @@ func (s *Service) ensureDemoEntry(ctx context.Context, args map[string]any, pref
 		"tag_ids":     []any{tagID},
 		"billable":    true,
 	}
+	if customFields, ok := args["custom_fields"]; ok {
+		entryArgs["custom_fields"] = customFields
+	}
 	if upsert {
 		entries, _, _, _, err := s.listCurrentUserEntries(ctx, map[string]any{
 			"start": date + " 00:00",

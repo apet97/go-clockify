@@ -1,0 +1,35 @@
+{
+  "probe_id": "put.workspaces.projects.users.cost-rate",
+  "ts": "2026-05-21T05:00:00Z",
+  "iter": "iter21",
+  "batch": "C",
+  "method": "PUT",
+  "path_template": "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate",
+  "path_probed": "/workspaces/[REDACTED]/projects/<redacted-id:a3eb26d457>/users/<redacted-id:706f58c94f>/cost-rate",
+  "source_file": "internal/tools/project_admin.go:669-700",
+  "mcp_tool": "clockify_update_project_user_cost_rate",
+  "probe_method": "direct_tool_call_live",
+  "steps": [
+    {
+      "step": 1,
+      "action": "GET path probe to verify registration",
+      "result": "405 Method Not Allowed - Request method 'GET' is not supported",
+      "interpretation": "Path is registered on the server; GET is not supported but PUT is (405 confirms path existence)"
+    },
+    {
+      "step": 2,
+      "action": "clockify_projects_rates_update dry_run with rate_kind=cost",
+      "result": "ok:true, dry_run preview returned, tool=clockify_update_project_user_cost_rate",
+      "interpretation": "Tool resolves to cost-rate endpoint handler, dry_run path confirmed"
+    },
+    {
+      "step": 3,
+      "action": "clockify_projects_rates_update live call rate_kind=cost amount=3000",
+      "result": "ok:true, HTTP 200, membership.costRate.amount=3000 confirmed in response",
+      "interpretation": "LIVE VERIFIED - PUT /projects/{projectId}/users/{userId}/cost-rate accepted and applied the rate"
+    }
+  ],
+  "verdict": "LIVE-VERIFIED",
+  "notes": "GET probe returns 405 (path registered, PUT is the supported method). Live PUT succeeded with 200. Code at project_admin.go:690 builds path via paths.Workspace(wsID, 'projects', projectID, 'users', userID, endpoint) where endpoint='cost-rate'. The clockify_projects_rates_update workflow tool routes to clockify_update_project_user_cost_rate when rate_kind=cost.",
+  "redacted_fields": ["workspaceId", "X-Api-Key"]
+}

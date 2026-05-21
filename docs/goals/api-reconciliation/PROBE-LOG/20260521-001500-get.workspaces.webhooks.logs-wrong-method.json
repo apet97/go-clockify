@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.webhooks.logs",
+  "probe_kind": "wrong-method",
+  "timestamp_utc": "2026-05-21T00:15:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/webhooks/<redacted-id:508f41ec5c>/logs",
+  "query": {"page": 1, "page-size": 3},
+  "status_code": 405,
+  "status_text": "Method Not Allowed",
+  "response_body_sample": {
+    "message": "Request method 'GET' is not supported"
+  },
+  "verdict": "LIVE-OVERRIDE",
+  "notes": "GET not supported on webhook logs endpoint. Route exists (405 not Spring-MVC 404) but method is wrong. Present only in our generated spec. Unclear what the correct method is."
+}

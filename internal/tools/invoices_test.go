@@ -798,7 +798,7 @@ func TestBuildInvoiceImportBodyValidatesDateRange(t *testing.T) {
 }
 
 func TestBuildInvoiceImportBodyGroupedRequiresPrimaryGroupBy(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	_, err := buildInvoiceImportBody(svc, map[string]any{
 		"from":                  "2026-05-01",
 		"to":                    "2026-05-17",
@@ -1137,7 +1137,7 @@ func TestDeleteInvoicePaymentDryRun(t *testing.T) {
 	defer cleanup()
 	svc := New(client, "ws1")
 	res, err := svc.deleteInvoicePaymentOneUser(context.Background(), map[string]any{
-		"invoice_id": "65b382b606de527a7ee2b60e",
+		"invoice_id": "000000000000000000000001",
 		"payment_id": "65b382b606de527a7ee2b60d",
 		"dry_run":    true,
 	})
@@ -1185,7 +1185,7 @@ func assertRawFileEnvelope(t *testing.T, data map[string]any, wantFilename strin
 func TestAddInvoiceItemRejectsNonPositiveQuantity(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	_, err := svc.addInvoiceItem(context.Background(), map[string]any{
 		"invoice_id": "000000000000000000000001",
 		"item_type":  "Service",
@@ -1199,7 +1199,7 @@ func TestAddInvoiceItemRejectsNonPositiveQuantity(t *testing.T) {
 func TestExportInvoiceRejectsUnknownFormat(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	_, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
 		"invoice_id": "000000000000000000000001",
 		"format":     "DOCX-INVALID",
@@ -1212,7 +1212,7 @@ func TestExportInvoiceRejectsUnknownFormat(t *testing.T) {
 func TestExportInvoiceRejectsCSVXLSXFormats(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	for _, format := range []string{"CSV", "XLSX"} {
 		_, err := svc.exportInvoiceOneUser(context.Background(), map[string]any{
 			"invoice_id": "000000000000000000000001",
@@ -1252,7 +1252,7 @@ func TestExportInvoiceForwardsPDFFormat(t *testing.T) {
 func TestCreateInvoicePaymentDoesNotRequireNote(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	_, err := svc.createInvoicePaymentOneUser(context.Background(), map[string]any{
 		"invoice_id": "000000000000000000000001",
 		"amount":     100.0,

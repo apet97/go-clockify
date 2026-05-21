@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "listTimeOffRequests",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-off/requests",
+  "probe_kind": "devil-wrong-method",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "truth_yaml_said": {
+    "x-verification-status-get": "LIVE-OVERRIDE",
+    "x-live-override-reason": "GET returns 405 'not supported'. Time-off request listing is POST-based.",
+    "documented_get_response": "405",
+    "x-verification-status-post": "LIVE-VERIFIED",
+    "post_response_shape": "{count: integer, requests: array}",
+    "prior_evidence": "PROBE-LOG/20260520-215801-get.workspaces.time-off.requests-wrong-method.json"
+  },
+  "live_probe_result": {
+    "status": 405,
+    "ok": false,
+    "error_code": "clockify_upstream_error",
+    "error_message": "Request method 'GET' is not supported",
+    "raw_response": {
+      "ok": false,
+      "action": "clockify_api_request",
+      "error": {
+        "code": "clockify_upstream_error",
+        "message": "Request method 'GET' is not supported"
+      }
+    }
+  },
+  "verdict": "CONFIRMED",
+  "notes": "Devil re-probe via GET: upstream returned exactly 405 'Request method GET is not supported'. TRUTH.yaml GET entry (LIVE-OVERRIDE, 405) is correct. Also tested POST with a filter for a non-existent userId (<redacted-id:1aaa799929>) via typed tool clockify_time_off_requests_list — returned {data:[], meta:{count:0, total:0, has_more:false}} with HTTP 200. POST empty-list shape confirms {count, requests} envelope matches TRUTH.yaml schema."
+}

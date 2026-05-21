@@ -1,6 +1,6 @@
 # openapi-fragments/webhooks-b.yaml
 # Source: live probe `probes/webhooks-fresh-b.sh` against
-# workspace 65b382b606de527a7ee2b60e on 2026-05-12.
+# workspace <REDACTED_ID> on 2026-05-12.
 # Covers MUTATING webhook endpoints: create, update, regenerate token,
 # delete. /test was deliberately NOT probed (no third-party POST).
 openapi: 3.0.3

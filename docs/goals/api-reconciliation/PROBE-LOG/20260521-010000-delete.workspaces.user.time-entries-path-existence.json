@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "delete.workspaces.user.time-entries",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T01:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/user/<redacted-id:706f58c94f>/time-entries",
+    "query": {"page": "1", "page-size": "1"},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["array"],
+    "body_sample": "[{\"id\":\"<redacted-id:cfff382083>\",\"description\":\"Test Entry for Approval 2\",...}]"
+  },
+  "facts_observed": {
+    "path_family_exists": true,
+    "get_status": 200,
+    "delete_probe_attempted": false,
+    "delete_blocked_reason": "CLOCKIFY_ENABLE_RAW_WRITES not set; raw DELETE blocked by MCP server",
+    "endpoint_semantics": "Bulk delete by time-entry-ids query param (required). operationId: deleteMany. Summary: 'Delete all time entries for a user on a workspace'",
+    "required_query_param": "time-entry-ids (array of entry IDs)",
+    "response_shape_on_delete": "array of TimeEntryDtoImplV1 per OpenAPI spec",
+    "openapi_live_status": "documented (not probe-documented — not yet live-verified)",
+    "raw_allowlist_entry": "DELETE /workspaces/{workspaceId}/user/{userId}/time-entries is in raw_allowlist_gen.go line 157",
+    "both_specs_agree": true,
+    "test_entry_created_and_cleaned": "<redacted-id:9fe07fee3f> created then deleted via clockify_entries_delete (single-entry path)"
+  },
+  "notes": "Path family confirmed live (GET 200 returns array of time entries). DELETE on this path is a bulk delete requiring time-entry-ids query param (documented operationId: deleteMany). Raw DELETE probe blocked. Both specs agree on this endpoint. The OpenAPI spec marks x-clockify-live-status as 'documented' (not yet probe-verified). Cannot confirm live behavior of DELETE without raw writes enabled."
+}

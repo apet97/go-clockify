@@ -5,7 +5,7 @@ info:
   description: |
     Live-probe findings for GET endpoints on time-off policies.
     Base: https://api.clockify.me/api/v1. Auth: X-Api-Key.
-    Probed against workspace 65b382b606de527a7ee2b60e.
+    Probed against workspace <REDACTED_ID>.
 servers:
   - url: https://api.clockify.me/api/v1
 security:

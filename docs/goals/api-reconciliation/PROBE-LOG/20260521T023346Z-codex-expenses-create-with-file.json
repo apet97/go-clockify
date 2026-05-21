@@ -1,0 +1,27 @@
+{
+  "body_bytes": 43,
+  "label": "expenses-create-with-file",
+  "method": "POST",
+  "request_body": {
+    "multipart_fields": {
+      "amount": "12.34",
+      "categoryId": "<redacted-id:c6f4ae2e99>",
+      "date": "2026-04-11T00:00:00Z",
+      "file": "codex-receipt.txt",
+      "notes": "CODEX-VERIFY-1779330824-EXPENSE-FILE",
+      "userId": "<redacted-id:706f58c94f>"
+    }
+  },
+  "response_body_text": "{\"message\":\"Amount is required\",\"code\":501}",
+  "response_headers_subset": {
+    "Content-Length": "43",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:33:46 GMT"
+  },
+  "response_json": {
+    "code": 501,
+    "message": "Amount is required"
+  },
+  "status": 400,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses"
+}

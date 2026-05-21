@@ -1,5 +1,5 @@
 # Clockify Scheduling — mutations (Agent B, live-probed 2026-05-12)
-# Workspace 65b382b606de527a7ee2b60e. All assignments created DRAFT
+# Workspace <REDACTED_ID>. All assignments created DRAFT
 # (published=false), never published (notifyUsers never sent).
 # Host: https://api.clockify.me/api/v1 (NOT a separate scheduling host).
 openapi: 3.0.3

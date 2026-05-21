@@ -1,0 +1,42 @@
+{
+  "body_bytes": 477,
+  "label": "time-off-policy-archive-before-delete",
+  "method": "PATCH",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": {
+    "status": "ARCHIVED"
+  },
+  "response_body_text": "{\"id\":\"<redacted-id:a61d6f230f>\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"name\":\"CODEX-VERIFY-1779332317-POLICY\",\"allowNegativeBalance\":false,\"negativeBalance\":null,\"allowHalfDay\":false,\"archived\":true,\"timeUnit\":\"DAYS\",\"userIds\":[\"<redacted-id:706f58c94f>\"],\"userGroupIds\":[],\"everyoneIncludingNew\":false,\"approve\":{\"requiresApproval\":false,\"teamManagers\":false,\"specificMembers\":false,\"userIds\":[]},\"automaticAccrual\":null,\"projectId\":null,\"automaticTimeEntryCreation\":null}",
+  "response_headers_subset": {
+    "Content-Length": "477",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:58:41 GMT"
+  },
+  "response_json": {
+    "allowHalfDay": false,
+    "allowNegativeBalance": false,
+    "approve": {
+      "requiresApproval": false,
+      "specificMembers": false,
+      "teamManagers": false,
+      "userIds": []
+    },
+    "archived": true,
+    "automaticAccrual": null,
+    "automaticTimeEntryCreation": null,
+    "everyoneIncludingNew": false,
+    "id": "<redacted-id:a61d6f230f>",
+    "name": "CODEX-VERIFY-1779332317-POLICY",
+    "negativeBalance": null,
+    "projectId": null,
+    "timeUnit": "DAYS",
+    "userGroupIds": [],
+    "userIds": [
+      "<redacted-id:706f58c94f>"
+    ],
+    "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+  },
+  "run": "20260521T025837Z",
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/policies/<redacted-id:a61d6f230f>"
+}

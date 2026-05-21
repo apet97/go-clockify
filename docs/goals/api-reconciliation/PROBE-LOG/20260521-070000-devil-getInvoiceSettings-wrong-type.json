@@ -1,0 +1,70 @@
+{
+  "endpoint_id": "getInvoiceSettings",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/invoices/settings",
+  "probe_kind": "devil-happy-path",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "truth_yaml_said": {
+    "x-verification-status": "LIVE-VERIFIED",
+    "x-notes": "Single object, no pagination, no required query params. Both specs agree. Tax values in minor units (2500 = 25%).",
+    "response_top_keys": ["defaults", "exportFields", "labels"],
+    "defaults_sub_keys": ["companyId", "defaultImportExpenseItemTypeId", "defaultImportTimeItemTypeId", "dueDays", "itemTypeId", "notes", "subject", "tax", "tax2", "tax2Percent", "taxPercent", "taxType"],
+    "exportFields_sub_keys": ["itemType", "quantity", "rtl", "tax", "tax2", "unitPrice"],
+    "labels_description": "Customizable label strings for invoice UI fields",
+    "tax_description": "Minor units (2500 = 25%)"
+  },
+  "live_probe_result": {
+    "status": 200,
+    "ok": true,
+    "data": {
+      "defaults": {
+        "companyId": "[REDACTED-ID]",
+        "defaultImportExpenseItemTypeId": "[REDACTED-ID]",
+        "defaultImportTimeItemTypeId": "[REDACTED-ID]",
+        "dueDays": 0,
+        "itemTypeId": "[REDACTED-ID]",
+        "notes": "[present]",
+        "subject": "[present]",
+        "tax": 2500,
+        "tax2": 0,
+        "tax2Percent": 0,
+        "taxPercent": 25,
+        "taxType": "SIMPLE"
+      },
+      "exportFields": {
+        "itemType": true,
+        "quantity": true,
+        "rtl": false,
+        "tax": true,
+        "tax2": true,
+        "unitPrice": true
+      },
+      "labels": {
+        "amount": "[present]",
+        "billFrom": "[present]",
+        "billTo": "[present]",
+        "description": "[present]",
+        "discount": "[present]",
+        "dueDate": "[present]",
+        "issueDate": "[present]",
+        "itemType": "[present]",
+        "notes": "[present]",
+        "paid": "[present]",
+        "quantity": "[present]",
+        "subtotal": "[present]",
+        "tax": "[present]",
+        "tax2": "[present]",
+        "total": "[present]",
+        "totalAmount": "[present]",
+        "unitPrice": "[present]"
+      }
+    },
+    "observed_structure_matches_truth": true
+  },
+  "verdict": "CONFIRMED",
+  "secondary_finding": {
+    "finding": "TRUTH.yaml schema for 'labels' only has description 'Customizable label strings for invoice UI fields' with no enumerated sub-keys. Live response contains 17 specific label keys: amount, billFrom, billTo, description, discount, dueDate, issueDate, itemType, notes, paid, quantity, subtotal, tax, tax2, total, totalAmount, unitPrice. TRUTH.yaml underspecifies labels object.",
+    "severity": "informational — schema gap but not a demotion"
+  },
+  "notes": "Devil re-probe (second independent GET): all top-level keys present (defaults, exportFields, labels). tax=2500, taxPercent=25 confirms minor-units claim. All defaults sub-keys from TRUTH.yaml schema present in live response. exportFields bool flags all present. labels object has 17 keys not individually documented in TRUTH.yaml. No required query params confirmed (bare GET returns 200). TRUTH.yaml LIVE-VERIFIED status holds."
+}

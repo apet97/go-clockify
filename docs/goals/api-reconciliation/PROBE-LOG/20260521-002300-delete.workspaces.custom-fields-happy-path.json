@@ -1,0 +1,16 @@
+{
+  "endpoint_id": "delete.workspaces.custom-fields",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:23:00Z",
+  "method": "DELETE",
+  "path": "/workspaces/<redacted-id:7955161f32>/custom-fields/<redacted-id:2e08556611>",
+  "query": {},
+  "status_code": 200,
+  "status_text": "OK",
+  "response_body_sample": {
+    "deleted": true,
+    "fieldId": "<redacted-id:2e08556611>"
+  },
+  "verdict": "LIVE-VERIFIED",
+  "notes": "Successfully deleted test custom field MCP-LIVE-RECON-20260521-002300-cf (type TXT). Response uses fieldId not customFieldId. Both specs document this endpoint."
+}

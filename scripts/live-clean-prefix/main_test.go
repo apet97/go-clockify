@@ -68,8 +68,8 @@ func TestMatchesPrefixUsesCollectionSpecificFields(t *testing.T) {
 }
 
 func TestCleanErrorRedactsWorkspaceID(t *testing.T) {
-	s := &sweeper{workspaceID: "65b382b606de527a7ee2b60e"}
-	got := s.cleanError(errors.New("GET /workspaces/65b382b606de527a7ee2b60e/invoices failed"))
+	s := &sweeper{workspaceID: "000000000000000000000001"}
+	got := s.cleanError(errors.New("GET /workspaces/000000000000000000000001/invoices failed"))
 	if strings.Contains(got, s.workspaceID) {
 		t.Fatalf("workspace id was not redacted: %s", got)
 	}
@@ -101,7 +101,7 @@ func TestArchivePayloadIncludesClientName(t *testing.T) {
 // exercised without touching live Clockify.
 // ---------------------------------------------------------------------------
 
-const testWorkspaceID = "65b382b606de527a7ee2b60e"
+const testWorkspaceID = "000000000000000000000001"
 
 // allKinds is every collection the sweeper touches, keyed by the fake-server
 // route kind. The hyphenated kinds map to space-separated collection labels in

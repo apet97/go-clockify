@@ -117,7 +117,7 @@ The `isRetryableStatus` function correctly maps 429, 502, 503, 504 as retryable.
 
 ## Cleanup performed
 
-- Created and deleted test project `qa-agent-53-test-project-*` (ID: `6a00f2e72568d3d29305eced`) — archived then deleted.
+- Created and deleted test project `qa-agent-53-test-project-*` (ID: `<REDACTED_ID>`) — archived then deleted.
 
 ## Leftover test resources
 

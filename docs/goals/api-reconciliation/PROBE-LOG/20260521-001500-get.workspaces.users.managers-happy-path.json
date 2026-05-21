@@ -1,0 +1,13 @@
+{
+  "endpoint_id": "get.workspaces.users.managers",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:15:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>/managers",
+  "query": {},
+  "status_code": 200,
+  "status_text": "OK",
+  "response_body_sample": [],
+  "verdict": "LIVE-VERIFIED",
+  "notes": "Returns bare empty array for user with no managers. Endpoint works. Both specs document it."
+}

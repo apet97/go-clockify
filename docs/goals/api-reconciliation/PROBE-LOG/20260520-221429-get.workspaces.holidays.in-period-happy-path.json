@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.holidays.in-period",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/holidays/in-period",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:14:29Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/holidays/in-period","query":{"start":"2026-01-01T00:00:00Z","end":"2026-12-31T23:59:59Z","assigned-to":"[REDACTED_USER_ID]"},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":200,"headers_redacted":{},"body_keys":["bare array of holiday objects"],"body_sample":"[{\"automaticTimeEntryCreation\":false,\"datePeriod\":{...},\"everyoneIncludingNew\":true,\"id\":\"...\",\"name\":\"TestHoliday2\",...}]"},
+  "facts_observed": {"response_shape":"bare_array","item_keys":["automaticTimeEntryCreation","datePeriod","everyoneIncludingNew","id","name","occursAnnually","projectId","taskId","userGroupIds","userIds","workspaceId"],"assigned_to_required":true,"start_end_required":true,"date_format":"ISO 8601 datetime only (YYYY-MM-DDTHH:MM:SSZ), plain YYYY-MM-DD rejected","items_returned":27},
+  "notes": "assigned-to (userId), start, end are all required - same as both specs. Date format must be ISO 8601 datetime, plain YYYY-MM-DD rejected. Bare array, same shape as /holidays list."
+}

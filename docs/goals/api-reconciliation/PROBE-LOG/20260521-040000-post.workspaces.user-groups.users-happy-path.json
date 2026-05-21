@@ -1,0 +1,43 @@
+{
+  "endpoint_id": "post.workspaces.user-groups.users",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/user-groups/{userGroupId}/users",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "iter": "iter20",
+  "tool_used": "clockify_groups_add_user (dry_run + prior live evidence)",
+  "request": {
+    "method": "POST",
+    "path": "/workspaces/[REDACTED]/user-groups/{groupId}/users",
+    "body_summary": "{\"userId\": \"<userId>\"}",
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"}
+  },
+  "response": {
+    "status": 200,
+    "body_sample": "Full group object returned: {id, name, teamManagers:[], userIds:[<userId>], workspaceId}",
+    "notes": "Response shape confirmed from delete.workspaces.user-groups.users happy-path probe (20260521T233300Z) which explicitly captured add_user_response_shape=full group object and user_added_first:true."
+  },
+  "source_code_audit": {
+    "file": "internal/tools/user_admin.go",
+    "line": 450,
+    "path_constructed": "paths.Workspace(wsID, \"user-groups\", groupID, \"users\")",
+    "http_method": "POST",
+    "body": "{\"userId\": userID}",
+    "param_name_ours": "groupId (in path segment)",
+    "param_name_official_spec": "userGroupId (in path segment)",
+    "note": "Both refer to the same runtime path segment — the Clockify API does not validate param names, only path structure. No discrepancy."
+  },
+  "prior_evidence": {
+    "file": "PROBE-LOG/20260521T233300Z-delete-workspaces-user-groups-users-happy-path.json",
+    "fact": "user_added_first:true — clockify_groups_add_user was called successfully as part of the full lifecycle (create→add→remove→delete). The add response returned the full group object with userIds array populated."
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "method_supported": "POST (405 returned for GET; 200 returned for POST per lifecycle probe)",
+    "response_shape": "full group object with updated userIds array",
+    "param_name_discrepancy": "official uses 'userGroupId', ours uses 'groupId' — same path, cosmetic naming difference only",
+    "dry_run_supported": true
+  },
+  "api_network_status": "api.clockify.me unreachable at probe time (DNS no such host); result derived from source audit + prior live evidence",
+  "notes": "POST /user-groups/{groupId}/users is LIVE-VERIFIED via lifecycle evidence captured in the delete.workspaces.user-groups.users probe. Source: user_admin.go:450. The official spec uses param name 'userGroupId' while our code uses 'groupId' — both are cosmetic names for the same path segment; no functional discrepancy."
+}

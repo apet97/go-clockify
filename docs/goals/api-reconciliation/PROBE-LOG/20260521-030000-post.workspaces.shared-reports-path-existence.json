@@ -1,0 +1,36 @@
+{
+  "endpoint_id": "post.workspaces.shared-reports",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/shared-reports",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/shared-reports",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null,
+    "note": "GET probe to confirm path existence; POST blocked by raw-writes-disabled fence. Prior iters established path is absent."
+  },
+  "response": {
+    "status": 404,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "error", "recovery"],
+    "body_sample": "{\"ok\":false,\"action\":\"clockify_api_get\",\"error\":{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/[REDACTED-WORKSPACE]/shared-reports.\"},\"recovery\":{\"hint\":\"Use workflow or domain tools first. Call clockify_tools_guide to find the nearest typed tool before retrying raw GET.\",\"tool\":\"clockify_tools_guide\"}}"
+  },
+  "facts_observed": {
+    "get_status": 404,
+    "spring_mvc_message": "No static resource v1/workspaces/.../shared-reports.",
+    "spring_mvc_absent": true,
+    "post_inferrable_absent": true,
+    "no_shared_reports_tool_in_mcp": true,
+    "prior_evidence_files": [
+      "PROBE-LOG/20260521-000800-get.workspaces.shared-reports-not-found.json",
+      "PROBE-LOG/20260521T233400Z-delete-workspaces-shared-reports-other.json",
+      "PROBE-LOG/20260520-204725-get.shared-reports-fence-blocked.json"
+    ],
+    "confirmed_live_override": true
+  },
+  "notes": "Spring-MVC 404 'No static resource' on GET confirms the path itself does not exist on the live API. Since Spring-MVC routing rejects the path entirely (not just the method), POST to the same path would also return 404. No typed MCP tool exists for shared-reports create. Both specs document this endpoint but live evidence from multiple prior iters confirms it is absent. Status: LIVE-OVERRIDE (spec says exists, live says absent)."
+}

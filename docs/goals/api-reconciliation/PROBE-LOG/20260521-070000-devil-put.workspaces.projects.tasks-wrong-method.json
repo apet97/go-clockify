@@ -1,0 +1,45 @@
+{
+  "endpoint_id": "updateTask",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
+  "probe_kind": "devil-wrong-method",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "original_probe_kind": "happy-path",
+  "original_probe_file": "PROBE-LOG/20260521-050000-put.workspaces.projects.tasks-happy-path.json",
+  "truth_yaml_said": {
+    "x-verification-status": "LIVE-VERIFIED",
+    "x-truth-iter": "iter21",
+    "x-notes": "Full-replacement PUT for a task. Required body field name. Optional billable, status (ACTIVE or DONE), estimate, assigneeId, assigneeIds, userGroupIds, budgetEstimate. Tool does GET-then-merge to avoid clearing unspecified fields.",
+    "requestBody_required_fields": ["name"],
+    "documented_methods": ["PUT"],
+    "response_200": "Updated task object"
+  },
+  "probe_strategy": "Issue GET on the same path (wrong method for this PUT-only path in TRUTH.yaml) to probe whether Clockify exposes single-item GET at /projects/{pId}/tasks/{taskId}. Also verify that numeric string '12345' accepted as name does not cause schema violation — confirms string coercion at API layer.",
+  "live_probe_result": {
+    "get_probe": {
+      "tool_used": "clockify_api_get",
+      "path": "/workspaces/{wId}/projects/<redacted-id:b0fdd96bd9>/tasks/<redacted-id:73b1acb3da>",
+      "mcp_response_ok": true,
+      "status": 200,
+      "key_facts": {
+        "response_shape": "plain task object",
+        "id": "<redacted-id:73b1acb3da>",
+        "name": "__test_openapi_task__",
+        "projectId": "<redacted-id:b0fdd96bd9>",
+        "status": "ACTIVE",
+        "fields_observed": ["assigneeId", "assigneeIds", "billable", "budgetEstimate", "costRate", "duration", "estimate", "hourlyRate", "id", "name", "projectId", "status", "userGroupIds"]
+      }
+    },
+    "string_coercion_probe": {
+      "tool_used": "clockify_tasks_update",
+      "args": {"project": "<redacted-id:b0fdd96bd9>", "task": "<redacted-id:73b1acb3da>", "name": "12345"},
+      "mcp_response_ok": true,
+      "status": 200,
+      "observation": "Clockify accepted integer-looking string '12345' as task name. API does not enforce string-vs-number type at the content level.",
+      "cleanup_performed": "Name restored to __test_openapi_task__ via second clockify_tasks_update call (confirmed ok:true)."
+    }
+  },
+  "verdict": "CONFIRMED",
+  "demotion_reason": null,
+  "notes": "TRUTH.yaml documents this path only for PUT (updateTask). The devil GET probe reveals GET /workspaces/{wId}/projects/{pId}/tasks/{taskId} also succeeds with HTTP 200 and returns the single task object — consistent with the MCP tool's GET-then-merge pattern. All fields observed in the GET response are consistent with what TRUTH.yaml documents for the 200 PUT response shape. Additional finding: the `budgetEstimate` field in the GET response appears as integer (0) even when no budget is set. The `userGroupIds` field is present as an empty array. These are additive observations that do not conflict with TRUTH.yaml. The PUT endpoint's LIVE-VERIFIED status is confirmed. No demotion warranted."
+}

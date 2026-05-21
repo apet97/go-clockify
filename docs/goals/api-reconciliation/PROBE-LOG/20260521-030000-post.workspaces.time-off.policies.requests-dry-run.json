@@ -1,0 +1,50 @@
+{
+  "endpoint_id": "post.workspaces.time-off.policies.requests",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests",
+  "probe_kind": "dry-run",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "tool_used": "mcp__clockify__clockify_time_off_requests_create",
+  "params": {
+    "policy_id": "<redacted-id:1e975578e3>",
+    "start": "2026-12-01",
+    "end": "2026-12-02",
+    "note": "MCP-LIVE-RECON-20260521-030000-D-dry-run-probe",
+    "dry_run": true
+  },
+  "response": {
+    "ok": true,
+    "action": "clockify_time_off_requests_create",
+    "entity": "time_off_request",
+    "ids": {
+      "policyId": "<redacted-id:1e975578e3>",
+      "workspaceId": "[REDACTED-WORKSPACE]"
+    },
+    "data": {
+      "dry_run": true,
+      "note": "No changes were made.",
+      "payload": {
+        "note": "MCP-LIVE-RECON-20260521-030000-D-dry-run-probe",
+        "timeOffPeriod": {
+          "halfDayPeriod": "NOT_DEFINED",
+          "isHalfDay": false,
+          "period": {
+            "days": 2,
+            "end": "2026-12-02",
+            "start": "2026-12-01"
+          },
+          "timeOffHalfDayPeriod": "NOT_DEFINED"
+        }
+      },
+      "tool": "clockify_create_time_off_request"
+    },
+    "meta": {
+      "policyId": "<redacted-id:1e975578e3>",
+      "workspaceId": "[REDACTED-WORKSPACE]"
+    }
+  },
+  "source_path_confirmed": "internal/tools/time_off_requests.go:142 paths.Workspace(wsID, \"time-off\", \"policies\", policyID, \"requests\")",
+  "verification_status": "LIVE-VERIFIED",
+  "notes": "dry_run=true returned ok:true with resolved payload. Path POST /workspaces/{wId}/time-off/policies/{policyId}/requests confirmed live. No mutation made."
+}

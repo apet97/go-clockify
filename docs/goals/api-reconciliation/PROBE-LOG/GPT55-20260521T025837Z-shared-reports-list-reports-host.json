@@ -1,0 +1,580 @@
+{
+  "body_bytes": 13022,
+  "label": "shared-reports-list-reports-host",
+  "method": "GET",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": null,
+  "response_body_text": "{\"reports\":[{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"111111111\",\"link\":\"https://app.clockify.me/shared/<redacted-id:da0097f6fe>\",\"id\":\"<redacted-id:da0097f6fe>\",\"visibleToUsers\":[{\"id\":\"<redacted-id:706f58c94f>\",\"name\":\"Firstname Lastname\"}],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":false},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"111222333\",\"link\":\"https://app.clockify.me/shared/<redacted-id:4eb8d59b74>\",\"id\":\"<redacted-id:4eb8d59b74>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"1name shared report\",\"link\":\"https://app.clockify.me/shared/<redacted-id:5bf1837e3b>\",\"id\":\"<redacted-id:5bf1837e3b>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"22222\",\"link\":\"https://app.clockify.me/shared/<redacted-id:11e25d02d0>\",\"id\":\"<redacted-id:11e25d02d0>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"22232323232\",\"link\":\"https://app.clockify.me/shared/<redacted-id:7d91037285>\",\"id\":\"<redacted-id:7d91037285>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"43222\",\"link\":\"https://app.clockify.me/shared/<redacted-id:de7ade101b>\",\"id\":\"<redacted-id:de7ade101b>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"5552222555\",\"link\":\"https://app.clockify.me/shared/<redacted-id:f6659ebc7f>\",\"id\":\"<redacted-id:f6659ebc7f>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"555555\",\"link\":\"https://app.clockify.me/shared/<redacted-id:f8e96b8a23>\",\"id\":\"<redacted-id:f8e96b8a23>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"adsadasdasda\",\"link\":\"https://app.clockify.me/shared/<redacted-id:e74ccc8121>\",\"id\":\"<redacted-id:e74ccc8121>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"adsasdasd\",\"link\":\"https://app.clockify.me/shared/<redacted-id:458545a265>\",\"id\":\"<redacted-id:458545a265>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"adsdasdada\",\"link\":\"https://app.clockify.me/shared/<redacted-id:9952f5fa76>\",\"id\":\"<redacted-id:9952f5fa76>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"adtest\",\"link\":\"https://app.clockify.me/shared/<redacted-id:8824fed0ed>\",\"id\":\"<redacted-id:8824fed0ed>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asasdadsasd\",\"link\":\"https://app.clockify.me/shared/<redacted-id:c6c3cf08af>\",\"id\":\"<redacted-id:c6c3cf08af>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdadsdadsadada\",\"link\":\"https://app.clockify.me/shared/<redacted-id:6db2f737f3>\",\"id\":\"<redacted-id:6db2f737f3>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:5c7b345126>\",\"id\":\"<redacted-id:5c7b345126>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdasd\",\"link\":\"https://app.clockify.me/shared/<redacted-id:a4bfd385a8>\",\"id\":\"<redacted-id:a4bfd385a8>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"PM USER\",\"name\":\"asdasd\",\"link\":\"https://app.clockify.me/shared/<redacted-id:3aa9431459>\",\"id\":\"<redacted-id:3aa9431459>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdasda\",\"link\":\"https://app.clockify.me/shared/<redacted-id:1ade77b2eb>\",\"id\":\"<redacted-id:1ade77b2eb>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdasdasd\",\"link\":\"https://app.clockify.me/shared/<redacted-id:bd73ccf4b7>\",\"id\":\"<redacted-id:bd73ccf4b7>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdasdasda\",\"link\":\"https://app.clockify.me/shared/<redacted-id:405abf9e2e>\",\"id\":\"<redacted-id:405abf9e2e>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdasdasdsada\",\"link\":\"https://app.clockify.me/shared/<redacted-id:c9092d1105>\",\"id\":\"<redacted-id:c9092d1105>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdsadas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:a84d7da9d6>\",\"id\":\"<redacted-id:a84d7da9d6>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdsadasdadssa\",\"link\":\"https://app.clockify.me/shared/<redacted-id:2dd2e82abd>\",\"id\":\"<redacted-id:2dd2e82abd>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdsadasdasdad\",\"link\":\"https://app.clockify.me/shared/<redacted-id:918b110646>\",\"id\":\"<redacted-id:918b110646>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"asdsadsadas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:0adcc637b1>\",\"id\":\"<redacted-id:0adcc637b1>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"CODEX-VERIFY-1779332317-SR-HAPPY\",\"link\":\"https://app.clockify.me/shared/<redacted-id:a96179c3a4>\",\"id\":\"<redacted-id:a96179c3a4>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":false},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"create shared report\",\"link\":\"https://app.clockify.me/shared/<redacted-id:2edcf8d18d>\",\"id\":\"<redacted-id:2edcf8d18d>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"Create shared report\",\"link\":\"https://app.clockify.me/shared/<redacted-id:27d4020ee9>\",\"id\":\"<redacted-id:27d4020ee9>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"Detailed Report - 2026\",\"link\":\"https://app.clockify.me/shared/<redacted-id:c1364e3140>\",\"id\":\"<redacted-id:c1364e3140>\",\"visibleToUsers\":[],\"fixedDate\":true,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":false},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"Detailed Report for CLIENT NAME (Last Month)\",\"link\":\"https://app.clockify.me/shared/<redacted-id:8822262bdd>\",\"id\":\"<redacted-id:8822262bdd>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"ertest\",\"link\":\"https://app.clockify.me/shared/<redacted-id:73209f1ac6>\",\"id\":\"<redacted-id:73209f1ac6>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"etetete\",\"link\":\"https://app.clockify.me/shared/<redacted-id:d0108a1187>\",\"id\":\"<redacted-id:d0108a1187>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"John J 2th Avenue, New York, NY 123456\",\"link\":\"https://app.clockify.me/shared/<redacted-id:15a3d4a674>\",\"id\":\"<redacted-id:15a3d4a674>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"name surname location other information company information test test testtesttest test test\",\"link\":\"https://app.clockify.me/shared/<redacted-id:49b6a9091c>\",\"id\":\"<redacted-id:49b6a9091c>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"name the report here\",\"link\":\"https://app.clockify.me/shared/<redacted-id:fbdeba1d88>\",\"id\":\"<redacted-id:fbdeba1d88>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"new report\",\"link\":\"https://app.clockify.me/shared/<redacted-id:a57ba06fc9>\",\"id\":\"<redacted-id:a57ba06fc9>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"NEW REPORT CLIENT\",\"link\":\"https://app.clockify.me/shared/<redacted-id:1949c46871>\",\"id\":\"<redacted-id:1949c46871>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"PH TIME REPORT\",\"link\":\"https://app.clockify.me/shared/<redacted-id:a6b9e68a0e>\",\"id\":\"<redacted-id:a6b9e68a0e>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"DETAILED\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"sadasdsadaadasadasdsad\",\"link\":\"https://app.clockify.me/shared/<redacted-id:245919d42b>\",\"id\":\"<redacted-id:245919d42b>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"schedule test report\",\"link\":\"https://app.clockify.me/shared/<redacted-id:f6eaac6b46>\",\"id\":\"<redacted-id:f6eaac6b46>\",\"visibleToUsers\":[{\"id\":\"<redacted-id:706f58c94f>\",\"name\":\"Firstname Lastname\"}],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":false},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"Scheduled report\",\"link\":\"https://app.clockify.me/shared/<redacted-id:a383914fd3>\",\"id\":\"<redacted-id:a383914fd3>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"WEEKLY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"sdasdad2222222asdas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:bfda781f99>\",\"id\":\"<redacted-id:bfda781f99>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":false},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"sdasdad2222sddasdsadd222asdas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:3c93cf88cd>\",\"id\":\"<redacted-id:3c93cf88cd>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"sdasdad2222sddd222asdas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:1004ee6b12>\",\"id\":\"<redacted-id:1004ee6b12>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"sdasdad2222sddddddddddasdsadd222asdas\",\"link\":\"https://app.clockify.me/shared/<redacted-id:6567e39a79>\",\"id\":\"<redacted-id:6567e39a79>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Firstname Lastname\",\"name\":\"sfsdfsfsfsf\",\"link\":\"https://app.clockify.me/shared/<redacted-id:fdea06e368>\",\"id\":\"<redacted-id:fdea06e368>\",\"visibleToUsers\":[],\"fixedDate\":false,\"type\":\"SUMMARY\",\"visibleToUserGroups\":[],\"isPublic\":true},{\"reportAuthor\":\"Fi",
+  "response_headers_subset": {
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:58:39 GMT"
+  },
+  "response_json": {
+    "count": 75,
+    "reports": [
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:da0097f6fe>",
+        "isPublic": false,
+        "link": "https://app.clockify.me/shared/<redacted-id:da0097f6fe>",
+        "name": "111111111",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": [
+          {
+            "id": "<redacted-id:706f58c94f>",
+            "name": "Firstname Lastname"
+          }
+        ]
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:4eb8d59b74>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:4eb8d59b74>",
+        "name": "111222333",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:5bf1837e3b>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:5bf1837e3b>",
+        "name": "1name shared report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:11e25d02d0>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:11e25d02d0>",
+        "name": "22222",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:7d91037285>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:7d91037285>",
+        "name": "22232323232",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:de7ade101b>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:de7ade101b>",
+        "name": "43222",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:f6659ebc7f>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:f6659ebc7f>",
+        "name": "5552222555",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:f8e96b8a23>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:f8e96b8a23>",
+        "name": "555555",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:e74ccc8121>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:e74ccc8121>",
+        "name": "adsadasdasda",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:458545a265>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:458545a265>",
+        "name": "adsasdasd",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:9952f5fa76>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:9952f5fa76>",
+        "name": "adsdasdada",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:8824fed0ed>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:8824fed0ed>",
+        "name": "adtest",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:c6c3cf08af>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:c6c3cf08af>",
+        "name": "asasdadsasd",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:6db2f737f3>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:6db2f737f3>",
+        "name": "asdadsdadsadada",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:5c7b345126>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:5c7b345126>",
+        "name": "asdas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:a4bfd385a8>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:a4bfd385a8>",
+        "name": "asdasd",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:3aa9431459>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:3aa9431459>",
+        "name": "asdasd",
+        "reportAuthor": "PM USER",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:1ade77b2eb>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:1ade77b2eb>",
+        "name": "asdasda",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:bd73ccf4b7>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:bd73ccf4b7>",
+        "name": "asdasdasd",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:405abf9e2e>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:405abf9e2e>",
+        "name": "asdasdasda",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:c9092d1105>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:c9092d1105>",
+        "name": "asdasdasdsada",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:a84d7da9d6>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:a84d7da9d6>",
+        "name": "asdsadas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:2dd2e82abd>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:2dd2e82abd>",
+        "name": "asdsadasdadssa",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:918b110646>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:918b110646>",
+        "name": "asdsadasdasdad",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:0adcc637b1>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:0adcc637b1>",
+        "name": "asdsadsadas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:a96179c3a4>",
+        "isPublic": false,
+        "link": "https://app.clockify.me/shared/<redacted-id:a96179c3a4>",
+        "name": "CODEX-VERIFY-1779332317-SR-HAPPY",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:2edcf8d18d>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:2edcf8d18d>",
+        "name": "create shared report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:27d4020ee9>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:27d4020ee9>",
+        "name": "Create shared report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": true,
+        "id": "<redacted-id:c1364e3140>",
+        "isPublic": false,
+        "link": "https://app.clockify.me/shared/<redacted-id:c1364e3140>",
+        "name": "Detailed Report - 2026",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:8822262bdd>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:8822262bdd>",
+        "name": "Detailed Report for CLIENT NAME (Last Month)",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:73209f1ac6>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:73209f1ac6>",
+        "name": "ertest",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:d0108a1187>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:d0108a1187>",
+        "name": "etetete",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:15a3d4a674>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:15a3d4a674>",
+        "name": "John J 2th Avenue, New York, NY 123456",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:49b6a9091c>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:49b6a9091c>",
+        "name": "name surname location other information company information test test testtesttest test test",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:fbdeba1d88>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:fbdeba1d88>",
+        "name": "name the report here",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:a57ba06fc9>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:a57ba06fc9>",
+        "name": "new report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:1949c46871>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:1949c46871>",
+        "name": "NEW REPORT CLIENT",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:a6b9e68a0e>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:a6b9e68a0e>",
+        "name": "PH TIME REPORT",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:245919d42b>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:245919d42b>",
+        "name": "sadasdsadaadasadasdsad",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:f6eaac6b46>",
+        "isPublic": false,
+        "link": "https://app.clockify.me/shared/<redacted-id:f6eaac6b46>",
+        "name": "schedule test report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": [
+          {
+            "id": "<redacted-id:706f58c94f>",
+            "name": "Firstname Lastname"
+          }
+        ]
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:a383914fd3>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:a383914fd3>",
+        "name": "Scheduled report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "WEEKLY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:bfda781f99>",
+        "isPublic": false,
+        "link": "https://app.clockify.me/shared/<redacted-id:bfda781f99>",
+        "name": "sdasdad2222222asdas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:3c93cf88cd>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:3c93cf88cd>",
+        "name": "sdasdad2222sddasdsadd222asdas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:1004ee6b12>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:1004ee6b12>",
+        "name": "sdasdad2222sddd222asdas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:6567e39a79>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:6567e39a79>",
+        "name": "sdasdad2222sddddddddddasdsadd222asdas",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:fdea06e368>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:fdea06e368>",
+        "name": "sfsdfsfsfsf",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:2657759cf0>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:2657759cf0>",
+        "name": "Share report",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:d63f25b562>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:d63f25b562>",
+        "name": "SHARED REPORT",
+        "reportAuthor": "Firstname Lastname",
+        "type": "SUMMARY",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:7f86d35aa7>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:7f86d35aa7>",
+        "name": "Shared report 1",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      },
+      {
+        "fixedDate": false,
+        "id": "<redacted-id:5cd4ee7b1c>",
+        "isPublic": true,
+        "link": "https://app.clockify.me/shared/<redacted-id:5cd4ee7b1c>",
+        "name": "shared report example1",
+        "reportAuthor": "Firstname Lastname",
+        "type": "DETAILED",
+        "visibleToUserGroups": [],
+        "visibleToUsers": []
+      }
+    ]
+  },
+  "run": "20260521T025837Z",
+  "status": 200,
+  "url": "https://reports.api.clockify.me/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/shared-reports"
+}

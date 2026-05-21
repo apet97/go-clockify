@@ -25,7 +25,7 @@ PASS
 
 | File | Purpose |
 |------|---------|
-| `/tmp/clockify-livetest.env` | API key (redacted), workspace ID `65b382b606de527a7ee2b60e` |
+| `/tmp/clockify-livetest.env` | API key (redacted), workspace ID `<REDACTED_ID>` |
 | `CLAUDE.md` | Agent safety rules and probe lab conventions |
 | `README.md` | Lab overview, credential format, project layout |
 
@@ -52,13 +52,13 @@ go build ./...
 make fmt
 
 # MCP server doctor
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp doctor
 # exit code 0, Load() result OK
 
 # MCP stdio smoke: initialize
 printf '{"jsonrpc":"2.0","id":1,"method":"initialize",...}\n' | \
-  CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp
 # OK: protocolVersion 2025-03-26, server clockify-go-mcp
 
@@ -93,9 +93,9 @@ find . -name '*.go' -not -path './.git/*' -exec grep -l '[[:space:]]$' {} \;
 |-------|--------|--------|
 | `clockify_whoami` (MCP) | tools/call | OK — returned user + resolved workspace |
 | `clockify_list_projects` (MCP) | tools/call | OK — returned project list |
-| `clockify_create_tag` (MCP) | tools/call | OK — created tag `qa-agent-37-test-tag` (6a00fe98284e03fc79356713) |
+| `clockify_create_tag` (MCP) | tools/call | OK — created tag `qa-agent-37-test-tag` (<REDACTED_ID>) |
 | Direct API: GET /workspaces/{ws}/users | curl | OK — returned user list |
-| Direct API: DELETE tag 6a00fe98284e03fc79356713 | curl | OK — cleaned up |
+| Direct API: DELETE tag <REDACTED_ID> | curl | OK — cleaned up |
 
 ## Findings
 
@@ -172,7 +172,7 @@ go install golang.org/x/tools/cmd/goimports@latest
 
 ## Cleanup performed
 
-- Deleted tag `6a00fe98284e03fc79356713` (qa-agent-37-test-tag) via direct API DELETE
+- Deleted tag `<REDACTED_ID>` (qa-agent-37-test-tag) via direct API DELETE
 
 ## Leftover test resources
 

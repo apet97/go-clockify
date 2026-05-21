@@ -1,0 +1,35 @@
+{
+  "endpoint_id": "delete.workspaces.projects.custom-fields",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T23:33:20Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/projects/<redacted-id:79d0170ba2>/custom-fields",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "entity", "ids", "data", "changed"],
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_api_get\",\"entity\":\"raw_api\",\"data\":[{\"id\":\"<redacted-id:31d28936b5>\",\"name\":\"adasd\",\"entityType\":\"TIMEENTRY\"},...5 fields total]}"
+  },
+  "facts_observed": {
+    "project_custom_fields_list_path_exists": true,
+    "http_status_get": 200,
+    "fields_returned": 5,
+    "field_ids_returned": [
+      "<redacted-id:31d28936b5>",
+      "<redacted-id:a8835adc97>",
+      "<redacted-id:3b43e2bfb9>",
+      "<redacted-id:cc48a8b1a5>",
+      "<redacted-id:0310acfb91>"
+    ],
+    "delete_attempt": "blocked by raw-writes-disabled guard",
+    "delete_http_status": "not_attempted_live"
+  },
+  "notes": "GET /workspaces/{wId}/projects/{pId}/custom-fields returns 200 with a list of workspace-level custom fields that are visible to this project. Attempted DELETE via clockify_api_request but raw writes are disabled (CLOCKIFY_ENABLE_RAW_WRITES not set). The GET path shape confirms the parent resource path exists, making DELETE plausible. Note: these are workspace-level custom fields shown in project context — DELETE on this path likely REMOVES the field from the project (disassociates), not deletes globally. This is consistent with the spec description. Path confirmed present; DELETE semantics inferred from spec + path structure but not live-verified due to raw-writes guard."
+}

@@ -62,7 +62,7 @@ curl -s -H "X-Api-Key: <REDACTED>" \
 
 ## Live API probes run
 
-1. **Direct API: GET /user** — returned user (alpettest1@gmail.com), confirmed active workspace and full settings object
+1. **Direct API: GET /user** — returned user (<EMAIL>), confirmed active workspace and full settings object
 2. **Direct API: GET /workspaces/{ws}/projects** — returned paginated array with proper `hourlyRate`, `costRate`, `memberships`, `estimate`, `timeEstimate` nested objects
 3. **Direct API: GET /workspaces/{ws}/user/{uid}/time-entries** — returned time entries with `timeInterval: {start, end, duration}`, `customFieldValues[]`, `hourlyRate`, `costRate` — confirmed nested object shapes match API docs
 4. **MCP: clockify_whoami** — returned `{ok, action, data: {user, workspaceId}}` envelope; user object contained `id, name, email, activeWorkspace, settings, memberships, profilePicture`

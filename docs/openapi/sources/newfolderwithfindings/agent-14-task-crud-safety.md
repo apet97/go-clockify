@@ -123,8 +123,8 @@ The ListTasks handler only passes `page` and `page-size` query params. The API s
 
 ## Cleanup performed
 
-- All 7 test tasks deleted (6a00f6bc2568d3d293061e2a, 6a00f6bb2568d3d293061e17, 6a00f650284e03fc79328648, 6a00f434385b9fac085a0fde, 6a00f433284e03fc7932657a, 6a00f4332568d3d29305faf6, 6a00f3d9d9647159dc100ed2)
-- Test project "qa-agent-14-task-test-project" archived then deleted (6a00f2e32568d3d29305ecc2)
+- All 7 test tasks deleted (<REDACTED_ID>, <REDACTED_ID>, <REDACTED_ID>, <REDACTED_ID>, <REDACTED_ID>, <REDACTED_ID>, <REDACTED_ID>)
+- Test project "qa-agent-14-task-test-project" archived then deleted (<REDACTED_ID>)
 
 ## Leftover test resources
 

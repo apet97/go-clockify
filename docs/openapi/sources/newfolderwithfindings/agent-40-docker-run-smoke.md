@@ -22,7 +22,7 @@ PASS
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLAUDE.md` — agent safety rules
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/README.md` — lab layout and usage
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/docs/official-api-notes.md` — per-domain API notes
-- Probe workspace: `65b382b606de527a7ee2b60e` ("WORKSPACE")
+- Probe workspace: `<REDACTED_ID>` ("WORKSPACE")
 
 ## Commands run
 
@@ -164,7 +164,7 @@ None. No code issues were found requiring fixes in the docker-run-smoke area.
 
 - Docker containers removed: `clockify-mcp-smoke`, `clockify-mcp-live`
 - Docker images removed: `clockify-mcp-pr:abf9459`, `clockify-mcp-pr-grpc:abf9459`
-- Test project `qa-agent-40-smoke-test-project` (6a00feae284e03fc7935682a): archived then deleted via direct API
+- Test project `qa-agent-40-smoke-test-project` (<REDACTED_ID>): archived then deleted via direct API
 
 ## Leftover test resources
 

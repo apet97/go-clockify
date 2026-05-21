@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -72,7 +73,11 @@ func (s *Server) marshalCachedToolsListResponse(id any) ([]byte, error) {
 	// (large) cached tools/list payload allocates exactly once instead
 	// of growing through ~5 doublings — measured 18 allocs/op shrinks
 	// to 2 allocs/op on a 156-tool registry.
-	out := make([]byte, 0, len(prefix)+len(idBytes)+len(resultKey)+len(result)+1)
+	capHint, err := checkedByteBufferCapacity(len(prefix), len(idBytes), len(resultKey), len(result), 1)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]byte, 0, capHint)
 	out = append(out, prefix...)
 	out = append(out, idBytes...)
 	out = append(out, resultKey...)
@@ -173,8 +178,54 @@ func toolPriority(tool Tool) (int, bool) {
 
 func cloneToolList(in []Tool) []Tool {
 	out := make([]Tool, len(in))
-	copy(out, in)
+	for i := range in {
+		out[i] = cloneTool(in[i])
+	}
 	return out
+}
+
+func cloneTool(in Tool) Tool {
+	out := in
+	out.InputSchema = deepCopyAnyMap(out.InputSchema)
+	out.OutputSchema = deepCopyAnyMap(out.OutputSchema)
+	out.Annotations = deepCopyAnyMap(out.Annotations)
+	return out
+}
+
+func deepCopyAnyMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = deepCopyAnyValue(v)
+	}
+	return out
+}
+
+func deepCopyAnyValue(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		return deepCopyAnyMap(t)
+	case []any:
+		if t == nil {
+			return []any(nil)
+		}
+		cp := make([]any, len(t))
+		for i := range t {
+			cp[i] = deepCopyAnyValue(t[i])
+		}
+		return cp
+	case []string:
+		if t == nil {
+			return []string(nil)
+		}
+		cp := make([]string, len(t))
+		copy(cp, t)
+		return cp
+	default:
+		return v
+	}
 }
 
 func (s *Server) invalidateToolListCacheLocked() {
@@ -288,7 +339,7 @@ func schemaValidationArguments(schema map[string]any, args map[string]any) map[s
 		if out == nil {
 			// Measured by BenchmarkDispatchToolsCallAliasArgument; the small
 			// copy keeps jsonschema validation unchanged while supporting _id aliases.
-			out = make(map[string]any, len(args)+1)
+			out = make(map[string]any, schemaValidationCopyCapacity(len(args)))
 			for key, value := range args {
 				out[key] = value
 			}
@@ -316,6 +367,24 @@ func schemaRequiredNames(schema map[string]any) []string {
 	default:
 		return nil
 	}
+}
+
+func checkedByteBufferCapacity(parts ...int) (int, error) {
+	total := 0
+	for _, part := range parts {
+		if part < 0 || total > math.MaxInt-part {
+			return 0, fmt.Errorf("byte buffer capacity overflow")
+		}
+		total += part
+	}
+	return total, nil
+}
+
+func schemaValidationCopyCapacity(argsLen int) int {
+	if argsLen >= math.MaxInt {
+		return argsLen
+	}
+	return argsLen + 1
 }
 
 // InFlightToolCalls reports the current depth of the stdio dispatch

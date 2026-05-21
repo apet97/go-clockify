@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.shared-reports",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:08:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/shared-reports",
+  "query": {},
+  "status_code": 404,
+  "status_text": "Not Found",
+  "response_body_sample": {
+    "message": "No static resource v1/workspaces/<redacted-id:7955161f32>/shared-reports."
+  },
+  "verdict": "LIVE-OVERRIDE",
+  "notes": "404 Spring-MVC 'No static resource' — endpoint does not exist. Both specs document this endpoint. Shared reports are accessible via /shared-reports/{id} (top-level, not workspace-scoped) but that path is workspace-fence blocked."
+}

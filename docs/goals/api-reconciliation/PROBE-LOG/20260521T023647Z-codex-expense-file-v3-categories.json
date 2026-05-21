@@ -1,0 +1,109 @@
+{
+  "body_bytes": 2028,
+  "label": "expense-file-v3-categories",
+  "method": "GET",
+  "request_body": null,
+  "response_body_text": "{\"count\":129,\"categories\":[{\"id\":\"<redacted-id:c6f4ae2e99>\",\"name\":\"__api_harvest___20260114_191330_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:de000edf86>\",\"name\":\"__api_harvest___20260114_191636_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:4e11ba43eb>\",\"name\":\"__api_harvest___20260114_191913_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:5c524023ee>\",\"name\":\"__api_harvest___20260114_192426_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:4bc7741e4b>\",\"name\":\"__api_harvest___20260114_193100_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:53a76e3e56>\",\"name\":\"__api_harvest___20260114_193207_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:5554db7a1a>\",\"name\":\"__api_harvest___20260114_193306_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:f25bf6d0f1>\",\"name\":\"__api_harvest___20260114_193810_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:45ddc16410>\",\"name\":\"__api_harvest___20260114_194828_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false},{\"id\":\"<redacted-id:e6c05ac02f>\",\"name\":\"__api_harvest___20260114_194957_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false}]}",
+  "response_headers_subset": {
+    "Content-Length": "2028",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:36:47 GMT"
+  },
+  "response_json": {
+    "categories": [
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:c6f4ae2e99>",
+        "name": "__api_harvest___20260114_191330_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:de000edf86>",
+        "name": "__api_harvest___20260114_191636_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:4e11ba43eb>",
+        "name": "__api_harvest___20260114_191913_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:5c524023ee>",
+        "name": "__api_harvest___20260114_192426_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:4bc7741e4b>",
+        "name": "__api_harvest___20260114_193100_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:53a76e3e56>",
+        "name": "__api_harvest___20260114_193207_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:5554db7a1a>",
+        "name": "__api_harvest___20260114_193306_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:f25bf6d0f1>",
+        "name": "__api_harvest___20260114_193810_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:45ddc16410>",
+        "name": "__api_harvest___20260114_194828_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:e6c05ac02f>",
+        "name": "__api_harvest___20260114_194957_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      }
+    ],
+    "count": 129
+  },
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses/categories?page=1&page-size=10"
+}

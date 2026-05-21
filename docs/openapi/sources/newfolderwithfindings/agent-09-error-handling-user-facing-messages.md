@@ -30,7 +30,7 @@
 - `/tmp/clockify-livetest.env` — API key and workspace ID (secrets redacted)
 - `probes/lib/common.sh` — shared probe library with curl wrapper and redaction
 - `CLAUDE.md` — probe lab safety rules and limits
-- Workspace: `65b382b606de527a7ee2b60e` (probe/test workspace)
+- Workspace: `<REDACTED_ID>` (probe/test workspace)
 
 ## Commands run
 
@@ -39,7 +39,7 @@ Redacted secrets as `****REDACTED****`.
 ```sh
 # Doctor check
 MCP_PROFILE=local-stdio CLOCKIFY_API_KEY=****REDACTED**** \
-  CLOCKIFY_WORKSPACE=65b382b606de527a7ee2b60e \
+  CLOCKIFY_WORKSPACE=<REDACTED_ID> \
   go run ./cmd/clockify-mcp/ doctor
 
 # Error unit tests (all pass)
@@ -53,7 +53,7 @@ go build ./cmd/clockify-mcp/
 
 ## Live API probes run
 
-All probes ran against `https://api.clockify.me/api/v1` with workspace `65b382b606de527a7ee2b60e`.
+All probes ran against `https://api.clockify.me/api/v1` with workspace `<REDACTED_ID>`.
 
 | Probe | Method | Path | Expected | Actual HTTP | Upstream Body |
 |-------|--------|------|----------|-------------|---------------|

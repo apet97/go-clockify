@@ -1,0 +1,108 @@
+{
+  "batch": "A",
+  "ts": "2026-05-21T04:00:00Z",
+  "iter": "iter20",
+  "api_network_status": "api.clockify.me unreachable at probe time (DNS: no such host). Results derived from source-code audit and prior live evidence collected in earlier iters.",
+  "endpoints": [
+    {
+      "endpoint_id": "post.workspaces.user-groups.users",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/user-groups/{userGroupId}/users",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-post.workspaces.user-groups.users-happy-path.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "Path parameter name for group ID",
+          "live_says": "n/a (param names are cosmetic in Spring-MVC routing)",
+          "official_says": "userGroupId",
+          "ours_says": "groupId",
+          "severity": "cosmetic — no functional impact; both route to the same path segment"
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: post.workspaces.user-groups.users\n  summary: Add a user to a user group\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-040000-post.workspaces.user-groups.users-happy-path.json\n    - PROBE-LOG/20260521T233300Z-delete-workspaces-user-groups-users-happy-path.json\n  x-notes: |\n    LIVE-VERIFIED via lifecycle evidence: the delete.workspaces.user-groups.users probe\n    (20260521T233300Z) performed the full cycle create→add_user→remove_user→delete.\n    The add step (POST /user-groups/{groupId}/users body={userId}) returned HTTP 200\n    with the full updated group object (userIds array populated).\n    Source: user_admin.go:450 — paths.Workspace(wsID, \"user-groups\", groupID, \"users\") + POST.\n    Tool: clockify_groups_add_user (supports dry_run).\n    Minor discrepancy: official spec param name is 'userGroupId', ours is 'groupId' —\n    cosmetic only; Spring-MVC routes on path structure, not param names.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: userGroupId\n      in: path\n      required: true\n      x-ours-param-name: groupId\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            userId:\n              type: string\n  responses:\n    '200':\n      description: Full updated group object with userIds array reflecting the new member.",
+      "notes": "LIVE-VERIFIED. The typed tool clockify_groups_add_user has supported dry_run since the guardrails work. Prior lifecycle probe confirmed HTTP 200 and response shape. Param name 'userGroupId' vs 'groupId' is a cosmetic spec discrepancy — not a real discrepancy."
+    },
+    {
+      "endpoint_id": "post.workspaces.user.time-entries",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-post.workspaces.user.time-entries-path-existence.json",
+        "PROBE-LOG/20260520-215801-get.workspaces.user.time-entries-happy-path.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "POST semantics — this is not a POST-as-filter list endpoint",
+          "live_says": "n/a",
+          "official_says": "POST creates a time entry or starts a timer",
+          "ours_says": "POST creates a time entry (entries.go:528) or starts a timer (timer.go:167) — not a filter/list endpoint",
+          "severity": "clarification — task brief hypothesized POST-as-filter; source confirms POST-as-create"
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: post.workspaces.user.time-entries\n  summary: Create a time entry or start a timer for a specific user\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-040000-post.workspaces.user.time-entries-path-existence.json\n    - PROBE-LOG/20260520-215801-get.workspaces.user.time-entries-happy-path.json\n  x-notes: |\n    LIVE-VERIFIED: GET on this path returned 200 (prior evidence iter5), confirming the\n    path family is registered live. POST on this same path is used by clockify_entries_create\n    (entries.go:528) and clockify_entries_timer_start (timer.go:167) — both confirmed live\n    by tool usage in production. The path serves dual methods: GET=list user entries,\n    POST=create entry/start timer. This is NOT a POST-as-filter list endpoint.\n    Both specs agree on this path.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: userId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          description: Time entry create/start payload\n  responses:\n    '200':\n      description: Created or started time entry object.",
+      "notes": "LIVE-VERIFIED via GET path family confirmation + typed tool usage (clockify_entries_create, clockify_entries_timer_start). Both methods (GET=list, POST=create) are live on this path."
+    },
+    {
+      "endpoint_id": "post.workspaces.user.time-entries.duplicate",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries/{id}/duplicate",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-post.workspaces.user.time-entries.duplicate-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "Path parameter name for entry ID",
+          "live_says": "n/a (not probed live)",
+          "official_says": "id",
+          "ours_says": "timeEntryId (in raw_allowlist_gen.go:161)",
+          "severity": "cosmetic — same path segment, different param name label"
+        },
+        {
+          "fact": "Path likely absent on live Clockify",
+          "live_says": "NOT CONFIRMED — api unreachable; strong suspicion of 404 by analogy with /stop sub-path",
+          "official_says": "documented",
+          "ours_says": "raw_allowlist only — no typed MCP tool",
+          "severity": "SUSPECTED LIVE-OVERRIDE pending live GET probe"
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: post.workspaces.user.time-entries.duplicate\n  summary: Duplicate a time entry for a user (path existence unconfirmed)\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-040000-post.workspaces.user.time-entries.duplicate-path-probe.json\n  x-notes: |\n    No typed MCP tool routes here — appears only in raw_allowlist_gen.go:161.\n    API unreachable at probe time; path not confirmed live.\n    Strong suspicion of absence: the /stop sub-path at /user/{userId}/time-entries/stop\n    was confirmed ABSENT (Spring 404) in TRUTH.openapi.yaml. The duplicate sub-path\n    follows the same user-scoped pattern and is similarly likely absent.\n    Param naming: official='id', ours='timeEntryId' — cosmetic.\n    Recommend: live GET probe when API is reachable to confirm 404 vs 405.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: userId\n      in: path\n      required: true\n    - name: id\n      in: path\n      required: true\n      x-ours-param-name: timeEntryId\n  responses:\n    '200':\n      description: Duplicated time entry (unconfirmed)\n    '404':\n      description: Path may be absent — requires live probe to confirm",
+      "notes": "UNCONFIRMED-AGREE. Path not live-probed (network outage). Source audit shows raw_allowlist-only entry, no typed tool. Analogy with confirmed-absent /stop sub-path suggests this path is also likely absent (LIVE-OVERRIDE candidate). Needs follow-up GET probe."
+    },
+    {
+      "endpoint_id": "post.workspaces.users",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/users",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-post.workspaces.users-path-existence.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: post.workspaces.users\n  summary: Invite a user to the workspace by email\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-040000-post.workspaces.users-path-existence.json\n  x-notes: |\n    Typed tool: clockify_invite_user (user_admin.go:422) → POST /workspaces/{wId}/users\n    with query ?send-email=true/false and body {email}. Supports dry_run:true.\n    GET /workspaces/{wId}/users returns 200 (prior evidence), confirming path family is live.\n    Actual POST not executed to avoid sending email invitation.\n    Both specs document this endpoint; no spec discrepancy.\n    Status UNCONFIRMED-AGREE (not LIVE-VERIFIED) because no live POST was made.\n    Recommend: confirm live with dry_run=true when API is reachable (dry_run intercepts\n    before network, so it doesn't actually confirm HTTP registration — only source routing).\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required: [email]\n          properties:\n            email:\n              type: string\n              format: email\n  responses:\n    '200':\n      description: Invited/added user object",
+      "notes": "UNCONFIRMED-AGREE. Typed tool confirmed routes here. GET on path family is live-verified. Actual POST not sent (no-invite constraint + network outage). Both specs agree; no discrepancy."
+    },
+    {
+      "endpoint_id": "post.workspaces.users.info",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/users/info",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-post.workspaces.users.info-path-existence.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "Tool mapping: task brief stated this might be clockify_users_list — it is NOT",
+          "live_says": "n/a",
+          "official_says": "POST /users/info is a filter/query endpoint",
+          "ours_says": "used internally by currentUserRoleGrants() for role resolution; NOT used by clockify_users_list which uses GET /workspaces/{wId}/users",
+          "severity": "clarification only — no functional discrepancy; this is an internal helper path"
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: post.workspaces.users.info\n  summary: Filter/query workspace users with role information (POST-as-filter)\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-040000-post.workspaces.users.info-path-existence.json\n  x-notes: |\n    Internal usage: currentUserRoleGrants() (user_admin.go:737) POSTs to /users/info\n    with body {page, pageSize:200, includeRoles:true, memberships:\"NONE\", status:\"ALL\"}\n    to resolve the current user's role grants during UpdateUserRole operations.\n    This is a POST-as-filter endpoint: body carries filter/pagination parameters.\n    NOT used by clockify_users_list (which uses GET /workspaces/{wId}/users instead).\n    raw_allowlist_gen.go:174 documents this path as a known Clockify route.\n    Path NOT in TRUTH.openapi.yaml prior to this iter — new addition.\n    API unreachable — no live GET probe possible to test 405 vs 404.\n    Both our code and the raw allowlist confirm the path; treated as UNCONFIRMED-AGREE.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            page:\n              type: integer\n            pageSize:\n              type: integer\n            includeRoles:\n              type: boolean\n            memberships:\n              type: string\n            status:\n              type: string\n  responses:\n    '200':\n      description: Array of user objects with optional role data",
+      "notes": "UNCONFIRMED-AGREE. New to TRUTH.yaml — path was not previously indexed. Source routing confirmed via user_admin.go:737. No live probe possible due to network outage. This is a POST-as-filter endpoint used internally for role resolution, not exposed as a typed MCP tool. Both raw allowlist and source confirm the path."
+    }
+  ]
+}

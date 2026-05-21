@@ -1,0 +1,85 @@
+{
+  "batch": "DEVIL-B",
+  "iter": "iter23",
+  "ts": "2026-05-21T07:00:00Z",
+  "probe_agent": "devil-advocate-subagent",
+  "stride": "LV[5-9] (every 5th LIVE-VERIFIED endpoint, indices 5-9)",
+  "endpoints_sampled": [
+    "getTags — GET /workspaces/{workspaceId}/tags",
+    "getWebhook — GET /workspaces/{workspaceId}/webhooks/{webhookId}",
+    "updateTimeEntry — PUT /workspaces/{workspaceId}/time-entries/{timeEntryId}",
+    "updateTask — PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
+    "createExpenseCategory — POST /workspaces/{workspaceId}/expenses/categories"
+  ],
+  "results": [
+    {
+      "endpoint_id": "getTags",
+      "method": "GET",
+      "path": "/workspaces/{workspaceId}/tags",
+      "original_probe_kind": "happy-path",
+      "verdict": "CONFIRMED",
+      "probe_kind": "devil-empty-list",
+      "probe_file": "PROBE-LOG/20260521-070000-devil-get.workspaces.tags-empty-list.json",
+      "notes": "page=9999 yields bare empty array []. Shape consistent with TRUTH.yaml. Raw GET and MCP tool agree."
+    },
+    {
+      "endpoint_id": "getWebhook",
+      "method": "GET",
+      "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+      "original_probe_kind": "single-item",
+      "verdict": "CONFIRMED",
+      "probe_kind": "devil-missing-required",
+      "probe_file": "PROBE-LOG/20260521-070000-devil-get.workspaces.webhooks.single-missing-required.json",
+      "notes": "Non-existent webhookId (all-zeros) returns 'webhook not found in this workspace'. Correct error handling. Does not contradict TRUTH.yaml 200-path documentation."
+    },
+    {
+      "endpoint_id": "updateTimeEntry",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
+      "original_probe_kind": "happy-path (no-op same-value update)",
+      "verdict": "CONFIRMED",
+      "probe_kind": "devil-wrong-method",
+      "probe_file": "PROBE-LOG/20260521-070000-devil-put.workspaces.time-entries-wrong-method.json",
+      "notes": "GET on same path returns HTTP 200 with full time entry object. Consistent with MCP tool's internal GET-then-PUT merge. TRUTH.yaml only documents PUT here — the GET is an additive finding, not a contradiction. PUT endpoint verified as functional. Entry <redacted-id:1dac181586> intact, not modified by this devil probe."
+    },
+    {
+      "endpoint_id": "updateTask",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
+      "original_probe_kind": "happy-path",
+      "verdict": "CONFIRMED",
+      "probe_kind": "devil-wrong-method",
+      "probe_file": "PROBE-LOG/20260521-070000-devil-put.workspaces.projects.tasks-wrong-method.json",
+      "notes": "GET on same path returns HTTP 200 with full task object. Shape consistent with TRUTH.yaml documented PUT response fields. Additional observation: Clockify accepts numeric-string as task name ('12345' accepted). Task __test_openapi_task__ restored after probe. No schema contradiction."
+    },
+    {
+      "endpoint_id": "createExpenseCategory",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/expenses/categories",
+      "original_probe_kind": "dry-run",
+      "verdict": "CONFIRMED",
+      "probe_kind": "devil-missing-required",
+      "probe_file": "PROBE-LOG/20260521-070000-devil-post.workspaces.expenses.categories-missing-required.json",
+      "notes": "Empty name is rejected with 'name is required'. Enforces TRUTH.yaml's required:name constraint. Dry-run cross-check also confirms. No entity created during probe. Original dry_run evidence remains valid."
+    }
+  ],
+  "demotions": [],
+  "additive_findings": [
+    {
+      "finding": "GET /workspaces/{wId}/time-entries/{id} returns 200 with full time entry",
+      "relevance": "TRUTH.yaml documents only PUT at this path for updateTimeEntry. The GET endpoint is real and used internally by the MCP tool's GET-then-merge pattern. Could be added to TRUTH.yaml as getTimeEntry if not already documented elsewhere.",
+      "severity": "informational"
+    },
+    {
+      "finding": "GET /workspaces/{wId}/projects/{pId}/tasks/{taskId} returns 200 with full task object",
+      "relevance": "TRUTH.yaml documents only PUT at this path for updateTask. The GET is used internally by the MCP tool. getProjectTask single-item path is real. Could be added to TRUTH.yaml.",
+      "severity": "informational"
+    },
+    {
+      "finding": "Clockify accepts numeric-looking strings (e.g. '12345') as task name — no type enforcement at API layer for string fields",
+      "relevance": "The name field is documented as string in TRUTH.yaml. Clockify does not reject content that looks numeric. This is consistent behavior (type coercion), not a schema violation.",
+      "severity": "informational"
+    }
+  ],
+  "summary": "All 5 LIVE-VERIFIED endpoints CONFIRMED under different probe kinds. Zero demotions. Three additive informational findings about undocumented GET paths on PUT-only path segments — consistent with the MCP tool's read-before-write pattern."
+}

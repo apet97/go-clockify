@@ -102,7 +102,7 @@ func TestQualityGateRecoveryErrorCodes(t *testing.T) {
 }
 
 func TestQualityGateNameResolutionStrictAndTimeParsing(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 	loc, err := time.LoadLocation("Europe/Belgrade")
@@ -156,7 +156,7 @@ func TestQualityGateNameResolutionStrictAndTimeParsing(t *testing.T) {
 }
 
 func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = svc
@@ -256,7 +256,7 @@ func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 }
 
 func TestQualityGateFakeClockifyDomainWritesAndErrorEdges(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
@@ -302,7 +302,7 @@ func TestQualityGateFakeClockifyDomainWritesAndErrorEdges(t *testing.T) {
 }
 
 func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
@@ -337,7 +337,7 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 }
 
 func TestInvoiceClientWorkImportFailureReturnsRecoverableError(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
@@ -514,7 +514,7 @@ func containsAny(text string, needles []string) bool {
 }
 
 func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	workflowDataSchemas := map[string][]string{
 		"clockify_tools_guide":         {"workflows", "commonTasks", "domainTools", "rawFallback"},
 		"clockify_create_work_package": {"project"},
@@ -575,7 +575,7 @@ func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
 }
 
 func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 	svc.DefaultTimezone = time.UTC
@@ -633,7 +633,7 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 	callAndValidate("clockify_invoice_client_work", map[string]any{"client_id": packageResult.IDs["clientId"], "number": "INV-SCHEMA-1", "currency": "USD"})
 	callAndValidate("clockify_record_expense", map[string]any{"amount": float64(10), "category_id": "65b382b606de527a7ee2b60b", "date": "2026-01-02T00:00:00Z"})
 	callAndValidate("clockify_request_time_off", map[string]any{"policy_id": "65b382b606de527a7ee2b60c", "start": "2026-01-05", "end": "2026-01-06", "note": "Schema coverage"})
-	callAndValidate("clockify_schedule_work", map[string]any{"user_id": "65b382b606de527a7ee2b60e", "project_id": "65b382b606de527a7ee2b60d", "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(6)})
+	callAndValidate("clockify_schedule_work", map[string]any{"user_id": "000000000000000000000001", "project_id": "65b382b606de527a7ee2b60d", "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(6)})
 	callAndValidate("clockify_setup_webhook", map[string]any{"name": "Schema webhook", "url": "https://example.com/clockify", "webhook_event": "NEW_TIME_ENTRY"})
 	seed := callAndValidate("clockify_demo_seed", map[string]any{"run_id": "schema", "prefix": "SCHEMA", "date": "2026-01-02"})
 	if seed.IDs["entryId"] == "" || started.IDs["entryId"] == "" {
@@ -643,7 +643,7 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 }
 
 func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	wantNative := map[string]bool{
 		"clockify_invoices_list":                 true,
 		"clockify_invoices_get":                  true,
@@ -941,7 +941,7 @@ func isToolIdentByte(b byte) bool {
 }
 
 func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	wantFields := map[string][]string{
 		"clockify_clients_list":                  {"clients", "count", "page", "pageSize"},
 		"clockify_clients_get":                   {"id", "name"},
@@ -1177,7 +1177,7 @@ func TestToolDescriptionsAreNotVague(t *testing.T) {
 func TestRecoveryEnvelopeConformsToOutputSchema(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
 
@@ -1667,7 +1667,7 @@ func TestOneUserFeatureStatusUsesConservativeVocabulary(t *testing.T) {
 }
 
 func TestOneUserStatusIsUsefulFirstCall(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
@@ -1715,7 +1715,7 @@ func TestMCPStartupListingsMakeNoClockifyRequests(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = svc
@@ -1734,7 +1734,7 @@ func TestMCPStartupListingsMakeNoClockifyRequests(t *testing.T) {
 }
 
 func TestToolsResourceMatchesServerToolsList(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 	server.ResourceProvider = svc
@@ -1778,7 +1778,7 @@ func TestToolsResourceMatchesServerToolsList(t *testing.T) {
 }
 
 func TestPromptAndWorkflowGuidanceToolNamesExist(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	knownTools := map[string]bool{}
 	for _, descriptor := range svc.FullAccessRegistry() {
 		knownTools[descriptor.Tool.Name] = true
@@ -1864,7 +1864,7 @@ func assertGuidanceToolValueExists(t *testing.T, knownTools map[string]bool, val
 }
 
 func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
@@ -1878,7 +1878,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 		categoryID = "65b382b606de527a7ee2b60b"
 		policyID   = "65b382b606de527a7ee2b60c"
 		projectID  = "65b382b606de527a7ee2b60d"
-		userID     = "65b382b606de527a7ee2b60e"
+		userID     = "000000000000000000000001"
 	)
 
 	invoice := callToolOK(t, server, "clockify_invoice_client_work", map[string]any{"client_id": clientID, "number": "INV-FAKE-1", "currency": "USD"})
@@ -1945,7 +1945,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
@@ -1983,7 +1983,7 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
@@ -2008,7 +2008,7 @@ func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.
 func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
@@ -2163,7 +2163,7 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 func TestOneUserProjectMembershipsUpdateKeepsUserIDsCompatibility(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	initializeServer(t, server)
@@ -2181,7 +2181,7 @@ func TestOneUserProjectMembershipsUpdateKeepsUserIDsCompatibility(t *testing.T) 
 }
 
 func TestOneUserStopWorkNoRunningTimerReturnsNoop(t *testing.T) {
-	const workspaceID = "65b382b606de527a7ee2b60e"
+	const workspaceID = "000000000000000000000001"
 	const userID = "65b382b606de527a7ee2b624"
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -3099,7 +3099,7 @@ func oneUserCoverageArgs(tool mcp.Tool) map[string]any {
 		args["time_entry_ids"] = []any{oneUserCoverageID("entry_id")}
 		args["invoiced"] = true
 	case "clockify_users_invite":
-		args["emails"] = []any{"coverage@example.com"}
+		args["emails"] = []any{oneUserCoverageEmail("coverage")}
 	case "clockify_audit_logs_search":
 		args["actions"] = []any{"CREATE_PROJECT"}
 	case "clockify_entity_changes_list":
@@ -3133,9 +3133,9 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 	case "currency":
 		return "USD"
 	case "email":
-		return "coverage@example.com"
+		return oneUserCoverageEmail("coverage")
 	case "emails":
-		return []any{"coverage@example.com"}
+		return []any{oneUserCoverageEmail("coverage")}
 	case "memberships":
 		return []any{map[string]any{"user_id": oneUserCoverageID("user_id")}}
 	case "role_grants":
@@ -3181,6 +3181,8 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 		return false
 	case "change_fields":
 		return []any{"DATE", "PROJECT", "CATEGORY", "NOTES", "AMOUNT", "BILLABLE"}
+	case "custom_fields":
+		return []any{map[string]any{"field_id": oneUserCoverageID("custom_field_id"), "value": "Coverage custom field"}}
 	case "file_name":
 		return "receipt.pdf"
 	case "file_content_base64":
@@ -3231,7 +3233,7 @@ func oneUserCoverageID(name string) string {
 		"tag_id":          "65b382b606de527a7ee2b621",
 		"user_id":         "65b382b606de527a7ee2b622",
 		"webhook_id":      "65b382b606de527a7ee2b623",
-		"workspace_id":    "65b382b606de527a7ee2b60e",
+		"workspace_id":    "000000000000000000000001",
 	}
 	key := strings.ToLower(strings.TrimSuffix(name, "s"))
 	if id, ok := ids[key]; ok {
@@ -3240,8 +3242,12 @@ func oneUserCoverageID(name string) string {
 	return "65b382b606de527a7ee2b61f"
 }
 
+func oneUserCoverageEmail(local string) string {
+	return local + "@example.invalid"
+}
+
 func newOneUserCoverageUpstream() *httptest.Server {
-	const workspaceID = "65b382b606de527a7ee2b60e"
+	const workspaceID = "000000000000000000000001"
 	const userID = "65b382b606de527a7ee2b624"
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
@@ -3261,7 +3267,7 @@ func oneUserCoveragePayload(workspaceID, userID, method, path, rawQuery string) 
 	user := map[string]any{
 		"id":                 userID,
 		"name":               "Coverage User",
-		"email":              "coverage@example.com",
+		"email":              oneUserCoverageEmail("coverage"),
 		"activeWorkspace":    workspaceID,
 		"defaultWorkspace":   workspaceID,
 		"activeWorkspaceId":  workspaceID,

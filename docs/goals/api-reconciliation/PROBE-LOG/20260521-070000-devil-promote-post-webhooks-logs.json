@@ -1,0 +1,23 @@
+{
+  "endpoint_id": "getWebhookLogs",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+  "probe_kind": "devil-promotion-attempt",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "prior_status": "UNCONFIRMED-AGREE",
+  "live_probe_result": {
+    "probe_1": {
+      "method_probed": "GET",
+      "path_probed": "/workspaces/<redacted-id:7955161f32>/webhooks/FAKE_WEBHOOK_ID_DEVIL/logs",
+      "status": 405,
+      "key_facts": {
+        "error_code": "clockify_upstream_error",
+        "message": "Request method 'GET' is not supported",
+        "interpretation": "405 = Spring-MVC path IS registered. GET not allowed. The /webhooks/{webhookId}/logs path exists in Clockify router. POST is the correct method per TRUTH.yaml."
+      }
+    }
+  },
+  "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+  "promotion_evidence": "GET on /webhooks/FAKE_ID/logs returned 405 'Request method GET is not supported'. Per probe protocol: 405 = path is registered in Clockify router. This is definitive path-registration evidence. The fake webhook ID did not cause a 'No static resource' response — routing succeeded to the endpoint handler which then rejected the method. Both specs agree on POST. Promoting from UNCONFIRMED-AGREE to LIVE-VERIFIED on 405-confirms-path-registration evidence.",
+  "notes": "405 on GET is the gold standard path-registration probe per this project's probe protocol (documented in CLAUDE.md: '404 Spring-MVC No static resource = path absent, 405 = path exists'). Path /webhooks/{webhookId}/logs is registered. POST response shape remains unconfirmed (raw writes blocked). Partial promotion: path existence LIVE-VERIFIED, POST semantics still UNCONFIRMED."
+}

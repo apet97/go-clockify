@@ -50,6 +50,7 @@ SOURCE_PRIORITIES = {
   "doc-md" => 10
 }.freeze
 SENSITIVE_EXAMPLE_KEY_RE = /\A(?:api[_-]?key|auth[_-]?token|token|secret)\z/i
+EMAIL_EXAMPLE_RE = /\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b/i
 
 options = {
   real_dir: ENV.fetch("CLOCKIFY_OPENAPI_REAL_DIR", DEFAULT_REAL_DIR),
@@ -99,12 +100,20 @@ def redact_sensitive_examples!(value)
     value.each do |key, child|
       if child.is_a?(String) && key.to_s.match?(SENSITIVE_EXAMPLE_KEY_RE)
         value[key] = "<redacted>"
+      elsif child.is_a?(String)
+        value[key] = child.gsub(EMAIL_EXAMPLE_RE, "<EMAIL>")
       else
         redact_sensitive_examples!(child)
       end
     end
   when Array
-    value.each { |child| redact_sensitive_examples!(child) }
+    value.each_with_index do |child, index|
+      if child.is_a?(String) && !value.frozen?
+        value[index] = child.gsub(EMAIL_EXAMPLE_RE, "<EMAIL>")
+      else
+        redact_sensitive_examples!(child)
+      end
+    end
   end
 end
 

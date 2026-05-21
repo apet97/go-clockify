@@ -1,0 +1,24 @@
+{
+  "body_bytes": 75,
+  "content_type_sent": "multipart/form-data; boundary=CodexBoundary0b5e0e01e95647b792aac2f8b2d106ca",
+  "label": "expense-file-v2-create-with-file",
+  "method": "POST",
+  "request_body": {
+    "multipart_fields": {
+      "amount": "12.34",
+      "categoryId": "<redacted-id:c6f4ae2e99>",
+      "date": "2026-04-11T00:00:00Z",
+      "file": "codex-receipt.txt",
+      "notes": "CODEX-VERIFY-1779330956-EXPENSE-FILE",
+      "projectId": "<redacted-id:9837b32ece>",
+      "userId": "<redacted-id:706f58c94f>"
+    }
+  },
+  "response_body_text": "{\"message\":\"Uploading files of type text/plain is not allowed\",\"code\":4015}",
+  "response_json": {
+    "code": 4015,
+    "message": "Uploading files of type text/plain is not allowed"
+  },
+  "status": 400,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses"
+}

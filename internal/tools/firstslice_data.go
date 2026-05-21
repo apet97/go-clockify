@@ -381,6 +381,11 @@ func (s *Service) buildEntryPayload(ctx context.Context, args map[string]any) (m
 	if len(tagIDs) > 0 {
 		payload["tagIds"] = tagIDs
 	}
+	if customFields, ok, err := entryCustomFieldsFromArgs(args); err != nil {
+		return nil, nil, err
+	} else if ok {
+		payload["customFields"] = customFields
+	}
 	if billable, ok := args["billable"].(bool); ok {
 		payload["billable"] = billable
 	} else if projectID != "" && !dryrun.Enabled(args) {
@@ -451,6 +456,34 @@ func (s *Service) createEntry(ctx context.Context, args map[string]any) (clockif
 	}
 	ids["entryId"] = entry.ID
 	return entry, ids, nil
+}
+
+func entryCustomFieldsFromArgs(args map[string]any) ([]map[string]any, bool, error) {
+	items, ok, err := mapSliceArg(args, "custom_fields")
+	if err != nil || !ok {
+		return nil, ok, err
+	}
+	out := make([]map[string]any, 0, len(items))
+	for i, item := range items {
+		fieldID := firstNonEmptyString(
+			stringFromAny(item["field_id"]),
+			stringFromAny(item["custom_field_id"]),
+			stringFromAny(item["customFieldId"]),
+			stringFromAny(item["id"]),
+		)
+		if strings.TrimSpace(fieldID) == "" {
+			return nil, true, fmt.Errorf("custom_fields[%d].field_id is required", i)
+		}
+		if err := resolve.ValidateID(fieldID, fmt.Sprintf("custom_fields[%d].field_id", i)); err != nil {
+			return nil, true, err
+		}
+		value, hasValue := item["value"]
+		if !hasValue {
+			return nil, true, fmt.Errorf("custom_fields[%d].value is required", i)
+		}
+		out = append(out, map[string]any{"customFieldId": fieldID, "value": value})
+	}
+	return out, true, nil
 }
 
 func (s *Service) projectIDFromArgs(ctx context.Context, args map[string]any) (string, error) {

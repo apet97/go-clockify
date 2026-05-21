@@ -1,7 +1,7 @@
 # Clockify WORKSPACES — verified reads (Agent A)
 # Base: https://api.clockify.me/api
 # Auth: header X-Api-Key
-# Verified against workspace 65b382b606de527a7ee2b60e on 2026-05-12.
+# Verified against workspace <REDACTED_ID> on 2026-05-12.
 # Fixtures: fixtures/workspaces-fresh-a/*.json (+ *.status.txt)
 
 paths:
@@ -66,13 +66,13 @@ components:
       properties:
         id:
           type: string
-          example: "65b382b606de527a7ee2b60e"
+          example: "<REDACTED_ID>"
         name:
           type: string
           example: "WORKSPACE"
         cakeOrganizationId:
           type: string
-          example: "678fed5d3b6581697c1b3425"
+          example: "<REDACTED_ID>"
         imageUrl:
           type: string
           description: May be empty string "" (NOT null, NOT absent).
@@ -117,7 +117,7 @@ components:
     CurrencyWithDefaultInfoDtoV1:
       type: object
       properties:
-        id:        { type: string, example: "69644fd2dc6d1f31695f2178" }
+        id:        { type: string, example: "<REDACTED_ID>" }
         code:      { type: string, example: "USD" }
         isDefault: { type: boolean, example: false }
 

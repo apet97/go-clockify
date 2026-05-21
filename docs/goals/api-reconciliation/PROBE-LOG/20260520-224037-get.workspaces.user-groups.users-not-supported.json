@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.user-groups.users",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/user-groups/{groupId}/users",
+  "probe_kind": "wrong-method",
+  "timestamp_utc": "2026-05-20T22:40:37Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/user-groups/<redacted-id:27ef83798b>/users","query":{},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":405,"body_keys":["ok","error"],"body_sample":"{\"error\":{\"code\":\"clockify_upstream_error\",\"message\":\"Request method 'GET' is not supported\"}}"},
+  "facts_observed": {"method_not_supported":true,"error_code":"clockify_upstream_error"},
+  "notes": "In ours spec only. GET /user-groups/{groupId}/users returns 405 'GET not supported'. User group members should be read from /user-groups list response (userIds field)."
+}

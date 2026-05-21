@@ -1,0 +1,51 @@
+{
+  "endpoint_id": "post.workspaces.invoices.items",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/items",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "dry_run via clockify_invoices_items_add",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:e98f14fe16>/items",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "invoice_id": "<redacted-id:e98f14fe16>",
+      "item_type": "Service",
+      "description": "RECON test item",
+      "quantity": 1,
+      "unit_price": 100,
+      "unit_price_unit": "minor",
+      "dry_run": true
+    }
+  },
+  "response": {
+    "status": "dry_run",
+    "headers_redacted": {},
+    "body_sample": {
+      "ok": true,
+      "action": "clockify_invoices_items_add",
+      "entity": "invoice_item",
+      "data": {
+        "dry_run": true,
+        "note": "No changes were made.",
+        "payload": {
+          "applyTaxes": "NONE",
+          "description": "RECON test item",
+          "itemType": "Service",
+          "quantity": 1,
+          "unitPrice": 100
+        },
+        "tool": "clockify_add_invoice_item"
+      }
+    }
+  },
+  "facts_observed": {
+    "dry_run_supported": true,
+    "payload_field_names": ["applyTaxes", "itemType", "unitPrice", "quantity", "description"],
+    "upstream_tool_name": "clockify_add_invoice_item",
+    "path_confirmed": "POST /workspaces/{wId}/invoices/{invoiceId}/items — dry_run resolves correctly, path is live",
+    "unit_price_unit": "minor (cents) by default; multiplied by 100 for major"
+  },
+  "notes": "dry_run returned ok:true with resolved payload. Confirms the path /workspaces/{wId}/invoices/{invoiceId}/items (POST) is valid and the tool correctly serializes itemType, unitPrice, quantity, applyTaxes. No actual mutation occurred."
+}

@@ -1,5 +1,5 @@
 # clients-b.yaml — Clockify Clients API: MUTATION + ERROR shapes.
-# Derived from live probes against workspace 65b382b606de527a7ee2b60e on
+# Derived from live probes against workspace <REDACTED_ID> on
 # 2026-05-12. Source fixtures: fixtures/clients-fresh-b/*.json.
 #
 # Scope: only mutating endpoints (POST/PUT/DELETE). Read shapes are
@@ -65,7 +65,7 @@ paths:
                 value:
                   name: "mcp-probe-...-full"
                   address: "123 Probe Lane"
-                  email: "probe@example.com"
+                  email: "<EMAIL>"
                   note: "probe full body"
       responses:
         "201":

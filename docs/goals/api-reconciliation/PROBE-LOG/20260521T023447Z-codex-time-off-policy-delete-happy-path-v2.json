@@ -1,0 +1,13 @@
+{
+  "body_bytes": 71,
+  "label": "time-off-policy-delete-happy-path-v2",
+  "method": "DELETE",
+  "request_body": null,
+  "response_body_text": "{\"message\":\"Policy must be archived in order to be deleted\",\"code\":400}",
+  "response_json": {
+    "code": 400,
+    "message": "Policy must be archived in order to be deleted"
+  },
+  "status": 400,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/policies/<redacted-id:57a75351b4>"
+}

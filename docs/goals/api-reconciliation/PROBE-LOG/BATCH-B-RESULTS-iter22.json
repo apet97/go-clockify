@@ -1,0 +1,82 @@
+{
+  "batch": "B",
+  "ts": "2026-05-21T06:00:00Z",
+  "iter": "iter22",
+  "network_status": "ONLINE — live Clockify API reachable; fresh PUT probes succeeded for both endpoints",
+  "endpoints": [
+    {
+      "endpoint_id": "put.workspaces.time-off.policies.ours",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
+      "spec_source": "ours",
+      "mcp_tool": "clockify_time_off_policies_update",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-060000-put.workspaces.time-off.policies-ours-live-put.json",
+        "PROBE-LOG/20260520-233247-patch.workspaces.time-off.policies-happy-path.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "path parameter name",
+          "official_says": "id",
+          "ours_says": "policyId",
+          "live_says": "positional — both names refer to the same URL segment; no functional difference",
+          "severity": "cosmetic",
+          "resolution": "No action required. Keep ours param name policyId for internal consistency."
+        }
+      ],
+      "cross_reference_batch_a": {
+        "note": "BATCH-A (iter15, BATCH-B-RESULTS.json) covered PATCH on this same path (patch.workspaces.time-off.policies, LIVE-OVERRIDE for param name discrepancy). This iter22 BATCH-B item covers the same path under PUT — the MCP tool clockify_time_off_policies_update at internal/tools/time_off_policies.go:165 uses s.Client.Put(), confirmed live.",
+        "patch_also_works": "PATCH probe from iter15 confirmed HTTP 200 on the same path. Clockify accepts both PUT and PATCH on /time-off/policies/{policyId}."
+      },
+      "truth_yaml": "put:\n  operationId: updateTimeOffPolicy\n  summary: Update a time-off policy (GET-then-PUT merge)\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-060000-put.workspaces.time-off.policies-ours-live-put.json\n    - PROBE-LOG/20260520-233247-patch.workspaces.time-off.policies-happy-path.json\n  x-notes: |\n    Live PUT returns 200 with full policy object. MCP tool clockify_time_off_policies_update\n    uses GET-then-PUT merge: fetches existing policy, merges caller-supplied fields into\n    the full body, then PUTs the merged result back.\n    Source: internal/tools/time_off_policies.go:131 path construction,\n    line 165 s.Client.Put().\n    Param name discrepancy: official spec uses {id}, ours uses {policyId}.\n    Cosmetic only -- same URL segment. Both work on live Clockify.\n    Clockify also accepts PATCH on this path (iter15 probe confirmed).\n    Response includes full policy: id, name, timeUnit, archived, allowHalfDay,\n    allowNegativeBalance, approve, automaticAccrual, automaticTimeEntryCreation,\n    balance_rules, everyoneIncludingNew, negativeBalance, projectId,\n    userGroupIds, userIds, workspaceId.\n    meta.changedFields lists which fields were actually modified.\n  x-truth-iter: iter22\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: policyId, in: path, required: true, schema: {type: string}}\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            name:\n              type: string\n              maxLength: 150\n            timeUnit:\n              type: string\n              enum: [DAYS, HOURS]\n            automaticAccrual:\n              type: object\n              description: Accrual config with amount, period, timeUnit\n            allowNegativeBalance:\n              type: boolean\n            negativeBalance:\n              type: object\n              description: Negative balance config with amount, period, shouldReset, timeUnit\n            approve:\n              type: object\n              description: Approval config with requiresApproval, specificMembers, teamManagers, userIds\n            everyoneIncludingNew:\n              type: boolean\n            archived:\n              type: boolean\n            automaticTimeEntryCreation:\n              type: object\n  responses:\n    '200':\n      description: Updated policy object (full shape)\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id: {type: string}\n              name: {type: string}\n              timeUnit: {type: string}\n              archived: {type: boolean}\n              allowHalfDay: {type: boolean}\n              allowNegativeBalance: {type: boolean}\n              approve: {type: object}\n              automaticAccrual: {type: object, nullable: true}\n              automaticTimeEntryCreation: {type: object}\n              balance_rules: {type: object}\n              everyoneIncludingNew: {type: boolean}\n              negativeBalance: {type: object}\n              projectId: {type: string}\n              userGroupIds:\n                type: array\n                items: {type: string}\n              userIds:\n                type: array\n                items: {type: string}\n              workspaceId: {type: string}",
+      "notes": "LIVE-VERIFIED. PUT /workspaces/{workspaceId}/time-off/policies/{policyId} confirmed live with HTTP 200 and full policy object returned. Tool uses GET-then-PUT merge pattern. Param name discrepancy between specs (id vs policyId) is cosmetic only — both resolve to the same URL segment. Same path also accepts PATCH (confirmed iter15). No functional discrepancy; only cosmetic param label difference."
+    },
+    {
+      "endpoint_id": "put.workspaces.user-groups.official",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/user-groups/{id}",
+      "spec_source": "official",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-060000-put.workspaces.user-groups-official-live-put.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "path parameter name for group ID",
+          "official_says": "id",
+          "ours_says": "groupId",
+          "live_says": "positional — both names refer to the same URL segment; no functional difference",
+          "severity": "cosmetic",
+          "resolution": "No action required."
+        }
+      ],
+      "truth_yaml": "put:\n  operationId: updateUserGroup\n  summary: Update a user group by ID (full-replacement PUT)\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-060000-put.workspaces.user-groups-official-live-put.json\n  x-notes: |\n    Live PUT returns 200 with full group object. MCP tool clockify_groups_update\n    dispatches to PUT /workspaces/{wId}/user-groups/{groupId}.\n    Source: internal/tools/groups_holidays.go:364 path construction,\n    line 369 s.Client.Put().\n    Required args: group_id and name (both required by MCP tool schema).\n    Optional args: user_ids (array -- sent as full replacement list, not append).\n    Clockify enforces workspace-scoped name uniqueness: sending the current name\n    returns a 400 business error (User group with name X already exists).\n    This confirms the path reaches Clockify business logic layer.\n    Response shape: id, name, teamManagers (array), userIds (array), workspaceId.\n    Meta does not include changedFields (unlike time-off-policies).\n    Official spec param name is {id}; ours is {groupId} -- cosmetic alias only.\n    No dry_run support in UpdateUserGroupAdmin (only DeleteUserGroupAdmin has dry_run).\n  x-truth-iter: iter22\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: id, in: path, required: true, schema: {type: string}}\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required: [name]\n          properties:\n            name:\n              type: string\n              maxLength: 150\n            userIds:\n              type: array\n              items: {type: string}\n              description: Full desired membership list (replacement semantics)\n  responses:\n    '200':\n      description: Updated group object\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id: {type: string}\n              name: {type: string}\n              teamManagers:\n                type: array\n                items: {type: object}\n              userIds:\n                type: array\n                items: {type: string}\n              workspaceId: {type: string}\n    '400':\n      description: Name already taken in this workspace",
+      "notes": "LIVE-VERIFIED. PUT /workspaces/{workspaceId}/user-groups/{id} confirmed live with HTTP 200. Required body fields: name (required by both Clockify and MCP tool schema). user_ids is optional but when provided replaces the full membership list (not an append). Clockify enforces unique name constraint — sending an existing name returns 400 business error confirming path reaches business logic. Param name discrepancy (id vs groupId) is cosmetic only."
+    },
+    {
+      "endpoint_id": "put.workspaces.user-groups.ours",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/user-groups/{groupId}",
+      "spec_source": "ours",
+      "mcp_tool": "clockify_groups_update",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-060000-put.workspaces.user-groups-ours-live-put.json",
+        "PROBE-LOG/20260521-060000-put.workspaces.user-groups-official-live-put.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "path parameter name for group ID",
+          "official_says": "id",
+          "ours_says": "groupId",
+          "live_says": "positional — same URL segment; cosmetic difference only",
+          "severity": "cosmetic",
+          "resolution": "No action required."
+        }
+      ],
+      "truth_yaml": "# Same path as official row above; ours uses {groupId} param alias instead of {id}.\n# See put.workspaces.user-groups.official truth_yaml -- functionally identical.\n# MCP tool clockify_groups_update uses ours param groupId in path construction.\n# LIVE-VERIFIED by the same probe as the official row.",
+      "notes": "LIVE-VERIFIED via the same probe as the official row. Our spec uses {groupId} instead of official {id}. Same concrete URL path. No separate truth_yaml entry needed — merged with official row. CLAUDE.md constraint confirmed: user_ids must be sent as the full desired membership array (full replacement, not append). MCP tool requires both group_id and name. No dry_run support on update (only on delete)."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "endpoint_id": "delete.workspaces.users.roles",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/users/{userId}/roles",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:45:00Z",
+  "request": {
+    "method": "dry_run via clockify_users_role",
+    "path": "PATCH /workspaces/[REDACTED-WORKSPACE]/users/<redacted-id:706f58c94f>/roles",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"role": "REGULAR", "role_grants": [{"role": "TEAM_MANAGER", "entityId": "<redacted-id:706f58c94f>"}]}
+  },
+  "response": {
+    "status": "dry_run",
+    "headers_redacted": {},
+    "body_sample": "{\"dry_run\":true,\"note\":\"No changes were made.\",\"payload\":{\"role\":\"REGULAR\",\"role_grants\":[{\"role\":\"TEAM_MANAGER\",\"entityId\":\"<redacted-id:706f58c94f>\"}]},\"tool\":\"clockify_update_user_role\"}"
+  },
+  "facts_observed": {
+    "actual_method": "PATCH not DELETE",
+    "actual_path": "PATCH /workspaces/{wId}/users/{userId}/roles (used by clockify_users_role tool)",
+    "spec_method": "DELETE per both specs",
+    "live_method": "PATCH (via clockify_users_role tool implementation)",
+    "discrimination": "Both specs document DELETE /users/{userId}/roles. The MCP typed tool clockify_users_role uses PATCH. The actual verb used for role changes is PATCH, not DELETE.",
+    "tool_note": "clockify_users_role uses PATCH internally; dry_run confirmed the path and payload"
+  },
+  "notes": "LIVE-OVERRIDE. Both specs list DELETE /workspaces/{wId}/users/{userId}/roles. The MCP typed tool clockify_users_role sends PATCH to the same path. Dry_run confirmed path and payload. The HTTP verb discrepancy is a spec issue — the live implementation uses PATCH for role mutations."
+}

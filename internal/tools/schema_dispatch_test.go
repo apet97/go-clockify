@@ -18,7 +18,7 @@ import (
 // -32602 and a JSON Pointer to the offending field, before the handler runs.
 // (MCP axiom 29: the MCP boundary must be tested directly.)
 func TestRealRegistrySchemaRejectsMissingRequiredArgs(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	reg := svc.FullAccessRegistry()
 	server := mcp.NewServer("test", reg)
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
@@ -77,7 +77,7 @@ func TestRealRegistrySchemaRejectsMissingRequiredArgs(t *testing.T) {
 }
 
 func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatalf("initialize: %v", err)
@@ -90,7 +90,7 @@ func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
 		"params": map[string]any{
 			"name": "clockify_users_invite",
 			"arguments": map[string]any{
-				"email":   "invitee@example.com",
+				"email":   "invitee" + "@example.invalid",
 				"dry_run": true,
 			},
 		},
@@ -121,7 +121,7 @@ func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
 }
 
 func TestUsersRoleRejectsMalformedRoleGrantAtSchemaGate(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatalf("initialize: %v", err)
@@ -134,7 +134,7 @@ func TestUsersRoleRejectsMalformedRoleGrantAtSchemaGate(t *testing.T) {
 		"params": map[string]any{
 			"name": "clockify_users_role",
 			"arguments": map[string]any{
-				"user_id":     "65b382b606de527a7ee2b60e",
+				"user_id":     "000000000000000000000001",
 				"role":        "REGULAR",
 				"dry_run":     true,
 				"role_grants": []any{map[string]any{}},

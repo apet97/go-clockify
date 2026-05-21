@@ -171,6 +171,11 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 			"description": description,
 			"projectId":   resolvedProjectID,
 		}
+		if customFields, ok, err := entryCustomFieldsFromArgs(args); err != nil {
+			return ResultEnvelope{}, err
+		} else if ok {
+			payload["customFields"] = customFields
+		}
 		return ok(oneUserToolSwitchWork, dryrunPreviewPayload(oneUserToolSwitchWork, payload), map[string]any{"workspaceId": wsID, "projectId": resolvedProjectID}), nil
 	}
 
@@ -194,6 +199,9 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	startArgs := map[string]any{"project": projectRef, "description": description}
 	if projectID != "" {
 		startArgs = map[string]any{"project_id": projectID, "description": description}
+	}
+	if customFields, ok := args["custom_fields"]; ok {
+		startArgs["custom_fields"] = customFields
 	}
 	startResult, startErr := s.StartTimerArgs(ctx, startArgs)
 	if startErr != nil {

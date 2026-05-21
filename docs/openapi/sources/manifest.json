@@ -99,8 +99,8 @@
     },
     {
       "path": "clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml",
-      "bytes": 38020,
-      "sha256": "2835b8699e175ad8afe9391ddb5b3e766b170fd88ce8c3389cc44467d244cc5d"
+      "bytes": 37822,
+      "sha256": "fccc25397d97acadbddda4892432c72870f9ac959213f9da977723b385d1dfc7"
     },
     {
       "path": "clockify-api-probe-lab/WEBHOOKDOC.md",
@@ -144,8 +144,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/rates-and-reports.md",
-      "bytes": 9520,
-      "sha256": "4e6514fdf98c68d833993708dab8f51df63c07e78cdca784eaa842470cf552d8"
+      "bytes": 9509,
+      "sha256": "470e0fdfd7c1e359daaed19f3f98afe80ac033c870ce0a15f829b7026ebecd1c"
     },
     {
       "path": "clockify-api-probe-lab/findings/scheduling.md",
@@ -174,13 +174,13 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/approvals-a.yaml",
-      "bytes": 6459,
-      "sha256": "29eeea140bda2cf78ef92d990ca8b9c9401189e94afa85aaa9df5272c4d9381a"
+      "bytes": 6448,
+      "sha256": "c86da3856d44574c9b2211e17dc3ff37081164562c7d9e848b386d9f4e178746"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/approvals-b.yaml",
-      "bytes": 10214,
-      "sha256": "be631b95f222480c660a8a26e637c9763bea5132ac47570cdda65a81a9234da8"
+      "bytes": 10203,
+      "sha256": "ddb8fd2add6b097113a7b67a1b9d4731651a7fa289a8bd5b071e6df25ab75f41"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/balance-a.yaml",
@@ -189,68 +189,68 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/balance-b.yaml",
-      "bytes": 3120,
-      "sha256": "df152db3dc092eb119a75bdfb5fbd838eb017f2c7f1fc57149fc66a85bf8b744"
+      "bytes": 3065,
+      "sha256": "5eba7fb3d669347968709fcaaf69c18d48d5c581b8b4dbe616814fe51ba74cb5"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/clients-a.yaml",
-      "bytes": 4792,
-      "sha256": "1d22bb15d540eea729ae00af856125089352f805a1b4fa50712f5859de832bd2"
+      "bytes": 4781,
+      "sha256": "9b85b60b65cad38d03f070ffd9cabfe5529b912eb1a1bf84e7ef3dd6966c0721"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/clients-b.yaml",
-      "bytes": 8190,
-      "sha256": "bc1c533f3855365fe78d88a347125dba9192c3e9383ace592dd53afe596ecd00"
+      "bytes": 8169,
+      "sha256": "8fae6c444a58bd8f0d0721ac50b55f87fad159d6dae5dd589baccd0e3c5d300d"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/expenses-a.yaml",
-      "bytes": 8693,
-      "sha256": "95dcd2c8781ea40e600af3df59f6e301b286b042e97c603db594702469a7e908"
+      "bytes": 8682,
+      "sha256": "89619ece98456fe4f9a88be80f432bf4da12b30823a84d8e42401e033497b90e"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/expenses-b.yaml",
-      "bytes": 6482,
-      "sha256": "63b706c5150d66792d62847b7fc32086709d33dba0674087b44be1c1a61d4d78"
+      "bytes": 6471,
+      "sha256": "75718a3c66a1503488656c295ff40f3b261de45f0566269d01f78691a599e40a"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/holidays-a.yaml",
-      "bytes": 3719,
-      "sha256": "ba33be9b52f3adad012b6e8867aa946225e96e056f5196e449222250901a4b3e"
+      "bytes": 3686,
+      "sha256": "85b9aa545ebfb03597eedb55be90d7c84b86b28e4b5e8949c64e0926fd42db4f"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/holidays-b.yaml",
-      "bytes": 8090,
-      "sha256": "9a9c93abb458c5c236527b4c08f45f9f4b0948df7a30c85dd941a6e72fad7ccd"
+      "bytes": 8079,
+      "sha256": "5f2dde26c00db7e2894a1cdb781e43e2a683c232c8070fe9816106b9cb1d29f3"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/invoices-a.yaml",
-      "bytes": 7573,
-      "sha256": "988d18093c101f0a50eafae3780f1b0fa7efaeadee3d74b0dd22bff57bc50714"
+      "bytes": 7562,
+      "sha256": "e0974326862a96764cfefe8273429fe2442b395e5c3013bf9e36ebb350f742e8"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/invoices-b.yaml",
-      "bytes": 7460,
-      "sha256": "07cc4626f4220b7912dc9c840455b1485262e376323d41abfe67862bdfecca56"
+      "bytes": 7449,
+      "sha256": "d6e7b94431c3e8048401703175a37be53997e51d6c5dc2adb41acfdbb1d8f56d"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/policies-a.yaml",
-      "bytes": 6792,
-      "sha256": "59812f00897f6f3db82d640cff8bfe762c79dae78f7ecca671fae93ad23ea89a"
+      "bytes": 6781,
+      "sha256": "4202a1c05d7d307856059be0060221ff608cb4c1b490431b3005f2762a5bdce9"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/policies-b.yaml",
-      "bytes": 6280,
-      "sha256": "ad08f46b8572cb6e7b981df67670f9e27f75751fa82ed4244fb6deb930a73873"
+      "bytes": 6269,
+      "sha256": "05478874cb171e91f9b6a9616df7b63f77d98ff3f6da285c1074aed3b17803e8"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/projects-a.yaml",
-      "bytes": 11918,
-      "sha256": "1efaff551289c9682eff5ff3e8519a963a936aaaf427d77fdc59c52f726e9909"
+      "bytes": 11907,
+      "sha256": "2ae27ebc991a079389d5d8d238e4eeb68a95b1d9ac1528bc93bef68d567bedfd"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/projects-b.yaml",
-      "bytes": 10253,
-      "sha256": "ab20dd813a4a9cf52432a3aa1e3919dd06d8520d843372ff8b0271458ccc6776"
+      "bytes": 10242,
+      "sha256": "31b3d365351d8168e982c6ee440f3804eff32903c8ab8007a56021f03f28a64a"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml",
@@ -259,83 +259,83 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml",
-      "bytes": 5808,
-      "sha256": "14496c34ff83466d0d6cc6c5488d19f77d1c5b5b956826dc237f7cd0dba8420b"
+      "bytes": 5797,
+      "sha256": "6d054a8abba5397600ef1b0a94d0fc4ebb50263edf9000c4f5ec94ba32ff1924"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/tags-a.yaml",
-      "bytes": 3404,
-      "sha256": "c1e651eee7732fbb388bcb411ee0543eb62f423ec985ff55947732c972e8e1b7"
+      "bytes": 3371,
+      "sha256": "917d2f9042382d753ae99782c55458a5e1930115dfa044673e1d049d6c306701"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/tags-b.yaml",
-      "bytes": 3324,
-      "sha256": "4393e503693becf3281b100c32af435a40ae585b5c640f7d58c3cc2ac49d8e8a"
+      "bytes": 3313,
+      "sha256": "73a0f1d0d8fd5aa9db3436cc4c3116d493549c32a01c3bd7793e3f5d6a89c6b2"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/tasks-a.yaml",
-      "bytes": 5168,
-      "sha256": "d05934c5f6e36925017d8683b69ef3b68f292e1676ce8658b1c86dbfc30ff581"
+      "bytes": 5146,
+      "sha256": "14bbd741d0094b5a55b3bf5e8493c9e6bec3faa6025d7f9f13f967c4f4246172"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/tasks-b.yaml",
-      "bytes": 5479,
-      "sha256": "e4b08f91e148be14175f3861fde7e5a4faae6619df7e7482326ef4c61ea86979"
+      "bytes": 5468,
+      "sha256": "99164057313011b3541412e8ca2ea58447c94ccdbb9e557bc711d2cb0e0f44fa"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/time-entries-a.yaml",
-      "bytes": 5902,
-      "sha256": "9068a8928ada4d435e8573f8c802125f409238d6f814fdea6cad420eca9e6be1"
+      "bytes": 5880,
+      "sha256": "3cff9fc06a88f9c3a296154fd48be088b1906baa568668492f3e63b07bd6019b"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/time-entries-b.yaml",
-      "bytes": 6802,
-      "sha256": "0dbf61211fe8354d08065cf5daf5cc8dd7dad8bb128b905a34c268356ebd610a"
+      "bytes": 6791,
+      "sha256": "547e8570d3e9b2c3323dfc33ec4e97b9e9bf65f085ba66733cee3061bf6892e7"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/time-off-a.yaml",
-      "bytes": 8506,
-      "sha256": "98c10452218a1e63cdcc965b66b84872b86c16e3171049b225f44ed2653fc02f"
+      "bytes": 8495,
+      "sha256": "b91bc5ff6de7042b34823c9b3961fad0480b0a8b74627942a2bab9a1ba04f493"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/time-off-b.yaml",
-      "bytes": 7640,
-      "sha256": "7b956ed0caccdec93ef195da30746b18b6d03a1eaca1efb6bedf2506f0063b9a"
+      "bytes": 7629,
+      "sha256": "5a5e64079f1f52e70f7c72223784cb9e0afec3d2728a81311c72dc743b529c42"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/user-groups-a.yaml",
-      "bytes": 4615,
-      "sha256": "1797ab08315454b820f6187bd596fc02f3ee3332d58e511958f8a9857f655b87"
+      "bytes": 4582,
+      "sha256": "3200b5f47fed485395469f303804cbd955543289915c603c4d1150c153b5a57b"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/user-groups-b.yaml",
-      "bytes": 6920,
-      "sha256": "7b90253afb7450edd010ef781e4934f7ffedc7df0588b4d7819b567765e80cd3"
+      "bytes": 6887,
+      "sha256": "fcbb499667253116fc6cd517ce91c0b055354ad70918d431bdd7bd41be3a0749"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml",
-      "bytes": 6474,
-      "sha256": "79260064e488d666adb897f53a830fbad6ccbe12394efdda595397a31498d21f"
+      "bytes": 6452,
+      "sha256": "e63758cd28c33e658f040490d9e56f516a68bd88ce8e901c001d67976b16c325"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml",
-      "bytes": 8877,
-      "sha256": "c4931ebf5861a7ce26331229573276a287ab8ca0205c998bd720953c29608cf1"
+      "bytes": 8866,
+      "sha256": "ff58991e0333217cc870745476d718d47a5014508d81ed3fe5450f8b585f9fdd"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml",
-      "bytes": 7663,
-      "sha256": "2d261690eed0a44afabb252146f47e84932b5aea5b15600f144545a91e13e535"
+      "bytes": 7619,
+      "sha256": "691b3b06927c529298b304eff2c73c18c0e6ad554f6d305c068b0a990e2bb53d"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml",
-      "bytes": 16461,
-      "sha256": "6116123bfbaaa9c65ecbe95ba59dcad841391ea64946eda9d51240bb82ed0af8"
+      "bytes": 16439,
+      "sha256": "5c3fb48a3a7ded0af535023709f30baa83b3eb71920f8c784e7c8e9ec2e28269"
     },
     {
       "path": "clockify-api-probe-lab/openapi.yaml",
-      "bytes": 126914,
-      "sha256": "e2e72e70db49a1f9f23346e23c1ae1ba71bd71d5dfc8ec5c7fe61efd78426ae1"
+      "bytes": 126848,
+      "sha256": "b8a288167144695f07932ca114da4e92740306a87bf6612fe99c2e81577abe59"
     },
     {
       "path": "clockify-api-probe-lab/openapi_scheduling.yaml",
@@ -354,13 +354,13 @@
     },
     {
       "path": "newfolderwithfindings/agent-01-api-coverage-vs-openapi.md",
-      "bytes": 18149,
-      "sha256": "e7f18aea07fb96f979177c82f70ab1a1701ce2ba3b54c0a98277945ac3b22ca1"
+      "bytes": 18127,
+      "sha256": "5618f5405c65d56241023f66d8baaf67c623e1764b8dd9100081cd6f6b56111a"
     },
     {
       "path": "newfolderwithfindings/agent-02-mcp-tool-schema-quality.md",
-      "bytes": 10846,
-      "sha256": "3a2fb99571e144c009e081a60bed20e4f8992b847b97efea0e1d50d1732b2b80"
+      "bytes": 10833,
+      "sha256": "404b3950073b04888522beaa4dfc50f28f782b71a05c95ed4ec33658b12f5f4e"
     },
     {
       "path": "newfolderwithfindings/agent-03-tool-descriptions-and-parameter-clarity.md",
@@ -369,18 +369,18 @@
     },
     {
       "path": "newfolderwithfindings/agent-04-auth-api-key-loading.md",
-      "bytes": 12348,
-      "sha256": "fc0ac21f1476e9eaee0fc50f34cacbab59eb2bae035cae43b95b8c296af8a6c3"
+      "bytes": 12293,
+      "sha256": "94a48ffcd1104b8432746a5ee1f3375231a482f8c83fe93b422dc4a489f50d98"
     },
     {
       "path": "newfolderwithfindings/agent-05-api-key-redaction-and-secret-safety.md",
-      "bytes": 10396,
-      "sha256": "1b46242645b2b11a16dadef843fb2735c624c4794f2a6ecadd39447af10daed4"
+      "bytes": 10305,
+      "sha256": "c0ec68cb2f7a166b8e4c40ede3ae8aafe32870550b719a3a6154d6faece745b5"
     },
     {
       "path": "newfolderwithfindings/agent-06-config-env-validation.md",
-      "bytes": 14033,
-      "sha256": "ece8b490d9c96fc6b0259f42a659b26b80e5dbc518c27fb6e6f57e22fdf27e9a"
+      "bytes": 14000,
+      "sha256": "d6280c06e2fb72518eddffa9a0f82eb974b986cdfc0300dd36289557fc00cb19"
     },
     {
       "path": "newfolderwithfindings/agent-07-doctor-command-output.md",
@@ -389,43 +389,43 @@
     },
     {
       "path": "newfolderwithfindings/agent-08-startup-failure-modes.md",
-      "bytes": 13021,
-      "sha256": "2408d8d764d4056a03d8fc1822d4cf202623ddb7f190320274de8ba0304cb42e"
+      "bytes": 12955,
+      "sha256": "23bd2443712690d3714b90e72418f72fa93e7ff041a8a50628f913c3317f4363"
     },
     {
       "path": "newfolderwithfindings/agent-09-error-handling-user-facing-messages.md",
-      "bytes": 13927,
-      "sha256": "6b2137b8fe34451160c8bc8cb0b700defe370ca05379162e98c210c36b8a840b"
+      "bytes": 13894,
+      "sha256": "2c99c6792b01743e90f3db8ed930b0b960c2176b9c14be63d6a37edde7f388c4"
     },
     {
       "path": "newfolderwithfindings/agent-10-clockify-workspace-isolation.md",
-      "bytes": 11025,
-      "sha256": "bb4469046c1b337ea5263b13da5581563df6422d0c02a845c9dd5e7f910788a5"
+      "bytes": 10959,
+      "sha256": "0cc7ad3995c0207bd063984d4dad557b10d6a828db07e8cba833559ae92e549a"
     },
     {
       "path": "newfolderwithfindings/agent-11-tenant-boundary-safety.md",
-      "bytes": 11054,
-      "sha256": "e72ba757a71e56666e52264e78cfcf8ba7ca3c06a82a4f46a645cf5ff25d06f6"
+      "bytes": 10999,
+      "sha256": "28a141be63092a7583f7a0670da7d6411afcc687350ffdc6c6ed8b5cc590a7d6"
     },
     {
       "path": "newfolderwithfindings/agent-12-project-crud-safety.md",
-      "bytes": 13067,
-      "sha256": "1ddbc04e5d487a8462a8c04ce912ce118e05dee5b8d2782e1c34dd1622c57fce"
+      "bytes": 13034,
+      "sha256": "fcb5bbd1e7bdf221f6c79aaf111943d106092dbea226b4340cee71af3511fe11"
     },
     {
       "path": "newfolderwithfindings/agent-13-client-crud-safety.md",
-      "bytes": 13294,
-      "sha256": "aba4cdd337aa7a2deb6c933787ac0b592814cd03ac1393af3f8581a02b38969f"
+      "bytes": 13228,
+      "sha256": "e6d711da329772e2277f28b07cc5788a2265e4bad8ac417b5879b7dea397efe4"
     },
     {
       "path": "newfolderwithfindings/agent-14-task-crud-safety.md",
-      "bytes": 9908,
-      "sha256": "12cdf0b88c045f2d82117f0014a552e7f8855ef6b378db38bca7a84b15dab32a"
+      "bytes": 9820,
+      "sha256": "3eb99a1506cbfb9da0553a2723e4017506919abebf465b5f4fe12be234d1380f"
     },
     {
       "path": "newfolderwithfindings/agent-15-tag-crud-safety.md",
-      "bytes": 11817,
-      "sha256": "abe937e562a4b56c769eecdf87bdb8446600ada7a1fe011b562ac57d82da468f"
+      "bytes": 11773,
+      "sha256": "b6938b6c97c8507e8f8ee86ee648bccdd5de9e536bcaa8bc64f175cb9d5e950f"
     },
     {
       "path": "newfolderwithfindings/agent-16-user-endpoint-safety.md",
@@ -434,13 +434,13 @@
     },
     {
       "path": "newfolderwithfindings/agent-17-time-entry-read-paths.md",
-      "bytes": 14836,
-      "sha256": "7352fe06443d4d3ed8032a4aaf92b573c88f73929507efcf2cb3309013a32459"
+      "bytes": 14814,
+      "sha256": "69e3a0700cbaa2c35dcc0655d63c5e4b5147a79ea7cd817e84c3b0f4a488d0e7"
     },
     {
       "path": "newfolderwithfindings/agent-18-time-entry-mutation-safety.md",
-      "bytes": 10670,
-      "sha256": "0ee4b175918862bb7efe8a238e7047a7907133b90e524e3d82ef604013b2d683"
+      "bytes": 10615,
+      "sha256": "2e7b813417db3a7398e15d04453623717355d92732d6d836b9d8fda7728b843d"
     },
     {
       "path": "newfolderwithfindings/agent-19-timer-start-stop-flows.md",
@@ -454,13 +454,13 @@
     },
     {
       "path": "newfolderwithfindings/agent-21-reports-summary-endpoint.md",
-      "bytes": 12851,
-      "sha256": "c3bdb3ffb713ce600521c648f1ab35d71b723f11c2d6132f69ac238bfa976783"
+      "bytes": 12840,
+      "sha256": "2739e394cc2c5a0ce650e73d04c1165d96eceebe3f89cf77bc17151cfc443ae9"
     },
     {
       "path": "newfolderwithfindings/agent-22-reports-weekly-endpoint.md",
-      "bytes": 12123,
-      "sha256": "f1b32c00e30492dff84bd432091c5fb4897742fe30ca2cbdfccb39006f3e62bd"
+      "bytes": 12079,
+      "sha256": "5f512fc73d74c80826c934ac4faf7c6f8c00f3484ce06d52ee086153bad3001c"
     },
     {
       "path": "newfolderwithfindings/agent-23-reports-pagination-and-large-results.md",
@@ -469,38 +469,38 @@
     },
     {
       "path": "newfolderwithfindings/agent-24-date-timezone-handling.md",
-      "bytes": 13548,
-      "sha256": "f923f0bb35a0ac6f737c39656dd3a66c8a8b2651ab3616e4ea1e79cf6f2b7ec2"
+      "bytes": 13515,
+      "sha256": "47e3cf7f90ab850df709ce9d5648b97abcb403cced2835ce68f6fbb81ff1eafa"
     },
     {
       "path": "newfolderwithfindings/agent-25-duration-format-handling.md",
-      "bytes": 11911,
-      "sha256": "954b01031b8d137d4d3275ccf6ce17d5e7216f5514ed629afb9bed7289cf0744"
+      "bytes": 11845,
+      "sha256": "c991cf93d7363b24bd9fd4c153853db54962aa116ccdf184c5c1ac4ff065bb64"
     },
     {
       "path": "newfolderwithfindings/agent-26-rate-limit-retry-behavior.md",
-      "bytes": 10176,
-      "sha256": "d59f8a7a7a1b88fc566171240dc713fa0be5db26d5fd0353f3e98b983e511a1b"
+      "bytes": 10143,
+      "sha256": "7a99e3c293246cb8ecd58b3fb9ef70d6b51e8e020b0189a2ed6d4fa39b8d8bb2"
     },
     {
       "path": "newfolderwithfindings/agent-27-timeout-and-cancellation-behavior.md",
-      "bytes": 9849,
-      "sha256": "4fec731ff908167a665a3b1601d85284da87c6383d446ab445ea8c32ceef73dc"
+      "bytes": 9838,
+      "sha256": "297b113bb6ccd4893700c45bc340c0b36b6f9e7da701bd688cfe464e5415f347"
     },
     {
       "path": "newfolderwithfindings/agent-28-webhook-docs-and-event-behavior.md",
-      "bytes": 12897,
-      "sha256": "724d725551ca75b30d9bc347b7b3646fc17a673ba86a3945279f8b26c6b31628"
+      "bytes": 12853,
+      "sha256": "f118ee4dc05c28c0530455e62625cc71914618b77ec155a3be29b19f15f01984"
     },
     {
       "path": "newfolderwithfindings/agent-29-invite-user-dummy-flow-only.md",
-      "bytes": 11024,
-      "sha256": "f914825684697c3b4910ec9074e96b1622bb100541ed05a0ef3969cdf7bec109"
+      "bytes": 10893,
+      "sha256": "3c7e72612ff105a585f89675e2eb6f423644fec5c27acb7b0c5cfa14c9f890ef"
     },
     {
       "path": "newfolderwithfindings/agent-30-no-real-email-safety.md",
-      "bytes": 10810,
-      "sha256": "f1fb1a851b0357d1109f48d26c06cd84c84bae8eda1a0770eda261fa353eb6fe"
+      "bytes": 10771,
+      "sha256": "e341baae6b31077a55904090493d08fa319e9bc20f5752c14f35bf737fa11a08"
     },
     {
       "path": "newfolderwithfindings/agent-31-logging-quality-and-noise.md",
@@ -509,23 +509,23 @@
     },
     {
       "path": "newfolderwithfindings/agent-32-auditability-of-tool-actions.md",
-      "bytes": 11713,
-      "sha256": "236d03bb95acdb54a508a46102fae4a90fc2c81b35658996ec5a3d143ad9de64"
+      "bytes": 11667,
+      "sha256": "e363702883a17a229287aca2a2888f751ea3746a70d711de1dd4afad87d87202"
     },
     {
       "path": "newfolderwithfindings/agent-33-build-and-install-from-clean-checkout.md",
-      "bytes": 10383,
-      "sha256": "c86f50bc503f787fdf754f82b46feb7aad27f3da2e7c79f4d3974179db2b3a7d"
+      "bytes": 10295,
+      "sha256": "4e92a5d15a597235f32d3387a0db5a1e69a9d185b5a58e19e3d216eaf224e2b3"
     },
     {
       "path": "newfolderwithfindings/agent-34-unit-tests.md",
-      "bytes": 12191,
-      "sha256": "94ea624e4185282194a7a4554002f475a2c111ba02f6b0d36a867ebbbf8d76e4"
+      "bytes": 12125,
+      "sha256": "ba7a88f3633596f604f5883de8d48d38b374cba72723e1e4fa0e8ac64f6b9f0a"
     },
     {
       "path": "newfolderwithfindings/agent-35-integration-tests-mocked-only.md",
-      "bytes": 16435,
-      "sha256": "505db4626edd456d482432c0689a766060384b8a7df3dfa15ec60cd896fb1bfa"
+      "bytes": 16391,
+      "sha256": "f1106e37650742fef3b9b3097f695b821a41a69923e40c5786815b684899099b"
     },
     {
       "path": "newfolderwithfindings/agent-36-go-vet-static-analysis.md",
@@ -534,23 +534,23 @@
     },
     {
       "path": "newfolderwithfindings/agent-37-gofmt-goimports-formatting.md",
-      "bytes": 8384,
-      "sha256": "318c6b3d59c407ef6e969e81836ba65de07d4cb1af068804707fc4adcea249d8"
+      "bytes": 8318,
+      "sha256": "5d4647af016e08f31516b8c0c7085b6fae746a41a7a5614c9a065fc3b655635d"
     },
     {
       "path": "newfolderwithfindings/agent-38-golangci-or-existing-lint-config.md",
-      "bytes": 8632,
-      "sha256": "0b7e8e26c11d76cfac1ddfc150bd4300fd1acad7221be5eeb8cd5f1c9943b218"
+      "bytes": 8610,
+      "sha256": "c334d317d7fc0435f2b695a022cbed1ded0c7db7a757f218eca34c61afafbd4a"
     },
     {
       "path": "newfolderwithfindings/agent-39-docker-build-smoke.md",
-      "bytes": 11189,
-      "sha256": "ebb74c4cd9898c96312ebd6e01ffc063efeb65acc720c5d94d91c325965b90dc"
+      "bytes": 11145,
+      "sha256": "93edc2658aae53431dda92e828d7a03b0922744ae0549e75bf94a8e0274f324d"
     },
     {
       "path": "newfolderwithfindings/agent-40-docker-run-smoke.md",
-      "bytes": 10074,
-      "sha256": "4d9a8ffc7db306c749ccbe78f823e1f047362b3ef16ff41a430caf044258cc8f"
+      "bytes": 10052,
+      "sha256": "12b6218f419dc0bcb2bbc10f473b8d86b44655de2f5a6c8be3f17c0087cc5e23"
     },
     {
       "path": "newfolderwithfindings/agent-41-docker-secrets-not-baked.md",
@@ -559,23 +559,23 @@
     },
     {
       "path": "newfolderwithfindings/agent-42-readme-getting-started.md",
-      "bytes": 13457,
-      "sha256": "5a15fed76d22f335ba28f7ae691afc3a04ebc228e1e52f64dd9383de9da18ebf"
+      "bytes": 13290,
+      "sha256": "ae87bd0fed28e2366bbffe7d6b66a599a3966f77b58bc39b97b19e8105eb9cc3"
     },
     {
       "path": "newfolderwithfindings/agent-43-local-internal-handoff-docs.md",
-      "bytes": 10819,
-      "sha256": "2e1f30dd232db79f14dff43a409389a4fc167283b1463c6ad65f2653b5280eb1"
+      "bytes": 10764,
+      "sha256": "fe80562fa0787380dccf1e683be7b873f331ce6cb730cd651ce136c6147989ec"
     },
     {
       "path": "newfolderwithfindings/agent-44-release-docs-accuracy.md",
-      "bytes": 9669,
-      "sha256": "84661e42544f93333d7d47e08209f208e7741a8709e05b078a5151deda57cfa5"
+      "bytes": 9647,
+      "sha256": "9aff95bc3a365c7b1ea986c3bafc532068a07b445023789c6ad699430ea847b7"
     },
     {
       "path": "newfolderwithfindings/agent-45-example-env-safety.md",
-      "bytes": 13029,
-      "sha256": "ff51d495db10422dd9d354f457154056830dc8254a218d33a996ccf15133bbf9"
+      "bytes": 12981,
+      "sha256": "14d69ddd642f2106035fbb95bad72fafff621267de3b2ab3669688fee28b54f5"
     },
     {
       "path": "newfolderwithfindings/agent-46-cli-help-version-output.md",
@@ -584,73 +584,73 @@
     },
     {
       "path": "newfolderwithfindings/agent-47-mcp-server-startup-smoke.md",
-      "bytes": 12513,
-      "sha256": "61c28d06dfc2f520791fff23fa642f56710ac20e26f427f6628aa40d24476081"
+      "bytes": 12489,
+      "sha256": "5b3211862d528bbf911773ef811e9df02e04c510718c60a657036ab80c7b66bf"
     },
     {
       "path": "newfolderwithfindings/agent-48-mcp-client-compatibility-notes.md",
-      "bytes": 14925,
-      "sha256": "b8378e40f701c7986d20c2837629bf62487f9f2b2aaa97eee3a056c003c607ba"
+      "bytes": 14892,
+      "sha256": "1222b163c1bd6c8fa3eb0fe7aa828f4ad6bc7bb458255b4318b83cbc7becb8e5"
     },
     {
       "path": "newfolderwithfindings/agent-49-tool-profile-fullness.md",
-      "bytes": 14055,
-      "sha256": "ffa2846fdaea60c0d79da68f3631096115975788614de4ca2e8c2ede9200c9de"
+      "bytes": 13923,
+      "sha256": "a8dc40a9010e3afa97fdc5cdb2f85bf21216e115a814ed9112a71b516bad4bcc"
     },
     {
       "path": "newfolderwithfindings/agent-50-openapi-generated-code-consistency.md",
-      "bytes": 12271,
-      "sha256": "de01fe247dae74e98045927833416ed01f945596e13b20d7416788431f17f0a7"
+      "bytes": 12260,
+      "sha256": "a1ff6408ea30a3a3bea8d307deeef6ae12e67f83307fbd5c5803ad9ec1849616"
     },
     {
       "path": "newfolderwithfindings/agent-51-permissions-and-scope-documentation.md",
-      "bytes": 15897,
-      "sha256": "a5e833a807d892637a998e646be870caf26340c6e62c20f0b770fd73bb10446c"
+      "bytes": 15754,
+      "sha256": "c575eae6da449981c5ba76851a586785dde9a9c99da60e371e03cccd67d046e7"
     },
     {
       "path": "newfolderwithfindings/agent-52-nil-empty-response-handling.md",
-      "bytes": 9708,
-      "sha256": "1e360eb71ef6ebcad2507ba34de699c3792c12e32b3fa179823b6891a424f75d"
+      "bytes": 9644,
+      "sha256": "4bf053134eeeffcda51f3c57b058af23eee41b303a79532512424b97d200c278"
     },
     {
       "path": "newfolderwithfindings/agent-53-http-status-code-mapping.md",
-      "bytes": 9655,
-      "sha256": "59d271114153ff307a3bbb88df7c4c2bf1d981ea27e61d942b1ad4977f622765"
+      "bytes": 9644,
+      "sha256": "ea2b29869f756337b14a59b7bde398c25a435132c2f26f4d13e4b5b9050e85b7"
     },
     {
       "path": "newfolderwithfindings/agent-54-clockify-api-edge-cases.md",
-      "bytes": 16857,
-      "sha256": "de76f820c52e8508cef1a57d574d1c76bc0d6ea83b5a65464bbda1771bb13eae"
+      "bytes": 16813,
+      "sha256": "4a7a2a0a62a7d963a12da4b9758b21f337a7d96bef788df480a27ccaa405c5d3"
     },
     {
       "path": "newfolderwithfindings/agent-55-performance-load-sanity-local.md",
-      "bytes": 10052,
-      "sha256": "7e962633fd1d44461eff1252e1a16ae3388c9d63e7fe3603c1f05ec622922c2a"
+      "bytes": 10017,
+      "sha256": "23495f558c2e91893fb2148a70fce0875262b3502f9db35058108f77926d2c80"
     },
     {
       "path": "newfolderwithfindings/agent-56-memory-and-goroutine-sanity.md",
-      "bytes": 11444,
-      "sha256": "289b0415527b3b3eb8bc015cd404d59fa16a649ef31b855f59b9be4bd6198b9c"
+      "bytes": 11400,
+      "sha256": "4701dc5ef487ceec747938f133d94bdcc28e952cae2844562d60898023541d43"
     },
     {
       "path": "newfolderwithfindings/agent-57-cross-platform-macos-linux-notes.md",
-      "bytes": 13699,
-      "sha256": "3bcdff5c33df1bb0fcf483de48af6b70eeac749f0c5e38b7a864120cc0641506"
+      "bytes": 13677,
+      "sha256": "6d34241a659c45ca6359d41672b19b913cd429702212c666219de1885349b136"
     },
     {
       "path": "newfolderwithfindings/agent-58-security-local-static-grep.md",
-      "bytes": 12896,
-      "sha256": "742a18b7fff7290573b1a83693b662d095d954195f76001ef424c1b9f912e95c"
+      "bytes": 12885,
+      "sha256": "5da4e7b474a2f31e9469a40ac1fa58167aae850fe715e289f578502bc19f7194"
     },
     {
       "path": "newfolderwithfindings/agent-59-patch-quality-and-minimalism.md",
-      "bytes": 12808,
-      "sha256": "a5aea8ac66f27d766578798ba3207daa47a7da8e9e7d225c70472bc792b0cb13"
+      "bytes": 12751,
+      "sha256": "d9765b62c0107cc4c87ee3c59041866aedb2fc86c09f6884cd07097a20053476"
     },
     {
       "path": "newfolderwithfindings/agent-60-final-release-readiness-verdict.md",
-      "bytes": 10391,
-      "sha256": "40444cd6ee503431f1e58dc74dd5560b1e1e425480762388365ed4e7e5764c74"
+      "bytes": 10358,
+      "sha256": "dc93133012f3b9b20e56e1f54af284f4ecaaca39f0c600d7d38962a238bce51d"
     },
     {
       "path": "realOPENAPI/APPROVALOPENAPI.YAML",

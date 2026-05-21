@@ -1,7 +1,7 @@
 # Findings — rates and reports money
 
 Probe: `probes/rates-and-reports.sh` (PROBE_MUTATE=1).
-Run: 2026-05-12T11:12Z, workspace `65b382b606de527a7ee2b60e`, currency EUR.
+Run: 2026-05-12T11:12Z, workspace `<REDACTED_ID>`, currency EUR.
 
 ## TL;DR
 

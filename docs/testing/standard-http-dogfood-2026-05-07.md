@@ -17,7 +17,7 @@ launch-candidate evidence and does not close Groups 1, 6, or 7 in
 | Auth | `static_bearer` |
 | Policy | `standard` |
 | Client | Claude Code / curl |
-| Workspace | `65b382b606de527a7ee2b60e` |
+| Workspace | `<REDACTED_ID>` |
 | User | `<REDACTED>` |
 | Evidence dir | `/tmp/clockify-mcp-standard-deep-1778163965` |
 

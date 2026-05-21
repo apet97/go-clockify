@@ -29,7 +29,7 @@ Covered these startup paths:
 
 ## Live API probe lab files used
 
-- `/tmp/clockify-livetest.env` — credentials (API key: ****REDACTED****, workspace: `65b382b606de527a7ee2b60e`)
+- `/tmp/clockify-livetest.env` — credentials (API key: ****REDACTED****, workspace: `<REDACTED_ID>`)
 - `source`-d only; raw key never written to files, logs, or shell history
 
 ## Commands run
@@ -94,7 +94,7 @@ Direct API (curl with `X-Api-Key` header):
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|
 | `/user` | GET | 200 | Returns user identity, active workspace |
-| `/workspaces` | GET | 200 | Workspace `65b382b606de527a7ee2b60e` accessible |
+| `/workspaces` | GET | 200 | Workspace `<REDACTED_ID>` accessible |
 | `/user` with bad key | GET | 401 | `"Api key does not exist"`, code 4003 |
 | `/workspaces/INVALID` | GET | 403 | `"Access Denied"`, code 501 |
 | `/workspaces/{ws}/projects` | GET | 200 | Returns project list |
@@ -111,7 +111,7 @@ MCP server tool calls (stdio transport):
 | `tools/list` | 38 Tier-1 tools with full inputSchema/outputSchema |
 | `clockify_whoami` | User ID `64621fae...`, workspace `65b382b6...` |
 | `clockify_create_project` (dry_run) | OK, previewed payload |
-| `clockify_create_project` (real) | Created project `6a00f8bb385b9fac085a4f80` |
+| `clockify_create_project` (real) | Created project `<REDACTED_ID>` |
 
 ## Findings
 
@@ -230,7 +230,7 @@ docker run --rm clockify-mcp:test
 
 ### P2 - Eager start with bad credentials
 ```
-CLOCKIFY_API_KEY="bogus-key" CLOCKIFY_WORKSPACE_ID="65b382b606de527a7ee2b60e" \
+CLOCKIFY_API_KEY="bogus-key" CLOCKIFY_WORKSPACE_ID="<REDACTED_ID>" \
   clockify-mcp
 # Server starts, logs "server_start", responds to initialize + tools/list
 # clockify_whoami -> 401 error
@@ -238,8 +238,8 @@ CLOCKIFY_API_KEY="bogus-key" CLOCKIFY_WORKSPACE_ID="65b382b606de527a7ee2b60e" \
 
 ## Cleanup performed
 
-- Created test project `qa-agent-08-test-project` (id `6a00f8bb385b9fac085a4f80`)
-  in workspace `65b382b606de527a7ee2b60e`
+- Created test project `qa-agent-08-test-project` (id `<REDACTED_ID>`)
+  in workspace `<REDACTED_ID>`
 - Archived it via PUT, deleted via DELETE — both returned 200
 - No leftover test resources
 

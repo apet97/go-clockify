@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.users.time-off.balances",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:15:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>/time-off/balances",
+  "query": {"page": 1, "page-size": 3},
+  "status_code": 404,
+  "status_text": "Not Found",
+  "response_body_sample": {
+    "message": "No static resource v1/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>/time-off/balances."
+  },
+  "verdict": "LIVE-OVERRIDE",
+  "notes": "404 Spring-MVC 'No static resource' — endpoint does not exist. Present only in our generated spec. Note: time-off balances ARE available via /time-off/balance/user/{userId} (verified iter10) and /time-off/balance/policy/{policyId} (verified iter8)."
+}

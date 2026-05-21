@@ -58,14 +58,15 @@ as setup instructions.
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect`, `make perfect-local`, and `make perfect-live` were green for
   the finalization stack; the latest live run is recorded in `docs/live-tests.md`
-  with a commit column and `Leftovers: 0`.
+  with a commit column and prefix-object `Leftovers: 0`.
 - Claude's local binary was rebuilt to `/Users/15x/.local/bin/clockify-mcp`.
 - There is no required follow-up work from the finalization plan. Treat release
   tagging or new Clockify API drift as new work, not leftover finalization.
 
 ## Safety Rules
 
-- Never print, commit, or log API keys, workspace IDs, or tokens.
+- Never print, commit, or log API keys, full workspace IDs, or tokens. Doctor
+  and logs may show only a redacted/suffixed workspace-ID hint.
 - Use only the configured sacrificial workspace for live tests, and do not
   mutate live Clockify unless the user asked or a test gate requires it.
 - Do not weaken validation, schemas, or recovery behavior to pass tests.
@@ -272,10 +273,10 @@ instead of depending on Psych's exact parser wording.
 
 - Do not use destructive git commands unless explicitly asked.
 - Do not commit ignored local files unless the user requests it.
-- The repo ships no tracked `.gitignore`: always `go build -o` to a path
-  outside the tree. A bare `go build ./cmd/...` or `./scripts/...` drops a
-  binary named after the package directory into the repo root, so stage
-  explicit paths and never `git add -A` / `git add .`.
+- The repo has a tracked `.gitignore` for common local artifacts such as the
+  root `clockify-mcp` binary, coverage output, local env files, and assistant
+  state. Still stage explicit paths and never `git add -A` / `git add .`:
+  secrets and local state remain too risky to scoop up blindly.
 - Keep commits atomic and evidence-backed.
 - Keep `main` as the only maintained branch unless the maintainer explicitly
   asks for a work branch; delete/prune merged branches after landing.

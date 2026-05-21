@@ -21,7 +21,7 @@ The MCP server enforces safety at multiple layers that the raw Clockify API does
 
 ## Live API probe lab files used
 
-- `/tmp/clockify-livetest.env` — credentials (CLOCKIFY_API_KEY=****REDACTED****, CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e)
+- `/tmp/clockify-livetest.env` — credentials (CLOCKIFY_API_KEY=****REDACTED****, CLOCKIFY_WORKSPACE_ID=<REDACTED_ID>)
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/TIMEENTRYDOC.md` — Clockify time entry API docs (create, update, delete, stop timer, duplicate, bulk edit, mark invoiced, in-progress list, user-scoped time entries)
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLAUDE.md` — agent rules and safety constraints
 
@@ -45,7 +45,7 @@ All tests PASS with CLOCKIFY_API_KEY set from /tmp/clockify-livetest.env.
 
 ## Live API probes run
 
-All probes executed against workspace 65b382b606de527a7ee2b60e using the Clockify API directly:
+All probes executed against workspace <REDACTED_ID> using the Clockify API directly:
 
 1. **CREATE entry** → HTTP 201, valid entry returned with ID, description, timeInterval
 2. **READ entry** → HTTP 200, matches created data
@@ -139,7 +139,7 @@ All qa-agent-18-* prefixed test resources created during probing were deleted im
 
 ## Leftover test resources
 
-None created by QA Agent 18. The `TestE2EMutating` test left two resources (client 6a00f1542568d3d29305dc39 and project 6a00f154284e03fc793244cd) with the `AG_TEST_` prefix — these are pre-existing test artifacts from standard E2E runs and are not qa-agent-18 resources.
+None created by QA Agent 18. The `TestE2EMutating` test left two resources (client <REDACTED_ID> and project <REDACTED_ID>) with the `AG_TEST_` prefix — these are pre-existing test artifacts from standard E2E runs and are not qa-agent-18 resources.
 
 ## Severity
 
@@ -162,7 +162,7 @@ None created by QA Agent 18. The `TestE2EMutating` test left two resources (clie
 1. Run `make gen-tool-catalog` to refresh the generated tool catalog with the new `type` parameter
 2. Run `go test -tags=livee2e -run TestE2EMutating -v -count=1 ./tests/...` to confirm the fix works end-to-end
 3. Consider adding `type` support to `clockify_find_and_update_entry` for completeness (currently only `UpdateEntry` and `FindAndUpdateEntry` share `timeEntryPutPayload` which now includes `type`, but `FindAndUpdateEntry` doesn't have a `type` parameter in its schema)
-4. Schedule cleanup of `AG_TEST_*` prefixed resources in workspace 65b382b606de527a7ee2b60e
+4. Schedule cleanup of `AG_TEST_*` prefixed resources in workspace <REDACTED_ID>
 
 ## False positives / uncertainty
 

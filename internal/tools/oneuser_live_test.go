@@ -33,19 +33,20 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 	if runID == "" {
 		runID = "live"
 	}
-	date := "2026-01-02"
+	date := liveFutureWeekdayDate(1)
 
 	status := callLiveToolDataOrRecovery(t, server, "clockify_status", nil)
 	requireLiveID(t, status, "workspaceId")
 	requireLiveID(t, status, "userId")
 	clearLiveRunningTimer(t, svc)
+	requiredCustomFields := liveRequiredTimeEntryCustomFields(t, svc, prefix)
 
-	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", map[string]any{"run_id": runID, "prefix": prefix, "date": date})
+	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", addLiveTimeEntryCustomFields(map[string]any{"run_id": runID, "prefix": prefix, "date": date}, requiredCustomFields))
 	for _, key := range []string{"clientId", "projectId", "taskId", "tagId", "entryId"} {
 		requireLiveID(t, seed, key)
 	}
 
-	logged := callLiveToolOKOrRecovery(t, server, "clockify_log_work", map[string]any{
+	logged := callLiveToolOKOrRecovery(t, server, "clockify_log_work", addLiveTimeEntryCustomFields(map[string]any{
 		"start":       date + " 10:30",
 		"end":         date + " 11:00",
 		"description": prefix + " Live logged work",
@@ -53,26 +54,26 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 		"task_id":     seed.IDs["taskId"],
 		"tag_ids":     []any{seed.IDs["tagId"]},
 		"billable":    true,
-	})
+	}, requiredCustomFields))
 	requireLiveID(t, logged, "entryId")
 
 	startAt := time.Now().UTC().Add(-4 * time.Minute).Format(time.RFC3339)
-	started := callLiveToolOKOrRecovery(t, server, "clockify_start_work", map[string]any{
+	started := callLiveToolOKOrRecovery(t, server, "clockify_start_work", addLiveTimeEntryCustomFields(map[string]any{
 		"start":       startAt,
 		"description": prefix + " Live started work",
 		"project_id":  seed.IDs["projectId"],
 		"task_id":     seed.IDs["taskId"],
 		"tag_ids":     []any{seed.IDs["tagId"]},
-	})
+	}, requiredCustomFields))
 	requireLiveID(t, started, "entryId")
 
-	switched := callLiveToolOKOrRecovery(t, server, "clockify_switch_work", map[string]any{
+	switched := callLiveToolOKOrRecovery(t, server, "clockify_switch_work", addLiveTimeEntryCustomFields(map[string]any{
 		"start":       time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339),
 		"description": prefix + " Live switched work",
 		"project_id":  seed.IDs["projectId"],
 		"task_id":     seed.IDs["taskId"],
 		"tag_ids":     []any{seed.IDs["tagId"]},
-	})
+	}, requiredCustomFields))
 	requireLiveID(t, switched, "entryId")
 
 	stopped := callLiveToolOKOrRecovery(t, server, "clockify_stop_work", nil)
@@ -94,7 +95,7 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 		t.Fatalf("live week review missing data: %+v", week)
 	}
 
-	cleanup := callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2026-01-01 00:00", "end": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
+	cleanup := callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2000-01-01 00:00", "end": "2100-01-01T00:00:00Z"})
 	requireLiveID(t, cleanup, "workspaceId")
 }
 
@@ -127,6 +128,7 @@ func TestOneUserLiveTimerHappyPaths(t *testing.T) {
 	}
 
 	clearLiveRunningTimer(t, svc)
+	requiredCustomFields := liveRequiredTimeEntryCustomFields(t, svc, prefix)
 
 	project := callLiveToolOKOrRecovery(t, server, "clockify_projects_create", map[string]any{
 		"name":     liveOptionalName(prefix, runID, "timer fixture", 80),
@@ -148,10 +150,10 @@ func TestOneUserLiveTimerHappyPaths(t *testing.T) {
 		t.Fatalf("clockify_projects_memberships_list returned no data: %+v", memberships)
 	}
 
-	started := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_start", map[string]any{
+	started := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_start", addLiveTimeEntryCustomFields(map[string]any{
 		"project_id":  projectID,
 		"description": prefix + " live timer start probe",
-	})
+	}, requiredCustomFields))
 	startedEntry := requireLiveID(t, started, "entryId")
 	t.Cleanup(func() {
 		_, _ = svc.DeleteEntry(context.Background(), map[string]any{"entry_id": startedEntry})
@@ -167,10 +169,10 @@ func TestOneUserLiveTimerHappyPaths(t *testing.T) {
 		t.Fatalf("clockify_entries_running did not report the started timer: %+v", running.Data)
 	}
 
-	switched := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_switch", map[string]any{
+	switched := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_switch", addLiveTimeEntryCustomFields(map[string]any{
 		"project":     projectID,
 		"description": prefix + " live timer switch probe",
-	})
+	}, requiredCustomFields))
 	switchedEntry := requireLiveID(t, switched, "entryId")
 	t.Cleanup(func() {
 		_, _ = svc.DeleteEntry(context.Background(), map[string]any{"entry_id": switchedEntry})
@@ -201,11 +203,12 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 	if runID == "" {
 		runID = "live-paid"
 	}
-	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", map[string]any{"run_id": runID, "prefix": prefix, "date": "2026-01-02"})
+	requiredCustomFields := liveRequiredTimeEntryCustomFields(t, svc, prefix)
+	seed := callLiveToolOKOrRecovery(t, server, "clockify_demo_seed", addLiveTimeEntryCustomFields(map[string]any{"run_id": runID, "prefix": prefix, "date": liveFutureWeekdayDate(1)}, requiredCustomFields))
 	status := callLiveToolDataOrRecovery(t, server, "clockify_status", nil)
 	userID := requireLiveID(t, status, "userId")
 	defer func() {
-		callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2026-01-01 00:00", "end": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
+		callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2000-01-01 00:00", "end": "2100-01-01T00:00:00Z"})
 	}()
 
 	callLiveToolOKOrRecovery(t, server, "clockify_invoice_client_work", map[string]any{"client_id": seed.IDs["clientId"], "number": "MCP-LIVE-" + runID})
@@ -243,6 +246,7 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	if userID == "" {
 		t.Fatalf("clockify_status did not return userId: %+v", status)
 	}
+	requiredCustomFields := liveRequiredTimeEntryCustomFields(t, svc, prefix)
 	workPackage := callLiveToolOKOrRecovery(t, server, "clockify_create_work_package", map[string]any{
 		"client":  liveOptionalName(prefix, runID, "client", 80),
 		"project": liveOptionalName(prefix, runID, "project", 80),
@@ -251,13 +255,13 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	})
 	var entry liveToolEnvelope
 	if workPackage.OK {
-		entry = callLiveToolOKOrRecovery(t, server, "clockify_log_work", map[string]any{
+		entry = callLiveToolOKOrRecovery(t, server, "clockify_log_work", addLiveTimeEntryCustomFields(map[string]any{
 			"start":       "2026-01-06T09:00:00Z",
 			"end":         "2026-01-06T10:00:00Z",
 			"description": liveOptionalName(prefix, runID, "invoiceable work", 120),
 			"project_id":  requireLiveID(t, workPackage, "projectId"),
 			"task_id":     workPackage.IDs["taskId"],
-		})
+		}, requiredCustomFields))
 	}
 
 	for _, probe := range []struct {
@@ -393,6 +397,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 
 	status := requireLiveOK(t, server, "clockify_status", nil)
 	userID := requireLiveID(t, status, "userId")
+	requiredCustomFields := liveRequiredTimeEntryCustomFields(t, svc, prefix)
 
 	callLiveToolDataOrRecovery(t, server, "clockify_clients_list", nil)
 	clientResp := requireLiveOK(t, server, "clockify_clients_create", map[string]any{"name": unique("client")})
@@ -439,14 +444,14 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	requireLiveOK(t, server, "clockify_tags_get", map[string]any{"tag_id": tagID})
 	requireLiveOK(t, server, "clockify_tags_update", map[string]any{"tag_id": tagID, "name": unique("tag-renamed")})
 
-	entryResp := requireLiveOK(t, server, "clockify_entries_create", map[string]any{
+	entryResp := requireLiveOK(t, server, "clockify_entries_create", addLiveTimeEntryCustomFields(map[string]any{
 		"start":       "2026-02-03T09:00:00Z",
 		"end":         "2026-02-03T10:00:00Z",
 		"description": unique("entry"),
 		"project_id":  projectID,
 		"task_id":     taskID,
 		"tag_ids":     []any{tagID},
-	})
+	}, requiredCustomFields))
 	entryID := requireLiveID(t, entryResp, "entryId")
 	requireLiveOK(t, server, "clockify_entries_get", map[string]any{"entry_id": entryID})
 	requireLiveOK(t, server, "clockify_entries_update", map[string]any{"entry_id": entryID, "description": unique("entry-updated")})
@@ -455,15 +460,15 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	callLiveToolDataOrRecovery(t, server, "clockify_entries_timer_status", nil)
 	callLiveToolDataOrRecovery(t, server, "clockify_entries_timer_stop", nil)
 	clearLiveRunningTimer(t, svc)
-	timerStart := requireLiveOK(t, server, "clockify_entries_timer_start", map[string]any{
+	timerStart := requireLiveOK(t, server, "clockify_entries_timer_start", addLiveTimeEntryCustomFields(map[string]any{
 		"project_id":  projectID,
 		"description": unique("timer-start"),
-	})
+	}, requiredCustomFields))
 	requireLiveID(t, timerStart, "entryId")
-	timerSwitch := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_switch", map[string]any{
+	timerSwitch := callLiveToolOKOrRecovery(t, server, "clockify_entries_timer_switch", addLiveTimeEntryCustomFields(map[string]any{
 		"project":     unique("timer-project"),
 		"description": unique("timer-switch"),
-	})
+	}, requiredCustomFields))
 	var timerEntryID string
 	if timerSwitch.OK {
 		timerEntryID = timerSwitch.IDs["entryId"]
@@ -754,6 +759,104 @@ func clearLiveRunningTimer(t *testing.T, svc *Service) {
 	if _, err := svc.DeleteEntry(context.Background(), map[string]any{"entry_id": entryID}); err != nil {
 		t.Fatalf("preflight delete stale running timer: %v", err)
 	}
+}
+
+func liveRequiredTimeEntryCustomFields(t *testing.T, svc *Service, prefix string) []any {
+	t.Helper()
+	path := "/workspaces/" + svc.WorkspaceID + "/custom-fields"
+	var fields []map[string]any
+	if err := svc.Client.Get(context.Background(), path, map[string]string{"page": "1", "page-size": "200"}, &fields); err != nil {
+		t.Fatalf("list custom fields: %v", err)
+	}
+	out := make([]any, 0)
+	for _, field := range fields {
+		if !boolFromAny(field["required"]) || !liveCustomFieldAppliesToTimeEntry(field) {
+			continue
+		}
+		status := strings.ToUpper(strings.TrimSpace(firstReportString(field, "status")))
+		if status != "" && status != "VISIBLE" {
+			continue
+		}
+		fieldID := firstReportString(field, "id", "_id", "customFieldId", "custom_field_id")
+		if strings.TrimSpace(fieldID) == "" {
+			t.Fatalf("required time-entry custom field is missing an id")
+		}
+		value, ok := liveCustomFieldTestValue(field, prefix)
+		if !ok {
+			t.Fatalf("required time-entry custom field %q has unsupported type/allowed values", firstReportString(field, "name"))
+		}
+		out = append(out, map[string]any{"field_id": fieldID, "value": value})
+	}
+	return out
+}
+
+func addLiveTimeEntryCustomFields(args map[string]any, customFields []any) map[string]any {
+	if len(customFields) > 0 {
+		args["custom_fields"] = customFields
+	}
+	return args
+}
+
+func liveCustomFieldAppliesToTimeEntry(field map[string]any) bool {
+	scopes := customFieldEntityScopes(field)
+	if len(scopes) == 0 {
+		return true
+	}
+	for _, scope := range scopes {
+		switch strings.ToUpper(strings.TrimSpace(scope)) {
+		case "TIME_ENTRY", "TIMEENTRY", "TIME_ENTRIES", "TIMEENTRY_CUSTOM_FIELD_VALUE":
+			return true
+		}
+	}
+	return false
+}
+
+func liveCustomFieldTestValue(field map[string]any, prefix string) (any, bool) {
+	switch strings.ToUpper(strings.TrimSpace(firstReportString(field, "type", "customFieldType", "fieldType"))) {
+	case "TXT":
+		return prefix + " custom field", true
+	case "LINK":
+		return "https://example.com/" + strings.ToLower(strings.ReplaceAll(prefix, " ", "-")), true
+	case "NUMBER":
+		return float64(1), true
+	case "CHECKBOX":
+		return true, true
+	case "DROPDOWN_SINGLE":
+		return liveFirstAllowedCustomFieldValue(field)
+	case "DROPDOWN_MULTIPLE":
+		value, ok := liveFirstAllowedCustomFieldValue(field)
+		if !ok {
+			return nil, false
+		}
+		return []any{value}, true
+	default:
+		return nil, false
+	}
+}
+
+func liveFirstAllowedCustomFieldValue(field map[string]any) (string, bool) {
+	items, _ := field["allowedValues"].([]any)
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			if strings.TrimSpace(v) != "" {
+				return v, true
+			}
+		case map[string]any:
+			if value := firstReportString(v, "id", "_id", "value", "name"); value != "" {
+				return value, true
+			}
+		}
+	}
+	return "", false
+}
+
+func liveFutureWeekdayDate(monthsAhead int) string {
+	day := time.Now().UTC().AddDate(0, monthsAhead, 0)
+	for day.Weekday() == time.Saturday || day.Weekday() == time.Sunday {
+		day = day.AddDate(0, 0, 1)
+	}
+	return day.Format("2006-01-02")
 }
 
 func liveRunningEntryID(entry any) string {

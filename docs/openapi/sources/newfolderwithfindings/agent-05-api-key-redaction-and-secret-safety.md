@@ -23,7 +23,7 @@ PASS WITH CONCERNS
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLAUDE.md` — lab safety rules
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/probes/lib/common.sh` — auth wrapper, redaction, cleanup patterns
 
-Workspace: `65b382b606de527a7ee2b60e` (confirmed live test workspace)
+Workspace: `<REDACTED_ID>` (confirmed live test workspace)
 API key: `****REDACTED****` (48 chars, `X-Api-Key` header authentication)
 
 ## Commands run
@@ -39,22 +39,22 @@ go test ./internal/authn/ -v -count=1
 go test ./internal/enforcement/ -v -count=1
 
 # Doctor with real API key (CLOCKIFY_API_KEY displayed as "set (redacted)")
-CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp doctor
 
 # Valid key probe
 curl -s -H "X-Api-Key: " \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e"
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>"
 # -> 200, workspace data
 
 # Invalid key probe
 curl -s -w "\nHTTP:%{http_code}" -H "X-Api-Key: " \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e"
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>"
 # -> 401, {"message":"Api key does not exist","code":4003}
 
 # Missing key probe
 curl -s -w "\nHTTP:%{http_code}" \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e"
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>"
 # -> 401, {"message":"Multiple or none auth tokens present","code":1000}
 ```
 
@@ -111,8 +111,8 @@ The `MCP_CONTROL_PLANE_DSN` env var is already correctly marked `Sensitive: true
 - Preserves user, host, port, dbname, and query parameters for operator visibility
 - Gracefully returns the raw DSN unchanged if URL parsing fails
 
-**Before**: `postgres://app:hunter2@db.internal:5432/clockify_mcp` -> logged as `"control_plane_dsn": "postgres://app:hunter2@db.internal:5432/clockify_mcp"`
-**After**: `postgres://app:hunter2@db.internal:5432/clockify_mcp` -> logged as `"control_plane_dsn": "postgres://app:[REDACTED]@db.internal:5432/clockify_mcp"`
+**Before**: `postgres://app:<EMAIL>:5432/clockify_mcp` -> logged as `"control_plane_dsn": "postgres://app:<EMAIL>:5432/clockify_mcp"`
+**After**: `postgres://app:<EMAIL>:5432/clockify_mcp` -> logged as `"control_plane_dsn": "postgres://app:[REDACTED]@db.internal:5432/clockify_mcp"`
 
 ## Reproduction steps for each issue
 

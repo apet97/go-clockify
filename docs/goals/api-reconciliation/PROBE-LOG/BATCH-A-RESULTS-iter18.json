@@ -1,0 +1,80 @@
+{
+  "batch": "A",
+  "ts": "2026-05-21T02:00:00Z",
+  "iter": "iter18",
+  "endpoints": [
+    {
+      "endpoint_id": "post.workspaces.approval-requests.users.resubmit-entries-for-approval",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-020000-post.workspaces.approval-requests.users.resubmit-entries-for-approval-path-existence.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: resubmitEntriesForUserApproval\n  summary: Resubmit another user's entries for approval\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-020000-post.workspaces.approval-requests.users.resubmit-entries-for-approval-path-existence.json\n  x-notes: |\n    GET probe returns 405 confirming path is registered in Clockify routing. Raw writes\n    disabled so POST could not be tested directly. The MCP tool clockify_approvals_resubmit\n    uses the non-user-scoped sibling path (LIVE-VERIFIED in iter17). The user-scoped path\n    is handled internally by resubmitForUserApproval → postUserApprovalPeriod with parts\n    [approval-requests, users, {userId}, resubmit-entries-for-approval]. No separate exported\n    MCP tool exposes this path; 405 path registration is the best available live evidence.\n  x-truth-iter: iter18\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: userId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required:\n            - approval_id\n            - entry_ids\n            - period\n            - period_start\n          properties:\n            approval_id:\n              type: string\n              description: Approval request ID\n            entry_ids:\n              type: array\n              items:\n                type: string\n              description: Time entry IDs to resubmit\n            expense_ids:\n              type: array\n              items:\n                type: string\n              description: Expense IDs to resubmit\n            period:\n              type: string\n              enum: [WEEKLY, SEMI_MONTHLY, MONTHLY]\n            period_start:\n              type: string\n              format: date-time\n            note:\n              type: string\n              maxLength: 500\n  responses:\n    '400':\n      description: Business logic error (no active approval request for period, or approval already approved)\n    '200':\n      description: Resubmit successful — approval object returned\n      content:\n        application/json:\n          schema:\n            type: object\n            description: Approval request object (same shape as submit response)",
+      "notes": "Both specs agree on this path. GET probe returns 405 confirming path is registered (Spring-MVC: wrong method, not absent). Raw writes are disabled so we cannot do a live POST. The MCP tool clockify_approvals_resubmit (non-user path sibling) returned a biz-logic 400 in a parallel call confirming the approval approval system is live. The user-scoped path follows the same pattern. Status UNCONFIRMED-AGREE: path is registered, specs agree, but no live POST biz-logic response captured for this exact user-scoped variant."
+    },
+    {
+      "endpoint_id": "post.workspaces.audit-log",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/audit-log",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-020000-post.workspaces.audit-log-happy-path.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "Server ignores page_size parameter",
+          "live_says": "Clockify returns all matching rows up to server cap regardless of page_size; meta.requested_page_size is echoed but server cap applies; count=7 returned even though page_size=5 was requested",
+          "official_says": "API docs suggest page_size is respected",
+          "ours_says": "MCP tool documents this behavior with server_page_size_note in meta"
+        },
+        {
+          "fact": "content field is stringified JSON, not a nested object",
+          "live_says": "content field is a JSON string containing a stringified object (e.g. '{\"projectName\":\"...\",\"archived\":false,...}')",
+          "official_says": "Not explicitly documented as stringified",
+          "ours_says": "MCP tool returns raw upstream shape — content as string"
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: searchAuditLog\n  summary: Search workspace audit log entries\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-020000-post.workspaces.audit-log-happy-path.json\n  x-notes: |\n    Tool clockify_audit_logs_search returned 7 CREATE_PROJECT entries successfully.\n    Server ignores page_size — all matching rows up to server cap are returned regardless.\n    content field is a stringified JSON string, not a nested object.\n    previousContent is nullable (null when no previous state, e.g. on CREATE actions).\n  x-truth-iter: iter18\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required:\n            - actions\n            - author_ids\n            - start\n            - end\n          properties:\n            actions:\n              type: array\n              items:\n                type: string\n              description: Audit-log action type filter\n            author_ids:\n              type: array\n              items:\n                type: string\n              description: User IDs to filter by (use SYSTEM for system actions)\n            start:\n              type: string\n              format: date-time\n            end:\n              type: string\n              format: date-time\n            page:\n              type: integer\n              minimum: 1\n            page_size:\n              type: integer\n              description: Requested page size; server ignores and applies own cap\n  responses:\n    '200':\n      description: Audit log entries matching filters\n      content:\n        application/json:\n          schema:\n            type: array\n            items:\n              type: object\n              properties:\n                action:\n                  type: string\n                  description: Action enum (e.g. CREATE_PROJECT, DELETE_TIME_PERSONAL)\n                content:\n                  type: string\n                  description: Stringified JSON of the new entity state\n                previousContent:\n                  type: string\n                  nullable: true\n                  description: Stringified JSON of prior state; null on CREATE actions\n                timestamp:\n                  type: string\n                  format: date-time\n                userEmail:\n                  type: string\n                userId:\n                  type: string\n                userName:\n                  type: string\n                workspaceId:\n                  type: string",
+      "notes": "LIVE-VERIFIED: clockify_audit_logs_search returned 7 audit entries with full response shape observed. Key finding: server ignores page_size (returns all matching rows up to server cap). content field is a stringified JSON object, not a nested object. previousContent is null on CREATE actions. Timestamp is RFC3339."
+    },
+    {
+      "endpoint_id": "post.workspaces.clients",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/clients",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-020000-post.workspaces.clients-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: createClient\n  summary: Create a client in the workspace\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-020000-post.workspaces.clients-happy-path.json\n  x-notes: |\n    Client created (id <redacted-id:1daad9ff7a>) and immediately deleted via\n    clockify_clients_delete. Response shape confirmed: id, name, currencyCode,\n    currencyId, workspaceId. No dry_run support on this tool.\n  x-truth-iter: iter18\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required:\n            - name\n          properties:\n            name:\n              type: string\n              maxLength: 150\n              description: Client display name\n  responses:\n    '200':\n      description: Client created successfully\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id:\n                type: string\n                description: 24-char hex Clockify ID\n              name:\n                type: string\n              currencyCode:\n                type: string\n                description: e.g. USD\n              currencyId:\n                type: string\n                description: 24-char hex Clockify ID\n              workspaceId:\n                type: string",
+      "notes": "LIVE-VERIFIED: POST /workspaces/{wId}/clients successfully created a client with id, name, currencyCode, currencyId, workspaceId. Test object was created (id <redacted-id:1daad9ff7a>) and immediately deleted. No discrepancies with spec."
+    },
+    {
+      "endpoint_id": "post.workspaces.custom-fields",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/custom-fields",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-020000-post.workspaces.custom-fields-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: createCustomField\n  summary: Create a custom field in the workspace\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-020000-post.workspaces.custom-fields-happy-path.json\n  x-notes: |\n    Custom field (TXT type) created (id <redacted-id:1a8c9d0b44>) and immediately deleted.\n    entityType defaults to TIMEENTRY when not specified. status defaults to VISIBLE.\n    allowedValues is empty array for TXT type. description and placeholder are null.\n    projectDefaultValues is empty array. workspaceDefaultValue is null.\n  x-truth-iter: iter18\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required:\n            - name\n            - field_type\n          properties:\n            name:\n              type: string\n              maxLength: 150\n            field_type:\n              type: string\n              enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]\n            allowed_values:\n              type: array\n              items:\n                type: string\n              description: Required for DROPDOWN_SINGLE and DROPDOWN_MULTIPLE\n            required:\n              type: boolean\n            status:\n              type: string\n              enum: [VISIBLE, INVISIBLE, INACTIVE]\n              default: VISIBLE\n            workspace_default_value:\n              description: Typed default; type follows field_type\n  responses:\n    '200':\n      description: Custom field created\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id:\n                type: string\n              name:\n                type: string\n              type:\n                type: string\n                enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]\n              entityType:\n                type: string\n                description: Defaults to TIMEENTRY\n              status:\n                type: string\n                enum: [VISIBLE, INVISIBLE, INACTIVE]\n              allowedValues:\n                type: array\n                items:\n                  type: string\n              description:\n                type: string\n                nullable: true\n              placeholder:\n                type: string\n                nullable: true\n              required:\n                type: boolean\n              onlyAdminCanEdit:\n                type: boolean\n              projectDefaultValues:\n                type: array\n              workspaceDefaultValue:\n                nullable: true\n              workspaceId:\n                type: string",
+      "notes": "LIVE-VERIFIED: POST /workspaces/{wId}/custom-fields successfully created a TXT custom field with full response shape observed. Test object created (id <redacted-id:1a8c9d0b44>) and immediately deleted. entityType defaults to TIMEENTRY, status defaults to VISIBLE. No discrepancies with spec."
+    },
+    {
+      "endpoint_id": "post.workspaces.expenses",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/expenses",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-020000-post.workspaces.expenses-dry-run.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: createExpense\n  summary: Create an expense in the workspace\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-020000-post.workspaces.expenses-dry-run.json\n    - PROBE-LOG/20260521-001500-delete.workspaces.expenses-happy-path.json\n  x-notes: |\n    dry_run confirmed payload construction: amount (major units default, coerced to string\n    upstream), categoryId (required), date (RFC3339), userId (defaults to caller).\n    project_id is optional — dry_run succeeded without it. Prior iter confirmed actual\n    expense creation and deletion via delete.workspaces.expenses probe (expense id\n    <redacted-id:78b0838c43>). amount sent as string upstream despite number input.\n  x-truth-iter: iter18\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required:\n            - amount\n            - date\n            - category_id\n          properties:\n            amount:\n              type: number\n              description: Expense amount in major currency units by default\n            amount_unit:\n              type: string\n              enum: [major, minor]\n              default: major\n            date:\n              type: string\n              format: date-time\n            category_id:\n              type: string\n              description: Expense category ID (required)\n            project_id:\n              type: string\n              description: Optional project\n            task_id:\n              type: string\n            user_id:\n              type: string\n              description: Defaults to calling user\n            billable:\n              type: boolean\n            notes:\n              type: string\n              maxLength: 2000\n  responses:\n    '200':\n      description: Expense created\n      content:\n        application/json:\n          schema:\n            type: object\n            description: Expense object with id, workspaceId, categoryId, amount, date, userId, billable, notes",
+      "notes": "LIVE-VERIFIED: dry_run confirmed tool routing and payload construction for POST /workspaces/{wId}/expenses. Prior iter's delete probe confirms an actual expense was created and deleted. category_id is required; project_id is optional. amount is coerced to string in the upstream payload. userId defaults to the calling user. No discrepancies with spec."
+    }
+  ]
+}

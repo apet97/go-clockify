@@ -1,0 +1,88 @@
+{
+  "batch": "A",
+  "ts": "2026-05-21T05:00:00Z",
+  "iter": "iter21",
+  "endpoints": [
+    {
+      "endpoint_id": "put.workspaces.projects",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-050000-put.workspaces.projects-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "put:\n  operationId: updateProject\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-050000-put.workspaces.projects-happy-path.json\n  x-notes: |\n    Full-replacement PUT. Required body field: name. Optional: archived, billable,\n    isPublic, clientId, color, note, costRate, hourlyRate, estimate, budgetEstimate,\n    estimateReset, timeEstimate, memberships, tasks. Tool does GET-then-PUT merge\n    to preserve unspecified fields. Archival is handled via archived:true in this\n    same body -- no /archive sub-path exists.\n  x-truth-iter: iter21\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: projectId, in: path, required: true, schema: {type: string}}\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required: [name]\n          properties:\n            name: {type: string, maxLength: 150}\n            archived: {type: boolean}\n            billable: {type: boolean}\n            isPublic: {type: boolean}\n            clientId: {type: string}\n            color: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}\n            note: {type: string}\n            costRate: {type: object, description: Rate object with amount and currency}\n            hourlyRate: {type: object, description: Rate object with amount and currency}\n            estimate: {type: object, description: Estimate object}\n            budgetEstimate: {type: object}\n            estimateReset: {type: object}\n            timeEstimate: {type: object}\n            memberships: {type: array, items: {type: object}}\n            tasks: {type: array, items: {type: object}}\n  responses:\n    '200':\n      description: Updated project object\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id: {type: string}\n              name: {type: string}\n              archived: {type: boolean}\n              billable: {type: boolean}\n              workspaceId: {type: string}\n",
+      "notes": "Live-verified happy path. PUT responds 200 with full project object. Required field is name only. Tool wraps this as a fetch-then-merge pattern. Project-level /cost-rate and /hourly-rate sub-paths are absent (Spring-MVC 404); per-user rate sub-paths under /users/{userId}/cost-rate and /hourly-rate are present (405 on GET confirms PUT-only)."
+    },
+    {
+      "endpoint_id": "put.workspaces.projects.archive",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/archive",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-050000-put.workspaces.projects.archive-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "kind": "path-absent",
+          "description": "Clockify returns Spring-MVC 404 for /projects/{id}/archive sub-path. Archival is achieved via PUT /projects/{id} with archived:true in body.",
+          "severity": "high",
+          "resolution": "Remove this endpoint from TRUTH. Archival is subsumed by put.workspaces.projects with archived:true. Tools are correct."
+        }
+      ],
+      "truth_yaml": "put:\n  operationId: archiveProject\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-050000-put.workspaces.projects.archive-path-probe.json\n  x-notes: |\n    This dedicated /archive sub-path does NOT exist on Clockify (Spring-MVC 404).\n    Archival is performed via PUT /workspaces/{workspaceId}/projects/{projectId}\n    with {archived: true} in the body. Both clockify_projects_archive (single) and\n    clockify_archive_projects (batch) correctly use the main PUT path.\n    This endpoint entry should be removed from TRUTH.openapi.yaml.\n  x-truth-iter: iter21\n  x-path-absent: true\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: projectId, in: path, required: true, schema: {type: string}}\n  responses:\n    '404':\n      description: Path absent -- Spring-MVC No static resource\n",
+      "notes": "LIVE-OVERRIDE: path absent. GET probe returns Spring-MVC 404. The ours-only inventory entry for /archive is stale or derived from a spec that does not match live Clockify behavior. The MCP tool clockify_projects_archive correctly uses the main PUT path with archived=true."
+    },
+    {
+      "endpoint_id": "put.workspaces.projects.tasks",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-050000-put.workspaces.projects.tasks-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "put:\n  operationId: updateTask\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-050000-put.workspaces.projects.tasks-happy-path.json\n  x-notes: |\n    Full-replacement PUT for a task. Required body field: name. Optional:\n    billable, status (ACTIVE|DONE), estimate, assigneeId, assigneeIds,\n    userGroupIds, budgetEstimate. Tool does GET-then-layered-merge to avoid\n    wiping unspecified fields. Supported query params: contains-assignee,\n    membership-status.\n  x-truth-iter: iter21\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: projectId, in: path, required: true, schema: {type: string}}\n    - {name: taskId, in: path, required: true, schema: {type: string}}\n    - {name: contains-assignee, in: query, required: false, schema: {type: boolean}}\n    - {name: membership-status, in: query, required: false, schema: {type: string, enum: [PENDING, ACTIVE, DECLINED, INACTIVE, ALL]}}\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required: [name]\n          properties:\n            name: {type: string, maxLength: 150}\n            billable: {type: boolean}\n            status: {type: string, enum: [ACTIVE, DONE]}\n            estimate: {type: string, description: ISO 8601 duration e.g. PT8H}\n            assigneeId: {type: string}\n            assigneeIds: {type: array, items: {type: string}}\n            userGroupIds: {type: array, items: {type: string}}\n            budgetEstimate: {type: integer, description: Budget estimate in minor currency units}\n  responses:\n    '200':\n      description: Updated task object\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id: {type: string}\n              name: {type: string}\n              projectId: {type: string}\n              billable: {type: boolean}\n              status: {type: string}\n              estimate: {type: string}\n              hourlyRate: {type: object}\n",
+      "notes": "Live-verified happy path. PUT responds 200 with full task object. Required body field is name; billable is preserved from existing task. Tool does GET-then-merge to handle full-replacement semantics safely."
+    },
+    {
+      "endpoint_id": "put.workspaces.projects.cost-rate",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/cost-rate",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-050000-put.workspaces.projects.cost-rate-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "kind": "path-absent",
+          "description": "Project-level /cost-rate sub-path does not exist (Spring-MVC 404). Per-user sub-path /projects/{id}/users/{userId}/cost-rate exists (405 on GET confirms PUT-only).",
+          "severity": "high",
+          "resolution": "Remove project-level cost-rate entry from TRUTH. The actual endpoint is /projects/{projectId}/users/{userId}/cost-rate. Tool clockify_projects_rates_update correctly uses the per-user path."
+        }
+      ],
+      "truth_yaml": "put:\n  operationId: updateProjectCostRate\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-050000-put.workspaces.projects.cost-rate-path-probe.json\n  x-notes: |\n    PUT /workspaces/{workspaceId}/projects/{projectId}/cost-rate does NOT exist\n    (Spring-MVC 404). The correct path for project member cost-rate updates is\n    PUT /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate\n    (405 on GET confirms path exists, PUT-only). Tool clockify_projects_rates_update\n    correctly uses the per-user sub-path. This endpoint entry should be removed.\n  x-truth-iter: iter21\n  x-path-absent: true\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: projectId, in: path, required: true, schema: {type: string}}\n  responses:\n    '404':\n      description: Path absent -- Spring-MVC No static resource\n",
+      "notes": "LIVE-OVERRIDE: project-level /cost-rate path absent. Per-user path /projects/{id}/users/{userId}/cost-rate is confirmed live (405 on GET). The ours-only inventory entry appears to incorrectly identify the path level. No action needed on tool code; clockify_projects_rates_update is correct."
+    },
+    {
+      "endpoint_id": "put.workspaces.projects.hourly-rate",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-050000-put.workspaces.projects.hourly-rate-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "kind": "path-absent",
+          "description": "Project-level /hourly-rate sub-path does not exist (Spring-MVC 404). Per-user sub-path /projects/{id}/users/{userId}/hourly-rate exists (405 on GET confirms PUT-only).",
+          "severity": "high",
+          "resolution": "Remove project-level hourly-rate entry from TRUTH. The actual endpoint is /projects/{projectId}/users/{userId}/hourly-rate. Tool clockify_projects_rates_update correctly uses the per-user path."
+        }
+      ],
+      "truth_yaml": "put:\n  operationId: updateProjectHourlyRate\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-050000-put.workspaces.projects.hourly-rate-path-probe.json\n  x-notes: |\n    PUT /workspaces/{workspaceId}/projects/{projectId}/hourly-rate does NOT exist\n    (Spring-MVC 404). The correct path for project member hourly rate updates is\n    PUT /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate\n    (405 on GET confirms path exists, PUT-only). Tool clockify_projects_rates_update\n    correctly uses the per-user sub-path. This endpoint entry should be removed.\n  x-truth-iter: iter21\n  x-path-absent: true\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: projectId, in: path, required: true, schema: {type: string}}\n  responses:\n    '404':\n      description: Path absent -- Spring-MVC No static resource\n",
+      "notes": "LIVE-OVERRIDE: project-level /hourly-rate path absent. Per-user path /projects/{id}/users/{userId}/hourly-rate is confirmed live (405 on GET). Same pattern as cost-rate. No action needed on tool code."
+    }
+  ]
+}

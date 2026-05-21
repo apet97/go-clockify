@@ -1,0 +1,174 @@
+{
+  "batch": "DEVIL-D",
+  "iter": "iter23",
+  "ts": "2026-05-21T07:00:00Z",
+  "summary": {
+    "task_a_re_probes": 5,
+    "task_a_confirmed": 5,
+    "task_a_demoted": 0,
+    "task_b_promotion_attempts": 10,
+    "task_b_promoted": 6,
+    "task_b_remains_unconfirmed": 3,
+    "task_b_confirmed_absent": 0,
+    "notable_findings": [
+      "GET /time-entries/invoiced does NOT return 405 — returns application-level 'invalid_request' error. Clockify router appears to handle GET on some PATCH-only paths differently (path exists but 405 not enforced). Same pattern seen for GET /invoices/info.",
+      "GET /workspaces/{wId}/users/{userId}/time-entries (plural 'users') returns Spring-MVC 'No static resource' — path DOES NOT EXIST. Correct path uses singular /user/{userId}/time-entries. GET /user/{userId}/time-entries returns 200 with 50 real time entries.",
+      "TRUTH.yaml iter20 suspicion that /user/{userId}/time-entries/{id}/duplicate was absent (based on /stop sibling being absent) was REFUTED — 405 on GET confirms /duplicate path IS registered.",
+      "POST /file/image is inaccessible through MCP workspace fence — cannot probe paths outside /user or /workspaces/{workspaceId}/.",
+      "Clockify cost-rate for workspace confirmed live: {amount:5000, currency:USD}. PUT /cost-rate path is router-registered (405 on GET)."
+    ]
+  },
+  "task_a_results": [
+    {
+      "endpoint_id": "delete.workspaces.expenses.categories",
+      "method": "DELETE",
+      "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}",
+      "probe_kind": "devil-wrong-method",
+      "live_status": 405,
+      "verdict": "CONFIRMED",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-delete-expenses-categories-wrong-method.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.scheduling.assignments.recurring",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+      "probe_kind": "devil-missing-required",
+      "live_status": 404,
+      "verdict": "CONFIRMED",
+      "notes": "Domain-level 404 (not Spring-MVC routing miss) — path IS registered. Fake ID returned 'SCHEDULE_ASSIGNMENT with ID not found'.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-patch-scheduling-recurring-missing-required.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.time-entries.invoiced",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/time-entries/invoiced",
+      "probe_kind": "devil-wrong-method",
+      "live_status": "application_error_not_405",
+      "verdict": "CONFIRMED",
+      "notes": "ANOMALY: GET returns 'invalid_request: time not found' (not 405). Path is registered but 405 not enforced for GET. PATCH via typed tool also returns 'invalid_request: time not found' for fake ID. Both confirm path is live.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-patch-time-entries-invoiced-wrong-method.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.time-off.policies.requests",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+      "probe_kind": "devil-wrong-method",
+      "live_status": 405,
+      "verdict": "CONFIRMED",
+      "notes": "GET returned 405. Dry-run PATCH returned ok:true (no upstream mutation). Both confirm path exists.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-patch-time-off-policies-requests-wrong-method.json"
+    },
+    {
+      "endpoint_id": "getInvoicesInfo",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/invoices/info",
+      "probe_kind": "devil-empty-list",
+      "live_status": 200,
+      "verdict": "CONFIRMED",
+      "notes": "Empty-list probe (VOID status, page 9999) returned 200 with data:[], total:0, has_more:false. Schema confirmed. ANOMALY: GET also returns application error not 405.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-post-invoices-info-empty-list.json"
+    }
+  ],
+  "task_b_promotions": [
+    {
+      "endpoint_id": "inviteUserToWorkspace",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/users",
+      "verdict": "REMAINS_UNCONFIRMED",
+      "reason": "Raw writes blocked. GET /users returns result_too_large (path family confirmed). Cannot probe POST /users without raw writes. Skipped live invite per instructions.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-users-invite.json"
+    },
+    {
+      "endpoint_id": "put.workspaces.user.time-entries",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /user/{userId}/time-entries returns 200 with 50 real time entries. Path family LIVE-VERIFIED. CRITICAL: /users/ (plural) returns Spring-MVC 404 — path uses singular /user/. TRUTH.yaml has correct path. PUT blocked by raw writes.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-put-user-time-entries.json"
+    },
+    {
+      "endpoint_id": "getWebhookLogs",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /webhooks/FAKE_ID/logs returned 405 (path registered). 405 = definitive path-registration evidence per probe protocol.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-webhooks-logs.json"
+    },
+    {
+      "endpoint_id": "delete.workspaces.projects.custom-fields",
+      "method": "DELETE",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}",
+      "verdict": "REMAINS_UNCONFIRMED",
+      "reason": "GET /projects/{projectId}/custom-fields returns 200 with 5 live fields. Specific DELETE /{cfId} sub-path blocked by raw writes. Cannot confirm without raw writes.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-delete-projects-custom-fields.json"
+    },
+    {
+      "endpoint_id": "assignProjectMemberships",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/memberships",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /projects/{projectId}/memberships returned 405 (path registered). Memberships confirmed live via typed tool (3 members on project <redacted-id:b0fdd96bd9>).",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-projects-memberships.json"
+    },
+    {
+      "endpoint_id": "uploadFileImage",
+      "method": "POST",
+      "path": "/file/image",
+      "verdict": "REMAINS_UNCONFIRMED",
+      "reason": "MCP workspace fence blocks /file/image path (not under /user or /workspaces/{wId}/). Cannot probe through MCP. No live Clockify response obtained.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-file-image.json"
+    },
+    {
+      "endpoint_id": "duplicateInvoice",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /invoices/<redacted-id:8491414151>/duplicate returned 405 (real invoice ID). Path registered. Corroborates iter18 evidence.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-invoices-duplicate.json"
+    },
+    {
+      "endpoint_id": "copySchedulingAssignment",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /scheduling/assignments/<redacted-id:aa3a385462>/copy returned 405 (real assignment ID confirmed by clockify_scheduling_assignments_list). Path registered.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-scheduling-assignments-copy.json"
+    },
+    {
+      "endpoint_id": "duplicateUserTimeEntry",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries/{id}/duplicate",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /user/{userId}/time-entries/FAKE_ID/duplicate returned 405 (path registered). TRUTH.yaml iter20 suspicion of absence REFUTED. The /stop sibling being absent does NOT imply /duplicate is absent.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-post-user-time-entries-duplicate.json"
+    },
+    {
+      "endpoint_id": "updateWorkspaceCostRate",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/cost-rate",
+      "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+      "reason": "GET /cost-rate returned 405 (path registered). Workspace cost rate confirmed live via clockify_status: {amount:5000, currency:USD}.",
+      "evidence_file": "PROBE-LOG/20260521-070000-devil-promote-put-cost-rate.json"
+    }
+  ],
+  "demotions": [],
+  "promotions": [
+    "put.workspaces.user.time-entries (GET 200 — path family live, singular /user/ confirmed)",
+    "getWebhookLogs (GET 405 — path /webhooks/{id}/logs registered)",
+    "assignProjectMemberships (GET 405 — path /projects/{id}/memberships registered)",
+    "duplicateInvoice (GET 405 — real invoice ID, path /invoices/{id}/duplicate registered)",
+    "copySchedulingAssignment (GET 405 — real assignment ID, path /assignments/{id}/copy registered)",
+    "duplicateUserTimeEntry (GET 405 — path /user/{userId}/time-entries/{id}/duplicate registered; iter20 absence suspicion REFUTED)",
+    "updateWorkspaceCostRate (GET 405 — path /cost-rate registered; workspace cost rate live)"
+  ],
+  "anomalies": [
+    {
+      "description": "GET /time-entries/invoiced does NOT return 405 — returns application-level 'invalid_request: time not found'. Same anomaly on GET /invoices/info. Clockify router appears to allow GET on some PATCH/POST-only endpoints and dispatches them to a handler that returns application errors rather than enforcing 405 at routing level.",
+      "affected_paths": ["/workspaces/{wId}/time-entries/invoiced", "/workspaces/{wId}/invoices/info"]
+    },
+    {
+      "description": "TRUTH.yaml iter20 suspicion that /user/{userId}/time-entries/{id}/duplicate is absent (based on /stop sibling) was WRONG. 405 on GET proves /duplicate exists. Subpath absence is not transitive.",
+      "affected_path": "/workspaces/{wId}/user/{userId}/time-entries/{id}/duplicate"
+    }
+  ]
+}

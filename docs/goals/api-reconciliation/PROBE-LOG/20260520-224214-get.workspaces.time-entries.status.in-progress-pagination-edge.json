@@ -1,0 +1,54 @@
+{
+  "endpoint_id": "get.workspaces.time-entries.status.in-progress",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-entries/status/in-progress",
+  "probe_kind": "pagination-edge",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries/status/in-progress",
+    "query": {
+      "page": 1,
+      "page-size": 1
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "array"
+    ],
+    "body_sample": "[{\"id\":\"...\",\"description\":\"\",\"tagIds\":null,\"userId\":\"[REDACTED-USER]\",\"billable\":false,\"taskId\":null,\"projectId\":null,\"workspaceId\":\"[REDACTED-WORKSPACE]\",\"timeInterval\":{\"start\":\"2026-05-19T19:01:06Z\",\"end\":null,\"duration\":null},\"customFieldValues\":[{\"customFieldId\":\"...\",\"timeEntryId\":\"...\",\"value\":null,\"name\":\"adasd\",\"type\":\"TXT\"},{\"customFieldId\":\"...\",\"timeEntryId\":\"...\",\"value\":null,\"name\":\"SIM6-Cost Center\",\"type\":\"TXT\"},{\"customFieldId\":\"...\",\"timeEntryId\":\"...\",\"value\":42,\"name\":\"MCP-NUM-CF-20260517\",\"type\":\"NUMBER\"},{\"customFieldId\":\"...\",\"timeEntryId\":\"...\",\"value\":null,\"name\":\"MCP-TEST-FIELD\",\"type\":\"TXT\"},{\"customFieldId\":\"...\",\"timeEntryId\":\"...\",\"value\":null,\"name\":\"MCP-Sweep-Field-2026-05-18-updated\",\"type\":\"TXT\"}],\"type\":\"REGULAR\",\"kioskId\":null,\"hourlyRate\":{\"amount\":0,\"currency\":\"USD\"},\"costRate\":{\"amount\":15000,\"currency\":\"USD\"},\"isLocked\":false}]"
+  },
+  "facts_observed": {
+    "status": 200,
+    "response_top_keys": [
+      "array"
+    ],
+    "item_keys": [
+      "billable",
+      "costRate",
+      "customFieldValues",
+      "description",
+      "hourlyRate",
+      "id",
+      "isLocked",
+      "kioskId",
+      "projectId",
+      "tagIds",
+      "taskId",
+      "timeInterval",
+      "type",
+      "userId",
+      "workspaceId"
+    ],
+    "item_count": 1
+  },
+  "notes": ""
+}

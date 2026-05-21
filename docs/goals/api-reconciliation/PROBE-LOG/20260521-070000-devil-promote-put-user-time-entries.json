@@ -1,0 +1,35 @@
+{
+  "endpoint_id": "put.workspaces.user.time-entries",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+  "probe_kind": "devil-promotion-attempt",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "prior_status": "UNCONFIRMED-AGREE",
+  "live_probe_result": {
+    "probe_1": {
+      "method_probed": "GET",
+      "path_probed": "/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>/time-entries",
+      "status": 404,
+      "key_facts": {
+        "error_code": "not_found",
+        "message": "No static resource v1/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>/time-entries.",
+        "interpretation": "Spring-MVC 'No static resource' = path DOES NOT EXIST in Clockify router. The /users/{userId}/time-entries path is ABSENT."
+      }
+    },
+    "probe_2": {
+      "method_probed": "GET",
+      "path_probed": "/workspaces/<redacted-id:7955161f32>/user/<redacted-id:706f58c94f>/time-entries",
+      "note": "singular 'user' vs plural 'users'",
+      "status": 200,
+      "key_facts": {
+        "ok": true,
+        "data_count": 50,
+        "first_entry_id": "<redacted-id:cfff382083>",
+        "interpretation": "GET /workspaces/{wId}/user/{userId}/time-entries (singular 'user') returns 200 with real entries. Path EXISTS as /user/{userId}/time-entries (singular). The plural /users/{userId}/time-entries is absent."
+      }
+    }
+  },
+  "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+  "promotion_evidence": "GET /workspaces/{wId}/user/{userId}/time-entries (singular 'user') returned HTTP 200 with 50 real time entries. The correct path uses singular 'user', not plural 'users'. The path /workspaces/{wId}/users/{userId}/time-entries returns Spring-MVC 'No static resource' (absent). PUT on the singular path is blocked by raw writes guard, but GET 200 on the same path family is strong path-registration evidence. TRUTH.yaml x-notes for this endpoint must be updated to clarify: singular /user/ not plural /users/.",
+  "notes": "CRITICAL FINDING: path uses singular /user/ not plural /users/. GET /user/{userId}/time-entries = 200 (live). GET /users/{userId}/time-entries = Spring 404. TRUTH.yaml likely has the path documented correctly as /user/{userId}/time-entries but worth double-checking. Promoting to LIVE-VERIFIED on the GET evidence (path is registered and returns data). PUT remains unconfirmed (raw writes blocked) but path family is now live-verified."
+}

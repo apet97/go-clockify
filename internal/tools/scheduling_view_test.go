@@ -14,7 +14,7 @@ import (
 )
 
 func TestSchedulingCapacityHandlerAllowsMissingUserIDs(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	// The unreachable client URL makes the upstream call fail; we only
 	// assert the handler no longer rejects a missing user_ids up front.
 	_, err := svc.schedulingCapacityOneUser(context.Background(), map[string]any{

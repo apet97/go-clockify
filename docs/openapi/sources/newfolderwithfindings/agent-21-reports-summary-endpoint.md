@@ -118,7 +118,7 @@ These are fundamentally different shapes. The MCP wrapper focuses on time durati
 ### Finding 3 (P3): Hydrated time-entries may lack projectName
 **Location:** `internal/tools/reports.go:153-163`
 
-In the live probe, one time entry had `projectId=69e96841a50edf6295fdf46a` but `projectName` was empty in the hydrated response, causing the MCP server to label it "(no project)". The actual Reports Summary API correctly resolved this to "Marketing Campaign Q3".
+In the live probe, one time entry had `projectId=<REDACTED_ID>` but `projectName` was empty in the hydrated response, causing the MCP server to label it "(no project)". The actual Reports Summary API correctly resolved this to "Marketing Campaign Q3".
 
 The MCP server's fallback logic at `reports.go:161-163` handles this partially:
 ```go

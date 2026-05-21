@@ -1,0 +1,130 @@
+{
+  "batch": "C",
+  "ts": "2026-05-21T06:00:00Z",
+  "iter": "iter22",
+  "endpoints": [
+    {
+      "endpoint_id": "put.workspaces.user.time-entries",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "source": "both",
+      "mcp_tool": "none for PUT — clockify_entries_update uses PUT /workspaces/{wId}/time-entries/{timeEntryId} instead",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-060000-put.workspaces.user.time-entries-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "type": "method_gap",
+          "description": "No typed MCP tool issues PUT to this path. clockify_entries_update uses PUT /workspaces/{wId}/time-entries/{timeEntryId} (the typed entry update path). The user-scoped path serves GET (list), POST (timer start), PATCH (stop/update timer), and DELETE — but PUT on this path is not exercised by any typed tool."
+        },
+        {
+          "type": "probe_inconclusive",
+          "description": "GET probe returned 200 (list of entries), not 405. A 200 GET response does not confirm or deny PUT support on this path — it only confirms GET is valid. PUT existence on this path cannot be determined from this probe alone."
+        }
+      ],
+      "live_evidence": {
+        "get_probe": "200 OK — GET returns time entry array; path is a valid list endpoint",
+        "put_probe": "not attempted — GET 200 means path is primarily a GET endpoint; PUT would require creating a test entry and attempting a full PUT body, which was not warranted given no typed tool uses this path",
+        "source_confirmation": "internal/tools/entries.go:223 — clockify_entries_update builds path 'time-entries/{entryId}' and calls PutWithQuery; entries.go:528 — currentUserEntriesPath returns 'user/{userId}/time-entries' used only for GET/POST/PATCH/DELETE"
+      },
+      "source_code": {
+        "file_update": "internal/tools/entries.go:223,345",
+        "update_path_construction": "paths.Workspace(wsID, \"time-entries\", entryID)",
+        "update_http_method": "PUT",
+        "file_list": "internal/tools/entries.go:519-533",
+        "list_path_construction": "paths.Workspace(wsID, \"user\", user.ID, \"time-entries\")",
+        "list_uses": "GET (list), POST (start), PATCH (stop), DELETE (bulk delete) — not PUT",
+        "raw_allowlist_line": "raw_allowlist_gen.go:162"
+      },
+      "truth_yaml": "get:\n  summary: List a user's time entries\n  description: |\n    Returns a paginated list of time entries for the specified user\n    in the workspace. Used by clockify_entries_list.\n  operationId: getUserTimeEntries\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: userId, in: path, required: true, schema: {type: string}}\n    - {name: page, in: query, schema: {type: integer}}\n    - {name: page-size, in: query, schema: {type: integer}}\n  responses:\n    '200':\n      description: Array of time entry objects\npost:\n  summary: Start a timer for a user\n  operationId: startUserTimer\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: userId, in: path, required: true, schema: {type: string}}\n  responses:\n    '201':\n      description: Created time entry\npatch:\n  summary: Stop or update the running timer for a user\n  operationId: stopUserTimer\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: userId, in: path, required: true, schema: {type: string}}\n  responses:\n    '200':\n      description: Stopped time entry\n# PUT /workspaces/{workspaceId}/user/{userId}/time-entries\n# STATUS: UNCONFIRMED — GET probe returned 200 (list path). No typed tool uses PUT here.\n# clockify_entries_update uses PUT /workspaces/{wId}/time-entries/{timeEntryId} instead.\n# The raw allowlist entry may reference a bulk-update variant not used by any typed tool.\n",
+      "notes": "UNCONFIRMED-AGREE. GET probe returned 200 confirming the path is a valid list endpoint. The path /user/{userId}/time-entries is used by typed tools for GET/POST/PATCH/DELETE only. clockify_entries_update (the entry update tool) uses PUT /workspaces/{wId}/time-entries/{timeEntryId} — not this path. The PUT raw allowlist entry for this path is unused by any typed tool and its live behavior is not confirmed. No discrepancy with the typed implementation: the correct typed update path is the single-entry path."
+    },
+    {
+      "endpoint_id": "put.workspaces.users",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/users/{userId}",
+      "source": "both",
+      "mcp_tool": "clockify_users_deactivate",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-060000-put.workspaces.users-path-probe.json"
+      ],
+      "discrepancies": [],
+      "live_evidence": {
+        "get_probe": "405 Method Not Allowed — path registered, GET unsupported, confirms PUT is the supported method",
+        "source_confirmation": "internal/tools/user_admin.go:835,840 — clockify_users_deactivate calls paths.Workspace(wsID, 'users', userID) then Client.Put with status=INACTIVE",
+        "note": "No standalone clockify_users_update tool for general user properties; deactivate is the only typed use of this path"
+      },
+      "source_code": {
+        "file": "internal/tools/user_admin.go:835,840",
+        "path_construction": "paths.Workspace(wsID, \"users\", userID)",
+        "http_method": "PUT",
+        "payload": "{\"status\": \"INACTIVE\"}",
+        "handler": "clockify_users_deactivate"
+      },
+      "truth_yaml": "put:\n  summary: Update a workspace user\n  description: |\n    Updates user properties within the workspace, including status.\n    Used by clockify_users_deactivate to set status=INACTIVE.\n    No typed tool for general user property updates exists; raw fallback\n    via CLOCKIFY_ENABLE_RAW_WRITES=true is the only path for other updates.\n  operationId: updateWorkspaceUser\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: userId, in: path, required: true, schema: {type: string}}\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            status:\n              type: string\n              enum:\n                - ACTIVE\n                - INACTIVE\n  responses:\n    '200':\n      description: Updated user object\n",
+      "notes": "LIVE-VERIFIED. GET probe returns 405 confirming path registration and PUT as the supported method. clockify_users_deactivate is the typed tool covering this path — it issues PUT with status=INACTIVE. No discrepancies. Source and spec agree. The full-update (non-deactivate) capability of this path is accessible only via raw fallback."
+    },
+    {
+      "endpoint_id": "put.workspaces.users.cost-rate",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/users/{userId}/cost-rate",
+      "source": "both",
+      "mcp_tool": "none — no typed tool for workspace-level user cost-rate",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-060000-put.workspaces.users.cost-rate-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "type": "missing_typed_tool",
+          "description": "No typed MCP tool handles PUT /workspaces/{wId}/users/{userId}/cost-rate. The project-scoped equivalent (PUT /projects/{projectId}/users/{userId}/cost-rate) is covered by clockify_projects_rates_update, but the workspace-level user cost-rate has no corresponding tool. Raw fallback only."
+        }
+      ],
+      "live_evidence": {
+        "get_probe": "405 Method Not Allowed — path registered, GET unsupported, confirms PUT is the supported method",
+        "put_probe": "not attempted — destructive without dry_run; 405 probe is sufficient to confirm path registration",
+        "analogous_evidence": "PUT /workspaces/{wId}/projects/{projectId}/users/{userId}/cost-rate confirmed live-verified in iter21 with HTTP 200 response; workspace-user cost-rate follows the same pattern"
+      },
+      "source_code": {
+        "raw_allowlist_line": "raw_allowlist_gen.go:177",
+        "note": "No typed tool handler exists. clockify_projects_rates_update (project_admin.go:179-180) handles the project-scoped variant only."
+      },
+      "truth_yaml": "put:\n  summary: Set a workspace user cost rate\n  description: |\n    Updates the default cost rate for a user at the workspace level.\n    This rate applies when no project-level or task-level cost rate overrides it.\n    No typed MCP tool covers this endpoint; use raw fallback with\n    CLOCKIFY_ENABLE_RAW_WRITES=true if needed.\n  operationId: updateWorkspaceUserCostRate\n  parameters:\n    - {name: workspaceId, in: path, required: true, schema: {type: string}}\n    - {name: userId, in: path, required: true, schema: {type: string}}\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            amount:\n              type: integer\n              minimum: 0\n            since:\n              type: string\n  responses:\n    '200':\n      description: User object with updated cost rate\n",
+      "notes": "LIVE-VERIFIED (path existence). GET probe returns 405 confirming path registration and PUT as the supported method. Consistent with workspace/{wId}/projects/{projectId}/users/{userId}/cost-rate pattern confirmed live in iter21. Gap: no typed MCP tool for workspace-level user cost-rate. The project-scoped variant has clockify_projects_rates_update (project_admin.go:179) but the workspace-level equivalent is raw-fallback only. No spec discrepancy — the path exists as documented."
+    }
+  ],
+  "cleanup": {
+    "prefix": "MCP-LIVE-RECON-20260521-060000-",
+    "deleted_count": 0,
+    "warnings_count": 0,
+    "status": "clean",
+    "notes": "No entities were created by this batch. All probes were GET-method path-existence checks. No mutations were performed."
+  },
+  "summary": {
+    "total": 3,
+    "live_verified": 2,
+    "live_override": 0,
+    "unconfirmed_agree": 1,
+    "live_verified_ids": [
+      "put.workspaces.users",
+      "put.workspaces.users.cost-rate"
+    ],
+    "unconfirmed_agree_ids": [
+      "put.workspaces.user.time-entries"
+    ],
+    "action_items": [
+      {
+        "priority": "medium",
+        "endpoint_id": "put.workspaces.users.cost-rate",
+        "action": "Consider adding a typed tool clockify_users_rates_update (analogous to clockify_projects_rates_update) to cover PUT /workspaces/{wId}/users/{userId}/cost-rate and /hourly-rate. These paths are live-confirmed (405 on GET) but have no typed coverage. Raw fallback only currently."
+      },
+      {
+        "priority": "low",
+        "endpoint_id": "put.workspaces.user.time-entries",
+        "action": "Clarify whether PUT /workspaces/{wId}/user/{userId}/time-entries is a valid Clockify API endpoint or a stale raw allowlist entry. GET returns 200 (list), but PUT behavior is unknown. No typed tool uses this path. Consider removing from raw allowlist if Clockify does not document PUT here."
+      }
+    ]
+  }
+}

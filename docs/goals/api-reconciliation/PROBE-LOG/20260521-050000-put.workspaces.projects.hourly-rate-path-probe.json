@@ -1,0 +1,28 @@
+{
+  "endpoint_id": "put.workspaces.projects.hourly-rate",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T05:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/<redacted-id:7955161f32>/projects/<redacted-id:b0fdd96bd9>/hourly-rate",
+    "note": "GET probe on project-level hourly-rate sub-path. Expected: 405 = path exists, PUT-only; Spring-MVC 404 = path absent."
+  },
+  "response": {
+    "status": 404,
+    "body_sample": "{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/<redacted-id:7955161f32>/projects/<redacted-id:b0fdd96bd9>/hourly-rate.\"}",
+    "clockify_error_type": "Spring-MVC No static resource"
+  },
+  "facts_observed": {
+    "project_level_hourly_rate_path_exists": false,
+    "spring_mvc_404": true,
+    "user_level_hourly_rate_path_exists": true,
+    "user_level_path_405_on_get": true,
+    "user_level_path": "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate",
+    "user_level_get_probe_result": "405 Request method GET not supported",
+    "clockify_projects_rates_update_tool_path": "/workspaces/{wsID}/projects/{projectID}/users/{userID}/{endpoint}",
+    "source_code_evidence": "project_admin.go UpdateProjectUserRate line 693: paths.Workspace(wsID, projects, projectID, users, userID, endpoint)"
+  },
+  "notes": "PUT /workspaces/{workspaceId}/projects/{projectId}/hourly-rate does NOT exist (Spring-MVC 404). Same pattern as cost-rate. The actual per-user hourly rate path is /projects/{projectId}/users/{userId}/hourly-rate (405 on GET confirms it exists, PUT-only). clockify_projects_rates_update correctly uses the per-user sub-path."
+}

@@ -1,0 +1,49 @@
+{
+  "endpoint_id": "patch.workspaces.invoices.status",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/status",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T23:32:47Z",
+  "request": {
+    "method": "PATCH",
+    "path": "/workspaces/[REDACTED]/invoices/<redacted-id:c2a0f34a9c>/status",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"status": "SENT"}
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "entity", "ids", "data", "meta", "changed"],
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_invoices_update\",\"entity\":\"invoice\",\"ids\":{\"invoiceId\":\"<redacted-id:c2a0f34a9c>\",\"workspaceId\":\"[REDACTED]\"},\"data\":{\"id\":\"<redacted-id:c2a0f34a9c>\",\"invoice\":{\"status\":\"SENT\"},\"status\":\"SENT\"},\"meta\":{\"workspaceId\":\"[REDACTED]\"},\"changed\":{\"updated\":[{\"type\":\"invoice\",\"id\":\"<redacted-id:c2a0f34a9c>\"}]}}"
+  },
+  "facts_observed": {
+    "endpoint_exists": true,
+    "method_correct": "PATCH",
+    "status_changed_to_SENT": true,
+    "response_shape": {
+      "top_level_status_field": "SENT",
+      "invoice_nested_status_field": "SENT",
+      "billing_fields_sparse_on_status_response": true,
+      "returns_full_invoice_object": false,
+      "returns_sparse_invoice_object": true
+    },
+    "status_values_observed": ["SENT"],
+    "tool_used": "clockify_invoices_update with status param",
+    "actual_url_used": "PATCH /workspaces/{workspaceId}/invoices/{invoiceId}/status",
+    "confirmatory_GET_status": "SENT (confirmed via GET /workspaces/{workspaceId}/invoices/{invoiceId})",
+    "confirmed_invoice_full_shape": {
+      "id": "<redacted-id:c2a0f34a9c>",
+      "status": "SENT",
+      "currency": "USD",
+      "clientId": "<redacted-id:e4d2c8ce74>",
+      "number": "MCP-LIVE-RECON-BATCH-B-20260520-INV-001",
+      "amount": 0,
+      "balance": 0,
+      "billFrom": "WORKSPACE",
+      "calculationType": "ITEM_BASED",
+      "visibleZeroFields": ["TAX"]
+    }
+  },
+  "notes": "Status update via PATCH /invoices/{invoiceId}/status works. Response when updating status is sparse (invoice sub-object, billing fields empty). Confirmatory GET to /invoices/{invoiceId} returned the full invoice with status=SENT. Tool clockify_invoices_update routes to the PATCH /status endpoint when the status param is supplied. Deleted after probing."
+}

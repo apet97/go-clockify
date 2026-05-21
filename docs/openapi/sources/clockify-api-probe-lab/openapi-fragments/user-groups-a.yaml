@@ -1,5 +1,5 @@
 # User Groups — READ endpoints (Agent A)
-# Live-probed 2026-05-12 against workspace 65b382b606de527a7ee2b60e.
+# Live-probed 2026-05-12 against workspace <REDACTED_ID>.
 # Host: https://api.clockify.me/api/v1
 # Auth: X-Api-Key (ApiKeyAuth)
 
@@ -60,9 +60,9 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/UserGroup" }
               example:
-                - id: "6a032e09385b9fac0881fa9c"
+                - id: "<REDACTED_ID>"
                   name: "mcp-probe-1778593289-23313f-group"
-                  workspaceId: "65b382b606de527a7ee2b60e"
+                  workspaceId: "<REDACTED_ID>"
                   userIds: []
                   teamManagers: []
         "400":

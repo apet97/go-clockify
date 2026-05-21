@@ -1,0 +1,49 @@
+{
+  "endpoint_id": "post.workspaces.user.time-entries.duplicate",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/user/{userId}/time-entries/{id}/duplicate",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "iter": "iter20",
+  "tool_used": "source-code-audit + Spring-MVC inference",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/user/[REDACTED-USER]/time-entries/<entryId>/duplicate",
+    "query": {},
+    "body_summary": null,
+    "note": "GET probe to test path registration per Spring-MVC discrimination: 405=registered, 404=absent"
+  },
+  "response": {
+    "status": "NOT PROBED LIVE — api.clockify.me unreachable at probe time",
+    "inferred_status": "likely 404 (No static resource) based on analogy with other user-scoped sub-paths",
+    "body_sample": "n/a"
+  },
+  "source_code_audit": {
+    "raw_allowlist_entry": "raw_allowlist_gen.go:161 — POST /workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate: true",
+    "typed_tool": "NONE — no typed MCP tool routes to this path",
+    "note": "The path appears only in the raw_allowlist_gen.go (stale generated artifact). No implementation in entries.go, timer.go, workflows.go, or any handler. Compare with /workspaces/{workspaceId}/invoices/{id}/duplicate which similarly had no typed tool and was confirmed via GET probe as 405 (registered) in iter14."
+  },
+  "analogous_evidence": {
+    "delete.workspaces.user.time-entries": {
+      "verdict": "UNRESOLVED-NO-LIVE from iter17",
+      "probe": "PROBE-LOG/20260521-010000-delete.workspaces.user.time-entries-path-existence.json",
+      "note": "User-scoped time entry sub-paths tend to be absent or unreachable on live Clockify (vs workspace-scoped paths)"
+    },
+    "post.workspaces.user.time-entries.stop": {
+      "verdict": "LIVE-OVERRIDE from iter (see TRUTH.openapi.yaml)",
+      "note": "GET probe returned 404 'No static resource' for /user/{userId}/time-entries/stop — Spring 404 = absent. Timer stop uses the base /user/{userId}/time-entries PATCH path, not a /stop suffix."
+    }
+  },
+  "spring_mvc_discrimination": {
+    "assessment": "Unable to confirm live due to network outage. Based on analogy with /stop sub-path (404 confirmed absent) and pattern that user-scoped time entry sub-paths are generally absent, this path is likely ABSENT on live Clockify.",
+    "status": "UNCONFIRMED-AGREE — both specs list this path; no live evidence contradicts it, but absence is strongly suspected by analogy"
+  },
+  "facts_observed": {
+    "path_registered_live": "UNKNOWN — not probed",
+    "typed_tool": false,
+    "raw_allowlist_only": true,
+    "param_name_discrepancy": "official spec uses 'id' (path param), ours uses 'timeEntryId' — cosmetic naming difference only"
+  },
+  "api_network_status": "api.clockify.me unreachable at probe time (DNS no such host)",
+  "notes": "Path exists in raw_allowlist only — no typed tool. Cannot confirm live existence. The /stop sub-path at the same path level was confirmed absent (Spring 404) in an earlier probe. The duplicate path is likely also absent. Status set to UNCONFIRMED-AGREE pending a live GET probe when API is reachable. Param naming: official='id', ours='timeEntryId' — functionally equivalent."
+}

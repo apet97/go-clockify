@@ -1,0 +1,231 @@
+{
+  "body_bytes": 3958,
+  "label": "shared-reports-get-by-id-reports-host",
+  "method": "GET",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": null,
+  "response_body_text": "{\"totals\":[{\"totalTime\":111875,\"totalBillableTime\":0,\"entriesCount\":8,\"amounts\":[{\"type\":\"EARNED\",\"value\":0.0,\"amountByCurrency\":[{\"currency\":\"USD\",\"amount\":0.0}]}],\"numOfCurrencies\":4,\"_id\":\"\",\"totalAmount\":0.0,\"totalAmountByCurrency\":[{\"currency\":\"USD\",\"amount\":0}]}],\"donutChart\":[],\"groupTotals\":{\"groupOneTotalCount\":1},\"groupOne\":[{\"currency\":\"USD\",\"workspaceCurrencyCode\":\"USD\",\"duration\":111875,\"amounts\":[{\"type\":\"EARNED\",\"value\":0.0,\"amountByCurrency\":[{\"currency\":\"USD\",\"amount\":0.0}]}],\"amount\":0.0,\"_id\":\"<redacted-id:8cd5662ca2>\",\"name\":\"Bug Fixes & QA\",\"nameLowerCase\":\"bug fixes & qa\",\"color\":\"#F44336\",\"clientName\":\"90 - MICR\"}],\"filters\":{\"id\":\"<redacted-id:a96179c3a4>\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"userId\":\"<redacted-id:706f58c94f>\",\"name\":\"CODEX-VERIFY-1779332317-SR-HAPPY\",\"isPublic\":false,\"visibleToUserGroups\":null,\"visibleToUsers\":null,\"fixedDate\":true,\"type\":\"SUMMARY\",\"exportVisibleCustomFieldIds\":[\"<redacted-id:a8835adc97>\",\"<redacted-id:3b43e2bfb9>\",\"<redacted-id:8bf6b10c28>\",\"<redacted-id:cc48a8b1a5>\",\"<redacted-id:0310acfb91>\"],\"exportVisibleUserCustomFieldIds\":[],\"exportVisibleElements\":[\"NOTES\",\"DECIMAL_DURATION\",\"PIE_CHART_3\",\"BAR_CHART\",\"PIE_CHART_2\",\"DURATION\",\"PIE_CHART_1\"],\"filter\":{\"dateRangeStart\":\"2026-04-01T00:00:00Z\",\"dateRangeEnd\":\"2026-04-30T23:59:59.999999999Z\",\"dateRangeType\":\"LAST_MONTH\",\"users\":null,\"userGroups\":null,\"clients\":null,\"projects\":null,\"currency\":null,\"tasks\":null,\"tags\":null,\"billable\":null,\"archived\":null,\"description\":null,\"withoutDescription\":false,\"detailedFilter\":null,\"summaryFilter\":{\"groups\":[\"PROJECT\"],\"sortColumn\":\"GROUP\",\"page\":1,\"pageSize\":0,\"summaryChartType\":\"BILLABILITY\"},\"weeklyFilter\":null,\"schedulingFilter\":null,\"attendanceFilter\":null,\"sortOrder\":\"DESCENDING\",\"exportType\":\"JSON_V1\",\"zoomLevel\":\"WEEK\",\"rounding\":false,\"amounts\":[\"EARNED\"],\"amountShown\":\"EARNED\",\"approvalState\":\"ALL\",\"invoicingState\":\"ALL\",\"customFields\":null,\"userCustomFields\":null,\"userLocale\":null,\"timeZone\":\"UTC\",\"timeFormat\":\"HOUR12\",\"dateFormat\":\"MM/DD/YYYY\",\"weekStart\":\"MONDAY\",\"showEstimate\":false,\"kioskIds\":[],\"timeEntryType\":[],\"includeUsersWithoutTime\":false,\"sortUsersWithoutTime\":false,\"colors\":{},\"timeViewMode\":\"TIME_SENSITIVE_VIEW\"},\"activeBillableHours\":true,\"onlyAdminsCanChangeBillableStatus\":false,\"notes\":\"\",\"originalLang\":\"EN\",\"timezone\":\"Europe/Belgrade\",\"dateFormat\":\"MM/DD/YYYY\",\"timeFormat\":\"HOUR12\",\"weekStart\":\"MONDAY\",\"workspace\":{\"id\":\"<CLOCKIFY_WORKSPACE_ID>\",\"name\":\"WORKSPACE\",\"workspaceSettings\":{\"trackTimeDownToSeconds\":true,\"timeRoundingInReports\":false,\"activeBillableHours\":true,\"onlyAdminsCanSeeAndChangeBillableStatus\":false,\"onlyAdminsSeeAllTimeEntries\":true,\"onlyAdminsSeePublicProjectEntries\":true,\"onlyAdminsSeeBillableRates\":true,\"rounding\":{\"roundingType\":\"NEAREST\",\"minutes\":15},\"isCostRateActive\":true,\"projectGroupingLabel\":\"client\",\"projectLabel\":\"project\",\"taskLabel\":\"task\",\"approvalEnabled\":true,\"invoicingEnabled\":true,\"decimalFormat\":false,\"breaksEnabled\":true,\"kiosksEnabled\":true,\"schedulingSettings\":{\"enabled\":true,\"everyoneCanSeeAllAssignments\":false,\"canSeeBillableAndCostAmount\":true},\"numberFormat\":\"SPACE_COMMA\",\"currencyFormat\":\"CURRENCY_SPACE_VALUE\",\"workingDays\":[\"TUESDAY\",\"MONDAY\",\"SUNDAY\",\"THURSDAY\",\"SATURDAY\",\"WEDNESDAY\",\"FRIDAY\"],\"expensesEnabled\":true,\"adminOnlyPages\":[],\"kioskAuthType\":\"PIN_4_DIGITS\",\"kioskAutologinEnabled\":false,\"timeViewMode\":\"TIME_SENSITIVE_VIEW\",\"multiFactorEnabled\":false,\"costRateActive\":true,\"timeOffEnabled\":true,\"lockDate\":null,\"lockTimeEntries\":null,\"isTimeOffEnabled\":true},\"currencyId\":\"<redacted-id:124745b6d4>\",\"currency\":\"USD\",\"imageUrl\":\"\",\"organizationLink\":{\"organizationId\":\"<redacted-id:c0eb87e1b3>\",\"organizationActive\":false},\"onlyAdminsCanSeeAndChangeBillableStatus\":false,\"activeBillableHours\":true,\"onlyAdminsSeeBillableRates\":true,\"trackTimeDownToSeconds\":true,\"aggregateTimeViewEnabled\":false},\"subscriptionPlan\":\"BUNDLE_YEAR_2024\",\"isAdminOrOwner\":true}}",
+  "response_headers_subset": {
+    "Content-Length": "1716",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:58:39 GMT"
+  },
+  "response_json": {
+    "donutChart": [],
+    "filters": {
+      "activeBillableHours": true,
+      "dateFormat": "MM/DD/YYYY",
+      "exportVisibleCustomFieldIds": [
+        "<redacted-id:a8835adc97>",
+        "<redacted-id:3b43e2bfb9>",
+        "<redacted-id:8bf6b10c28>",
+        "<redacted-id:cc48a8b1a5>",
+        "<redacted-id:0310acfb91>"
+      ],
+      "exportVisibleElements": [
+        "NOTES",
+        "DECIMAL_DURATION",
+        "PIE_CHART_3",
+        "BAR_CHART",
+        "PIE_CHART_2",
+        "DURATION",
+        "PIE_CHART_1"
+      ],
+      "exportVisibleUserCustomFieldIds": [],
+      "filter": {
+        "amountShown": "EARNED",
+        "amounts": [
+          "EARNED"
+        ],
+        "approvalState": "ALL",
+        "archived": null,
+        "attendanceFilter": null,
+        "billable": null,
+        "clients": null,
+        "colors": {},
+        "currency": null,
+        "customFields": null,
+        "dateFormat": "MM/DD/YYYY",
+        "dateRangeEnd": "2026-04-30T23:59:59.999999999Z",
+        "dateRangeStart": "2026-04-01T00:00:00Z",
+        "dateRangeType": "LAST_MONTH",
+        "description": null,
+        "detailedFilter": null,
+        "exportType": "JSON_V1",
+        "includeUsersWithoutTime": false,
+        "invoicingState": "ALL",
+        "kioskIds": [],
+        "projects": null,
+        "rounding": false,
+        "schedulingFilter": null,
+        "showEstimate": false,
+        "sortOrder": "DESCENDING",
+        "sortUsersWithoutTime": false,
+        "summaryFilter": {
+          "groups": [
+            "PROJECT"
+          ],
+          "page": 1,
+          "pageSize": 0,
+          "sortColumn": "GROUP",
+          "summaryChartType": "BILLABILITY"
+        },
+        "tags": null,
+        "tasks": null,
+        "timeEntryType": [],
+        "timeFormat": "HOUR12",
+        "timeViewMode": "TIME_SENSITIVE_VIEW",
+        "timeZone": "UTC",
+        "userCustomFields": null,
+        "userGroups": null,
+        "userLocale": null,
+        "users": null,
+        "weekStart": "MONDAY",
+        "weeklyFilter": null,
+        "withoutDescription": false,
+        "zoomLevel": "WEEK"
+      },
+      "fixedDate": true,
+      "id": "<redacted-id:a96179c3a4>",
+      "isAdminOrOwner": true,
+      "isPublic": false,
+      "name": "CODEX-VERIFY-1779332317-SR-HAPPY",
+      "notes": "",
+      "onlyAdminsCanChangeBillableStatus": false,
+      "originalLang": "EN",
+      "subscriptionPlan": "BUNDLE_YEAR_2024",
+      "timeFormat": "HOUR12",
+      "timezone": "Europe/Belgrade",
+      "type": "SUMMARY",
+      "userId": "<redacted-id:706f58c94f>",
+      "visibleToUserGroups": null,
+      "visibleToUsers": null,
+      "weekStart": "MONDAY",
+      "workspace": {
+        "activeBillableHours": true,
+        "aggregateTimeViewEnabled": false,
+        "currency": "USD",
+        "currencyId": "<redacted-id:124745b6d4>",
+        "id": "<CLOCKIFY_WORKSPACE_ID>",
+        "imageUrl": "",
+        "name": "WORKSPACE",
+        "onlyAdminsCanSeeAndChangeBillableStatus": false,
+        "onlyAdminsSeeBillableRates": true,
+        "organizationLink": {
+          "organizationActive": false,
+          "organizationId": "<redacted-id:c0eb87e1b3>"
+        },
+        "trackTimeDownToSeconds": true,
+        "workspaceSettings": {
+          "activeBillableHours": true,
+          "adminOnlyPages": [],
+          "approvalEnabled": true,
+          "breaksEnabled": true,
+          "costRateActive": true,
+          "currencyFormat": "CURRENCY_SPACE_VALUE",
+          "decimalFormat": false,
+          "expensesEnabled": true,
+          "invoicingEnabled": true,
+          "isCostRateActive": true,
+          "isTimeOffEnabled": true,
+          "kioskAuthType": "PIN_4_DIGITS",
+          "kioskAutologinEnabled": false,
+          "kiosksEnabled": true,
+          "lockDate": null,
+          "lockTimeEntries": null,
+          "multiFactorEnabled": false,
+          "numberFormat": "SPACE_COMMA",
+          "onlyAdminsCanSeeAndChangeBillableStatus": false,
+          "onlyAdminsSeeAllTimeEntries": true,
+          "onlyAdminsSeeBillableRates": true,
+          "onlyAdminsSeePublicProjectEntries": true,
+          "projectGroupingLabel": "client",
+          "projectLabel": "project",
+          "rounding": {
+            "minutes": 15,
+            "roundingType": "NEAREST"
+          },
+          "schedulingSettings": {
+            "canSeeBillableAndCostAmount": true,
+            "enabled": true,
+            "everyoneCanSeeAllAssignments": false
+          },
+          "taskLabel": "task",
+          "timeOffEnabled": true,
+          "timeRoundingInReports": false,
+          "timeViewMode": "TIME_SENSITIVE_VIEW",
+          "trackTimeDownToSeconds": true,
+          "workingDays": [
+            "TUESDAY",
+            "MONDAY",
+            "SUNDAY",
+            "THURSDAY",
+            "SATURDAY",
+            "WEDNESDAY",
+            "FRIDAY"
+          ]
+        }
+      },
+      "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+    },
+    "groupOne": [
+      {
+        "_id": "<redacted-id:8cd5662ca2>",
+        "amount": 0.0,
+        "amounts": [
+          {
+            "amountByCurrency": [
+              {
+                "amount": 0.0,
+                "currency": "USD"
+              }
+            ],
+            "type": "EARNED",
+            "value": 0.0
+          }
+        ],
+        "clientName": "90 - MICR",
+        "color": "#F44336",
+        "currency": "USD",
+        "duration": 111875,
+        "name": "Bug Fixes & QA",
+        "nameLowerCase": "bug fixes & qa",
+        "workspaceCurrencyCode": "USD"
+      }
+    ],
+    "groupTotals": {
+      "groupOneTotalCount": 1
+    },
+    "totals": [
+      {
+        "_id": "",
+        "amounts": [
+          {
+            "amountByCurrency": [
+              {
+                "amount": 0.0,
+                "currency": "USD"
+              }
+            ],
+            "type": "EARNED",
+            "value": 0.0
+          }
+        ],
+        "entriesCount": 8,
+        "numOfCurrencies": 4,
+        "totalAmount": 0.0,
+        "totalAmountByCurrency": [
+          {
+            "amount": 0,
+            "currency": "USD"
+          }
+        ],
+        "totalBillableTime": 0,
+        "totalTime": 111875
+      }
+    ]
+  },
+  "run": "20260521T025837Z",
+  "status": 200,
+  "url": "https://reports.api.clockify.me/v1/shared-reports/<redacted-id:a96179c3a4>?exportType=JSON"
+}

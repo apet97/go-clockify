@@ -1,0 +1,292 @@
+{
+  "cleanup": [
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": {
+          "archived": true,
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:c1d19ad816>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:c1d19ad816>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:c1d19ad816>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:c1d19ad816>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  ],
+  "endpoint_id": "updateClient",
+  "evidence": [
+    {
+      "endpoint_id": "fixture.client.create",
+      "probe_kind": "fixture-create",
+      "request": {
+        "body": {
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients",
+        "path_template": "/workspaces/{workspaceId}/clients",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": false,
+          "ccEmails": null,
+          "currencyCode": "CAD",
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:c1d19ad816>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "Created",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyCode",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    {
+      "endpoint_id": "updateClient",
+      "probe_kind": "happy-path",
+      "request": {
+        "body": {
+          "archived": false,
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:c1d19ad816>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": false,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:c1d19ad816>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": {
+          "archived": true,
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:c1d19ad816>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:c1d19ad816>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:c1d19ad816>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:c1d19ad816>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-client-updated",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  ],
+  "method": "PUT",
+  "notes": "Disposable client was created, PUT-renamed, archived, and deleted.",
+  "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+  "probe_id": "20260521T200626Z-put-workspaces-clients-happy-path",
+  "probe_kind": "codex-live-gap-closure",
+  "request_scope": "live sacrificial workspace; disposable fixtures only; secrets and identifiers redacted",
+  "timestamp_utc": "2026-05-21T20:06:27Z",
+  "verification_status": "LIVE-VERIFIED"
+}

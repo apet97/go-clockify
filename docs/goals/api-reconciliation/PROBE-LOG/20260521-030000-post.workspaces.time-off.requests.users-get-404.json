@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "post.workspaces.time-off.requests.users",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/time-off/requests/users/{userId}",
+  "probe_kind": "get-404",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "tool_used": "mcp__clockify__clockify_api_request",
+  "params": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/requests/users/<redacted-id:706f58c94f>"
+  },
+  "response": {
+    "ok": false,
+    "action": "clockify_api_request",
+    "error": {
+      "code": "not_found",
+      "message": "No static resource v1/workspaces/[REDACTED-WORKSPACE]/time-off/requests/users/<redacted-id:706f58c94f>."
+    }
+  },
+  "http_status_inferred": "404",
+  "source_confirmed": "internal/tools/raw_allowlist_gen.go:153 POST /workspaces/{workspaceId}/time-off/requests/users/{userId}: true",
+  "verification_status": "LIVE-OVERRIDE",
+  "notes": "GET returned Spring-MVC 404 'No static resource' — this means the route does NOT exist at all (contrast with 405 which means route exists but method wrong). Path is listed in raw_allowlist_gen.go but the live Clockify API does not serve it. No typed MCP tool handles this path. Also tried POST via raw fallback is blocked (CLOCKIFY_ENABLE_RAW_WRITES not set). Declaring LIVE-OVERRIDE: path is absent from live API. The list-by-user functionality is handled by the existing clockify_time_off_requests_list tool which accepts user_id as a POST body filter on /workspaces/{wId}/time-off/requests."
+}

@@ -210,7 +210,7 @@ paths:
                 activeWorkspace: 64a687e29ae1f428e7ebe303
                 customFields: []
                 defaultWorkspace: 64a687e29ae1f428e7ebe303
-                email: johndoe@example.com
+                email: "<EMAIL>"
                 id: 5a0ab5acb07987125438b60f
                 memberships: []
                 name: John Doe
@@ -648,7 +648,7 @@ paths:
               example:
               - approvalRequest:
                   creator:
-                    userEmail: johhndoe@example.com
+                    userEmail: "<EMAIL>"
                     userId: 5a0ab5acb07987125438b60f
                     userName: johhndoe
                   dateRange:
@@ -812,7 +812,7 @@ paths:
             application/json:
               example:
                 creator:
-                  userEmail: johhndoe@example.com
+                  userEmail: "<EMAIL>"
                   userId: 5a0ab5acb07987125438b60f
                   userName: johhndoe
                 dateRange:
@@ -874,7 +874,7 @@ paths:
             application/json:
               example:
                 creator:
-                  userEmail: johhndoe@example.com
+                  userEmail: "<EMAIL>"
                   userId: 5a0ab5acb07987125438b60f
                   userName: johhndoe
                 dateRange:
@@ -936,7 +936,7 @@ paths:
             application/json:
               example:
                 creator:
-                  userEmail: johhndoe@example.com
+                  userEmail: "<EMAIL>"
                   userId: 5a0ab5acb07987125438b60f
                   userName: johhndoe
                 dateRange:
@@ -1003,7 +1003,7 @@ paths:
             application/json:
               example:
                 creator:
-                  userEmail: johhndoe@example.com
+                  userEmail: "<EMAIL>"
                   userId: 5a0ab5acb07987125438b60f
                   userName: johhndoe
                 dateRange:
@@ -1069,7 +1069,7 @@ paths:
             application/json:
               example:
                 creator:
-                  userEmail: johhndoe@example.com
+                  userEmail: "<EMAIL>"
                   userId: 5a0ab5acb07987125438b60f
                   userName: johhndoe
                 dateRange:
@@ -4318,7 +4318,7 @@ paths:
           content:
             application/json:
               example:
-                email: johndoe@example.com
+                email: "<EMAIL>"
                 hasPassword: false
                 hasPendingApprovalRequest: false
                 imageUrl: https://www.url.com/imageurl-1234567890.jpg
@@ -4437,7 +4437,7 @@ paths:
           content:
             application/json:
               example:
-                email: johndoe@example.com
+                email: "<EMAIL>"
                 hasPassword: false
                 hasPendingApprovalRequest: false
                 imageUrl: https://www.url.com/imageurl-1234567890.jpg
@@ -12692,7 +12692,7 @@ paths:
         schema:
           type: string
       - description: Filters users by email substring.
-        example: mail@example.com
+        example: "<EMAIL>"
         in: query
         name: email
         required: false
@@ -12806,7 +12806,7 @@ paths:
               - activeWorkspace: 64a687e29ae1f428e7ebe303
                 customFields: []
                 defaultWorkspace: 64a687e29ae1f428e7ebe303
-                email: johndoe@example.com
+                email: "<EMAIL>"
                 id: 5a0ab5acb07987125438b60f
                 memberships: []
                 name: John Doe
@@ -12886,7 +12886,7 @@ paths:
         content:
           application/json:
             example:
-              email: johndoe@example.com
+              email: "<EMAIL>"
             schema:
               "$ref": "#/components/schemas/AddUserToWorkspaceRequest"
         required: true
@@ -12980,7 +12980,7 @@ paths:
               accountStatuses:
               - LIMITED
               - ACTIVE
-              email: mail@example.com
+              email: "<EMAIL>"
               includeRoles: false
               memberships: NONE
               name: John
@@ -13007,7 +13007,7 @@ paths:
               - activeWorkspace: 64a687e29ae1f428e7ebe303
                 customFields: []
                 defaultWorkspace: 64a687e29ae1f428e7ebe303
-                email: johndoe@example.com
+                email: "<EMAIL>"
                 id: 5a0ab5acb07987125438b60f
                 memberships: []
                 name: John Doe
@@ -13503,7 +13503,7 @@ paths:
               - activeWorkspace: 64a687e29ae1f428e7ebe303
                 customFields: []
                 defaultWorkspace: 64a687e29ae1f428e7ebe303
-                email: johndoe@example.com
+                email: "<EMAIL>"
                 id: 5a0ab5acb07987125438b60f
                 memberships: []
                 name: John Doe
@@ -21808,7 +21808,7 @@ components:
             end: '2022-08-26T17:00:00Z'
             start: '2022-08-26T08:00:00Z'
         timeUnit: DAYS
-        userEmail: johndoe@example.com
+        userEmail: "<EMAIL>"
         userId: 5b715612b079875110794444
         userName: John Doe
         userTimeZone: UTC
@@ -24305,7 +24305,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 8e38d1ab7164e9cb19b0ea0fdacd52fb2e53325225e72317e52b450ae0720fde
+    sha256: 4b7d527230ea0908601247b08344e8d28d8456f7b45922b34dec0d0972d2567f
     files: 146
   sourcePrecedence:
   - live/probe findings metadata

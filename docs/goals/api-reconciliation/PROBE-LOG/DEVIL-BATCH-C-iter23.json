@@ -1,0 +1,111 @@
+{
+  "batch_id": "DEVIL-BATCH-C-iter23",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "description": "Devil's-advocate re-probe of 5 LIVE-VERIFIED endpoints (stride=5 sample, LV[10-14]) using different probe kinds than the originals. Goal: find disagreements between TRUTH.openapi.yaml and live Clockify behavior.",
+  "summary": {
+    "total_endpoints": 5,
+    "confirmed": 5,
+    "demoted": 0,
+    "errors": 0,
+    "secondary_findings": 5
+  },
+  "results": [
+    {
+      "endpoint_id": "listTimeOffRequests",
+      "path": "/workspaces/{workspaceId}/time-off/requests",
+      "probe_kind": "devil-wrong-method",
+      "verdict": "CONFIRMED",
+      "truth_yaml_status": "LIVE-OVERRIDE (GET) + LIVE-VERIFIED (POST)",
+      "probe_log": "20260521-070000-devil-time-off-requests-wrong-method.json",
+      "key_finding": "GET returns 405 'Request method GET is not supported' — exactly as TRUTH.yaml documents. POST with impossible userId filter returns {count:0, requests:[]} — empty-envelope shape matches TRUTH.yaml schema. No discrepancy."
+    },
+    {
+      "endpoint_id": "patch.workspaces.user.time-entries",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "probe_kind": "devil-empty-list",
+      "verdict": "CONFIRMED",
+      "truth_yaml_status": "LIVE-VERIFIED",
+      "probe_log": "20260521-070000-devil-patch.workspaces.user.time-entries-empty-range.json",
+      "key_finding": "GET with far-future date window (2099) returns bare [] with HTTP 200 — confirms GET path live and bare-array shape holds for empty results. TRUTH.yaml correct.",
+      "secondary_finding": {
+        "description": "Server accepts page-size up to 5000 (returns 400 above that). TRUTH.yaml documents maximum:200 for page-size on this path. The 200 cap is a typed-tool constraint, not a live API constraint.",
+        "severity": "informational — tool-layer cap, not an API bug"
+      }
+    },
+    {
+      "endpoint_id": "getInvoiceSettings",
+      "path": "/workspaces/{workspaceId}/invoices/settings",
+      "probe_kind": "devil-happy-path",
+      "verdict": "CONFIRMED",
+      "truth_yaml_status": "LIVE-VERIFIED",
+      "probe_log": "20260521-070000-devil-getInvoiceSettings-wrong-type.json",
+      "key_finding": "Independent GET returned 200 with all documented keys (defaults, exportFields, labels). tax=2500 minor-units claim verified. No required query params confirmed. TRUTH.yaml fully accurate.",
+      "secondary_finding": {
+        "description": "TRUTH.yaml 'labels' sub-schema is underspecified — documents only free-form description, but live response contains 17 specific named keys (amount, billFrom, billTo, description, discount, dueDate, issueDate, itemType, notes, paid, quantity, subtotal, tax, tax2, total, totalAmount, unitPrice).",
+        "severity": "informational — schema completeness gap"
+      }
+    },
+    {
+      "endpoint_id": "get.workspaces.invoices.export",
+      "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/export",
+      "probe_kind": "devil-missing-required",
+      "verdict": "CONFIRMED",
+      "truth_yaml_status": "LIVE-VERIFIED",
+      "probe_log": "20260521-070000-devil-get.workspaces.invoices.export-missing-required.json",
+      "key_finding": "GET without userLocale → 400 'Required request parameter userLocale... is not present'. GET with userLocale=en → %PDF binary causes JSON parse error. Both behaviors match TRUTH.yaml exactly.",
+      "secondary_finding": {
+        "description": "Typed tool clockify_invoices_export silently defaults user_locale to 'en-US' when omitted. This tool-layer default masks the API's required parameter from MCP callers. TRUTH.yaml is accurate about the raw API contract but does not note the tool default.",
+        "severity": "informational — tool behavior note worth adding to TRUTH.yaml x-tool-note"
+      }
+    },
+    {
+      "endpoint_id": "get.workspaces.time-off.balance.user",
+      "path": "/workspaces/{workspaceId}/time-off/balance/user/{userId}",
+      "probe_kind": "devil-wrong-type",
+      "verdict": "CONFIRMED",
+      "truth_yaml_status": "LIVE-VERIFIED",
+      "probe_log": "20260521-070000-devil-get.workspaces.time-off.balance.user-nonexistent-userid.json",
+      "key_finding": "Non-existent userId ('<redacted-id:1aaa799929>') returns HTTP 200 {balances:[], count:0} — NOT a 404. Clockify silently returns empty results for unknown userIds.",
+      "secondary_findings": [
+        {
+          "description": "Non-existent userId: silent 200 empty envelope rather than 404. TRUTH.yaml only documents 200 response — technically correct, but the silent-200-for-missing-entity behavior is not noted.",
+          "severity": "informational — callers cannot distinguish user-not-found from user-has-no-balances"
+        },
+        {
+          "description": "Page parameter is server-capped at 1000: page=99999 returns 400 'must be less than or equal to 1000'. TRUTH.yaml documents page with default:1 but NO maximum constraint.",
+          "truth_yaml_gap": "Missing maximum: 1000 on page parameter",
+          "severity": "minor spec gap"
+        }
+      ]
+    }
+  ],
+  "demotions": [],
+  "actionable_truth_yaml_gaps": [
+    {
+      "path": "/workspaces/{workspaceId}/time-off/balance/user/{userId}",
+      "gap": "page parameter missing maximum: 1000 constraint",
+      "recommended_fix": "Add maximum: 1000 to page parameter schema"
+    },
+    {
+      "path": "/workspaces/{workspaceId}/time-off/balance/user/{userId}",
+      "gap": "No documentation that non-existent userId returns 200 empty rather than 404",
+      "recommended_fix": "Add x-note: 'unknown userId returns 200 {balances:[], count:0} not 404'"
+    },
+    {
+      "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/export",
+      "gap": "Typed tool clockify_invoices_export defaults user_locale to en-US when omitted — not documented",
+      "recommended_fix": "Add x-tool-note to TRUTH.yaml: 'clockify_invoices_export defaults user_locale to en-US when omitted'"
+    },
+    {
+      "path": "/workspaces/{workspaceId}/invoices/settings",
+      "gap": "labels object sub-keys not enumerated in schema (17 known keys)",
+      "recommended_fix": "Add named properties to labels schema: amount, billFrom, billTo, description, discount, dueDate, issueDate, itemType, notes, paid, quantity, subtotal, tax, tax2, total, totalAmount, unitPrice"
+    },
+    {
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "gap": "page-size maximum in TRUTH.yaml is 200 but server accepts up to 5000",
+      "recommended_fix": "Update page-size maximum from 200 to 5000 with note that typed tool enforces 200"
+    }
+  ],
+  "overall_assessment": "All 5 LIVE-VERIFIED endpoints remain CONFIRMED. Zero demotions. Five informational/minor spec gaps identified: (1) page max:1000 missing on time-off/balance/user; (2) silent-200 for unknown userId undocumented; (3) invoices/export typed-tool user_locale default undocumented; (4) invoices/settings labels sub-keys not enumerated; (5) user/time-entries page-size server cap is 5000 not 200. None of these gaps rise to a demotion — they are precision improvements to the spec."
+}

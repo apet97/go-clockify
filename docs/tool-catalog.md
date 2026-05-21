@@ -5,7 +5,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 - Tools: **156** (all registered at startup; workflow tools first, domain tools second, raw API fallback last).
 
-- `tools/list` returns the complete startup registry in one response; no cursor pagination.
+- `tools/list` returns the advertised toolset, not the loaded registry. The default toolset advertises 16 everyday tools; `CLOCKIFY_TOOLSET=all` advertises all 156 startup tools; unadvertised tools remain dispatch-callable by name. No cursor pagination.
 
 ## Agent cookbook recipes
 

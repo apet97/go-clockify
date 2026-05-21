@@ -1,0 +1,26 @@
+{
+  "endpoint_id": "delete.workspaces.webhooks",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T23:24:33Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks/<redacted-id:8f0289d5d1>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["deleted", "webhookId"],
+    "body_sample": "{\"deleted\":true,\"webhookId\":\"<redacted-id:8f0289d5d1>\"}"
+  },
+  "facts_observed": {
+    "response_shape": "{deleted:boolean, webhookId:string}",
+    "response_top_keys": ["deleted", "webhookId"],
+    "setup": "Created webhook 'MCP-RECON-232433-wh' (NEW_TIME_ENTRY, https://example.com/...) then deleted it"
+  },
+  "notes": "Consistent response shape: {deleted:true, webhookId:string}. Both specs document this endpoint."
+}

@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.invoices.settings",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/invoices/settings",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:14:29Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/invoices/settings","query":{},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":200,"headers_redacted":{},"body_keys":["defaults","exportFields","labels"],"body_sample":"{\"defaults\":{\"companyId\":\"...\",\"dueDays\":0,\"tax\":2500,\"taxPercent\":25,\"taxType\":\"SIMPLE\",...},\"exportFields\":{\"itemType\":true,\"quantity\":true,...},\"labels\":{\"amount\":\"AMOUNT\",...}}"},
+  "facts_observed": {"response_shape":"single_object","top_keys":["defaults","exportFields","labels"],"defaults_keys":["companyId","defaultImportExpenseItemTypeId","defaultImportTimeItemTypeId","dueDays","itemTypeId","notes","subject","tax","tax2","tax2Percent","taxPercent","taxType"],"export_fields_keys":["itemType","quantity","rtl","tax","tax2","unitPrice"],"tax_minor_units":true,"no_required_query_params":true},
+  "notes": "Single settings object. Both specs agree on path. Tax values in minor units (tax=2500 = 25%). No required query params beyond workspaceId path param."
+}

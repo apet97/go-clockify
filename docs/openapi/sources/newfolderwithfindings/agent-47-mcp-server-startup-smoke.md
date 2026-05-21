@@ -90,7 +90,7 @@ go test -race -tags=livee2e -run TestE2EReadOnly ./tests/...  # PASS
 
 | Probe | Endpoint | Result |
 |-------|----------|--------|
-| User identity | `GET /v1/user` | 200 — user `64621faec4d2cc53b91fce6c`, email `alpettest1@gmail.com` |
+| User identity | `GET /v1/user` | 200 — user `<REDACTED_ID>`, email `<EMAIL>` |
 | Workspace info | `GET /v1/workspaces/{ws}` | 200 — name "WORKSPACE", hourlyRate 150 EUR |
 | List projects | `GET /v1/workspaces/{ws}/projects?page-size=5` | 200 — 5 projects returned (25 total available) |
 | List clients | `GET /v1/workspaces/{ws}/clients?page-size=5` | 200 — 5 clients returned |

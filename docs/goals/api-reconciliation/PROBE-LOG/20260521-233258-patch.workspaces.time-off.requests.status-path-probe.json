@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "patch.workspaces.time-off.requests.status",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}/status",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T23:33:53Z",
+  "request": {
+    "method": "PATCH",
+    "path": "/workspaces/[REDACTED]/time-off/policies/<redacted-id:1e975578e3>/requests/<redacted-id:01eb976817>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"status": "APPROVED", "note": "MCP-LIVE-RECON-BATCH-C approve probe"}
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "entity", "ids", "data", "meta", "changed"],
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_time_off_approve\",\"data\":{\"id\":\"<redacted-id:01eb976817>\",\"status\":\"APPROVED\",\"policy\":{\"id\":\"<redacted-id:1e975578e3>\",\"name\":\"1111\"},\"policyId\":\"<redacted-id:1e975578e3>\",\"requestId\":\"<redacted-id:01eb976817>\"}}"
+  },
+  "facts_observed": {
+    "approve_succeeded": true,
+    "request_id_created": "<redacted-id:01eb976817>",
+    "final_status": "APPROVED",
+    "actual_path_used": "PATCH /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId}",
+    "our_spec_path": "PATCH /workspaces/{workspaceId}/time-off/requests/{requestId}/status",
+    "source_file_approve": "internal/tools/time_off_balances.go:63",
+    "source_file_update": "internal/tools/time_off_requests.go:202",
+    "raw_allowlist_has_status_path": true,
+    "raw_allowlist_entry": "PATCH /workspaces/{workspaceId}/time-off/requests/{requestId}/status",
+    "raw_allowlist_also_has_policy_path": true,
+    "raw_allowlist_policy_path": "PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"
+  },
+  "notes": "Our spec path PATCH /time-off/requests/{requestId}/status exists only in our raw_allowlist_gen.go (line 148) but is NOT the path actually used by any typed tool. Both approveTimeOff (time_off_balances.go:63) and updateTimeOffRequest (time_off_requests.go:202) use PATCH /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId}. Live happy-path approval succeeded via this policy-scoped path, returning status=APPROVED. The /status sub-path is listed in our raw allowlist but no typed tool exercises it. Could not delete the approved request (blocked: 'Approved time off requests cannot be withdrawn'). LIVE-OVERRIDE: the live path is PATCH /policies/{policyId}/requests/{requestId}, not /requests/{requestId}/status."
+}

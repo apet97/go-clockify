@@ -1,0 +1,32 @@
+{
+  "endpoint_id": "delete.workspaces.time-off.policies.requests",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T01:00:00Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/policies/<redacted-id:1e975578e3>/requests/<redacted-id:3f96a48955>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["deleted","id","policyId","requestId"],
+    "body_sample": "{\"deleted\":true,\"id\":\"<redacted-id:3f96a48955>\",\"policyId\":\"<redacted-id:1e975578e3>\",\"requestId\":\"<redacted-id:3f96a48955>\"}"
+  },
+  "facts_observed": {
+    "response_shape": "{deleted:boolean, id:string, policyId:string, requestId:string}",
+    "response_status": 200,
+    "deleted_confirmed": true,
+    "tool_used": "clockify_time_off_requests_delete",
+    "tool_path_source": "internal/tools/time_off_requests.go line 265: paths.Workspace(wsID, 'time-off', 'policies', policyID, 'requests', requestID)",
+    "path_is_policy_scoped": true,
+    "setup": "Created time-off request 'MCP-LIVE-RECON-20260521-010000-A-request-delete-test' under policy <redacted-id:1e975578e3>, then deleted via clockify_time_off_requests_delete",
+    "prior_dry_run_404": "dry_run with nonexistent request ID <redacted-id:1aaa799929> returned not_found, confirming path is live-active",
+    "both_specs_agree": true
+  },
+  "notes": "LIVE-VERIFIED. Both official and our spec list this endpoint. The typed MCP tool clockify_time_off_requests_delete uses exactly the policy-scoped path DELETE /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId} as confirmed from source code. Live probe returned {deleted:true} with 200 status. Note: a non-policy-scoped path also exists: DELETE /workspaces/{wId}/time-off/requests/{requestId} (separate endpoint already probed in iter15)."
+}

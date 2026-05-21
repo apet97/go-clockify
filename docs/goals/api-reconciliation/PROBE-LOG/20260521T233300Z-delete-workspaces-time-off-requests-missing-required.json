@@ -1,0 +1,30 @@
+{
+  "endpoint_id": "delete.workspaces.time-off.requests",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}",
+  "probe_kind": "missing-required",
+  "timestamp_utc": "2026-05-21T23:33:00Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED]/time-off/requests/<redacted-id:1aaa799929>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "policyId": "<redacted-id:1e975578e3>"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "error", "recovery"],
+    "body_sample": "{\"ok\":false,\"action\":\"clockify_time_off_requests_delete\",\"error\":{\"code\":\"auth_or_permission\",\"message\":\"Access Denied\"},\"recovery\":{\"hint\":\"If time off is unavailable, report that and continue. Otherwise list policies and retry with a returned policy ID.\",\"tool\":\"clockify_time_off_policies_list\"}}"
+  },
+  "facts_observed": {
+    "http_status": 403,
+    "error_code": "auth_or_permission",
+    "error_message": "Access Denied",
+    "not_404": true,
+    "fake_id_returns_access_denied_not_not_found": true
+  },
+  "notes": "Non-existent request ID returns 403 Access Denied, not 404. Clockify apparently checks ownership/permission before existence for time-off requests. This is the live error shape for unknown/inaccessible request IDs."
+}

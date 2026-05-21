@@ -59,11 +59,11 @@ All commands exited 0. All tests passed (clockify: 21.170s, tools: 4.887s).
 |---|----------|--------|---------|------|-----------|-------|
 | 1 | `/time-entries/nonexistent123456789` | GET | 404 on missing entry | 400 | 63 B | Clockify returns 400 for bad IDs, not 404 |
 | 2 | `/workspaces/{ws}` | GET | Baseline 200 shape | 200 | 4978 B | Valid workspace JSON |
-| 3 | `/users?email=nonexistent@example.invalid` | GET | Empty user search | 200 | 2 B | Returns `[]` |
+| 3 | `/users?email=<EMAIL>` | GET | Empty user search | 200 | 2 B | Returns `[]` |
 | 4 | `/user/me/time-entries?start=2000-01-01&end=2000-01-01` | GET | Zero-width date range | 400 | 69 B | Rejected as invalid range |
 | 5 | `/projects?page=9999&page-size=200` | GET | Past-the-end page | 200 | 2 B | Returns `[]` |
 | 6 | `/projects?page=9999` (verify body) | GET | Empty array shape | 200 | 2 B | Literal `[]` bytes |
-| 7 | `/clients` (POST `qa-agent-52-nil-test`) | POST | Create test resource | 200 | - | Created `6a00f387385b9fac085a06e3` |
+| 7 | `/clients` (POST `qa-agent-52-nil-test`) | POST | Create test resource | 200 | - | Created `<REDACTED_ID>` |
 | 8 | `/clients/{id}` | DELETE | Delete client (active) | 400 | - | "Cannot delete an active client" |
 | 9 | `/clients/{id}` | GET | Read deleted client | 400 | - | Expected |
 | 10 | `/clients/{id}` | DELETE | Double-delete | 400 | - | Returns `{"message":"...","code":501}` |
@@ -143,9 +143,9 @@ N/A — no issues found requiring reproduction.
 
 | Resource | ID | Action | Result |
 |----------|------|--------|--------|
-| Client `qa-agent-52-nil-test` | `6a00f387385b9fac085a06e3` | Archive then Delete | Deleted (verified 400 on re-GET) |
-| Tag `qa-agent-52-nil` | `6a00f40cd9647159dc10124c` | Delete | Deleted (verified 400 on re-GET) |
-| Tag `qa-agent-52-nil2` | `6a00f4152568d3d29305f8e3` | Delete | Deleted |
+| Client `qa-agent-52-nil-test` | `<REDACTED_ID>` | Archive then Delete | Deleted (verified 400 on re-GET) |
+| Tag `qa-agent-52-nil` | `<REDACTED_ID>` | Delete | Deleted (verified 400 on re-GET) |
+| Tag `qa-agent-52-nil2` | `<REDACTED_ID>` | Delete | Deleted |
 
 ## Leftover test resources
 

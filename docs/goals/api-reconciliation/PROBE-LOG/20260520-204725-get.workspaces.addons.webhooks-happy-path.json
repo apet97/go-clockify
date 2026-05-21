@@ -1,0 +1,18 @@
+{
+  "endpoint_id": "get.workspaces.addons.webhooks",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/addons/{addonId}/webhooks",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T20:49:25Z",
+  "request": {"method": "GET", "path": "/workspaces/[REDACTED_WS]/addons/<redacted-id:dd6eda34d1>/webhooks", "query": {}, "headers_redacted": {"X-Api-Key": "[REDACTED]"}},
+  "response": {"status": 200, "body_keys": ["webhooks","workspaceWebhookCount"], "body_sample": "{\"webhooks\":[],\"workspaceWebhookCount\":0}"},
+  "facts_observed": {
+    "status_code": 200,
+    "response_type": "object",
+    "response_keys": ["webhooks","workspaceWebhookCount"],
+    "empty_when_no_addon_webhooks": true,
+    "webhooks_field_type": "array",
+    "workspaceWebhookCount_type": "integer"
+  },
+  "notes": "Returns object {webhooks:[], workspaceWebhookCount:0} for non-existent addon (not 404). Both specs agree on this shape."
+}

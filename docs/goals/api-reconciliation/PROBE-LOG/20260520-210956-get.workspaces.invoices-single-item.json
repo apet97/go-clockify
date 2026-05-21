@@ -1,0 +1,32 @@
+{
+  "endpoint_id": "get.workspaces.invoices",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/invoices/{invoiceId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:09:56Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/invoices/<redacted-id:8491414151>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["amount", "balance", "billFrom", "calculationType", "clientAddress", "clientId", "clientName", "companyId", "containsImportedExpenses", "containsImportedTimes", "currency", "discount", "discountAmount", "dueDate", "id", "issuedDate", "items", "note", "number", "paid", "status", "subject", "subtotal", "tax", "tax2", "tax2Amount", "taxAmount", "taxType", "userId", "visibleZeroFields"],
+    "body_sample": "{\"amount\":100000,\"balance\":100000,\"billFrom\":\"WORKSPACE\",\"calculationType\":\"ITEM_BASED\",\"clientAddress\":\"asdada\",\"clientId\":\"<redacted-id:0651c649db>\",\"clientName\":\"Directamente asociadas a clientes\",\"companyId\":\"<redacted-id:5f665887e7>\",\"containsImportedExpenses\":false,\"containsImportedTimes\":false,\"currency\":\"AUD\",\"discount\":0,\"discountAmount\":0,\"dueDate\":\"2025-04-16T00:00:00Z\",\"id\":\"<redacted-id:8491414151>\",\"issuedDate\":\"2025-04-16T00:00:00Z\",\"items\":[{\"amount\":100000,\"applyTaxes\":\"TAX2\",\"description\":\"\",\"expenseIds\":[],\"importType\":\"NOT_IMPORTED\",\"itemType\":\"NEW DEFAULT\",\"order\":1,\"quantity\":100,\"timeEntryIds\":[],\"unitPrice\":100000}],\"note\":\"...\",\"number\":\"12\",\"paid\":null,\"status\":\"OVERDUE\",\"subject\":\"...\",\"subtotal\":100000,\"tax\":2500,\"tax2\":0,\"taxType\":\"SIMPLE\",\"userId\":\"[REDACTED]\",\"visibleZeroFields\":[\"TAX\"]}"
+  },
+  "facts_observed": {
+    "response_shape": "flat single object (NOT wrapped in invoices key)",
+    "richer_than_list": true,
+    "extra_keys_vs_list": ["billFrom", "calculationType", "clientAddress", "companyId", "containsImportedExpenses", "containsImportedTimes", "discount", "discountAmount", "items", "note", "subject", "subtotal", "tax", "tax2", "tax2Amount", "taxAmount", "taxType", "userId", "visibleZeroFields"],
+    "items_shape": "array of {amount, applyTaxes, description, expenseIds, importType, itemType, order, quantity, timeEntryIds, unitPrice}",
+    "calculation_type_seen": ["ITEM_BASED"],
+    "bill_from_seen": ["WORKSPACE"],
+    "tax_in_minor_units": true,
+    "visibleZeroFields_type": "array of strings",
+    "paid_nullable": true
+  },
+  "notes": "Single invoice is much richer than list item. Adds: items array (line items with taxes), company/billing metadata, tax breakdown, discount fields. The items[].applyTaxes enum value TAX2 is interesting — suggests multi-tax support. companyId is separate from workspaceId (relates to Clockify company billing entity)."
+}

@@ -48,7 +48,7 @@ CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor --check-backends
 
 # Missing key (stdio)
-CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # Invalid workspace ID
@@ -56,7 +56,7 @@ CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=not-a-valid-id!!! \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # Empty base URL (should default)
-CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   CLOCKIFY_BASE_URL="" MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04 doctor
 
 # --version / --help (check for secret leaks)
@@ -83,7 +83,7 @@ printf '...initialize...\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params"
 
 # MCP stdio smoke: tools/call with bad key
 printf '...initialize...\n...tools/call clockify_get_workspace...\n' | \
-  CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  CLOCKIFY_API_KEY= CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   MCP_METRICS_AUTH_MODE=none /tmp/clockify-mcp-qa04
 ```
 
@@ -113,7 +113,7 @@ curl -H "X-Api-Key: " .../workspaces/<REDACTED>/projects?page-size=5 → 200
 
 **What**: `resolve.ValidateID()` in `internal/resolve/resolve.go:18-37` validates workspace IDs for path safety only — it rejects control bytes (`<0x20`, `0x7F`), `/?#%`, `..`, empty strings, and values over 128 bytes. Values like `not-a-valid-id!!!` pass validation. The Clockify API rejects these at request time with a 404, which the MCP server surfaces as a tool error.
 
-**Impact**: A user who typos their workspace ID (e.g., `65b382b606de527a7ee2b60e` → `65b382b606de527a7ee2b60f`) gets a runtime 404 error from the first API call rather than an immediate config-load error. The error message is clear (`clockify GET /workspaces/... failed: 404 Not Found`), so this is low-severity.
+**Impact**: A user who typos their workspace ID (e.g., `<REDACTED_ID>` → `<REDACTED_ID>`) gets a runtime 404 error from the first API call rather than an immediate config-load error. The error message is clear (`clockify GET /workspaces/... failed: 404 Not Found`), so this is low-severity.
 
 **Design rationale**: The current validation deliberately avoids a Clockify-specific ID format check (24-char hex) because Clockify may change its ID format in the future. The API is the authoritative validator.
 

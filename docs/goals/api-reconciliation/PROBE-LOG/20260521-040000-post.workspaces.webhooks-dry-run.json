@@ -1,0 +1,57 @@
+{
+  "endpoint_id": "post.workspaces.webhooks",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/webhooks",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "tool": "clockify_webhooks_create",
+    "args": {
+      "name": "MCP-RECON-B-WH",
+      "url": "https://example.com/hook",
+      "webhook_event": "NEW_TIME_ENTRY",
+      "dry_run": true
+    }
+  },
+  "response": {
+    "ok": true,
+    "action": "clockify_webhooks_create",
+    "entity": "webhook",
+    "ids": {
+      "workspaceId": "<redacted-id:7955161f32>"
+    },
+    "data": {
+      "dry_run": true,
+      "note": "No changes were made.",
+      "payload": {
+        "name": "MCP-RECON-B-WH",
+        "secret_token_present": false,
+        "triggerSource": ["<redacted-id:7955161f32>"],
+        "triggerSourceType": "WORKSPACE_ID",
+        "url": "https://example.com/hook",
+        "webhookEvent": "NEW_TIME_ENTRY"
+      },
+      "tool": "clockify_create_webhook"
+    },
+    "meta": {
+      "workspaceId": "<redacted-id:7955161f32>"
+    },
+    "changed": {}
+  },
+  "facts_observed": {
+    "path_constructed": "/workspaces/<redacted-id:7955161f32>/webhooks",
+    "live_method_from_code": "POST",
+    "dry_run_payload_keys": ["name", "url", "webhookEvent", "triggerSourceType", "triggerSource"],
+    "both_specs_agree_on_post": true,
+    "previous_live_evidence": "PROBE-LOG/20260520-232433-delete.workspaces.webhooks-happy-path.json confirms webhook creation previously worked (webhook was created and deleted)"
+  },
+  "code_evidence": {
+    "file": "internal/tools/webhooks.go",
+    "line": 664,
+    "snippet": "if err := s.Client.Post(ctx, path, payload, &result); err != nil {",
+    "path_line": 659,
+    "path_snippet": "path, err := paths.Workspace(wsID, \"webhooks\")"
+  },
+  "network_status": "No live network: api.clockify.me DNS resolution failed during this session. Dry-run confirms tool routes to POST /workspaces/{workspaceId}/webhooks with expected payload shape.",
+  "notes": "First dry-run attempt failed because webhook name 'MCP-LIVE-RECON-20260521-040000-B-WH' exceeds maxLength:30. Shortened to 'MCP-RECON-B-WH' (14 chars) — dry run succeeded. Both official spec (POST createWebhook) and our code agree on POST /workspaces/{workspaceId}/webhooks. Previous iter14 live evidence (delete.workspaces.webhooks-happy-path.json) confirms this path is active on live — a webhook was created and deleted."
+}

@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.expenses.files",
+  "probe_kind": "wrong-type",
+  "timestamp_utc": "2026-05-21T00:00:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/expenses/<redacted-id:3deb9b3f6d>/files/dummy-file-id",
+  "query": {},
+  "status_code": 403,
+  "status_text": "Forbidden",
+  "response_body_sample": {
+    "message": "You don't have permission to perform this action."
+  },
+  "verdict": "UNRESOLVED-NO-LIVE",
+  "notes": "Endpoint exists (403 not 404/405). Probed with expense that has fileId=''. Cannot verify response shape without an expense that has an attached file in this workspace. Both specs document this endpoint."
+}

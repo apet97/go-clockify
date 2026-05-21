@@ -1,0 +1,35 @@
+{
+  "endpoint_id": "delete.workspaces.shared-reports",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/shared-reports/{id}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T23:34:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/shared-reports",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null,
+    "note": "Attempted GET first to confirm endpoint existence; DELETE not directly probeable via MCP raw tools (raw writes disabled). Two GET attempts made with and without page query params — both returned identical error."
+  },
+  "response": {
+    "status": 404,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "error", "recovery"],
+    "body_sample": "{\"ok\":false,\"action\":\"clockify_api_get\",\"error\":{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/[REDACTED]/shared-reports.\"},\"recovery\":{\"hint\":\"Use workflow or domain tools first. Call clockify_tools_guide to find the nearest typed tool before retrying raw GET.\",\"tool\":\"clockify_tools_guide\"}}"
+  },
+  "facts_observed": {
+    "get_status": 404,
+    "error_code": "not_found",
+    "error_message": "No static resource v1/workspaces/.../shared-reports",
+    "endpoint_appears_absent_from_live_api": true,
+    "workspace_has_SHARED_REPORTS_feature_flag": true,
+    "two_get_attempts_both_404": true,
+    "delete_not_probeable_without_raw_writes": true,
+    "spec_sources": {
+      "official_spec_path_param": "id",
+      "our_spec_path_param": "sharedReportId"
+    }
+  },
+  "notes": "The shared-reports collection endpoint returns 404 'No static resource' from the live API even though the workspace has the SHARED_REPORTS feature flag enabled. This contradicts both specs which document the endpoint. The path param naming discrepancy (official: 'id', ours: 'sharedReportId') is moot given the endpoint itself is absent. Status: UNRESOLVED-NO-LIVE — both specs agree on the path but live API does not respond. Raw DELETE cannot be tested safely without raw write access. The workspace feature flag 'SHARED_REPORTS' is present in settings, suggesting the feature may be routed to a different API host or path."
+}

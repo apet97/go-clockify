@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/testclockify"
 )
 
@@ -102,9 +103,32 @@ func TestParseLogLevelDefaultsToWarn(t *testing.T) {
 	}
 }
 
+func TestRedactIdentifierKeepsOnlySuffix(t *testing.T) {
+	if got := redactIdentifier("000000000000000000000001"); got != "[redacted]...0001" {
+		t.Fatalf("redactIdentifier = %q", got)
+	}
+	if got := redactIdentifier("abc"); got != "[redacted]" {
+		t.Fatalf("short redactIdentifier = %q", got)
+	}
+	if got := redactIdentifier(" "); got != "(unset)" {
+		t.Fatalf("empty redactIdentifier = %q", got)
+	}
+}
+
+func TestRedactDoctorDiagnosticRedactsAPIKeyAndWorkspaceID(t *testing.T) {
+	cfg := testOneUserConfig("test-secret-key", "000000000000000000000001")
+	got := redactDoctorDiagnostic(errors.New("clockify GET /workspaces/000000000000000000000001 failed with test-secret-key"), cfg)
+	if strings.Contains(got, cfg.APIKey) || strings.Contains(got, cfg.WorkspaceID) {
+		t.Fatalf("diagnostic leaked secret: %q", got)
+	}
+	if !strings.Contains(got, "[redacted]...0001") {
+		t.Fatalf("diagnostic missing redacted workspace suffix: %q", got)
+	}
+}
+
 func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_TIMEZONE", "Europe/Belgrade")
 	t.Setenv("CLOCKIFY_BASE_URL", "https://api.clockify.me/api/v1")
 	t.Setenv("MCP_LOG_LEVEL", "debug")
@@ -118,7 +142,7 @@ func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
 	for _, want := range []string{
 		"one-user configuration",
 		"CLOCKIFY_API_KEY       set (redacted)",
-		"CLOCKIFY_WORKSPACE_ID  65b382b606de527a7ee2b60e",
+		"CLOCKIFY_WORKSPACE_ID  [redacted]...0001",
 		"CLOCKIFY_TIMEZONE      Europe/Belgrade",
 		"MCP_LOG_LEVEL          debug",
 		"CLOCKIFY_TOOL_TIMEOUT  45s",
@@ -136,8 +160,9 @@ func TestRunDoctorOneUserSuccessRedactsAPIKey(t *testing.T) {
 			t.Fatalf("doctor output missing %q:\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") {
-		t.Fatalf("doctor leaked API key: stdout=%s stderr=%s", out, stderr.String())
+	if strings.Contains(out, "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") ||
+		strings.Contains(out, "000000000000000000000001") || strings.Contains(stderr.String(), "000000000000000000000001") {
+		t.Fatalf("doctor leaked API key or full workspace ID: stdout=%s stderr=%s", out, stderr.String())
 	}
 }
 
@@ -146,15 +171,15 @@ func TestRunDoctorLiveSuccess(t *testing.T) {
 		switch {
 		case r.URL.Path == "/user":
 			respondDoctorJSON(t, w, map[string]any{"id": "user1"})
-		case r.URL.Path == "/workspaces/65b382b606de527a7ee2b60e":
+		case r.URL.Path == "/workspaces/000000000000000000000001":
 			respondDoctorJSON(t, w, map[string]any{
-				"id":                      "65b382b606de527a7ee2b60e",
+				"id":                      "000000000000000000000001",
 				"name":                    "Pinned",
 				"featureSubscriptionType": "PRO",
 				"features":                []string{"INVOICE", "EXPENSE", "TIME_OFF", "SCHEDULING", "APPROVAL", "WEBHOOK", "CUSTOM_FIELD", "REPORT"},
 			})
 		case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
-			respondDoctorJSON(t, w, []map[string]any{{"id": "65b382b606de527a7ee2b60e", "name": "Pinned"}})
+			respondDoctorJSON(t, w, []map[string]any{{"id": "000000000000000000000001", "name": "Pinned"}})
 		default:
 			http.NotFound(w, r)
 		}
@@ -162,7 +187,7 @@ func TestRunDoctorLiveSuccess(t *testing.T) {
 	defer upstream.Close()
 
 	t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_BASE_URL", upstream.URL)
 	t.Setenv("CLOCKIFY_TOOLSET", "admin")
 	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "true")
@@ -181,9 +206,9 @@ func TestRunDoctorLiveSuccess(t *testing.T) {
 		"Advertised surface: 150 tools (toolset=admin)",
 		"CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   hooks.example.com,.trusted.test",
 		"GET /user                         OK",
-		"user_id: user1",
+		"user_id: [redacted]...ser1",
 		"GET /workspaces/{workspaceId}     OK",
-		"workspace_id: 65b382b606de527a7ee2b60e",
+		"workspace_id: [redacted]...0001",
 		"workspace_name: Pinned",
 		"feature_plan: PRO",
 		"feature_flags: INVOICE,EXPENSE,TIME_OFF,SCHEDULING,APPROVAL,WEBHOOK,CUSTOM_FIELD,REPORT",
@@ -195,8 +220,12 @@ func TestRunDoctorLiveSuccess(t *testing.T) {
 			t.Fatalf("doctor live output missing %q:\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") {
-		t.Fatalf("doctor leaked API key: stdout=%s stderr=%s", out, stderr.String())
+	if strings.Contains(out, "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") ||
+		strings.Contains(out, "000000000000000000000001") || strings.Contains(stderr.String(), "000000000000000000000001") {
+		t.Fatalf("doctor leaked API key or full workspace ID: stdout=%s stderr=%s", out, stderr.String())
+	}
+	if strings.Contains(out, "user1") || strings.Contains(stderr.String(), "user1") {
+		t.Fatalf("doctor leaked full user ID: stdout=%s stderr=%s", out, stderr.String())
 	}
 }
 
@@ -226,8 +255,8 @@ func TestRunDoctorLiveExitCodes(t *testing.T) {
 				switch {
 				case r.URL.Path == "/user":
 					respondDoctorJSON(t, w, map[string]any{"id": "user1"})
-				case r.URL.Path == "/workspaces/65b382b606de527a7ee2b60e":
-					respondDoctorJSON(t, w, map[string]any{"id": "65b382b606de527a7ee2b60e", "name": "Pinned"})
+				case r.URL.Path == "/workspaces/000000000000000000000001":
+					respondDoctorJSON(t, w, map[string]any{"id": "000000000000000000000001", "name": "Pinned"})
 				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
 					respondDoctorJSON(t, w, []map[string]any{{"id": "other", "name": "Other"}})
 				default:
@@ -241,8 +270,8 @@ func TestRunDoctorLiveExitCodes(t *testing.T) {
 				switch {
 				case r.URL.Path == "/user":
 					respondDoctorJSON(t, w, map[string]any{"id": "user1"})
-				case r.URL.Path == "/workspaces/65b382b606de527a7ee2b60e":
-					respondDoctorJSON(t, w, map[string]any{"id": "65b382b606de527a7ee2b60e", "name": "Pinned"})
+				case r.URL.Path == "/workspaces/000000000000000000000001":
+					respondDoctorJSON(t, w, map[string]any{"id": "000000000000000000000001", "name": "Pinned"})
 				case r.URL.Path == "/workspaces" && r.URL.Query().Get("roles") == "OWNER":
 					http.Error(w, "forbidden", http.StatusForbidden)
 				default:
@@ -259,7 +288,7 @@ func TestRunDoctorLiveExitCodes(t *testing.T) {
 			defer upstream.Close()
 
 			t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
-			t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+			t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 			t.Setenv("CLOCKIFY_BASE_URL", upstream.URL)
 
 			var stdout, stderr bytes.Buffer
@@ -269,6 +298,9 @@ func TestRunDoctorLiveExitCodes(t *testing.T) {
 			}
 			if strings.Contains(stdout.String(), "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") {
 				t.Fatalf("doctor leaked API key: stdout=%s stderr=%s", stdout.String(), stderr.String())
+			}
+			if strings.Contains(stdout.String(), "000000000000000000000001") || strings.Contains(stderr.String(), "000000000000000000000001") {
+				t.Fatalf("doctor leaked full workspace ID: stdout=%s stderr=%s", stdout.String(), stderr.String())
 			}
 		})
 	}
@@ -283,7 +315,7 @@ func TestRunDoctorDoesNotCallClockify(t *testing.T) {
 	defer upstream.Close()
 
 	t.Setenv("CLOCKIFY_API_KEY", "test-secret-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_BASE_URL", upstream.URL)
 
 	var stdout, stderr bytes.Buffer
@@ -314,7 +346,7 @@ func TestRunDoctorOneUserMissingConfig(t *testing.T) {
 }
 
 func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 
 	t.Setenv("CLOCKIFY_API_KEY", "stdio-secret-key")
@@ -366,6 +398,37 @@ func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
 	ids := mapObject(t, structured, "ids")
 	if ids["workspaceId"] != fake.WorkspaceID || ids["clientId"] == "" {
 		t.Fatalf("client-create missing IDs: %+v", ids)
+	}
+}
+
+func TestRunWithContextStartupLogRedactsWorkspaceID(t *testing.T) {
+	fake := testclockify.NewServer("000000000000000000000001")
+	defer fake.Close()
+
+	t.Setenv("CLOCKIFY_API_KEY", "stdio-secret-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", fake.WorkspaceID)
+	t.Setenv("CLOCKIFY_BASE_URL", fake.URL)
+
+	var logs bytes.Buffer
+	oldLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	t.Cleanup(func() { slog.SetDefault(oldLogger) })
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := runWithContext(ctx, strings.NewReader(""), io.Discard); err != nil {
+		t.Fatalf("runWithContext: %v", err)
+	}
+
+	out := logs.String()
+	if !strings.Contains(out, "one_user_server_start") {
+		t.Fatalf("startup log missing one_user_server_start: %s", out)
+	}
+	if strings.Contains(out, "stdio-secret-key") || strings.Contains(out, fake.WorkspaceID) {
+		t.Fatalf("startup log leaked secret: %s", out)
+	}
+	if !strings.Contains(out, "[redacted]...0001") {
+		t.Fatalf("startup log missing workspace suffix hint: %s", out)
 	}
 }
 
@@ -476,7 +539,7 @@ func TestRunWithContextClassifiesConfigError(t *testing.T) {
 }
 
 func TestRunDoctorLiveRoleVerdicts(t *testing.T) {
-	const wsID = "65b382b606de527a7ee2b60e"
+	const wsID = "000000000000000000000001"
 	cases := []struct {
 		name     string
 		handler  http.HandlerFunc
@@ -589,6 +652,16 @@ func TestRunDoctorLiveRoleVerdicts(t *testing.T) {
 			if strings.Contains(stdout.String(), "test-secret-key") || strings.Contains(stderr.String(), "test-secret-key") {
 				t.Fatal("doctor leaked the API key")
 			}
+			if strings.Contains(stdout.String(), wsID) || strings.Contains(stderr.String(), wsID) {
+				t.Fatal("doctor leaked the full workspace ID")
+			}
+			if strings.Contains(stdout.String(), "u1") || strings.Contains(stderr.String(), "u1") {
+				t.Fatal("doctor leaked the full user ID")
+			}
 		})
 	}
+}
+
+func testOneUserConfig(apiKey, workspaceID string) config.OneUserConfig {
+	return config.OneUserConfig{APIKey: apiKey, WorkspaceID: workspaceID}
 }

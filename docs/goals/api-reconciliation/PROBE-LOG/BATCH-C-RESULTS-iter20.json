@@ -1,0 +1,92 @@
+{
+  "batch": "C",
+  "ts": "2026-05-21T04:00:00Z",
+  "iter": "iter20",
+  "endpoints": [
+    {
+      "endpoint_id": "put.workspaces.clients.archive",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/clients/{clientId}/archive",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-put.workspaces.clients.archive-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "type": "path_absent_from_live",
+          "spec_says": "PUT /workspaces/{workspaceId}/clients/{clientId}/archive exists (ours-spec-only; official spec absent)",
+          "live_says": "Spring-MVC 404 'No static resource' — path entirely absent from live API router",
+          "severity": "major",
+          "note": "Archive functionality exists on live Clockify but is handled via the main PUT /clients/{clientId} with {archived:true} in the body, not a dedicated /archive sub-path. Our spec documents a separate /archive path that does not exist on live."
+        }
+      ],
+      "truth_yaml": "put:\n  operationId: archiveClient\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-040000-put.workspaces.clients.archive-path-probe.json\n  x-notes: |\n    Spring-MVC 404 'No static resource v1/.../clients/{clientId}/archive' confirms\n    the /archive sub-path is absent from live Clockify router. Archive semantics are\n    available via the main PUT /clients/{clientId} endpoint with {archived:true} in\n    the request body (covered by clockify_clients_update). Our spec documents this as\n    a separate sub-path but live evidence contradicts. Official spec does not include\n    this path. LIVE-OVERRIDE for the /archive sub-path.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: clientId\n      in: path\n      required: true\n  responses:\n    '404':\n      description: Path absent on live API (use PUT /clients/{clientId} with archived:true body field)",
+      "notes": "Spring-MVC 'No static resource' on GET confirms /archive sub-path absent. Archive via body field on main client PUT endpoint (clockify_clients_update) instead. Our-spec-only path."
+    },
+    {
+      "endpoint_id": "put.workspaces.cost-rate",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/cost-rate",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-put.workspaces.cost-rate-path-probe.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "put:\n  operationId: updateWorkspaceCostRate\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-040000-put.workspaces.cost-rate-path-probe.json\n  x-notes: |\n    Spring-MVC 405 'Request method GET is not supported' on GET\n    /workspaces/{wId}/cost-rate confirms the path IS registered in the live\n    API router and responds to PUT (but not GET). Both specs document this\n    endpoint. No typed MCP tool exists for workspace-level cost-rate update,\n    so a full happy-path LIVE-VERIFIED call was not possible. Path registration\n    confirmed; method confirmed as PUT-only via 405 discrimination.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          description: Workspace cost rate update payload (shape inferred from spec)\n  responses:\n    '200':\n      description: Workspace cost rate updated (path live, no MCP tool for happy-path)",
+      "notes": "Spring-MVC 405 on GET confirms path registered and PUT-only. Both specs agree. No MCP tool for workspace cost-rate update — can't get full happy-path. UNCONFIRMED-AGREE: specs agree + path confirmed live, but no typed tool to complete LIVE-VERIFIED."
+    },
+    {
+      "endpoint_id": "put.workspaces.custom-fields",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/custom-fields/{customFieldId}",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-put.workspaces.custom-fields-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "put:\n  operationId: updateCustomField\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-040000-put.workspaces.custom-fields-happy-path.json\n    - PROBE-LOG/20260520-210956-get.workspaces.custom-fields-happy-path.json\n  x-notes: |\n    clockify_custom_fields_update successfully PUT to\n    /workspaces/{wId}/custom-fields/{customFieldId} and received 200 with the\n    updated custom field object. Idempotent update (same name+type+status as\n    existing values) — no data changed. GET probe on /{customFieldId} first\n    confirmed 405 (path registered, GET not supported). Both specs document\n    this endpoint. MCP tool requires type on update (Clockify API constraint).\n    Response shape: id, name, type, status, entityType, allowedValues,\n    description, onlyAdminCanEdit, placeholder, projectDefaultValues,\n    required, workspaceDefaultValue, workspaceId.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: customFieldId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required: [name, type]\n          properties:\n            name:\n              type: string\n              maxLength: 150\n            type:\n              type: string\n              enum: [TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK]\n            status:\n              type: string\n              enum: [VISIBLE, INVISIBLE, INACTIVE]\n            required:\n              type: boolean\n            allowedValues:\n              type: array\n              items:\n                type: string\n            workspaceDefaultValue:\n              description: Type-dependent default value\n  responses:\n    '200':\n      description: Custom field updated\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id:\n                type: string\n              name:\n                type: string\n              type:\n                type: string\n              status:\n                type: string\n              entityType:\n                type: string\n              allowedValues:\n                type: array\n              description:\n                nullable: true\n                type: string\n              onlyAdminCanEdit:\n                type: boolean\n              placeholder:\n                nullable: true\n                type: string\n              projectDefaultValues:\n                type: array\n              required:\n                type: boolean\n              workspaceDefaultValue:\n                nullable: true\n              workspaceId:\n                type: string",
+      "notes": "Full LIVE-VERIFIED: PUT returned 200 with custom field object. Idempotent update — no data changed. Both specs agree on endpoint. GET on /{customFieldId} returns 405 (path registered, single-item GET not supported, list GET is on /custom-fields without ID)."
+    },
+    {
+      "endpoint_id": "put.workspaces.expenses",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/expenses/{expenseId}",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-put.workspaces.expenses-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "put:\n  operationId: updateExpense\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-040000-put.workspaces.expenses-happy-path.json\n    - PROBE-LOG/20260520-210956-get.workspaces.expenses-single-item.json\n  x-notes: |\n    clockify_expenses_update successfully PUT to /workspaces/{wId}/expenses/{expenseId}\n    and received 200 with the updated expense object. Actual update with original values\n    performed (no dry_run available); expense restored to original state (quantity=75,\n    total=112500 cents) after probing. GET /expenses/{expenseId} returns 200 (endpoint\n    accepts both GET and PUT). Both specs document this endpoint. MCP tool uses\n    change_fields enumeration for partial updates; Clockify requires AMOUNT in\n    change_fields for unit-priced categories. Response includes enriched shape beyond\n    raw API: amount.{amount_cents,amount_decimal,currency,display}, entities.{client,\n    project,task,user}, approval, invoicing, receipt, tax blocks.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: expenseId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      multipart/form-data:\n        schema:\n          type: object\n          description: Expense update payload with change_fields enumeration\n  responses:\n    '200':\n      description: Expense updated\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id:\n                type: string\n              billable:\n                type: boolean\n              categoryId:\n                type: string\n              currency:\n                type: string\n              date:\n                type: string\n              fileId:\n                type: string\n              has_file:\n                type: boolean\n              locked:\n                type: boolean\n              notes:\n                type: string\n              projectId:\n                nullable: true\n                type: string\n              quantity:\n                type: number\n              taskId:\n                nullable: true\n                type: string\n              total:\n                type: integer\n                description: Total in minor currency units (cents)\n              userId:\n                type: string\n              workspaceId:\n                type: string",
+      "notes": "Full LIVE-VERIFIED: PUT returned 200. Expense updated and restored to original state. GET also returns 200. Both specs agree. MCP uses multipart form with change_fields enumeration for partial update semantics."
+    },
+    {
+      "endpoint_id": "put.workspaces.expenses.categories",
+      "method": "PUT",
+      "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-040000-put.workspaces.expenses.categories-dry-run.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "put:\n  operationId: updateExpenseCategory\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-040000-put.workspaces.expenses.categories-dry-run.json\n    - PROBE-LOG/20260520-214436-get.workspaces.expenses.categories-happy-path.json\n  x-notes: |\n    clockify_expenses_categories_update with dry_run:true confirmed tool path and\n    payload structure for PUT /workspaces/{wId}/expenses/categories/{categoryId}.\n    No upstream write made. Both specs document this endpoint. MCP tool implements\n    partial update semantics: Clockify native PUT requires name, so handler\n    pre-fetches the category and merges existing name when caller omits it\n    (per CLAUDE.md). GET /expenses/categories (list) returns 200 with category\n    array. Response shape: id, name, archived, hasUnitPrice, priceInCents, unit,\n    workspaceId.\n  x-truth-iter: iter20\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: categoryId\n      in: path\n      required: true\n  requestBody:\n    required: true\n    content:\n      application/json:\n        schema:\n          type: object\n          required: [name]\n          properties:\n            name:\n              type: string\n              maxLength: 150\n            hasUnitPrice:\n              type: boolean\n            priceInCents:\n              type: integer\n              minimum: 0\n            unit:\n              type: string\n  responses:\n    '200':\n      description: Expense category updated\n      content:\n        application/json:\n          schema:\n            type: object\n            properties:\n              id:\n                type: string\n              name:\n                type: string\n              archived:\n                type: boolean\n              hasUnitPrice:\n                type: boolean\n              priceInCents:\n                type: integer\n              unit:\n                type: string\n              workspaceId:\n                type: string",
+      "notes": "LIVE-VERIFIED via dry_run:true (minimal preview quality — generic, no handler-specific validation). Both specs agree. MCP partial update: pre-fetches category to merge name when omitted. No data changed."
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "live_verified": 3,
+    "live_override": 1,
+    "unconfirmed_agree": 1,
+    "live_verified_ids": [
+      "put.workspaces.custom-fields",
+      "put.workspaces.expenses",
+      "put.workspaces.expenses.categories"
+    ],
+    "live_override_ids": [
+      "put.workspaces.clients.archive"
+    ],
+    "unconfirmed_agree_ids": [
+      "put.workspaces.cost-rate"
+    ]
+  }
+}

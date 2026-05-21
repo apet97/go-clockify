@@ -4,7 +4,7 @@ info:
   version: "2026-05-12"
   description: |
     OpenAPI synthesised from live probes against workspace
-    `65b382b606de527a7ee2b60e` on 2026-05-12. Every operation here was
+    `<REDACTED_ID>` on 2026-05-12. Every operation here was
     actually exercised; request/response shapes reflect real upstream
     behaviour, not the published documentation alone. Notable deltas
     from the public docs are recorded in the schema descriptions.
@@ -34,37 +34,37 @@ components:
       name: workspaceId
       in: path
       required: true
-      schema: { type: string, example: 64a687e29ae1f428e7ebe303 }
+      schema: { type: string, example: <REDACTED_ID> }
     UserId:
       name: userId
       in: path
       required: true
-      schema: { type: string, example: 5a0ab5acb07987125438b60f }
+      schema: { type: string, example: <REDACTED_ID> }
     ProjectId:
       name: projectId
       in: path
       required: true
-      schema: { type: string, example: 5b641568b07987035750505e }
+      schema: { type: string, example: <REDACTED_ID> }
     CustomFieldId:
       name: customFieldId
       in: path
       required: true
-      schema: { type: string, example: 26a687e29ae1f428e7ebe101 }
+      schema: { type: string, example: <REDACTED_ID> }
     CategoryId:
       name: categoryId
       in: path
       required: true
-      schema: { type: string, example: 89a687e29ae1f428e7ebe567 }
+      schema: { type: string, example: <REDACTED_ID> }
     ExpenseId:
       name: expenseId
       in: path
       required: true
-      schema: { type: string, example: 64c777ddd3fcab07cfbb210c }
+      schema: { type: string, example: <REDACTED_ID> }
     FileId:
       name: fileId
       in: path
       required: true
-      schema: { type: string, example: 745687e29ae1f428e7ebe890 }
+      schema: { type: string, example: <REDACTED_ID> }
     Page:
       name: page
       in: query
@@ -349,8 +349,8 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CustomFieldProjectDefault' }
       example:
-        id: 6a032899d9647159dc52a450
-        workspaceId: 65b382b606de527a7ee2b60e
+        id: <REDACTED_ID>
+        workspaceId: <REDACTED_ID>
         name: probe-cf-DROPDOWN_SINGLE
         description: probe
         type: DROPDOWN_SINGLE
@@ -416,8 +416,8 @@ components:
         customFieldName: { type: string }
         customFieldType: { $ref: '#/components/schemas/CustomFieldType' }
       example:
-        customFieldId: 6a03289d2568d3d2932f6b74
-        userId: 64621faec4d2cc53b91fce6c
+        customFieldId: <REDACTED_ID>
+        userId: <REDACTED_ID>
         value: hello
         customFieldName: probe-cf-user
         customFieldType: TXT
@@ -468,17 +468,17 @@ components:
         total: { type: number, format: double }
         locked: { type: boolean }
       example:
-        id: 6a0328a3d9647159dc52a4df
-        workspaceId: 65b382b606de527a7ee2b60e
-        userId: 64621faec4d2cc53b91fce6c
+        id: <REDACTED_ID>
+        workspaceId: <REDACTED_ID>
+        userId: <REDACTED_ID>
         date: 2026-05-12T13:18:26Z
-        projectId: 69f54244755f4967f81c3723
+        projectId: <REDACTED_ID>
         taskId: null
-        categoryId: 6a0328a22568d3d2932f6bd3
+        categoryId: <REDACTED_ID>
         notes: probe notes
         quantity: 1.0
         billable: true
-        fileId: 6a0328a3d9647159dc52a4dc
+        fileId: <REDACTED_ID>
         total: 1250.0
         locked: false
     ExpenseProject:

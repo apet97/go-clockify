@@ -1,0 +1,39 @@
+{
+  "endpoint_id": "getWebhook",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+  "probe_kind": "devil-missing-required",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "original_probe_kind": "single-item (happy-path variant)",
+  "original_probe_file": "PROBE-LOG/20260520-212439-get.workspaces.webhooks-single-item.json",
+  "truth_yaml_said": {
+    "x-verification-status": "LIVE-VERIFIED",
+    "x-notes": "Returns plain webhook object (not wrapped). Shape identical to items inside the list's webhooks array.",
+    "response_shape": "plain object (not wrapped)",
+    "response_200_fields": ["deliveryEnabled", "enabled", "id", "name", "planEnabled", "triggerSource", "triggerSourceType", "url", "userId", "webhookEvent", "workspaceId"],
+    "required_path_params": ["workspaceId", "webhookId"]
+  },
+  "probe_strategy": "Supply a syntactically valid but non-existent webhookId (all-zeros ObjectId) to test the 404/error path. TRUTH.yaml only documents a 200 response; confirm whether invalid ID triggers a proper error rather than a 200 with empty/null body.",
+  "live_probe_result": {
+    "tool_used": "clockify_webhooks_get",
+    "args": {"webhook_id": "<redacted-id:1aaa799929>"},
+    "mcp_response_ok": false,
+    "status_inferred": "4xx (not found)",
+    "key_facts": {
+      "error_code": "invalid_request",
+      "error_message": "webhook not found in this workspace"
+    },
+    "raw_api_cross_check": {
+      "tool_used": "clockify_api_get",
+      "path": "/workspaces/{wId}/webhooks/<redacted-id:1aaa799929>",
+      "response": {
+        "ok": false,
+        "error_code": "invalid_request",
+        "error_message": "webhook not found in this workspace"
+      }
+    }
+  },
+  "verdict": "CONFIRMED",
+  "demotion_reason": null,
+  "notes": "TRUTH.yaml only documents a 200 response; it does not document the 4xx error shape. The live probe confirms the endpoint correctly rejects a non-existent webhook ID with 'webhook not found in this workspace'. This is expected behavior and does not contradict the 200-path documentation. Both MCP tool and raw GET agree. No discrepancy with the LIVE-VERIFIED status."
+}

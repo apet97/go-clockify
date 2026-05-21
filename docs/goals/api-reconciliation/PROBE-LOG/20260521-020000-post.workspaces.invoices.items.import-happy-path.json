@@ -1,0 +1,57 @@
+{
+  "endpoint_id": "post.workspaces.invoices.items.import",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/invoices/{invoiceId}/items/import",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "happy-path via clockify_invoices_import_time",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:e98f14fe16>/items/import",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "invoice_id": "<redacted-id:e98f14fe16>",
+      "from": "2026-05-01",
+      "to": "2026-05-21"
+    }
+  },
+  "response": {
+    "status": "200",
+    "headers_redacted": {},
+    "body_sample": {
+      "ok": true,
+      "action": "clockify_invoices_import_time",
+      "entity": "invoice_item",
+      "data": {
+        "id": "<redacted-id:e98f14fe16>",
+        "number": "14",
+        "status": "UNSENT",
+        "currency": "AUD",
+        "amount": {"amount_cents": 0, "amount_decimal": "0.00", "currency": "AUD", "display": "$0.00 AUD"},
+        "items": [],
+        "containsImportedTimes": false,
+        "containsImportedExpenses": false,
+        "note": "INPUT BILL INFO HERE"
+      },
+      "meta": {
+        "from": "2026-05-01T00:00:00Z",
+        "invoiceId": "<redacted-id:e98f14fe16>",
+        "to": "2026-05-21T23:59:59Z",
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "changed": {
+        "updated": [{"type": "invoice_item", "id": "<redacted-id:e98f14fe16>", "name": "14"}]
+      }
+    }
+  },
+  "facts_observed": {
+    "path_confirmed": "POST /workspaces/{wId}/invoices/{invoiceId}/items/import — live HTTP 200",
+    "both_tools_use_same_path": "clockify_invoices_import_time and clockify_invoices_import_expenses both POST to /workspaces/{wId}/invoices/{invoiceId}/items/import (confirmed in invoices_imports.go lines 25, 111)",
+    "import_expenses_flag": "importExpenses=false for import_time, importExpenses=true for import_expenses",
+    "result_shape": "Returns full invoice object (not just items array); items=[] when date range has no billable entries",
+    "date_coercion": "Plain YYYY-MM-DD 'to' is coerced to end-of-day (23:59:59Z) by the MCP",
+    "changed_category": "updated (not created) — Clockify treats import as a mutation of the invoice entity",
+    "no_dry_run_available": "clockify_invoices_import_time has no dry_run parameter"
+  },
+  "notes": "Happy-path probe on invoice #14 (empty UNSENT invoice) with 2026-05-01..2026-05-21 date window. Returned ok:true with items=[] (no billable time in range) — confirms the /items/import path exists and is live. Both import_time and import_expenses share this single path; importExpenses flag in request body selects the variant. No cleanup needed (no billable entries were imported; invoice state unchanged at $0.00)."
+}

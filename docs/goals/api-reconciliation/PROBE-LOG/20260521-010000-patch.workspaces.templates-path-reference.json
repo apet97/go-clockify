@@ -1,0 +1,30 @@
+{
+  "endpoint_id": "patch.workspaces.templates",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/templates/{templateId}",
+  "probe_kind": "path-reference",
+  "timestamp_utc": "2026-05-21T01:00:00Z",
+  "request": {
+    "method": "REFERENCE",
+    "path": "N/A — no new probe; evidence carried forward from iter15 BATCH-C",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "error", "recovery"],
+    "body_sample": "see PROBE-LOG/20260521-233258-delete.workspaces.templates-path-probe.json"
+  },
+  "facts_observed": {
+    "workspace_templates_path_exists": false,
+    "iter15_evidence_file": "PROBE-LOG/20260521-233258-delete.workspaces.templates-path-probe.json",
+    "get_workspaces_templates_status": 404,
+    "not_spring_mvc_routing_miss": true,
+    "upstream_not_found": true,
+    "project_templates_path_exists": true,
+    "note": "workspace-level /templates/* family is entirely absent from live Clockify; only project-level templates exist"
+  },
+  "notes": "No new probe performed. Per iter15 BATCH-C evidence (20260521-233258-delete.workspaces.templates-path-probe.json): GET /workspaces/{wId}/templates returned HTTP 404 with 'Clockify request failed (HTTP 404)' — a plain upstream 404, not a Spring-MVC 'No static resource' routing miss. The workspace-level template path family is absent from live. PATCH /workspaces/{wId}/templates/{templateId} is therefore also absent. Only project-level templates work via /workspaces/{wId}/projects/{pId}/templates."
+}

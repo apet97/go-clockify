@@ -1,0 +1,20 @@
+{
+  "binary_summary": {
+    "first_16_hex": "a5fa6d02bc0000000049454e44ae4260",
+    "looks_like_png": false,
+    "sha256": "c9367a2798d87b7af749df8ca4763dc1aa2b45db2db5518d09527b86879cd7ab"
+  },
+  "body_bytes": 17,
+  "label": "expense-file-get-binary",
+  "method": "GET",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": null,
+  "response_headers_subset": {
+    "Content-Length": "17",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:58:43 GMT"
+  },
+  "run": "20260521T025837Z",
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses/<redacted-id:73d532425f>/files/<redacted-id:7b5850cb33>"
+}

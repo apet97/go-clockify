@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "get.workspaces.scheduling.assignments.projects.totals",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:00:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/scheduling/assignments/projects/totals",
+  "query": {"start": "2026-05-01T00:00:00.000Z", "end": "2026-05-31T23:59:59.000Z"},
+  "status_code": 200,
+  "status_text": "OK",
+  "response_body_sample": [
+    {
+      "projectId": "<redacted-id:f105c73931>",
+      "projectName": "AG_TEST_1778626728_project",
+      "projectColor": "#009688",
+      "projectBillable": true,
+      "projectArchived": false,
+      "clientName": null,
+      "taskId": null,
+      "taskName": null,
+      "totalHours": 16,
+      "milestones": [],
+      "workspaceId": "<redacted-id:7955161f32>",
+      "assignments": [
+        {"date": "2026-05-22T00:00:00Z", "hasAssignment": true},
+        {"date": "2026-05-23T00:00:00Z", "hasAssignment": true}
+      ]
+    }
+  ],
+  "verdict": "LIVE-VERIFIED",
+  "notes": "Bare array of project totals objects. start is REQUIRED (400 'Required request parameter start not present' without it). end appears optional. Pagination not applicable (array of all matching projects). Per-project has assignments[] array of {date, hasAssignment} daily breakdown."
+}

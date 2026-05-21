@@ -1,0 +1,28 @@
+{
+  "endpoint_id": "delete.workspaces.scheduling.assignments.recurring",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T23:24:33Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/recurring/<redacted-id:3811423616>",
+    "query": {"seriesUpdateOption": "ALL"},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["deleted", "assignmentId"],
+    "body_sample": "{\"deleted\":true,\"assignmentId\":\"<redacted-id:3811423616>\"}"
+  },
+  "facts_observed": {
+    "response_shape": "{deleted:boolean, assignmentId:string}",
+    "response_top_keys": ["deleted", "assignmentId"],
+    "setup": "Created recurring assignment for user <redacted-id:706f58c94f> on project <redacted-id:548964ccb4> (2026-05-26 to 2026-05-30, 1h/day) then deleted with seriesUpdateOption=ALL",
+    "series_options": "seriesUpdateOption accepts THIS_ONE | THIS_AND_FOLLOWING | ALL",
+    "path_note": "Correct path is /scheduling/assignments/recurring/{id}; bare /scheduling/assignments/{id} returns Spring-MVC 404"
+  },
+  "notes": "LIVE-VERIFIED. Response: {deleted:true, assignmentId:string}. seriesUpdateOption=ALL deletes all occurrences. This path is in both specs. Confirms CLAUDE.md note about recurring path."
+}

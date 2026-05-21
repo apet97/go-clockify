@@ -41,7 +41,7 @@ func TestUpdateTimeOffRequestRehydratesSparsePatch(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 
 	res, err := svc.updateTimeOffRequest(context.Background(), map[string]any{
 		"policy_id":  policyID,

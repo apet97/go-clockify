@@ -1,0 +1,49 @@
+{
+  "cleanup": [],
+  "endpoint_id": "setUserCustomFieldValue",
+  "facts_observed": {
+    "<redacted-token:300147f716>": true,
+    "status_code": 201,
+    "target": "current_api_user_fallback"
+  },
+  "method": "PUT",
+  "notes": "LIVE-VERIFIED: PUT returned 2xx using a disposable USER custom field, which was deleted after the probe.",
+  "path": "/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value",
+  "probe_kind": "happy-path",
+  "request": {
+    "body": {
+      "value": "codex-api-reconciliation"
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "method": "PUT",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/users/<redacted-id:706f58c94f>/custom-field/<redacted-id:9af0f1aaa3>/value",
+    "path_template": "/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value",
+    "query": {}
+  },
+  "response": {
+    "body_sample": {
+      "customFieldId": "<redacted-id:9af0f1aaa3>",
+      "customFieldName": "<redacted-token:ef9b758aeb>",
+      "customFieldType": "TXT",
+      "userId": "<redacted-id:706f58c94f>",
+      "value": "codex-api-reconciliation"
+    },
+    "content_type": "application/json",
+    "reason": "Created",
+    "shape": {
+      "key_count": 5,
+      "keys": [
+        "customFieldId",
+        "userId",
+        "value",
+        "customFieldName",
+        "customFieldType"
+      ],
+      "type": "object"
+    },
+    "status": 201
+  },
+  "timestamp_utc": "2026-05-21T20:34:28Z"
+}

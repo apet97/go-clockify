@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     Derived from live probes against api.clockify.me on 2026-05-12,
-    workspace 65b382b606de527a7ee2b60e. Read-only endpoints only.
+    workspace <REDACTED_ID>. Read-only endpoints only.
     Fixtures: clockify-api-probe-lab/fixtures/clients-fresh-a/
 
 servers:

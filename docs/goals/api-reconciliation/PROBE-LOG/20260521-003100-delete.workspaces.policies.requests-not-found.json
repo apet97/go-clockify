@@ -1,0 +1,10 @@
+{
+  "endpoint_id": "delete.workspaces.policies.requests",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:31:00Z",
+  "method": "DELETE",
+  "path": "/workspaces/<redacted-id:7955161f32>/policies/fake-policy-id/requests/fake-request-id",
+  "notes": "Cannot probe DELETE directly. All /policies/* paths return Spring-MVC 404. Present only in our generated spec. Inferred LIVE-OVERRIDE.",
+  "verdict": "LIVE-OVERRIDE",
+  "inferred_from": ["PROBE-LOG/20260521-000000-get.workspaces.policies.single-not-found.json"]
+}

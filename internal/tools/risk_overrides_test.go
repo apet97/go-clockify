@@ -271,7 +271,7 @@ func assertToolRiskClass(t *testing.T, registry map[string]mcp.ToolDescriptor, n
 
 func riskTestRegistry(t *testing.T) map[string]mcp.ToolDescriptor {
 	t.Helper()
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	out := map[string]mcp.ToolDescriptor{}
 	for _, descriptor := range svc.FullAccessRegistry() {
 		out[descriptor.Tool.Name] = descriptor

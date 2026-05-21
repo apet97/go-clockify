@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "get.workspaces.projects",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/projects",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:24:39Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/projects",
+    "query": {"page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["array"],
+    "body_sample": "[{\"archived\":false,\"billable\":true,\"budgetEstimate\":null,\"clientId\":\"...\",\"clientName\":\"...\",\"color\":\"#...\",\"costRate\":null,\"duration\":\"PT...\",\"estimate\":{\"estimate\":\"PT0S\",\"type\":\"AUTO\"},\"estimateReset\":null,\"hourlyRate\":{\"amount\":0,\"currency\":\"USD\"},\"id\":\"<redacted-id:7e50145fe4>\",\"memberships\":[{\"costRate\":null,\"hourlyRate\":null,\"membershipStatus\":\"ACTIVE\",\"membershipType\":\"PROJECT\",\"targetId\":\"...\",\"userId\":\"...\"}],\"name\":\"...\",\"note\":\"\",\"public\":false,\"template\":false,\"timeEstimate\":{\"active\":false,\"estimate\":\"PT0S\",\"includeNonBillable\":false,\"resetOption\":null,\"type\":\"AUTO\"},\"workspaceId\":\"[REDACTED-WORKSPACE]\"}]"
+  },
+  "facts_observed": {
+    "response_shape": "bare array (not wrapped object)",
+    "page_size_respected": true,
+    "returned_count_vs_requested": "3 requested, 3 returned",
+    "item_keys": ["archived","billable","budgetEstimate","clientId","clientName","color","costRate","duration","estimate","estimateReset","hourlyRate","id","memberships","name","note","public","template","timeEstimate","workspaceId"],
+    "estimate_shape": {"estimate": "string (ISO 8601 duration)", "type": "string (AUTO)"},
+    "timeEstimate_shape": {"active": "boolean", "estimate": "string", "includeNonBillable": "boolean", "resetOption": "nullable", "type": "string"},
+    "hourlyRate_shape": {"amount": "integer", "currency": "string"},
+    "memberships_item_keys": ["costRate","hourlyRate","membershipStatus","membershipType","targetId","userId"],
+    "budgetEstimate_nullable": true,
+    "costRate_nullable": true,
+    "estimateReset_nullable": true
+  },
+  "notes": "Bare array. page-size=3 was respected (3 items returned). Both specs' project list shape confirmed. Extra field 'template' present but not always in specs."
+}

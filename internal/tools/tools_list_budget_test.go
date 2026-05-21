@@ -14,7 +14,7 @@ import (
 const toolsListByteBudget = 512 * 1024
 
 func TestToolsListPayloadWithinByteBudget(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
 	server.StaticToolList = true
 

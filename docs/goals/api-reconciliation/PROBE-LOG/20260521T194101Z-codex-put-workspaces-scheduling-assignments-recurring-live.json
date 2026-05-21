@@ -1,0 +1,49 @@
+{
+  "cleanup": {
+    "reason": "no assignment id",
+    "skipped": true
+  },
+  "endpoint_id": "put.workspaces.scheduling.assignments.recurring",
+  "facts_observed": {
+    "cleanup_delete_status": null,
+    "put_status": null,
+    "put_success": false
+  },
+  "method": "PUT",
+  "notes": "Sacrificial recurring assignment was created, PUT was attempted on the same recurring path, then the assignment was deleted with seriesUpdateOption=ALL.",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+  "probe_kind": "live-failure",
+  "request": {
+    "body": {
+      "end": "2026-05-29",
+      "hoursPerDay": 2,
+      "note": "MCP-LIVE-RECON-20260521T194101Z-codex-rest-assignment-put",
+      "start": "2026-05-28"
+    },
+    "method": "PUT",
+    "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+    "query": {
+      "seriesUpdateOption": "THIS_ONE"
+    }
+  },
+  "response": {
+    "body_sample": null,
+    "reason": "assignment create failed",
+    "shape": {
+      "type": "NoneType"
+    },
+    "status": null
+  },
+  "setup": {
+    "assignment_create_shape": {
+      "keys": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "assignment_create_status": 400
+  },
+  "timestamp_utc": "2026-05-21T19:41:02.628149Z",
+  "verdict": "LIVE-OVERRIDE"
+}

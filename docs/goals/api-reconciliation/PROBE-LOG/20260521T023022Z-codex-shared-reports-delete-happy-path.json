@@ -1,0 +1,13 @@
+{
+  "body_bytes": 0,
+  "label": "shared-reports-delete-happy-path",
+  "method": "DELETE",
+  "request_body": null,
+  "response_body_text": "",
+  "response_headers_subset": {
+    "Date": "Thu, 21 May 2026 02:30:22 GMT"
+  },
+  "response_json": null,
+  "status": 204,
+  "url": "https://reports.api.clockify.me/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/shared-reports/<redacted-id:2e4c2c0182>"
+}

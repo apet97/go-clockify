@@ -1,0 +1,27 @@
+{
+  "endpoint_id": "delete.workspaces.tags",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/tags/{tagId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T23:24:33Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/tags/<redacted-id:d3737e7ff2>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["deleted", "tagId"],
+    "body_sample": "{\"deleted\":true,\"tagId\":\"<redacted-id:d3737e7ff2>\"}"
+  },
+  "facts_observed": {
+    "response_shape": "{deleted:boolean, tagId:string}",
+    "response_top_keys": ["deleted", "tagId"],
+    "setup": "Created tag 'MCP-LIVE-RECON-20260520-232433-tag' then deleted it",
+    "fake_id_note": "Probe not needed — response shape clear from create+delete cycle"
+  },
+  "notes": "Response identical to other entity deletes: {deleted:true, <entity>Id:string}. Both specs document this endpoint."
+}

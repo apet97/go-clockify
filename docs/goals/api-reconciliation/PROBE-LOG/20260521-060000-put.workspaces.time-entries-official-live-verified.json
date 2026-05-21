@@ -1,0 +1,23 @@
+{
+  "probe_id": "put.workspaces.time-entries-official-live-verified",
+  "ts": "2026-05-21T06:00:00Z",
+  "iter": "iter22",
+  "endpoint_id": "put.workspaces.time-entries.official",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/time-entries/{id}",
+  "source": "official",
+  "probe_kind": "live-verified",
+  "tool": "clockify_entries_update",
+  "entry_id_used": "<redacted-id:1dac181586>",
+  "workspace_id": "[REDACTED-SACRIFICIAL]",
+  "code_path_confirmed": "internal/tools/entries.go:223 paths.Workspace(wsID, 'time-entries', entryID) -> PUT",
+  "result": {
+    "ok": true,
+    "action": "clockify_entries_update",
+    "http_status": 200,
+    "changedFields": [],
+    "description_echo": "MCP-LIVE-20260519021310 workflow log fixed",
+    "entry_id_echoed": "<redacted-id:1dac181586>"
+  },
+  "notes": "Live PUT /workspaces/{wsId}/time-entries/{entryId} succeeded HTTP 200. Tool does GET-then-PUT merge. Official spec uses {id}, ours uses {timeEntryId} — cosmetic, same path segment. TRUTH.openapi.yaml for this path (/time-entries/{timeEntryId}) had GET and DELETE but no PUT entry. This probe adds it."
+}

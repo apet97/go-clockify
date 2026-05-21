@@ -1,0 +1,472 @@
+{
+  "cleanup": [
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:2e397c24b7>",
+        "path_template": "/workspaces/{workspaceId}/invoices/{invoiceId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": null,
+        "content_type": "",
+        "reason": "OK",
+        "shape": {
+          "type": "NoneType"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:2d40571f85>",
+        "path_template": "/workspaces/{workspaceId}/invoices/{invoiceId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": null,
+        "content_type": "",
+        "reason": "OK",
+        "shape": {
+          "type": "NoneType"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": {
+          "archived": true,
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:6d41f9210a>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:6d41f9210a>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:6d41f9210a>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:6d41f9210a>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  ],
+  "endpoint_id": "duplicateInvoice",
+  "evidence": [
+    {
+      "endpoint_id": "fixture.client.create",
+      "probe_kind": "fixture-create",
+      "request": {
+        "body": {
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients",
+        "path_template": "/workspaces/{workspaceId}/clients",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": false,
+          "ccEmails": null,
+          "currencyCode": "CAD",
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:6d41f9210a>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "Created",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyCode",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    {
+      "endpoint_id": "fixture.invoice.create",
+      "probe_kind": "fixture-create",
+      "request": {
+        "body": {
+          "clientId": "<redacted-id:6d41f9210a>",
+          "currency": "USD",
+          "dueDate": "2026-06-19T08:00:00Z",
+          "issuedDate": "2026-06-12T08:00:00Z",
+          "number": "CODX-200626-ef5fb0",
+          "timeViewMode": "TIME_SENSITIVE_VIEW"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/invoices",
+        "path_template": "/workspaces/{workspaceId}/invoices",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "billFrom": "WORKSPACE",
+          "clientId": "<redacted-id:6d41f9210a>",
+          "currency": "USD",
+          "dueDate": "2026-06-19T08:00:00Z",
+          "id": "<redacted-id:2d40571f85>",
+          "issuedDate": "2026-06-12T08:00:00Z",
+          "number": "CODX-200626-ef5fb0"
+        },
+        "content_type": "application/json",
+        "reason": "Created",
+        "shape": {
+          "keys": [
+            "billFrom",
+            "clientId",
+            "currency",
+            "dueDate",
+            "id",
+            "issuedDate",
+            "number"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    {
+      "endpoint_id": "duplicateInvoice",
+      "probe_kind": "happy-path",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:2d40571f85>/duplicate",
+        "path_template": "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "amount": 0,
+          "balance": 0,
+          "billFrom": "WORKSPACE",
+          "calculationType": "ITEM_BASED",
+          "clientAddress": null,
+          "clientId": "<redacted-id:6d41f9210a>",
+          "clientName": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client",
+          "companyId": "<redacted-id:5f665887e7>",
+          "containsImportedExpenses": false,
+          "containsImportedTimes": false,
+          "currency": "USD",
+          "discount": 0.0,
+          "discountAmount": 0,
+          "dueDate": "2026-06-19T08:00:00Z",
+          "id": "<redacted-id:2e397c24b7>",
+          "issuedDate": "2026-06-12T08:00:00Z",
+          "items": [],
+          "note": "INPUT BILL INFO HERE",
+          "number": "CODX-200626-ef5fb1",
+          "paid": null,
+          "status": "UNSENT",
+          "subject": "SUBJECT EXAMPLE - CHANGABLE",
+          "subtotal": 0,
+          "tax": 2500.0,
+          "tax2": 0.0,
+          "tax2Amount": 0,
+          "taxAmount": 0,
+          "taxType": "SIMPLE",
+          "userId": "<redacted-id:706f58c94f>",
+          "visibleZeroFields": [
+            "TAX"
+          ]
+        },
+        "content_type": "application/json",
+        "reason": "Created",
+        "shape": {
+          "keys": [
+            "amount",
+            "balance",
+            "billFrom",
+            "calculationType",
+            "clientAddress",
+            "clientId",
+            "clientName",
+            "companyId",
+            "<redacted-id:3f65b0d288>",
+            "<redacted-id:213873e195>",
+            "currency",
+            "discount",
+            "discountAmount",
+            "dueDate",
+            "id",
+            "issuedDate",
+            "items",
+            "note",
+            "number",
+            "paid",
+            "status",
+            "subject",
+            "subtotal",
+            "tax",
+            "tax2",
+            "tax2Amount",
+            "taxAmount",
+            "taxType",
+            "userId",
+            "visibleZeroFields"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:2e397c24b7>",
+        "path_template": "/workspaces/{workspaceId}/invoices/{invoiceId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": null,
+        "content_type": "",
+        "reason": "OK",
+        "shape": {
+          "type": "NoneType"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/invoices/<redacted-id:2d40571f85>",
+        "path_template": "/workspaces/{workspaceId}/invoices/{invoiceId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": null,
+        "content_type": "",
+        "reason": "OK",
+        "shape": {
+          "type": "NoneType"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": {
+          "archived": true,
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:6d41f9210a>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:6d41f9210a>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:6d41f9210a>",
+        "path_template": "/workspaces/{workspaceId}/clients/{clientId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "address": null,
+          "archived": true,
+          "ccEmails": null,
+          "currencyId": "<redacted-id:124745b6d4>",
+          "email": null,
+          "id": "<redacted-id:6d41f9210a>",
+          "name": "MCP-LIVE-RECON-20260521T200626Z-gap-invoice-client",
+          "note": null,
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "keys": [
+            "address",
+            "archived",
+            "ccEmails",
+            "currencyId",
+            "email",
+            "id",
+            "name",
+            "note",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  ],
+  "method": "POST",
+  "notes": "Disposable invoice duplicated successfully; original/duplicate invoices and client were deleted.",
+  "path_template": "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate",
+  "probe_id": "20260521T200626Z-post-workspaces-invoices-duplicate-happy-path",
+  "probe_kind": "codex-live-gap-closure",
+  "request_scope": "live sacrificial workspace; disposable fixtures only; secrets and identifiers redacted",
+  "timestamp_utc": "2026-05-21T20:06:40Z",
+  "verification_status": "LIVE-VERIFIED"
+}

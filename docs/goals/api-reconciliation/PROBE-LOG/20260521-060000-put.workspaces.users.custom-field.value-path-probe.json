@@ -1,0 +1,35 @@
+{
+  "endpoint_id": "put.workspaces.users.custom-field.value",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T06:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/users/[REDACTED-USER]/custom-field/<redacted-id:c82b6d9f0a>/value",
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null,
+    "rationale": "GET probe to test path registration — 404 means route absent, 405 means route registered PUT-only"
+  },
+  "response": {
+    "status": 405,
+    "clockify_message": "Request method 'GET' is not supported",
+    "interpretation": "Spring-MVC 405 — the route /workspaces/{wId}/users/{userId}/custom-field/{customFieldId}/value IS registered in live Clockify; GET is not accepted, PUT is implied"
+  },
+  "source_analysis": {
+    "mcp_tool": "clockify_set_custom_field_value (SetCustomFieldValue in custom_fields.go)",
+    "project_path": "PATCH /workspaces/{wId}/projects/{projectId}/custom-fields/{fieldId}",
+    "entry_path": "PUT /workspaces/{wId}/time-entries/{entryId} (full entry replacement, merges customFields)",
+    "user_custom_field_path": "NOT USED by any typed tool",
+    "raw_allowlist": "PUT /workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value — present in raw_allowlist_gen.go line 178",
+    "conclusion": "The path PUT /workspaces/{wId}/users/{userId}/custom-field/{customFieldId}/value exists in live Clockify but no typed MCP tool targets it. clockify_set_custom_field_value uses project and entry paths only. The user-scoped custom-field value route is raw-allowlist-only."
+  },
+  "facts_observed": {
+    "route_registered_in_live_api": true,
+    "http_method_constraint": "PUT only (GET rejected with 405)",
+    "typed_tool_coverage": "none — clockify_set_custom_field_value does not target this path",
+    "raw_allowlist_entry": "present",
+    "custom_field_id_used": "<redacted-id:c82b6d9f0a> (entityType=TIMEENTRY, type=TXT, status=INACTIVE)"
+  },
+  "notes": "Route confirmed present in live Clockify via 405 on GET. Both specs document PUT at this path. No typed MCP tool uses /users/{userId}/custom-field/{customFieldId}/value — clockify_set_custom_field_value targets project or entry paths. Raw fallback allowlist includes the PUT entry. Cannot achieve LIVE-VERIFIED without raw writes enabled. Classified UNCONFIRMED-AGREE."
+}

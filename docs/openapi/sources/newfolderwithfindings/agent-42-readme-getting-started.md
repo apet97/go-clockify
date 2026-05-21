@@ -19,7 +19,7 @@
 
 ## Live API probe lab files used
 
-- `/tmp/clockify-livetest.env` — API key, workspace ID (`65b382b606de527a7ee2b60e`), second-factor confirm
+- `/tmp/clockify-livetest.env` — API key, workspace ID (`<REDACTED_ID>`), second-factor confirm
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLAUDE.md` — safety rules
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/README.md` — lab overview
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/probes/lib/common.sh` — probe library helpers
@@ -96,10 +96,10 @@ tools/call clockify_create_project {"name":"qa-agent-42-readme-test","dry_run":t
 # → ✅ Preview: "No changes were made."
 
 tools/call clockify_create_project {"name":"qa-agent-42-readme-test","dry_run":false}
-# → ✅ Created project 6a00f5dbd9647159dc102e78
+# → ✅ Created project <REDACTED_ID>
 
 tools/call clockify_log_time {"project":"qa-agent-42-readme-test","start":"2026-05-10T22:00:00Z","end":"2026-05-10T23:00:00Z","description":"QA agent 42 readme getting-started test entry","dry_run":false}
-# → ✅ Created entry 6a00f632284e03fc793285b8
+# → ✅ Created entry <REDACTED_ID>
 
 tools/call clockify_list_entries {"project":"qa-agent-42-readme-test","page_size":5}
 # → ✅ Works with pagination metadata
@@ -120,12 +120,12 @@ tools/call clockify_create_project {"name":"qa-agent-42-should-fail","dry_run":f
 
 ```
 GET /api/v1/user
-# → User 64621faec4d2cc53b91fce6c, email alpettest1@gmail.com, ACTIVE
+# → User <REDACTED_ID>, email <EMAIL>, ACTIVE
 
-GET /api/v1/workspaces/65b382b606de527a7ee2b60e
+GET /api/v1/workspaces/<REDACTED_ID>
 # → Workspace "WORKSPACE", confirmed
 
-PUT /api/v1/workspaces/65b382b606de527a7ee2b60e/projects/6a00f5dbd9647159dc102e78
+PUT /api/v1/workspaces/<REDACTED_ID>/projects/<REDACTED_ID>
 # → Archived project successfully (HTTP 200)
 ```
 
@@ -147,11 +147,11 @@ npm --version      # → npm 11.12.1 ✅
 
 | # | Probe | MCP Tool | Direct API | Result |
 |---|-------|----------|------------|--------|
-| 1 | Auth check | `clockify_whoami` | `GET /api/v1/user` | ✅ User 64621faec4d2cc53b91fce6c, ACTIVE |
-| 2 | Workspace resolve | `clockify_get_workspace` | `GET /api/v1/workspaces/{id}` | ✅ Workspace 65b382b606de527a7ee2b60e |
+| 1 | Auth check | `clockify_whoami` | `GET /api/v1/user` | ✅ User <REDACTED_ID>, ACTIVE |
+| 2 | Workspace resolve | `clockify_get_workspace` | `GET /api/v1/workspaces/{id}` | ✅ Workspace <REDACTED_ID> |
 | 3 | Create project (dry_run) | `clockify_create_project(dry_run:true)` | — | ✅ Preview, no mutation |
-| 4 | Create project (execute) | `clockify_create_project(dry_run:false)` | — | ✅ Created 6a00f5dbd9647159dc102e78 |
-| 5 | Log time entry | `clockify_log_time` | — | ✅ Entry 6a00f632284e03fc793285b8 |
+| 4 | Create project (execute) | `clockify_create_project(dry_run:false)` | — | ✅ Created <REDACTED_ID> |
+| 5 | Log time entry | `clockify_log_time` | — | ✅ Entry <REDACTED_ID> |
 | 6 | List entries (filtered) | `clockify_list_entries(project=...)` | — | ✅ Works, pagination metadata correct |
 | 7 | List projects | `clockify_list_projects` | `GET .../projects` | ✅ MCP matches direct API |
 | 8 | Policy enforcement | `clockify_create_project` under `time_tracking_safe` | — | ✅ Blocked with clear message |
@@ -247,15 +247,15 @@ clockify-mcp --help 2>&1 | grep "CLOCKIFY_POLICY"
 
 ## Cleanup performed
 
-- Project `qa-agent-42-readme-test` (id: `6a00f5dbd9647159dc102e78`) — archived via direct API PUT (could not delete due to associated time entries; Clockify returns 400 "Cannot delete an active project")
+- Project `qa-agent-42-readme-test` (id: `<REDACTED_ID>`) — archived via direct API PUT (could not delete due to associated time entries; Clockify returns 400 "Cannot delete an active project")
 - No other test resources were created or modified
 
 ## Leftover test resources
 
 | Resource | ID | Status |
 |----------|-----|--------|
-| Project `qa-agent-42-readme-test` | `6a00f5dbd9647159dc102e78` | Archived (harmless) |
-| Time entry under archived project | `6a00f632284e03fc793285b8` | Exists under archived project (harmless) |
+| Project `qa-agent-42-readme-test` | `<REDACTED_ID>` | Archived (harmless) |
+| Time entry under archived project | `<REDACTED_ID>` | Exists under archived project (harmless) |
 
 ## Severity
 

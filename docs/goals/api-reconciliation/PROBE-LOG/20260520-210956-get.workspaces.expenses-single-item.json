@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "get.workspaces.expenses",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/expenses/{expenseId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:09:56Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/expenses/<redacted-id:3deb9b3f6d>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["billable", "categoryId", "date", "fileId", "id", "locked", "notes", "projectId", "quantity", "taskId", "total", "userId", "workspaceId"],
+    "body_sample": "{\"billable\":true,\"categoryId\":\"<redacted-id:e3786bf865>\",\"date\":\"2026-05-18T12:00:00Z\",\"fileId\":\"\",\"id\":\"<redacted-id:3deb9b3f6d>\",\"locked\":false,\"notes\":\"MCP-TEST expense updated\",\"projectId\":null,\"quantity\":75,\"taskId\":null,\"total\":112500,\"userId\":\"[REDACTED]\",\"workspaceId\":\"[REDACTED]\"}"
+  },
+  "facts_observed": {
+    "response_shape": "flat single object (NOT wrapped)",
+    "top_level_keys": ["billable", "categoryId", "date", "fileId", "id", "locked", "notes", "projectId", "quantity", "taskId", "total", "userId", "workspaceId"],
+    "SHAPE_DIFFERENCE_VS_LIST": "single-item uses categoryId (flat string reference), list uses nested category object; single-item uses projectId/taskId (flat), list uses nested project/task objects",
+    "projectId_nullable": true,
+    "taskId_nullable": true,
+    "fileId_empty_string_not_null": true,
+    "money_in_minor_units": true,
+    "date_format": "ISO 8601 datetime"
+  },
+  "notes": "Shape differs from list endpoint: single item uses flat foreign key references (categoryId, projectId, taskId) while list items embed nested objects (category:{...}, project:{...}). Both are valid representations but code must handle both shapes."
+}

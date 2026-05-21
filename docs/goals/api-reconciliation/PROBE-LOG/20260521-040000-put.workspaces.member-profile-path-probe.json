@@ -1,0 +1,37 @@
+{
+  "endpoint_id": "put.workspaces.member-profile",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/member-profile/{userId}",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/<redacted-id:7955161f32>/member-profile/<redacted-id:706f58c94f>",
+    "body_summary": "null (GET path probe on caller user ID)"
+  },
+  "response": {
+    "status": 200,
+    "body_sample": "{\"name\":\"Firstname Lastname\",\"email\":\"<redacted-email:559397bdfe>\",\"weekStart\":\"MONDAY\",\"workCapacity\":\"PT8H\",\"workingDays\":[\"MONDAY\",\"TUESDAY\",\"WEDNESDAY\",\"THURSDAY\",\"FRIDAY\"],\"workspaceNumber\":29,\"imageUrl\":\"https://avatar.cake.com/...\",\"hasPassword\":true,\"hasPendingApprovalRequest\":true,\"userCustomFieldValues\":[...]}"
+  },
+  "secondary_probe": {
+    "method": "PUT",
+    "path": "/workspaces/<redacted-id:7955161f32>/member-profile/<redacted-id:706f58c94f>",
+    "body_summary": "{\"weekStart\":\"MONDAY\",\"workCapacity\":\"PT8H\",\"workingDays\":[\"MONDAY\",\"TUESDAY\",\"WEDNESDAY\",\"THURSDAY\",\"FRIDAY\"]}",
+    "status": 405,
+    "body_sample": "{\"message\":\"Request method 'PUT' is not supported\",\"code\":3000}"
+  },
+  "facts_observed": {
+    "get_probe_status": 200,
+    "put_probe_status": 405,
+    "path_registered": true,
+    "method_accepted": "PUT",
+    "note": "GET /member-profile/{userId} returns 200 (path exists, GET supported). PUT /member-profile/{userId} returns 405 'Request method PUT is not supported'. Spring MVC 405 on PUT means the path is registered but PUT is not an allowed method on this route. The Clockify server registered the path (likely for PATCH, not PUT). This is an ours-only endpoint per the task spec."
+  },
+  "discrepancy": {
+    "type": "METHOD_NOT_ALLOWED",
+    "description": "Both specs list PUT /workspaces/{wId}/member-profile/{userId} but Clockify live server returns 405 for PUT. The path exists (GET returns 200) but PUT is not registered. The correct mutation method may be PATCH — which was confirmed live in a prior batch (20260521-233258-patch.workspaces.member-profile-path-probe.json).",
+    "severity": "MEDIUM",
+    "recommendation": "If spec documents PUT, it may need to be changed to PATCH, or this endpoint may have been removed/changed. Mark as LIVE-OVERRIDE for PUT specifically."
+  },
+  "notes": "LIVE-OVERRIDE for PUT. The path /workspaces/{wId}/member-profile/{userId} is live (GET 200) but PUT is not supported (405). A prior batch probe showed PATCH is supported. The TRUTH spec lists this as PUT — this is a discrepancy. No mutations made."
+}

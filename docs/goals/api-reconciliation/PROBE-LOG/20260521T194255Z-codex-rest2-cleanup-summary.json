@@ -1,0 +1,103 @@
+{
+  "assignment_id": null,
+  "cleanup": {
+    "assignment": {
+      "skipped": true
+    },
+    "entry": {
+      "skipped": true
+    },
+    "project": {
+      "archive_body": {
+        "archived": true,
+        "billable": false,
+        "budgetEstimate": null,
+        "clientId": "",
+        "clientName": "",
+        "color": "#009688",
+        "costRate": null,
+        "duration": "PT0S",
+        "estimate": {
+          "estimate": "PT0S",
+          "type": "AUTO"
+        },
+        "estimateReset": null,
+        "hourlyRate": {
+          "amount": 0,
+          "currency": "CAD"
+        },
+        "id": "<redacted-id:91bcbe7ccb>",
+        "memberships": [
+          {
+            "costRate": null,
+            "hourlyRate": null,
+            "membershipStatus": "ACTIVE",
+            "membershipType": "PROJECT",
+            "targetId": "<redacted-id:91bcbe7ccb>",
+            "userId": "<redacted-id:53b91fce6c>"
+          }
+        ],
+        "name": "MCP-LIVE-RECON-20260521T194255Z-codex-rest2-cleanup",
+        "note": "",
+        "public": false,
+        "template": false,
+        "timeEstimate": {
+          "active": false,
+          "estimate": "PT0S",
+          "includeNonBillable": true,
+          "resetOption": null,
+          "type": "AUTO"
+        },
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "archive_status": 200,
+      "delete_body": {
+        "archived": true,
+        "billable": false,
+        "budgetEstimate": null,
+        "clientId": "",
+        "clientName": "",
+        "color": "#009688",
+        "costRate": null,
+        "duration": "PT0S",
+        "estimate": {
+          "estimate": "PT0S",
+          "type": "AUTO"
+        },
+        "estimateReset": null,
+        "hourlyRate": {
+          "amount": 0,
+          "currency": "CAD"
+        },
+        "id": "<redacted-id:91bcbe7ccb>",
+        "memberships": [
+          {
+            "costRate": null,
+            "hourlyRate": null,
+            "membershipStatus": "ACTIVE",
+            "membershipType": "PROJECT",
+            "targetId": "<redacted-id:91bcbe7ccb>",
+            "userId": "<redacted-id:53b91fce6c>"
+          }
+        ],
+        "name": "MCP-LIVE-RECON-20260521T194255Z-codex-rest2-cleanup",
+        "note": "",
+        "public": false,
+        "template": false,
+        "timeEstimate": {
+          "active": false,
+          "estimate": "PT0S",
+          "includeNonBillable": true,
+          "resetOption": null,
+          "type": "AUTO"
+        },
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "delete_status": 200
+    }
+  },
+  "endpoint_id": "codex.reconciliation.cleanup2",
+  "entry_id": null,
+  "project_id": "<redacted-id:91bcbe7ccb>",
+  "timestamp_utc": "2026-05-21T19:42:56.232513Z"
+}

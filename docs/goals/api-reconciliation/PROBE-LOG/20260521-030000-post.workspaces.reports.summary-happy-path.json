@@ -1,0 +1,36 @@
+{
+  "probe_id": "post.workspaces.reports.summary",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "batch": "A",
+  "method": "POST",
+  "path": "/workspaces/[REDACTED-WORKSPACE]/reports/summary",
+  "tool_used": "clockify_reports_summary",
+  "params": { "start": "2026-05-21", "end": "2026-05-21" },
+  "probe_kind": "happy-path",
+  "result": {
+    "ok": true,
+    "action": "clockify_reports_summary",
+    "entity": "report",
+    "data_shape": {
+      "summary_rollups_count": 1,
+      "rollup_fields": ["group", "level", "id", "name", "duration", "financials", "money_by_currency"],
+      "group_totals_summary_key": "group_totals_summary",
+      "totals_summary_key": "totals_summary",
+      "financials_in_cents": true,
+      "sample_total_time_seconds": 28800,
+      "sample_cost_cents": 320
+    },
+    "meta_shape": {
+      "amountUnit": "cents",
+      "exportType": "JSON",
+      "source": "reports-api",
+      "workspaceId": "[REDACTED-WORKSPACE]",
+      "normalizedRollups": 1,
+      "totalAmount_present": true
+    }
+  },
+  "source_code_path": "internal/tools/reports.go SummaryReport() POST /workspaces/{wId}/reports/summary",
+  "verification_status": "LIVE-VERIFIED",
+  "notes": "Tool POSTed to /workspaces/{wId}/reports/summary. ok:true with 1 rollup (PROJECT group). Both 'group_totals_summary' and 'totals_summary' keys present — family-specific keys as documented in CLAUDE.md. Money in minor units (cents). Path confirmed live."
+}

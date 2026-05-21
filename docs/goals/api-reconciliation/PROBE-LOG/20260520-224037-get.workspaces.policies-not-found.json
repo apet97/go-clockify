@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.policies",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/policies",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:40:37Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/policies","query":{},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":404,"body_keys":["ok","error"],"body_sample":"{\"error\":{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/.../policies.\"}}"},
+  "facts_observed": {"exists":false,"error_code":"not_found","spring_mvc":true},
+  "notes": "In ours spec only. Live returns 404 Spring-MVC. policies/{policyId} also returns 404. Endpoint does not exist."
+}

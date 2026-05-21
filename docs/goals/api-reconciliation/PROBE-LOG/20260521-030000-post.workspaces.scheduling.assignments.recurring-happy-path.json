@@ -1,0 +1,39 @@
+{
+  "probe_id": "20260521-030000-post.workspaces.scheduling.assignments.recurring",
+  "endpoint_id": "post.workspaces.scheduling.assignments.recurring",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "batch": "B",
+  "probes": [
+    {
+      "kind": "source-grep",
+      "description": "Check createAssignment in scheduling.go line 465-469",
+      "result": "Line 465: paths.Workspace(wsID, 'scheduling', 'assignments', 'recurring'); line 469: s.Client.Post(ctx, path, payload, &result)",
+      "finding": "GOCLMCP createAssignment uses POST to /workspaces/{workspaceId}/scheduling/assignments/recurring"
+    },
+    {
+      "kind": "source-grep-additional",
+      "description": "Check updateAssignment and deleteAssignment paths (scheduling.go lines 521, 547)",
+      "result": "Line 521: paths.Workspace(wsID, 'scheduling', 'assignments', 'recurring', aID) — PATCH for update; line 547: same path — DELETE for delete",
+      "finding": "CRUD operations all use /scheduling/assignments/recurring/{id} paths as documented in CLAUDE.md"
+    },
+    {
+      "kind": "live-GET-method-probe",
+      "description": "GET /workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/recurring",
+      "http_status": 405,
+      "response_body": "{\"message\":\"Request method 'GET' is not supported\",\"code\":3000}",
+      "finding": "Spring-MVC 405 = POST path /scheduling/assignments/recurring is registered on live Clockify"
+    },
+    {
+      "kind": "live-list-assignments",
+      "description": "Called clockify_scheduling_assignments_list to confirm existing recurring assignments are accessible (indirectly verifies create path was used to create them)",
+      "http_status": 200,
+      "response_summary": "ok:true, data has 5 assignments with ids like <redacted-id:adcce55e08> all in the workspace",
+      "finding": "Live assignments exist, created via POST /recurring; list endpoint confirms the recurring path is in active use"
+    }
+  ],
+  "verification_status": "LIVE-VERIFIED",
+  "notes": "POST /scheduling/assignments/recurring confirmed by: (1) source code at scheduling.go:465 explicitly builds this path and POSTs to it, (2) GET probe returns 405 (path registered, wrong method), (3) live assignments exist in workspace proving the POST endpoint has been used. Also matches CLAUDE.md doc: 'delete uses DELETE /scheduling/assignments/recurring/{id}' — implying POST is the create path."
+}

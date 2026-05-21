@@ -1,0 +1,14 @@
+{
+  "body_bytes": 0,
+  "label": "expense-file-v3-expense-delete-cleanup",
+  "method": "DELETE",
+  "request_body": null,
+  "response_body_text": "",
+  "response_headers_subset": {
+    "Content-Length": "0",
+    "Date": "Thu, 21 May 2026 02:36:48 GMT"
+  },
+  "response_json": null,
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses/<redacted-id:5fbb3f7e95>"
+}

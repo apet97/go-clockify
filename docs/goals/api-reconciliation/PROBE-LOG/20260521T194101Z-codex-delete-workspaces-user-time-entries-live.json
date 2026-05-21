@@ -1,0 +1,52 @@
+{
+  "cleanup": {
+    "entry_cleanup": {
+      "reason": "bulk delete succeeded or no id",
+      "skipped": true
+    }
+  },
+  "endpoint_id": "delete.workspaces.user.time-entries",
+  "facts_observed": {
+    "bulk_delete_status": null,
+    "bulk_delete_success": false,
+    "entry_no_longer_readable_after_delete": false,
+    "required_query_param_used": "time-entry-ids"
+  },
+  "method": "DELETE",
+  "notes": "Sacrificial time entry was created, then deleted through the source-covered bulk user time-entry DELETE endpoint.",
+  "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+  "probe_kind": "live-failure",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/user/<redacted-id:53b91fce6c>/time-entries",
+    "query": {
+      "time-entry-ids": []
+    }
+  },
+  "response": {
+    "body_sample": null,
+    "reason": "entry create failed",
+    "shape": {
+      "type": "NoneType"
+    },
+    "status": null
+  },
+  "setup": {
+    "current_user_status": 200,
+    "project_create_status": 201,
+    "time_entry_create_shape": {
+      "keys": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "time_entry_create_status": 400
+  },
+  "timestamp_utc": "2026-05-21T19:41:02.484913Z",
+  "verdict": "UNRESOLVED-NO-LIVE",
+  "verification": {
+    "get_deleted_entry_body": null,
+    "get_deleted_entry_status": null
+  }
+}

@@ -27,7 +27,7 @@ From `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/`:
 
 Credentials used:
 - API key: `****REDACTED****`
-- Workspace ID: `65b382b606de527a7ee2b60e`
+- Workspace ID: `<REDACTED_ID>`
 
 ## Commands run
 
@@ -69,7 +69,7 @@ go run ./cmd/clockify-mcp --help 2>&1 | grep -i deprecat
 
 ## Live API probes run
 
-All probes sourced credentials from `/tmp/clockify-livetest.env` with `X-Api-Key` header. Workspace `65b382b606de527a7ee2b60e` ("WORKSPACE").
+All probes sourced credentials from `/tmp/clockify-livetest.env` with `X-Api-Key` header. Workspace `<REDACTED_ID>` ("WORKSPACE").
 
 | # | Endpoint | Response shape | Matches probe lab doc? |
 |---|----------|---------------|----------------------|

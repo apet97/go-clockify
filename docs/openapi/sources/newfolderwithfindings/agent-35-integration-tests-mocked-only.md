@@ -194,10 +194,10 @@ curl -H "X-Api-Key: {REDACTED}" \
 
 | Resource | ID | Cleanup method | Status |
 |----------|----|----------------|--------|
-| Project | `6a00f5272568d3d293060609` | Archive then Delete | 200 |
-| Tag | `6a00fab9385b9fac085a65c9` | Delete | 200 |
-| Project | `6a00fab1385b9fac085a6562` | Archive then Delete | 200 |
-| Project | `6a00fe03d9647159dc10999b` | Archive then Delete | 200 |
+| Project | `<REDACTED_ID>` | Archive then Delete | 200 |
+| Tag | `<REDACTED_ID>` | Delete | 200 |
+| Project | `<REDACTED_ID>` | Archive then Delete | 200 |
+| Project | `<REDACTED_ID>` | Archive then Delete | 200 |
 
 ## Leftover test resources
 

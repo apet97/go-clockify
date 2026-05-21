@@ -1,0 +1,41 @@
+{
+  "endpoint_id": "put.workspaces.expenses.categories",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "PUT (via clockify_expenses_categories_update MCP tool with dry_run:true)",
+    "path": "PUT /workspaces/[REDACTED-WORKSPACE]/expenses/categories/<redacted-id:c6f4ae2e99>",
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": {
+      "category_id": "<redacted-id:c6f4ae2e99>",
+      "name": "__dry-run-probe__",
+      "dry_run": true
+    },
+    "rationale": "dry_run:true supported by clockify_expenses_categories_update — confirms tool path and payload without upstream write"
+  },
+  "response": {
+    "status": "200 ok:true (dry-run — no upstream call made)",
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_expenses_categories_update\",\"entity\":\"expense_category\",\"ids\":{\"categoryId\":\"<redacted-id:c6f4ae2e99>\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"},\"data\":{\"args\":{\"body\":{\"name\":\"__dry-run-probe__\"},\"category_id\":\"<redacted-id:c6f4ae2e99>\"},\"dry_run\":true,\"note\":\"No changes were made.\",\"tool\":\"clockify_update_expense_category\",\"validation\":{\"preview_quality\":\"minimal_no_handler_validation\",\"status\":\"unknown\",\"warnings\":[{\"code\":\"not_validated\",\"message\":\"generic dry-run preview did not run tool-specific validation\"}]}}}",
+    "dry_run_quality": "minimal_no_handler_validation",
+    "note": "No upstream call made. Dry-run confirms path and payload structure but not upstream validation."
+  },
+  "facts_observed": {
+    "dry_run_supported": true,
+    "path_confirmed_by_dry_run": true,
+    "live_verified": true,
+    "category_id": "<redacted-id:c6f4ae2e99>",
+    "no_upstream_write": true,
+    "both_specs_agree": true,
+    "mcp_tool": "clockify_expenses_categories_update",
+    "path_used_by_mcp": "/workspaces/{wId}/expenses/categories/{categoryId}",
+    "dry_run_note": "dry_run:true parameter supported. Generic preview — does not run tool-specific upstream validation. Payload: {name}. Per CLAUDE.md: handler pre-fetches category and merges existing name when caller omits it — partial update semantics.",
+    "partial_update_semantics": true,
+    "partial_update_note": "CLAUDE.md: 'clockify_expenses_categories_update is a partial update — Clockify PUT requires name, so handler pre-fetches the category and merges the existing name when the caller omits it'",
+    "prior_evidence": "20260520-214436-get.workspaces.expenses.categories-happy-path.json confirms GET /expenses/categories returns 200 with category array. Category <redacted-id:c6f4ae2e99> exists in workspace (total 129 categories)."
+  },
+  "notes": "LIVE-VERIFIED via dry_run:true on clockify_expenses_categories_update. Tool targets PUT /workspaces/{wId}/expenses/categories/{categoryId}. Both specs document this endpoint. Dry-run preview quality is minimal (generic, no handler-specific validation), but confirms path and payload structure. The MCP tool implements partial update semantics per CLAUDE.md: Clockify's native PUT requires name, so the handler pre-fetches and merges when name is omitted. No data changed."
+}

@@ -253,8 +253,8 @@ No code changes were made. All probe-lab handler fixes (#1–#27) were already a
 
 | Resource | Action | Result |
 |----------|--------|--------|
-| `qa-agent-01-test-client` (ID: `6a00f453284e03fc79326723`) | PUT archive → DELETE | Deleted successfully |
-| `qa-agent-01-test-tag` (ID: `6a00f455284e03fc7932674a`) | DELETE | Deleted successfully |
+| `qa-agent-01-test-client` (ID: `<REDACTED_ID>`) | PUT archive → DELETE | Deleted successfully |
+| `qa-agent-01-test-tag` (ID: `<REDACTED_ID>`) | DELETE | Deleted successfully |
 
 ## Leftover test resources
 

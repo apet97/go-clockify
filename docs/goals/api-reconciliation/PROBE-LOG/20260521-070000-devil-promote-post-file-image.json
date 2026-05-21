@@ -1,0 +1,23 @@
+{
+  "endpoint_id": "uploadFileImage",
+  "method": "POST",
+  "path": "/file/image",
+  "probe_kind": "devil-promotion-attempt",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "prior_status": "UNCONFIRMED-AGREE",
+  "live_probe_result": {
+    "probe_1": {
+      "method_probed": "GET",
+      "path_probed": "/file/image",
+      "status": "blocked",
+      "key_facts": {
+        "error_code": "error",
+        "message": "raw API path must stay within /user or the pinned workspace API",
+        "interpretation": "The MCP workspace fence rejects /file/image — it does not fall under /user or /workspaces/{workspaceId}/ paths. Cannot probe this endpoint through the current MCP tool. The fence is a security guardrail, not a Clockify routing result. No live Clockify response obtained."
+      }
+    }
+  },
+  "verdict": "REMAINS_UNCONFIRMED",
+  "promotion_evidence": "Cannot probe /file/image through MCP — workspace fence blocks all paths outside /user and /workspaces/{workspaceId}/. No live Clockify response obtained. Cannot confirm 405 vs 404 vs 200 on this path. Both specs agree on path. Status remains UNCONFIRMED-AGREE.",
+  "notes": "The MCP's workspace fence intentionally blocks non-workspace paths. /file/image is a global upload endpoint (not workspace-scoped) and therefore inaccessible via clockify_api_get or clockify_api_request. To probe: use a direct HTTP call to https://api.clockify.me/api/v1/file/image with X-Addon-Token header (GET → expect 405 if registered, or 404 if absent). Cannot promote without bypassing the MCP fence."
+}

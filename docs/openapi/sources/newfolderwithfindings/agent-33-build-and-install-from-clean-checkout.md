@@ -26,7 +26,7 @@
 
 - `/tmp/clockify-livetest.env` — API key, workspace ID, workspace confirm guard
 - `probes/lib/common.sh` — curl wrapper, redaction, cleanup registry patterns
-- Workspace `65b382b606de527a7ee2b60e` ("WORKSPACE") — confirmed live test workspace
+- Workspace `<REDACTED_ID>` ("WORKSPACE") — confirmed live test workspace
 
 No secrets are revealed in this report.
 
@@ -45,7 +45,7 @@ make clean && make build
 ./clockify-mcp doctor       # => exit 2, "CLOCKIFY_API_KEY is required"
 
 # Doctor with API key (secret redacted in output)
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   ./clockify-mcp doctor     # => exit 0, "Load() result: OK", secret shown as "set (redacted)"
 
 # Code quality
@@ -71,21 +71,21 @@ docker build -f deploy/Dockerfile -t clockify-mcp:qa-test .
 docker run --rm clockify-mcp:qa-test --version    # => dev
 docker run --rm -e MCP_TRANSPORT=stdio \
   -e CLOCKIFY_API_KEY=<REDACTED> \
-  -e CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  -e CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   clockify-mcp:qa-test doctor                     # => exit 0, OK
 
 # MCP stdio protocol
 printf '{"jsonrpc":"2.0","method":"initialize",...}\n
         {"jsonrpc":"2.0","method":"notifications/initialized",...}\n
         {"jsonrpc":"2.0","method":"tools/list",...}\n' \
-  | CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  | CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
     MCP_PROFILE=local-stdio ./clockify-mcp
   # => serverInfo.name=clockify-go-mcp, protocolVersion=2025-11-25, 35 tools
 
 # Smoke test scripts
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   bash scripts/smoke-stdio.sh   # => OK: initialize, tools/list=35
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   bash scripts/smoke-doctor-strict.sh  # => OK
 ```
 
@@ -121,7 +121,7 @@ All API credentials from the probe lab work correctly against the live workspace
 ### Finding 3: Test client could not be deleted
 - **Severity**: P3
 - **Details**: Clockify API returned 400 "Cannot delete an active client" when trying to delete a client created during testing. The client has no associated projects and was freshly created. This appears to be Clockify API behavior where clients are always "active."
-- **Leftover**: `qa-agent-33-build-1778449102-client` (id=`6a00fad1385b9fac085a6756`)
+- **Leftover**: `qa-agent-33-build-1778449102-client` (id=`<REDACTED_ID>`)
 
 ### Finding 4: Docker image size larger than Dockerfile comment states
 - **Severity**: P3
@@ -168,7 +168,7 @@ curl -X DELETE -H "X-Api-Key: $CLOCKIFY_API_KEY" \
 
 | Resource | Type | ID | Name |
 |----------|------|----|------|
-| Client | clockify client | `6a00fad1385b9fac085a6756` | `qa-agent-33-build-1778449102-client` |
+| Client | clockify client | `<REDACTED_ID>` | `qa-agent-33-build-1778449102-client` |
 
 This client has no associated projects and was created with the required `qa-agent-33-` prefix. It is safe to leave in the test workspace.
 

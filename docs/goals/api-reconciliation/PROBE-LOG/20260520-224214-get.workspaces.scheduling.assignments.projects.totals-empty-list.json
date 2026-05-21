@@ -1,0 +1,41 @@
+{
+  "endpoint_id": "get.workspaces.scheduling.assignments.projects.totals",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/projects/totals",
+  "probe_kind": "empty-list",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/projects/totals",
+    "query": {
+      "start": "2026-05-01T00:00:00Z",
+      "end": "2026-05-31T23:59:59Z",
+      "search": "zzz-nonexistent-20260520-224214",
+      "page": 1,
+      "page-size": 3
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "array"
+    ],
+    "body_sample": "[]"
+  },
+  "facts_observed": {
+    "status": 200,
+    "response_top_keys": [
+      "array"
+    ],
+    "item_keys": [],
+    "item_count": 0
+  },
+  "notes": ""
+}

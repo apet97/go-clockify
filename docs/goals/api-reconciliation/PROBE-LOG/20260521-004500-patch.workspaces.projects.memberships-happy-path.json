@@ -1,0 +1,27 @@
+{
+  "endpoint_id": "patch.workspaces.projects.memberships",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/memberships",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:45:00Z",
+  "request": {
+    "method": "PATCH",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:a2952df332>/memberships",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"memberships": [{"userId": "<redacted-id:706f58c94f>", "membershipStatus": "ACTIVE", "membershipType": "PROJECT"}]}
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys_per_item": ["costRate", "hourlyRate", "membershipStatus", "membershipType", "targetId", "userId"],
+    "body_sample": "[{\"membershipStatus\":\"ACTIVE\",\"membershipType\":\"PROJECT\",\"targetId\":\"<redacted-id:a2952df332>\",\"userId\":\"<redacted-id:706f58c94f>\"}]"
+  },
+  "facts_observed": {
+    "response_shape": "Array of membership objects, NOT a full project object. Each item: {costRate, hourlyRate, membershipStatus, membershipType, targetId (projectId), userId}",
+    "response_is_array": true,
+    "array_note": "Response is the memberships array, not wrapped in a project object",
+    "tool_note": "Used clockify_projects_memberships_update MCP tool"
+  },
+  "notes": "LIVE-VERIFIED. PATCH /projects/{id}/memberships returns bare array of membership objects. Both specs agree on this path. Response shape: array, not object. Project <redacted-id:a2952df332> deleted after probe."
+}

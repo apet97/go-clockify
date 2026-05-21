@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.scheduling.assignments.users.totals",
+  "probe_kind": "missing-required",
+  "timestamp_utc": "2026-05-21T00:08:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/scheduling/assignments/users/<redacted-id:706f58c94f>/totals",
+  "query": {},
+  "status_code": 400,
+  "status_text": "Bad Request",
+  "response_body_sample": {
+    "message": "Required request parameter 'start' for method parameter type String is not present"
+  },
+  "verdict": "LIVE-VERIFIED",
+  "notes": "start is REQUIRED. Both specs mark it as optional — discrepancy logged."
+}

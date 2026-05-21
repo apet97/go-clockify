@@ -1,6 +1,6 @@
 # Tags read endpoints — derived from live probe fixtures/tags-fresh-a/
 # Host: https://api.clockify.me/api/v1   Auth: X-Api-Key
-# Workspace probed: 65b382b606de527a7ee2b60e
+# Workspace probed: <REDACTED_ID>
 openapi: 3.0.3
 info:
   title: Clockify Tags (reads) — empirical
@@ -28,7 +28,7 @@ paths:
             application/json:
               schema: {type: array, items: {$ref: "#/components/schemas/Tag"}}
               example:
-                - {id: "686a626dccb8b35162a8f8f4", name: "10138", workspaceId: "65b382b606de527a7ee2b60e", archived: false}
+                - {id: "<REDACTED_ID>", name: "10138", workspaceId: "<REDACTED_ID>", archived: false}
   /workspaces/{workspaceId}/tags/{id}:
     get:
       summary: Get a tag by ID

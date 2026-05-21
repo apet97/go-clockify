@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "delete.workspaces.time-off.requests",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T23:32:32Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED]/time-off/requests/<redacted-id:0dbda4d344>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "policyId": "<redacted-id:1e975578e3>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "entity", "ids", "data", "meta", "changed"],
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_time_off_requests_delete\",\"entity\":\"time_off_request\",\"ids\":{\"policyId\":\"<redacted-id:1e975578e3>\",\"requestId\":\"<redacted-id:0dbda4d344>\",\"timeOffRequestId\":\"<redacted-id:0dbda4d344>\",\"workspaceId\":\"[REDACTED]\"},\"data\":{\"deleted\":true,\"id\":\"<redacted-id:0dbda4d344>\",\"policyId\":\"<redacted-id:1e975578e3>\",\"requestId\":\"<redacted-id:0dbda4d344>\"},\"meta\":{\"workspaceId\":\"[REDACTED]\"},\"changed\":{\"deleted\":[{\"type\":\"time_off_request\",\"id\":\"<redacted-id:0dbda4d344>\"}]}}"
+  },
+  "facts_observed": {
+    "http_status": 200,
+    "response_shape": "deleted:true with id, policyId, requestId",
+    "requires_policy_id": true,
+    "policy_id_in_body_not_path": true,
+    "precondition": "request must be PENDING status (request was created first via clockify_time_off_requests_create)",
+    "setup_response": "time_off_request created with id <redacted-id:0dbda4d344>, status PENDING, policy <redacted-id:1e975578e3>"
+  },
+  "notes": "Happy path confirmed. The MCP tool requires both policy_id and request_id; the path only carries request_id (workspaceId implicit). policyId is sent in the body or as a path segment depending on impl. Response body is lean: deleted:true plus the two IDs. POST /time-off/requests confirmed as the correct LIST method (GET returns 405 per CLAUDE.md)."
+}

@@ -1,5 +1,5 @@
 # Clockify Time-Off READ surface — Agent A
-# Workspace 65b382b606de527a7ee2b60e, host https://api.clockify.me/api
+# Workspace <REDACTED_ID>, host https://api.clockify.me/api
 # Auth: X-Api-Key (header). All endpoints below returned 200 OK live.
 openapi: 3.0.3
 info:

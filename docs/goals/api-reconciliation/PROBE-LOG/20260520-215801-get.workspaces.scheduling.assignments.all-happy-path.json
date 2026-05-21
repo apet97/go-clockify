@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "get.workspaces.scheduling.assignments.all",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/all",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:58:01Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/all",
+    "query": {"start": "2026-05-01T00:00:00Z", "end": "2026-05-31T23:59:59Z", "page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["array"],
+    "body_sample": "[{\"billable\":true,\"clientId\":\"...\",\"clientName\":\"DEMO-mcp-alltest Client\",\"hoursPerDay\":5,\"id\":\"<redacted-id:aa3a385462>\",\"note\":\"bulk-06583\",\"period\":{\"end\":\"2026-05-15T17:00:00Z\",\"start\":\"2026-05-12T08:00:00Z\"},\"projectArchived\":false,\"projectBillable\":true,\"projectColor\":\"#009688\",\"projectId\":\"...\",\"projectName\":\"DEMO-mcp-alltest Project\",\"startTime\":null,\"taskId\":null,\"taskName\":null,\"userId\":\"...\",\"userName\":\"Firstname Lastname\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"}]"
+  },
+  "facts_observed": {
+    "required_params": ["start", "end"],
+    "start_required_confirmed": true,
+    "error_without_start": "400 — Required request parameter 'start' for method parameter type String is not present",
+    "response_shape": "bare array",
+    "page_size_respected": true,
+    "item_keys": ["billable","clientId","clientName","hoursPerDay","id","note","period","projectArchived","projectBillable","projectColor","projectId","projectName","startTime","taskId","taskName","userId","userName","workspaceId"],
+    "period_shape": {"end": "ISO 8601 datetime", "start": "ISO 8601 datetime"},
+    "startTime_nullable": true,
+    "taskId_nullable": true,
+    "taskName_nullable": true,
+    "hoursPerDay_type": "integer"
+  },
+  "notes": "LIVE-OVERRIDE: start (and likely end) are REQUIRED params. Both specs likely document them as optional query params. Response is bare array. Rich denormalized shape includes clientName/projectName/userName alongside IDs."
+}

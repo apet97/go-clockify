@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "get.workspaces.webhooks.single",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:24:39Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks/<redacted-id:508f41ec5c>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["deliveryEnabled","enabled","id","name","planEnabled","triggerSource","triggerSourceType","url","userId","webhookEvent","workspaceId"],
+    "body_sample": "{\"deliveryEnabled\":true,\"enabled\":true,\"id\":\"<redacted-id:508f41ec5c>\",\"name\":\"webhook-1\",\"planEnabled\":true,\"triggerSource\":[\"...\"],\"triggerSourceType\":\"WORKSPACE_ID\",\"url\":\"https://...\",\"userId\":\"...\",\"webhookEvent\":\"NEW_TIME_ENTRY\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"}"
+  },
+  "facts_observed": {
+    "single_vs_list_shape": "identical — same keys as list items inside webhooks array",
+    "item_keys": ["deliveryEnabled","enabled","id","name","planEnabled","triggerSource","triggerSourceType","url","userId","webhookEvent","workspaceId"]
+  },
+  "notes": "Single webhook shape is identical to list items. Returns plain object (not wrapped). No additional fields for single-item GET."
+}

@@ -54,9 +54,9 @@ func TestFetchAllExpenseCategoriesPaginates(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 
-	all, err := svc.fetchAllExpenseCategories(context.Background(), "65b382b606de527a7ee2b60e")
+	all, err := svc.fetchAllExpenseCategories(context.Background(), "000000000000000000000001")
 	if err != nil {
 		t.Fatalf("fetchAllExpenseCategories: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestFetchAllExpenseCategoriesPaginates(t *testing.T) {
 		t.Fatalf("got %d categories, want 57", len(all))
 	}
 	// A category on page 2 (past the first-page cap) must be findable.
-	got, err := svc.findExpenseCategory(context.Background(), "65b382b606de527a7ee2b60e", "cat55")
+	got, err := svc.findExpenseCategory(context.Background(), "000000000000000000000001", "cat55")
 	if err != nil {
 		t.Fatalf("findExpenseCategory(cat55): %v", err)
 	}
@@ -83,7 +83,7 @@ func TestCreateExpenseAcceptsWireJSONNumberAmount(t *testing.T) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/user":
-			respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "t@example.com"})
+			respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "test-user"})
 		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
 			respondJSON(t, w, map[string]any{"id": "ws1", "currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
@@ -186,7 +186,7 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case r.Method == http.MethodGet && r.URL.Path == "/user":
-				respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "t@example.com"})
+				respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "test-user"})
 			case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
 				assertExpenseMultipartForm(t, r, "create_expense")
 				for _, field := range []string{"userId", "amount", "date", "categoryId"} {
@@ -419,7 +419,7 @@ func TestCreateExpenseContractDefaultsUserAndAllowsNoFileNoProject(t *testing.T)
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/user":
 			userHit = true
-			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester", "email": "t@example.com"})
+			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester", "email": "test-user"})
 		case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
 			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 				t.Fatalf("create_expense expected multipart/form-data, got %q", r.Header.Get("Content-Type"))
@@ -558,7 +558,7 @@ func TestUpdateExpenseFallsBackToCurrentUserWhenUserIDOmitted(t *testing.T) {
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/user":
 			userHit = true
-			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester", "email": "t@example.com"})
+			respondJSON(t, w, map[string]any{"id": "u-current", "name": "Tester", "email": "test-user"})
 		case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/expenses/exp1":
 			if err := r.ParseMultipartForm(32 << 20); err != nil {
 				t.Fatalf("parse multipart: %v", err)
@@ -1124,7 +1124,7 @@ func TestUpdateExpense_RejectsGarbageDate(t *testing.T) {
 func TestCreateExpenseRejectsNonPositiveAmount(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	for _, amount := range []float64{-50, 0} {
 		_, err := svc.createExpense(context.Background(), map[string]any{
 			"amount":      amount,
@@ -1140,7 +1140,7 @@ func TestCreateExpenseRejectsNonPositiveAmount(t *testing.T) {
 func TestUpdateExpenseRejectsNonPositiveAmount(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	for _, amount := range []float64{0, -50} {
 		_, err := svc.updateExpense(context.Background(), map[string]any{
 			"expense_id":    "000000000000000000000001",

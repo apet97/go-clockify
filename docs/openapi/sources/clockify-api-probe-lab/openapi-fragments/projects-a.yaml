@@ -1,4 +1,4 @@
-# Projects GET endpoints — Agent A, live-probed against ws 65b382b606de527a7ee2b60e.
+# Projects GET endpoints — Agent A, live-probed against ws <REDACTED_ID>.
 # Source fixtures: fixtures/projects-fresh-a/*.json (154 probes).
 openapi: 3.0.3
 info:

@@ -91,7 +91,7 @@ curl -s -X DELETE -H "X-Api-Key: <REDACTED>" \
 
 | # | Probe | Result | HTTP Status |
 |---|-------|--------|-------------|
-| 1 | Create test entry `qa-agent-17-read-probe-entry` | Created, id=`6a00f63f385b9fac085a2fb2` | 201 |
+| 1 | Create test entry `qa-agent-17-read-probe-entry` | Created, id=`<REDACTED_ID>` | 201 |
 | 2 | GET single entry by ID (no hydration) | Returned entry with 15 fields. `projectName` absent. | 200 |
 | 3 | GET user entries (page-size=3) | Returned 3 entries | 200 |
 | 4 | GET with date range filter | Returned entries in range | 200 |
@@ -173,7 +173,7 @@ These are best addressed in a dedicated follow-up PR rather than in a QA pass.
 
 ## Cleanup performed
 
-- Deleted test time entry `6a00f63f385b9fac085a2fb2` (204 No Content)
+- Deleted test time entry `<REDACTED_ID>` (204 No Content)
 - Verified 0 remaining entries with `qa-agent-17-` prefix in the probe workspace
 
 ## Leftover test resources

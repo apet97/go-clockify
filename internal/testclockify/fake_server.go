@@ -43,7 +43,7 @@ type fakeError struct {
 
 func NewServer(workspaceID string) *Server {
 	if workspaceID == "" {
-		workspaceID = "65b382b606de527a7ee2b60e"
+		workspaceID = "000000000000000000000001"
 	}
 	s := &Server{
 		WorkspaceID: workspaceID,
@@ -90,7 +90,7 @@ func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	parts := splitPath(r.URL.Path)
 	if r.Method == http.MethodGet && len(parts) == 1 && parts[0] == "user" {
-		writeJSON(w, clockify.User{ID: s.UserID, Name: "Test User", Email: "test@example.com", ActiveWorkspace: s.WorkspaceID, DefaultWorkspace: s.WorkspaceID})
+		writeJSON(w, clockify.User{ID: s.UserID, Name: "Test User", Email: "test-user", ActiveWorkspace: s.WorkspaceID, DefaultWorkspace: s.WorkspaceID})
 		return
 	}
 	if len(parts) < 2 || parts[0] != "workspaces" || parts[1] != s.WorkspaceID {
@@ -539,7 +539,7 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request, parts []str
 		writeJSON(w, []map[string]any{{
 			"id":               s.UserID,
 			"name":             "Test User",
-			"email":            "test@example.com",
+			"email":            "test-user",
 			"activeWorkspace":  s.WorkspaceID,
 			"defaultWorkspace": s.WorkspaceID,
 		}})

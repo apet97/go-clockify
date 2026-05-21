@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "get.workspaces.projects.tasks.single",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:44:36Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:7eddf3906d>/tasks/<redacted-id:57269d4880>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["assigneeId","assigneeIds","billable","budgetEstimate","costRate","duration","estimate","hourlyRate","id","name","projectId","status","userGroupIds"],
+    "body_sample": "{\"assigneeId\":null,\"assigneeIds\":[],\"billable\":true,\"budgetEstimate\":0,\"costRate\":null,\"duration\":\"PT20S\",\"estimate\":\"PT0S\",\"hourlyRate\":null,\"id\":\"<redacted-id:57269d4880>\",\"name\":\"Login redirect loop in auth module\",\"projectId\":\"<redacted-id:7eddf3906d>\",\"status\":\"ACTIVE\",\"userGroupIds\":[]}"
+  },
+  "facts_observed": {
+    "single_vs_list_shape": "identical — same 13 keys as list items",
+    "item_keys": ["assigneeId","assigneeIds","billable","budgetEstimate","costRate","duration","estimate","hourlyRate","id","name","projectId","status","userGroupIds"]
+  },
+  "notes": "Single task shape identical to list item. No additional fields."
+}

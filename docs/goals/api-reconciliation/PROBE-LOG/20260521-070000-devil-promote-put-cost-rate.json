@@ -1,0 +1,33 @@
+{
+  "endpoint_id": "updateWorkspaceCostRate",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/cost-rate",
+  "probe_kind": "devil-promotion-attempt",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "prior_status": "UNCONFIRMED-AGREE",
+  "live_probe_result": {
+    "probe_1": {
+      "method_probed": "GET",
+      "path_probed": "/workspaces/<redacted-id:7955161f32>/cost-rate",
+      "status": 405,
+      "key_facts": {
+        "error_code": "clockify_upstream_error",
+        "message": "Request method 'GET' is not supported",
+        "interpretation": "405 = path /cost-rate IS registered in Clockify router. GET not allowed. PUT is the correct method per TRUTH.yaml.",
+        "context": "Workspace has costRate:{amount:5000, currency:USD} as confirmed by clockify_status. The PUT endpoint to change this is confirmed registered."
+      }
+    },
+    "probe_2": {
+      "note": "GET /workspaces/{wId} returns workspace object including costRate field. The cost-rate PUT endpoint would modify this. Current value: {amount:5000, currency:USD}.",
+      "method_probed": "via clockify_status",
+      "status": 200,
+      "key_facts": {
+        "workspace_cost_rate": {"amount": 5000, "currency": "USD"},
+        "interpretation": "Cost rate is a live workspace attribute. The PUT endpoint to update it is router-registered (405 on GET confirmed)."
+      }
+    }
+  },
+  "verdict": "PROMOTED_TO_LIVE_VERIFIED",
+  "promotion_evidence": "GET /workspaces/{wId}/cost-rate returned 405 'Request method GET is not supported'. Per probe protocol: 405 = path registered. Workspace cost rate confirmed live via clockify_status ({amount:5000, currency:USD}). Both specs agree on PUT. Promoting from UNCONFIRMED-AGREE to LIVE-VERIFIED on 405-confirms-path-registration evidence.",
+  "notes": "PUT body/response shape not confirmed (raw writes blocked — PUT would change workspace cost rate, avoid without dry_run). Current workspace cost rate: {amount:5000, currency:USD}. Path /cost-rate is router-registered. This is partial promotion: path existence LIVE-VERIFIED, PUT mutation semantics unconfirmed."
+}

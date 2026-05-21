@@ -1,5 +1,5 @@
 # Clockify time-off policies — mutation fragment (Agent B, live-verified 2026-05-12).
-# Workspace: 65b382b606de527a7ee2b60e. Host: https://api.clockify.me/api/v1.
+# Workspace: <REDACTED_ID>. Host: https://api.clockify.me/api/v1.
 openapi: 3.0.3
 info:
   title: Clockify Time-off Policies (mutations)

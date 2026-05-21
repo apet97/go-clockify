@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "post.workspaces.time-off.policies.users.requests",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests",
+  "probe_kind": "get-405",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "tool_used": "mcp__clockify__clockify_api_request",
+  "params": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/policies/<redacted-id:1e975578e3>/users/<redacted-id:706f58c94f>/requests"
+  },
+  "response": {
+    "ok": false,
+    "action": "clockify_api_request",
+    "error": {
+      "code": "clockify_upstream_error",
+      "message": "Request method 'GET' is not supported"
+    }
+  },
+  "http_status_inferred": "405",
+  "source_confirmed": "internal/tools/raw_allowlist_gen.go:151 POST /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests: true",
+  "verification_status": "UNCONFIRMED-AGREE",
+  "notes": "GET to this path returned 405 'Request method GET is not supported' — Spring-MVC 405 indicates the route exists but only accepts POST. Route is in raw_allowlist. No typed MCP tool for this path (admin on-behalf-of creation). Source confirms POST path exists. Cannot verify POST without mutation and without a typed tool supporting dry_run for this variant."
+}

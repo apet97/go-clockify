@@ -1,0 +1,21 @@
+{
+  "endpoint_id": "get.user",
+  "method": "GET",
+  "path": "/user",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T20:47:25Z",
+  "request": {"method": "GET", "path": "/user", "query": {}, "headers_redacted": {"X-Api-Key": "[REDACTED]"}},
+  "response": {
+    "status": 200,
+    "body_keys": ["activeWorkspace","customFields","defaultWorkspace","email","id","memberships","name","profilePicture","settings","status"],
+    "body_sample": "{\"activeWorkspace\":\"[REDACTED_WS]\",\"customFields\":[],\"defaultWorkspace\":\"[REDACTED_WS]\",\"email\":\"[REDACTED]\",\"id\":\"[REDACTED]\",\"memberships\":[],\"name\":\"Firstname Lastname\",\"status\":\"ACTIVE\"}"
+  },
+  "facts_observed": {
+    "status_code": 200,
+    "response_type": "object",
+    "top_level_keys": ["activeWorkspace","customFields","defaultWorkspace","email","id","memberships","name","profilePicture","settings","status"],
+    "memberships_empty_without_param": true,
+    "auth_header_required": true
+  },
+  "notes": "Single-user object. memberships is [] when include-memberships not specified."
+}

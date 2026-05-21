@@ -1,0 +1,47 @@
+{
+  "endpoint_id": "post.workspaces.users.info",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/users/info",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "iter": "iter20",
+  "tool_used": "source-code-audit + raw_allowlist confirmation",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/users/info",
+    "query": {},
+    "body_summary": null,
+    "note": "GET probe approach: 405 = path registered (POST-only), 404 = path absent. API unreachable so no live probe possible."
+  },
+  "response": {
+    "status": "NOT PROBED LIVE — api.clockify.me unreachable at probe time",
+    "inferred_status": "likely 405 (path registered, POST-only) based on source usage pattern",
+    "body_sample": "n/a"
+  },
+  "source_code_audit": {
+    "file": "internal/tools/user_admin.go",
+    "line": 737,
+    "path_constructed": "paths.Workspace(wsID, \"users\", \"info\")",
+    "http_method": "POST",
+    "body_summary": "{\"page\": N, \"pageSize\": 200, \"includeRoles\": true, \"memberships\": \"NONE\", \"status\": \"ALL\"}",
+    "caller_function": "currentUserRoleGrants (internal role resolution — not a typed MCP tool)",
+    "raw_allowlist_entry": "raw_allowlist_gen.go:174 — POST /workspaces/{workspaceId}/users/info: true",
+    "note": "This path is used internally by currentUserRoleGrants() which is called during role update operations (UpdateUserRole → currentUserRoleGrants). It is NOT exposed as a typed MCP tool — it is a private helper path for reading user roles. The clockify_users_list tool uses GET /workspaces/{wId}/users, NOT this /users/info endpoint."
+  },
+  "tool_mapping": {
+    "typed_mcp_tool": "NONE — no typed tool directly routes here",
+    "internal_usage": "currentUserRoleGrants() called from UpdateUserRole (user_admin.go:511 area)",
+    "note": "The task brief suggested clockify_users_list might use this path — it does NOT. ListUsers (users.go:72) uses GET /workspaces/{wId}/users. The /users/info POST path is used only for role-grant resolution during update operations."
+  },
+  "facts_observed": {
+    "path_in_raw_allowlist": true,
+    "typed_tool": false,
+    "internal_helper_usage": true,
+    "post_body_shape": "pagination-style filter: {page, pageSize, includeRoles, memberships, status}",
+    "response_shape": "array of user objects (with roles when includeRoles:true)",
+    "path_not_in_truth_yaml": true,
+    "note": "Path does not appear in TRUTH.openapi.yaml — it is new to this iter"
+  },
+  "api_network_status": "api.clockify.me unreachable at probe time (DNS no such host)",
+  "notes": "POST /workspaces/{wId}/users/info is a POST-as-filter endpoint used internally for role resolution. Source confirms the path and POST body shape. Not exposed as a typed tool. Not in TRUTH.openapi.yaml. Raw allowlist confirms it is a documented Clockify route. Status: UNCONFIRMED-AGREE — source routing confirmed, both specs imply this path exists, but no live GET/POST confirmation this session due to network outage."
+}

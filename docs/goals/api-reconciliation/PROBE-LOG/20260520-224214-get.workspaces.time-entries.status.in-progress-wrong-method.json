@@ -1,0 +1,37 @@
+{
+  "endpoint_id": "get.workspaces.time-entries.status.in-progress",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-entries/status/in-progress",
+  "probe_kind": "wrong-method",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "POST",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries/status/in-progress",
+    "query": {},
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 405,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "code",
+      "message"
+    ],
+    "body_sample": "{\"message\":\"Request method 'POST' is not supported\",\"code\":3000}"
+  },
+  "facts_observed": {
+    "status": 405,
+    "response_top_keys": [
+      "code",
+      "message"
+    ],
+    "item_keys": [],
+    "item_count": {}
+  },
+  "notes": ""
+}

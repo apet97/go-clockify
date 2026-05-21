@@ -1,0 +1,27 @@
+{
+  "endpoint_id": "delete.workspaces.time-entries",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T23:24:33Z",
+  "request": {
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries/<redacted-id:d51085db6f>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["deleted", "entryId"],
+    "body_sample": "{\"deleted\":true,\"entryId\":\"<redacted-id:d51085db6f>\"}"
+  },
+  "facts_observed": {
+    "response_shape": "{deleted:boolean, entryId:string}",
+    "response_top_keys": ["deleted", "entryId"],
+    "setup": "Created entry 'MCP-LIVE-RECON-20260520-232433-entry' under project <redacted-id:548964ccb4> then deleted it",
+    "workspace_constraint": "This workspace requires a project on every time entry — initial create without project_id returned error"
+  },
+  "notes": "Response shape: {deleted:true, entryId:string}. Note: workspace enforces mandatory project on entries. Both specs document this endpoint."
+}

@@ -19,7 +19,7 @@ PASS WITH CONCERNS
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLIENTDOC.md` — Client API documentation
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/TAGDOC.md` — Tag API documentation
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/TASKDOC.md` — Task API documentation
-- Workspace ID: `65b382b606de527a7ee2b60e` (probe workspace)
+- Workspace ID: `<REDACTED_ID>` (probe workspace)
 
 ## Commands run
 
@@ -199,10 +199,10 @@ additions, not bugs. They require design decisions about:
 
 | Resource | ID | Action | Result |
 |----------|-----|--------|--------|
-| Project | `6a00f40a284e03fc79326333` | Archive + Delete | Archive: 405, Delete: 400 |
-| Client | `6a00f442385b9fac085a10b0` | Archive + Delete | Archive: 405, Delete: 400 |
-| Tag | `6a00f47cd9647159dc101810` | Delete | 200 (cleaned up) |
-| Task | `6a00f54dd9647159dc10226f` | Delete | 400 |
+| Project | `<REDACTED_ID>` | Archive + Delete | Archive: 405, Delete: 400 |
+| Client | `<REDACTED_ID>` | Archive + Delete | Archive: 405, Delete: 400 |
+| Tag | `<REDACTED_ID>` | Delete | 200 (cleaned up) |
+| Task | `<REDACTED_ID>` | Delete | 400 |
 
 The PATCH endpoint for archiving returned 405 (Method Not Allowed) on both projects
 and clients, suggesting the probe workspace tier does not support archiving. Delete
@@ -210,9 +210,9 @@ returned 400 likely due to the same workspace plan limitation.
 
 ## Leftover test resources
 
-- Project `6a00f40a284e03fc79326333` — name: "qa-agent-49-test-project" (workspace: 65b382b606de527a7ee2b60e)
-- Client `6a00f442385b9fac085a10b0` — name: "qa-agent-49-test-client" (workspace: 65b382b606de527a7ee2b60e)
-- Task `6a00f54dd9647159dc10226f` — name: "qa-agent-49-test-task" (workspace: 65b382b606de527a7ee2b60e, project: 6899f08baa130e0232c2dcc2)
+- Project `<REDACTED_ID>` — name: "qa-agent-49-test-project" (workspace: <REDACTED_ID>)
+- Client `<REDACTED_ID>` — name: "qa-agent-49-test-client" (workspace: <REDACTED_ID>)
+- Task `<REDACTED_ID>` — name: "qa-agent-49-test-task" (workspace: <REDACTED_ID>, project: <REDACTED_ID>)
 
 These are test-only resources with the `qa-agent-49-` prefix. They are safe to leave
 in the probe workspace. A workspace admin can manually remove them if desired.

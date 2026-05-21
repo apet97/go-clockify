@@ -12,7 +12,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
 
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry())

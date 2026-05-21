@@ -1,0 +1,44 @@
+{
+  "cleanup": {
+    "common_project_cleanup": {
+      "archive_status": 200,
+      "delete_shape": {
+        "keys": [
+          "archived",
+          "billable",
+          "budgetEstimate",
+          "clientId",
+          "clientName",
+          "color",
+          "costRate",
+          "duration",
+          "estimate",
+          "estimateReset",
+          "hourlyRate",
+          "id",
+          "memberships",
+          "name",
+          "note",
+          "public",
+          "template",
+          "timeEstimate",
+          "workspaceId"
+        ],
+        "type": "object"
+      },
+      "delete_status": 200
+    }
+  },
+  "created": {
+    "assignment_ids": [],
+    "entry_ids": [],
+    "project_ids": [
+      "<redacted-id:f65eb56a7b>",
+      "<redacted-id:7b9993f176>"
+    ]
+  },
+  "endpoint_id": "codex.reconciliation.cleanup",
+  "notes": "Cleanup summary for the live reconciliation rest probe. Individual receipts include endpoint-specific cleanup details.",
+  "probe_kind": "cleanup-summary",
+  "timestamp_utc": "2026-05-21T19:41:04.257247Z"
+}

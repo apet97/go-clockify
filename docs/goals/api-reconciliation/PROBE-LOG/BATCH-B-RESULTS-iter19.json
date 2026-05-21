@@ -1,0 +1,76 @@
+{
+  "batch": "B",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "endpoints": [
+    {
+      "endpoint_id": "post.workspaces.scheduling.assignments.copy",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.copy-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: copySchedulingAssignment\n  summary: Copy a scheduling assignment\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.copy-happy-path.json\n  x-notes: |\n    GET /.../{assignmentId}/copy returns 405 (Spring-MVC: path registered, wrong method).\n    POST /.../{assignmentId}/copy with empty body returns 400 'must not be null' (path exists,\n    requires valid payload). No typed tool in GOCLMCP implements this path. Raw writes blocked\n    so full live success cannot be demonstrated. Status is UNCONFIRMED-AGREE (stronger than bare\n    405 due to 400 from POST confirming path is active).\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: assignmentId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Copied assignment",
+      "notes": "GET returns 405, POST returns 400 (not 404), confirming endpoint exists on live Clockify. No GOCLMCP typed tool covers this path. Cannot achieve LIVE-VERIFIED because raw writes are blocked."
+    },
+    {
+      "endpoint_id": "post.workspaces.scheduling.assignments.projects.totals",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/projects/totals",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.projects.totals-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: getProjectScheduleTotals\n  summary: Get scheduling totals per project\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.projects.totals-happy-path.json\n  x-notes: |\n    Tool clockify_get_project_schedule_totals (handler getProjectScheduleTotalsRaw in scheduling.go:648)\n    POSTs to /scheduling/assignments/projects/totals and returned 200 with 5 project totals\n    including scheduled hours and Reports-API-enriched financials. Source code confirmed:\n    scheduling.go line 648-652.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            start:\n              type: string\n            end:\n              type: string\n            pageSize:\n              type: integer\n            projectId:\n              type: string\n  responses:\n    '200':\n      description: Array of project scheduling totals",
+      "notes": "LIVE-VERIFIED: clockify_scheduling_project_totals tool POSTs to this path and returned 200 with real data. Source at scheduling.go:648-652."
+    },
+    {
+      "endpoint_id": "post.workspaces.scheduling.assignments.recurring",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.recurring-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: createRecurringSchedulingAssignment\n  summary: Create a recurring scheduling assignment\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.recurring-happy-path.json\n  x-notes: |\n    clockify_create_assignment (scheduling.go:465) POSTs to /scheduling/assignments/recurring.\n    GET probe on the path returns 405 (path registered, POST-only).\n    Live assignments exist in workspace proving the POST endpoint has been used successfully.\n    Update uses PATCH /recurring/{id}, delete uses DELETE /recurring/{id} (per CLAUDE.md).\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    content:\n      application/json:\n        schema:\n          type: object\n          required:\n            - userId\n            - projectId\n            - start\n            - end\n            - hoursPerDay\n          properties:\n            userId:\n              type: string\n            projectId:\n              type: string\n            start:\n              type: string\n            end:\n              type: string\n            hoursPerDay:\n              type: number\n            billable:\n              type: boolean\n            includeNonWorkingDays:\n              type: boolean\n            startTime:\n              type: string\n            taskId:\n              type: string\n            note:\n              type: string\n            recurringAssignment:\n              type: object\n  responses:\n    '200':\n      description: Array of created assignment(s)",
+      "notes": "LIVE-VERIFIED: source code at scheduling.go:465 confirms POST to /recurring; GET probe returns 405; live assignments in workspace confirm endpoint has been used."
+    },
+    {
+      "endpoint_id": "post.workspaces.scheduling.assignments.user-filter.totals",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.user-filter.totals-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: getUserFilterScheduleTotals\n  summary: Get scheduling totals per user with optional user filter\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.user-filter.totals-happy-path.json\n  x-notes: |\n    getWorkspaceScheduleUserTotalsRaw (scheduling_totals.go:127) POSTs to\n    /scheduling/assignments/user-filter/totals. Direct POST curl returned 200 with user totals\n    array. GET probe returns 405. Backs clockify_get_workspace_schedule_user_totals and\n    clockify_scheduling_capacity tools.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  requestBody:\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            start:\n              type: string\n            end:\n              type: string\n            page:\n              type: integer\n            pageSize:\n              type: integer\n            search:\n              type: string\n            statusFilter:\n              type: string\n            userFilter:\n              type: object\n            userGroupFilter:\n              type: object\n  responses:\n    '200':\n      description: Array of user scheduling totals",
+      "notes": "LIVE-VERIFIED: direct POST returns 200 with real user totals. Source at scheduling_totals.go:127-132. GET returns 405."
+    },
+    {
+      "endpoint_id": "post.workspaces.scheduling.assignments.users.totals",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments/users/totals",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.users.totals-wrong-path.json"
+      ],
+      "discrepancies": [
+        {
+          "type": "endpoint-absent",
+          "severity": "HIGH",
+          "openapi_claim": "POST /workspaces/{workspaceId}/scheduling/assignments/users/totals exists (source: ours only in TRUTH.openapi.yaml)",
+          "live_reality": "Both GET and POST return 404 'No static resource' — path is not registered on live Clockify",
+          "goclmcp_impact": "GOCLMCP does not use this path. Multi-user totals is served by POST /user-filter/totals (LIVE-VERIFIED). Single-user capacity uses GET /users/{userId}/totals.",
+          "action": "Remove this endpoint from OpenAPI spec. Replace with post.workspaces.scheduling.assignments.user-filter.totals which is the correct live path."
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: getUserScheduleTotalsAggregate\n  summary: Get scheduling totals per user (workspace-wide)\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments.users.totals-wrong-path.json\n  x-notes: |\n    LIVE-OVERRIDE: Both GET and POST to /scheduling/assignments/users/totals return 404\n    'No static resource' on live Clockify. This is NOT a Spring-MVC 405 (wrong method);\n    the path is genuinely absent. OpenAPI spec (source: ours only) incorrectly claims this\n    endpoint exists. The actual multi-user totals endpoint is\n    POST /scheduling/assignments/user-filter/totals (LIVE-VERIFIED in this batch).\n    GOCLMCP correctly does not use this path.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  responses:\n    '404':\n      description: Endpoint absent on live Clockify (No static resource)",
+      "notes": "LIVE-OVERRIDE: GET returns 404, POST returns 404. Path does not exist on live Clockify. OpenAPI spec entry should be removed or corrected to point to /user-filter/totals."
+    }
+  ]
+}

@@ -22,7 +22,7 @@ const (
 // AGENTS.md so an accidental tool add/remove/rename or a missing schema is
 // caught immediately.
 func TestProductContractDoesNotRegress(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	reg := svc.FullAccessRegistry()
 
 	if len(reg) != productContractFullRegistryTools {
@@ -103,7 +103,7 @@ func TestProductContractDoesNotRegress(t *testing.T) {
 // loaded registry.
 func TestDefaultToolsetEnvAdvertises16WhileRegistryLoads156(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_TOOLSET", "")
 
 	cfg, err := config.LoadOneUser()

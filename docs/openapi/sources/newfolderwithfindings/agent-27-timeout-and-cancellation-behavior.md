@@ -36,7 +36,7 @@ PASS WITH CONCERNS
 go build ./cmd/clockify-mcp/
 
 # Doctor audit
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e ./clockify-mcp doctor
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> ./clockify-mcp doctor
 
 # Cancellation unit tests (internal/mcp)
 go test -race -run "TestCancellation" ./internal/mcp/ -v -count=1

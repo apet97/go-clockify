@@ -1,0 +1,57 @@
+{
+  "endpoint_id": "post.workspaces.users.roles",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/users/{userId}/roles",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "tool": "clockify_users_role",
+    "args": {
+      "user_id": "<redacted-id:706f58c94f>",
+      "role": "WORKSPACE_ADMIN",
+      "dry_run": true
+    }
+  },
+  "response": {
+    "ok": true,
+    "action": "clockify_users_role",
+    "entity": "user",
+    "ids": {
+      "role": "WORKSPACE_ADMIN",
+      "userId": "<redacted-id:706f58c94f>",
+      "workspaceId": "<redacted-id:7955161f32>"
+    },
+    "data": {
+      "dry_run": true,
+      "note": "No changes were made.",
+      "payload": {
+        "entityId": "<redacted-id:7955161f32>",
+        "role": "WORKSPACE_ADMIN"
+      },
+      "tool": "clockify_update_user_role"
+    },
+    "meta": {
+      "role": "WORKSPACE_ADMIN",
+      "userId": "<redacted-id:706f58c94f>",
+      "workspaceId": "<redacted-id:7955161f32>"
+    },
+    "changed": {}
+  },
+  "facts_observed": {
+    "mcp_tool": "clockify_update_user_role",
+    "path_constructed": "/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>/roles",
+    "live_method_from_code": "POST",
+    "note_re_claude_md_claim": "CLAUDE.md says 'clockify_users_role uses PATCH to same path' — this is INCORRECT. Source code (user_admin.go:572) uses s.Client.Post(), not Patch(). The MCP tool uses POST /workspaces/{ws}/users/{userId}/roles.",
+    "dry_run_payload": {"entityId": "<redacted-id:7955161f32>", "role": "WORKSPACE_ADMIN"},
+    "official_spec": "POST and DELETE both documented at /users/{userId}/roles — our code matches POST for role grants",
+    "both_specs_agree": true
+  },
+  "code_evidence": {
+    "file": "internal/tools/user_admin.go",
+    "line": 572,
+    "snippet": "if err := s.Client.Post(ctx, path, payload, &result); err != nil {",
+    "path_construction_line": 567,
+    "path_snippet": "path, err := paths.Workspace(wsID, \"users\", userID, \"roles\")"
+  },
+  "notes": "Dry run succeeded. CLAUDE.md comment 'clockify_users_role uses PATCH to same path' is erroneous — code uses POST (s.Client.Post at line 572). Official spec also lists POST /users/{userId}/roles for role grant (createUserRole). Both official spec and our implementation agree on POST. stripUserRoles (for REGULAR) uses DELETE via s.Client.Delete at line ~966. No live network available; method confirmed via code analysis + dry-run payload shape."
+}

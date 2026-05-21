@@ -1,0 +1,26 @@
+{
+  "endpoint_id": "get.workspaces.time-off.requests.single",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-off/requests/{requestId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:58:01Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/requests/999nonexistent",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers_redacted": {},
+    "body_keys": [],
+    "body_sample": "{\"message\":\"No static resource v1/workspaces/[REDACTED-WORKSPACE]/time-off/requests/999nonexistent.\"}"
+  },
+  "facts_observed": {
+    "response_type": "404 'No static resource' — Spring MVC path-not-found message, ambiguous between route-missing and entity-not-found",
+    "probe_succeeded": false,
+    "stuck_reason": "Cannot distinguish 'route does not exist' from 'entity not found' without a real time-off request ID. No time-off requests available via GET. Need POST to retrieve listing."
+  },
+  "notes": "UNRESOLVED-NO-LIVE: '404 No static resource' is Spring MVC's path-not-found message, not an entity-not-found. May mean route doesn't exist as GET. Cannot test with real ID without first creating a request. Marking UNRESOLVED."
+}

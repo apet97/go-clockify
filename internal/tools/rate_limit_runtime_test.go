@@ -43,7 +43,7 @@ func dispatchToolCall(t *testing.T, srv *mcp.Server, id int, tool string) map[st
 // returns is exposed as `structuredContent` and validates against the output
 // schema of a read tool, an ordinary write tool, and a destructive tool.
 func TestRateLimitedStructuredContentConformsToOutputSchema(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	reg := svc.FullAccessRegistry()
 
 	schemas := make(map[string]map[string]any, len(reg))

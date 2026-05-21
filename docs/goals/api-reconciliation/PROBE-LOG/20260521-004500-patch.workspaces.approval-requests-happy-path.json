@@ -1,0 +1,27 @@
+{
+  "endpoint_id": "patch.workspaces.approval-requests",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:45:00Z",
+  "request": {
+    "method": "PATCH",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/approval-requests/<redacted-id:b7f10deabb>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"status": "APPROVED"}
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["id", "request", "owner", "creator", "status", "auditTrail", "dateRange", "durationTotals", "moneyTotals", "financials", "entrySummary", "expenseSummary"],
+    "body_sample": "{\"id\":\"<redacted-id:b7f10deabb>\",\"status\":\"APPROVED\",\"moneyTotals\":\"[unavailable]\",\"financials\":\"[unavailable]\"}"
+  },
+  "facts_observed": {
+    "response_shape": "Full approval object with id, request, owner, creator, status, auditTrail, dateRange, durationTotals, entrySummary, expenseSummary; moneyTotals and financials fields present but unavailable (no billing configured)",
+    "status_confirmed": "APPROVED",
+    "path_note": "Approval request ID is the {approvalRequestId} segment — different path from the collection /approval-requests (no ID segment)",
+    "tool_note": "Used clockify_approvals_approve MCP tool which wraps PATCH /workspaces/{wId}/approval-requests/{id}"
+  },
+  "notes": "LIVE-VERIFIED. Approved approval request <redacted-id:b7f10deabb> → status=APPROVED (HTTP 200). Response is full approval object; moneyTotals/financials unavailable without billing config. Both specs agree on this path."
+}

@@ -1,0 +1,42 @@
+{
+  "endpoint_id": "post.workspaces.projects.tasks",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "POST via clockify_tasks_create",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:c3f51f5227>/tasks",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "name": "MCP-LIVE-RECON-20260521-020000-D-task-probe",
+      "projectId": "<redacted-id:c3f51f5227>"
+    }
+  },
+  "response": {
+    "status": "200",
+    "headers_redacted": {},
+    "body_sample": {
+      "id": "<redacted-id:e9a118759e>",
+      "name": "MCP-LIVE-RECON-20260521-020000-D-task-probe",
+      "projectId": "<redacted-id:c3f51f5227>",
+      "billable": true,
+      "duration": "PT0S",
+      "estimate": "PT0S",
+      "status": "ACTIVE"
+    }
+  },
+  "facts_observed": {
+    "response_shape": "Single task object (not array)",
+    "top_level_fields": ["id", "name", "projectId", "billable", "duration", "estimate", "status"],
+    "status_default": "ACTIVE",
+    "billable_default": "true (inherits project setting)",
+    "duration_default": "PT0S",
+    "estimate_default": "PT0S (string, not object like project estimate)",
+    "note_on_task_estimate": "Task estimate is a plain ISO duration string, not an estimate object",
+    "assignee_fields_absent": "No userId/assigneeIds in response when no assignee given",
+    "cleanup": "Task immediately deleted via clockify_tasks_delete (required marking DONE first, handled transparently by tool)"
+  },
+  "notes": "LIVE-VERIFIED. POST /workspaces/{wId}/projects/{projectId}/tasks creates and returns a single task object. The task is created with ACTIVE status and inherits billable from the project. The estimate field is a plain ISO-8601 duration string (not the nested object used by projects). Cleanup complete — task deleted successfully."
+}

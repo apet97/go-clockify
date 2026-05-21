@@ -1,0 +1,88 @@
+{
+  "batch": "B",
+  "ts": "2026-05-21T01:00:00Z",
+  "endpoints": [
+    {
+      "endpoint_id": "patch.workspaces.policies.archive",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/policies/{policyId}/archive",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-patch.workspaces.policies.archive-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "kind": "wrong-path",
+          "spec_path": "/workspaces/{workspaceId}/policies/{policyId}/archive",
+          "live_path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
+          "detail": "The /policies/* subtree (without 'time-off' prefix) returns Spring-MVC 'No static resource' 404. Archive is achieved via PATCH on the standard time-off policy endpoint with body {status:'ARCHIVED'|'ACTIVE'}, not a dedicated /archive sub-resource."
+        }
+      ],
+      "truth_yaml": "patch_workspaces_policies_archive:\n  operationId: archiveOrActivatePolicy\n  summary: Archive or reactivate a time-off policy via status field on the policy PATCH endpoint\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-patch.workspaces.policies.archive-path-probe.json\n  x-notes: |\n    Spec path /workspaces/{wId}/policies/{policyId}/archive does not exist live.\n    The /policies/* root (without 'time-off' prefix) returns Spring-MVC 'No static resource' 404.\n    Archive is implemented as PATCH /workspaces/{wId}/time-off/policies/{policyId}\n    with body {\"status\": \"ARCHIVED\"} or {\"status\": \"ACTIVE\"} for reactivation.\n    Our clockify_time_off_archive tool correctly uses this path.\n    Our raw_allowlist_gen.go line 74 lists the non-prefixed path as a spec entry;\n    line 130+ covers the actual live time-off prefixed path.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: policyId\n      in: path\n      required: true\n  requestBody:\n    description: Use {\"status\": \"ARCHIVED\"} to archive or {\"status\": \"ACTIVE\"} to reactivate\n    content:\n      application/json:\n        schema:\n          type: object\n          properties:\n            status:\n              type: string\n              enum: [ARCHIVED, ACTIVE]\n  responses:\n    '200':\n      description: Updated policy object\n",
+      "notes": "LIVE-OVERRIDE: The spec path uses /policies/{policyId}/archive which is absent. Live Clockify achieves archive via the status field on PATCH /workspaces/{wId}/time-off/policies/{policyId}. Our tool implementation is correct."
+    },
+    {
+      "endpoint_id": "patch.workspaces.policies.requests",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-patch.workspaces.policies.requests-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "kind": "wrong-path-prefix",
+          "spec_path": "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
+          "live_path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+          "detail": "The /policies/* subtree (without 'time-off' prefix) returns Spring-MVC 'No static resource' 404. The time-off-prefixed path /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId} returns 405 on GET, confirming it IS registered server-side and supports PATCH."
+        }
+      ],
+      "truth_yaml": "patch_workspaces_policies_requests:\n  operationId: updateTimeOffRequest\n  summary: Update (approve/deny/withdraw) a time-off request — live path uses time-off prefix\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-patch.workspaces.policies.requests-path-probe.json\n  x-notes: |\n    Spec path /workspaces/{wId}/policies/{policyId}/requests/{requestId} does not exist live.\n    The /policies/* root without 'time-off' prefix returns Spring-MVC 'No static resource' 404.\n    The live path is PATCH /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId}.\n    GET on the time-off-prefixed path returns 405 'Request method GET is not supported',\n    confirming path is registered and PATCH would be the supported method.\n    Our raw_allowlist_gen.go lists both variants (lines 75 and 147).\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: policyId\n      in: path\n      required: true\n    - name: requestId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Updated time-off request object\n",
+      "notes": "LIVE-OVERRIDE: The spec path uses /policies/{policyId}/requests/{requestId} (no time-off prefix) which is absent live. The real path is /time-off/policies/{policyId}/requests/{requestId} confirmed by 405 on GET. Our spec entry is the non-prefixed alias path from the official Clockify documentation; live routing uses the time-off-prefixed path."
+    },
+    {
+      "endpoint_id": "patch.workspaces.projects.custom-fields",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-patch.workspaces.projects.custom-fields-path-probe.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "patch_workspaces_projects_custom_fields:\n  operationId: updateProjectCustomField\n  summary: Update a custom field configuration on a specific project\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-patch.workspaces.projects.custom-fields-path-probe.json\n  x-notes: |\n    GET /workspaces/{wId}/projects/{pId}/custom-fields returns HTTP 200 with field list (confirmed).\n    GET /workspaces/{wId}/projects/{pId}/custom-fields/{cfId} returns HTTP 405 'Request method GET\n    is not supported', confirming the single-field path IS registered on the server.\n    PATCH on this path is the expected method and is included in our raw_allowlist_gen.go (line 84).\n    Both our spec and the official Clockify spec include this endpoint.\n    Raw writes disabled — could not send an actual PATCH body to confirm 200 response.\n    Status UNCONFIRMED-AGREE: path exists, method registration inferred from 405, both specs agree.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: projectId\n      in: path\n      required: true\n    - name: customFieldId\n      in: path\n      required: true\n  requestBody:\n    description: Partial update of custom field configuration on project (status, default value, etc.)\n    content:\n      application/json:\n        schema:\n          type: object\n  responses:\n    '200':\n      description: Updated project custom field configuration\n",
+      "notes": "UNCONFIRMED-AGREE: Path is registered (405 on GET confirms server knows the route). Both specs agree. Raw writes disabled so actual PATCH not attempted. Path family works — list endpoint returns 200 with field data."
+    },
+    {
+      "endpoint_id": "patch.workspaces.projects.template",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/projects/{projectId}/template",
+      "verification_status": "UNCONFIRMED-AGREE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-patch.workspaces.projects.template-path-probe.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "patch_workspaces_projects_template:\n  operationId: updateProjectTemplate\n  summary: Set or update the template configuration for a project\n  x-verification-status: UNCONFIRMED-AGREE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-patch.workspaces.projects.template-path-probe.json\n  x-notes: |\n    GET /workspaces/{wId}/projects/{pId}/template returns HTTP 405 'Request method GET is not\n    supported', confirming the path IS registered server-side and PATCH is the supported method.\n    A project with template:true exists in the workspace (id <redacted-id:700c44d7aa>).\n    Both our spec and the official Clockify spec include this endpoint.\n    Our raw_allowlist_gen.go includes this path at line 87.\n    Raw writes disabled — actual PATCH not attempted.\n    Status UNCONFIRMED-AGREE: path is registered (405 on GET), both specs agree.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: projectId\n      in: path\n      required: true\n  requestBody:\n    description: Template configuration update for the project\n    content:\n      application/json:\n        schema:\n          type: object\n  responses:\n    '200':\n      description: Updated project with template settings applied\n",
+      "notes": "UNCONFIRMED-AGREE: Path is registered (405 on GET confirms server knows the route). Both specs agree. Raw writes disabled so actual PATCH not attempted. A real template project exists in the workspace."
+    },
+    {
+      "endpoint_id": "patch.workspaces.templates",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/templates/{templateId}",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-patch.workspaces.templates-path-reference.json",
+        "PROBE-LOG/20260521-233258-delete.workspaces.templates-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "kind": "path-family-absent",
+          "spec_path": "/workspaces/{workspaceId}/templates/{templateId}",
+          "live_path": "N/A — workspace-level template path family does not exist",
+          "detail": "GET /workspaces/{wId}/templates returns HTTP 404 (plain upstream 404, not Spring-MVC routing miss). The workspace-level template path family is entirely absent from live Clockify. Only project-level templates exist via /workspaces/{wId}/projects/{pId}/templates."
+        }
+      ],
+      "truth_yaml": "patch_workspaces_templates:\n  operationId: updateWorkspaceTemplate\n  summary: Update a workspace-level template — NOT LIVE; workspace templates are absent\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-233258-delete.workspaces.templates-path-probe.json\n    - PROBE-LOG/20260521-010000-patch.workspaces.templates-path-reference.json\n  x-notes: |\n    Evidence from iter15 BATCH-C (20260521-233258-delete.workspaces.templates-path-probe.json):\n    GET /workspaces/{wId}/templates returns HTTP 404 with plain upstream message\n    'Clockify request failed (HTTP 404)' — not a Spring-MVC 'No static resource' routing miss,\n    indicating the route exists but the resource/feature is disabled or not deployed.\n    The workspace-level template path family (/workspaces/{wId}/templates/*) is entirely absent\n    from live Clockify in the test workspace.\n    Only project-level templates work via /workspaces/{wId}/projects/{pId}/templates\n    (confirmed via clockify_projects_templates_list tool returning results).\n    The official spec lists this endpoint but it is not live.\n    PATCH /workspaces/{wId}/templates/{templateId} is therefore also absent live.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: templateId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Not reachable — workspace-level template path absent on live\n",
+      "notes": "LIVE-OVERRIDE: Official spec includes this endpoint but it is not live. The workspace-level /templates/* path family returns HTTP 404 (upstream not-found). Only project-level templates (/projects/{pId}/templates) work on live Clockify. Evidence from iter15 BATCH-C carried forward — no new probe needed."
+    }
+  ]
+}

@@ -9,7 +9,7 @@ import (
 )
 
 func TestEveryResourceHasATitle(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	resources, err := svc.ListResources(context.Background())
 	if err != nil {
 		t.Fatalf("ListResources: %v", err)
@@ -25,7 +25,7 @@ func TestEveryResourceHasATitle(t *testing.T) {
 }
 
 func TestEveryResourceTemplateHasATitle(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	templates, err := svc.ListResourceTemplates(context.Background())
 	if err != nil {
 		t.Fatalf("ListResourceTemplates: %v", err)

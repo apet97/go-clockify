@@ -6,12 +6,12 @@ import (
 )
 
 func FuzzSafeRawPath(f *testing.F) {
-	const workspaceID = "65b382b606de527a7ee2b60e"
+	const workspaceID = "000000000000000000000001"
 	for _, seed := range []string{
 		"/user",
 		"/workspaces/{workspaceId}/projects",
-		"workspaces/65b382b606de527a7ee2b60e/time-entries",
-		"https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e/projects",
+		"workspaces/000000000000000000000001/time-entries",
+		"https://api.clockify.me/api/v1/workspaces/000000000000000000000001/projects",
 		"/workspaces/other/projects",
 		"/workspaces/{workspaceId}/../projects",
 		"/workspaces/{workspaceId}//projects",

@@ -1,5 +1,5 @@
 # Clockify Approvals — READ endpoints (Agent A)
-# Source: live probes against ws 65b382b606de527a7ee2b60e on 2026-05-12.
+# Source: live probes against ws <REDACTED_ID> on 2026-05-12.
 # Base: https://api.clockify.me/api/v1
 #
 # Findings vs doc (APPROVALDOC.md):

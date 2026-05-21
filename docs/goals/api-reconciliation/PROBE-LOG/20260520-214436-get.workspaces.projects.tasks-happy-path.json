@@ -1,0 +1,33 @@
+{
+  "endpoint_id": "get.workspaces.projects.tasks",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:44:36Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:7eddf3906d>/tasks",
+    "query": {"page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["array"],
+    "body_sample": "[{\"assigneeId\":null,\"assigneeIds\":[],\"billable\":true,\"budgetEstimate\":0,\"costRate\":null,\"duration\":\"PT20S\",\"estimate\":\"PT0S\",\"hourlyRate\":null,\"id\":\"<redacted-id:57269d4880>\",\"name\":\"Login redirect loop in auth module\",\"projectId\":\"<redacted-id:7eddf3906d>\",\"status\":\"ACTIVE\",\"userGroupIds\":[]}]"
+  },
+  "facts_observed": {
+    "response_shape": "bare array",
+    "page_size_respected": true,
+    "item_count": 1,
+    "item_keys": ["assigneeId","assigneeIds","billable","budgetEstimate","costRate","duration","estimate","hourlyRate","id","name","projectId","status","userGroupIds"],
+    "assigneeId_nullable": true,
+    "costRate_nullable": true,
+    "hourlyRate_nullable": true,
+    "status_value": "ACTIVE",
+    "estimate_type": "ISO 8601 duration string",
+    "duration_type": "ISO 8601 duration string (accumulated)"
+  },
+  "notes": "Bare array response. page-size respected. Empty project returned 0 tasks; this project has 1. Task includes userGroupIds array (empty when no groups assigned). budgetEstimate is integer (0 when not set)."
+}

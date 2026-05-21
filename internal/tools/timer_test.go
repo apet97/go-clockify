@@ -68,6 +68,45 @@ func TestTimerStartInheritsProjectBillable(t *testing.T) {
 	}
 }
 
+func TestStartTimerForwardsCustomFields(t *testing.T) {
+	var postBody map[string]any
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/ws1/projects/p1" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.Project{ID: "p1", Billable: true})
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			respondJSON(t, w, []clockify.TimeEntry{})
+		case r.URL.Path == "/workspaces/ws1/time-entries" && r.Method == http.MethodPost:
+			if err := json.NewDecoder(r.Body).Decode(&postBody); err != nil {
+				t.Fatalf("decode timer post body: %v", err)
+			}
+			respondJSON(t, w, clockify.TimeEntry{ID: "te1", ProjectID: "p1", Billable: true})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	res, err := svc.StartTimerArgs(context.Background(), map[string]any{
+		"project_id": "p1",
+		"custom_fields": []any{
+			map[string]any{"field_id": "6a00f6bc2568d3d293061e2a", "value": "Site A"},
+		},
+	})
+	mustOK(t, res, err, oneUserToolEntriesTimerStart)
+	fields, ok := postBody["customFields"].([]any)
+	if !ok || len(fields) != 1 {
+		t.Fatalf("timer POST customFields = %T %#v, want one value", postBody["customFields"], postBody["customFields"])
+	}
+	field, _ := fields[0].(map[string]any)
+	if field["customFieldId"] != "6a00f6bc2568d3d293061e2a" || field["value"] != "Site A" {
+		t.Fatalf("timer POST custom field not normalized: %#v", field)
+	}
+}
+
 func TestStartTimer_RunningTimerBlocks(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {

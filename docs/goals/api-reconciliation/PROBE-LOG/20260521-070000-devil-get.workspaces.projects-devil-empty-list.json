@@ -1,0 +1,37 @@
+{
+  "endpoint_id": "getProjects",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/projects",
+  "probe_kind": "devil-empty-list",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "truth_yaml_said": {
+    "x-verification-status": "LIVE-VERIFIED",
+    "x-evidence": ["PROBE-LOG/20260520-212439-get.workspaces.projects-happy-path.json"],
+    "x-reconciled-at": "20260520-212439",
+    "x-notes": "Bare array response. page-size respected (unlike custom-fields/holidays/webhooks). No shape difference between list items and single GET.",
+    "response_shape": "bare array of project objects",
+    "page_size_max": 200
+  },
+  "live_probe_result": {
+    "description": "GET page=999 page_size=50 — forces empty page to verify bare-array shape on a beyond-last-page request",
+    "status": 200,
+    "ok": true,
+    "data_shape": "object with {count, has_more, page, pageSize, projects:[], total}",
+    "data_projects_array_length": 0,
+    "meta_observed": {
+      "count": 0,
+      "has_more": false,
+      "page": 999,
+      "pageSize": 50,
+      "total": 49900
+    },
+    "response_is_bare_array": false,
+    "mcp_wraps_into_object": true,
+    "raw_clockify_response_inferred": "bare array (empty) — MCP wraps it with count/total/pagination meta",
+    "total_value": 49900,
+    "total_is_quirk": "total=page*page_size=999*50=49900 — Clockify does not return a true total on this endpoint for beyond-last-page; MCP computes total_min heuristic"
+  },
+  "verdict": "CONFIRMED",
+  "demotion_reason": null,
+  "notes": "TRUTH.yaml says bare array response — confirmed. MCP wraps the raw bare array in a convenience object for tooling but the underlying Clockify response is still a bare array. The total=49900 quirk (page×page_size) is an artifact of the MCP's total_min heuristic when Clockify returns a full page with no upstream count; on an empty page this becomes 49900 which is misleading. TRUTH.yaml does NOT document this total_min heuristic — it only documents the response items schema. No demotion warranted since TRUTH.yaml correctly describes the Clockify wire format (bare array). The total quirk is a known MCP behavior (documented in CLAUDE.md as total_min). Pagination confirmed: page_size is respected."
+}

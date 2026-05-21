@@ -17,7 +17,7 @@ PASS WITH CONCERNS
 
 ## Live API probe lab files used
 
-- `/tmp/clockify-livetest.env` — API key (****REDACTED****), workspace ID (`65b382b606de527a7ee2b60e`), workspace confirm guard
+- `/tmp/clockify-livetest.env` — API key (****REDACTED****), workspace ID (`<REDACTED_ID>`), workspace confirm guard
 - `probes/lib/common.sh` — shared probe library with `probe_redact()`, `probe_curl()`, cleanup registry
 - `CLAUDE.md` — lab rules (hard limits, soft preferences)
 - `USERDOC.md` — user API docs
@@ -59,7 +59,7 @@ curl -H "X-Api-Key: ****REDACTED****" "https://api.clockify.me/api/v1/workspaces
 # 200 OK — workspace: WORKSPACE
 
 curl -H "X-Api-Key: ****REDACTED****" "https://api.clockify.me/api/v1/user"
-# 200 OK — user: alpettest1@gmail.com
+# 200 OK — user: <EMAIL>
 
 # Create + cleanup test project
 POST /workspaces/{id}/projects {"name":"qa-agent-45-env-test-project"}  # 201 → id=6a00f6...
@@ -78,7 +78,7 @@ git check-ignore -v .env deploy/.env examples/docker-compose.env
 | Probe | Endpoint | Method | Result |
 |-------|----------|--------|--------|
 | Workspace info | `/workspaces/{id}` | GET | 200, name="WORKSPACE" |
-| Current user | `/user` | GET | 200, email="alpettest1@gmail.com" |
+| Current user | `/user` | GET | 200, email="<EMAIL>" |
 | List projects | `/workspaces/{id}/projects?page-size=5` | GET | 200, 5 projects |
 | Create test project | `/workspaces/{id}/projects` | POST | 201, name="qa-agent-45-env-test-project" |
 | Archive project | `/workspaces/{id}/projects/{id}` | PUT | 200, archived=true |
@@ -186,7 +186,7 @@ $ git check-ignore -v .env deploy/.env examples/docker-compose.env
 
 ## Cleanup performed
 
-- Created test project `qa-agent-45-env-test-project` (id: `6a00f660d9647159dc10349c`)
+- Created test project `qa-agent-45-env-test-project` (id: `<REDACTED_ID>`)
 - Archived then deleted the test project — confirmed 200 DELETE
 - No other resources created or modified
 

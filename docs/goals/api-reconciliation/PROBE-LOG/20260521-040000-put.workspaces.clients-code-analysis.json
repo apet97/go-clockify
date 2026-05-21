@@ -1,0 +1,38 @@
+{
+  "endpoint_id": "put.workspaces.clients",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/clients/{clientId}",
+  "probe_kind": "code-analysis",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "note": "No live network available (api.clockify.me DNS resolution failed). No dry_run parameter in MCP schema for clockify_clients_update. Probe based on code analysis and prior live evidence from LIVE-VERIFIED delete in iter11."
+  },
+  "response": {
+    "network_error": "Get 'https://api.clockify.me/...': dial tcp: lookup api.clockify.me: no such host",
+    "dry_run_available_in_mcp_schema": false,
+    "dry_run_available_in_handler": true
+  },
+  "facts_observed": {
+    "path_constructed": "/workspaces/{workspaceId}/clients/{clientId}",
+    "live_method_from_code": "PUT",
+    "http_call": "s.Client.PutWithQuery(ctx, clientPath, query, payload, &updated)",
+    "code_file": "internal/tools/clients.go",
+    "code_line": 134,
+    "path_param_name_ours": "clientId",
+    "path_param_name_official": "id",
+    "param_equivalence": "Both refer to the same URL position; different variable names in spec only",
+    "official_spec_method": "PUT (operationId: updateClient)",
+    "both_specs_agree_on_put": true,
+    "related_prior_live_evidence": "PROBE-LOG/20260521-001500-delete.workspaces.clients-happy-path.json confirms path /workspaces/{wId}/clients/{clientId} is registered (client was GET'd and DELETE'd)",
+    "update_strategy": "fetch-then-merge (GET existing, merge caller args, PUT full replacement body)"
+  },
+  "code_evidence": {
+    "file": "internal/tools/clients.go",
+    "line_path": 72,
+    "path_snippet": "clientPath, err := paths.Workspace(wsID, \"clients\", clientID)",
+    "line_http": 134,
+    "http_snippet": "if err := s.Client.PutWithQuery(ctx, clientPath, query, payload, &updated); err != nil {",
+    "query_params": ["archive-projects", "mark-tasks-as-done"]
+  },
+  "notes": "PUT /workspaces/{workspaceId}/clients/{clientId} is confirmed by both specs and our implementation. Official spec uses path param {id}, our spec uses {clientId} — same URL position, different variable name only. The path is registered (confirmed by delete probe in iter11 which required GET to resolve the client first). The MCP tool clockify_clients_update uses PutWithQuery, consistent with a full-replacement body PUT (Clockify requires all fields including name). Status: UNCONFIRMED-AGREE (both specs agree; prior GET/DELETE probes confirm path is live; no fresh PUT live probe due to network outage)."
+}

@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.templates.single",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:08:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/templates/fake-template-id",
+  "query": {},
+  "status_code": 400,
+  "status_text": "Bad Request (invalid_request)",
+  "response_body_sample": {
+    "message": "template not found in this workspace"
+  },
+  "verdict": "UNRESOLVED-NO-LIVE",
+  "notes": "Endpoint route exists (meaningful 'template not found' error, not Spring-MVC 404). No templates exist in this workspace to test happy-path. Cannot verify response shape. Official spec only."
+}

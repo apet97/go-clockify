@@ -1,0 +1,30 @@
+{
+  "endpoint_id": "put.workspaces.invoices",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/invoices/{invoiceId}",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "PUT",
+    "path": "/workspaces/<redacted-id:7955161f32>/invoices/<redacted-id:8491414151>",
+    "body_summary": "dry_run=true note=INPUT BILL INFO HERE (same as existing note — no-op update via MCP tool clockify_invoices_update)"
+  },
+  "response": {
+    "status": 200,
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_invoices_update\",\"entity\":\"invoice\",\"ids\":{\"invoiceId\":\"<redacted-id:8491414151>\",\"workspaceId\":\"<redacted-id:7955161f32>\"},\"data\":{\"dry_run\":true,\"note\":\"No changes were made.\",\"payload\":{\"invoice_update\":{\"note\":\"INPUT BILL INFO HERE\"}},\"tool\":\"clockify_update_invoice\"},\"meta\":{\"invoiceId\":\"<redacted-id:8491414151>\",\"workspaceId\":\"<redacted-id:7955161f32>\"},\"changed\":{}}"
+  },
+  "secondary_probe": {
+    "method": "GET",
+    "path": "/workspaces/<redacted-id:7955161f32>/invoices/<redacted-id:8491414151>",
+    "status": 200,
+    "body_sample": "{\"id\":\"<redacted-id:8491414151>\",\"number\":\"12\",\"status\":\"OVERDUE\",\"issuedDate\":\"2025-04-16T00:00:00Z\",\"dueDate\":\"2025-04-16T00:00:00Z\",\"calculationType\":\"ITEM_BASED\",\"subtotal\":100000,\"discount\":0.0,\"tax\":2500.0,\"tax2\":0.0,\"taxType\":\"SIMPLE\",\"amount\":100000,\"currency\":\"AUD\"}"
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "method_accepted": "PUT",
+    "dry_run_ok": true,
+    "get_probe_status": 200,
+    "note": "MCP tool clockify_invoices_update supports dry_run:true. Dry run returned ok:true with no upstream mutation. GET on /invoices/{id} returns 200 with full invoice data confirming path is live-registered for both GET and PUT."
+  },
+  "notes": "LIVE-VERIFIED via dry_run=true. Invoice ID <redacted-id:8491414151> (number=12, OVERDUE, AUD). Both specs agree this path exists. No mutations made."
+}

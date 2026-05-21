@@ -1,0 +1,16 @@
+{
+  "body_bytes": 0,
+  "label": "time-off-policy-delete-after-archive",
+  "method": "DELETE",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": null,
+  "response_body_text": "",
+  "response_headers_subset": {
+    "Content-Length": "0",
+    "Date": "Thu, 21 May 2026 02:58:42 GMT"
+  },
+  "response_json": null,
+  "run": "20260521T025837Z",
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/policies/<redacted-id:a61d6f230f>"
+}

@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "patch.workspaces.policies.requests",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T01:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "error", "recovery"],
+    "body_sample": "{\"ok\":false,\"error\":{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}.\"}}"
+  },
+  "facts_observed": {
+    "spring_mvc_no_static_resource": true,
+    "policies_root_path_absent": true,
+    "spec_path_absent": true,
+    "time_off_requests_path_probed": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+    "time_off_requests_path_result": "405 Request method 'GET' is not supported",
+    "time_off_requests_path_registered": true,
+    "real_path_family": "PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+    "raw_allowlist_entry": "PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"
+  },
+  "notes": "The spec path PATCH /workspaces/{wId}/policies/{policyId}/requests/{requestId} does not exist on live Clockify. GET returns 'No static resource' confirming Spring-MVC routing miss. The corresponding time-off-prefixed path GET /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId} returns HTTP 405 'Request method GET is not supported', confirming that path IS registered server-side and PATCH would be the live method. The spec entry uses the non-prefixed 'policies' path which is absent; the live path family is under '/time-off/policies/'. Our raw_allowlist_gen.go includes BOTH the non-prefixed (74-75) and time-off-prefixed (143,147) variants."
+}

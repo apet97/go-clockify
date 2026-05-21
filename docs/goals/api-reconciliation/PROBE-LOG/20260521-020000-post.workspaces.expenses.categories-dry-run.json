@@ -1,0 +1,52 @@
+{
+  "endpoint_id": "post.workspaces.expenses.categories",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/expenses/categories",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "dry_run via clockify_expenses_categories_create",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/expenses/categories",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "name": "MCP-LIVE-RECON-20260521-020000-B-expcat-probe",
+      "dry_run": true
+    }
+  },
+  "response": {
+    "status": "dry_run",
+    "headers_redacted": {},
+    "body_sample": {
+      "ok": true,
+      "action": "clockify_expenses_categories_create",
+      "entity": "expense_category",
+      "data": {
+        "args": {"name": "MCP-LIVE-RECON-20260521-020000-B-expcat-probe"},
+        "dry_run": true,
+        "note": "No changes were made.",
+        "tool": "clockify_create_expense_category",
+        "validation": {
+          "preview_quality": "minimal_no_handler_validation",
+          "status": "unknown",
+          "warnings": [
+            {
+              "code": "not_validated",
+              "message": "generic dry-run preview did not run tool-specific validation"
+            }
+          ]
+        }
+      },
+      "changed": {}
+    }
+  },
+  "facts_observed": {
+    "dry_run_accepted": true,
+    "ok": true,
+    "validation_quality": "minimal_no_handler_validation — tool accepted dry_run flag but noted it did not run tool-specific validation",
+    "required_fields": ["name"],
+    "optional_fields": ["has_unit_price", "price_in_cents", "unit"],
+    "workspace_id_redacted": "[REDACTED-WORKSPACE]"
+  },
+  "notes": "dry_run returned ok:true. Validation quality is 'minimal' — the tool accepted the flag without running handler-level validation. Path is confirmed registered because the tool resolved the workspace and prepared the request. No object was created. No cleanup required."
+}

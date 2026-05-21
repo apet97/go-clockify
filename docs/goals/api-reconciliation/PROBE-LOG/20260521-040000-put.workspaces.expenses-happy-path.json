@@ -1,0 +1,82 @@
+{
+  "endpoint_id": "put.workspaces.expenses",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/expenses/{expenseId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "PUT (via clockify_expenses_update MCP tool)",
+    "path": "PUT /workspaces/[REDACTED-WORKSPACE]/expenses/<redacted-id:3deb9b3f6d>",
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": {
+      "change_fields": ["NOTES", "AMOUNT"],
+      "notes": "MCP-TEST expense updated",
+      "amount": 75,
+      "amount_unit": "major"
+    },
+    "rationale": "PUT with original values to verify path, then immediately restore — original state: quantity=75, total=112500 cents, notes='MCP-TEST expense updated'"
+  },
+  "prereq_probe": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/expenses/<redacted-id:3deb9b3f6d>",
+    "response_status": 200,
+    "response_body_keys": ["billable", "categoryId", "date", "fileId", "id", "locked", "notes", "projectId", "quantity", "taskId", "total", "userId", "workspaceId"],
+    "note": "GET /expenses/{expenseId} returns 200 — path accepts GET as well as PUT"
+  },
+  "response": {
+    "status": "200 ok:true",
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_expenses_update\",\"entity\":\"expense\",\"ids\":{\"categoryId\":\"<redacted-id:e3786bf865>\",\"expenseId\":\"<redacted-id:3deb9b3f6d>\"},\"data\":{\"amount\":{\"amount_cents\":112500,\"amount_decimal\":\"1125.00\",\"currency\":\"USD\",\"display\":\"$1125.00 USD\"},\"billable\":true,\"quantity\":75,\"total\":112500,\"notes\":\"MCP-TEST expense updated\",...}}",
+    "response_shape": {
+      "id": "string",
+      "billable": "boolean",
+      "categoryId": "string",
+      "currency": "string",
+      "date": "RFC3339 string",
+      "fileId": "string",
+      "has_file": "boolean",
+      "locked": "boolean",
+      "notes": "string",
+      "projectId": "null|string",
+      "quantity": "number",
+      "taskId": "null|string",
+      "total": "integer (cents)",
+      "userId": "string",
+      "workspaceId": "string",
+      "amount": {
+        "amount_cents": "integer",
+        "amount_decimal": "string",
+        "currency": "string",
+        "display": "string"
+      },
+      "approval": {"detailed_status": "null|string", "request_id": "string", "source": "string", "state": "string"},
+      "entities": {"client": {}, "project": {}, "task": {}, "user": {}},
+      "invoicing": {"invoice_id": "string", "invoice_number": "string", "source": "string", "state": "string"},
+      "receipt": {"file_id": "string", "file_name": "string", "file_url": "string", "has_file": "boolean"},
+      "tax": {"reimbursable": "null", "tax": "null", "tax2": "null", "tax_amount": "null"}
+    }
+  },
+  "cleanup": {
+    "performed": true,
+    "restore_result": "ok:true, quantity:75, total:112500 — original state restored",
+    "note": "Three update calls were made during probing (amount conversions tested). Final state matches original: quantity=75, total=112500, notes='MCP-TEST expense updated'."
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "accepted_method": "PUT",
+    "live_verified": true,
+    "expense_id": "<redacted-id:3deb9b3f6d>",
+    "expense_category_id": "<redacted-id:e3786bf865>",
+    "original_quantity": 75,
+    "original_total_cents": 112500,
+    "get_returns_200": true,
+    "both_specs_agree": true,
+    "mcp_tool": "clockify_expenses_update",
+    "path_used_by_mcp": "/workspaces/{wId}/expenses/{expenseId}",
+    "no_dry_run_available": true,
+    "amount_param_note": "MCP amount in major units = quantity (unit count for unit-priced categories). amount:75 major with category priceInCents:1500 → quantity=75, total=112500 cents.",
+    "change_fields_note": "Clockify requires AMOUNT in change_fields alongside quantity-related updates; NOTES must also appear in change_fields to be sent upstream."
+  },
+  "notes": "Full LIVE-VERIFIED: clockify_expenses_update PUT /workspaces/{wId}/expenses/{expenseId} returned 200. GET probe also returns 200 (endpoint accepts both GET and PUT). No dry_run available — actual update performed with original values and immediately restored. Both specs document this endpoint. MCP path matches spec exactly."
+}

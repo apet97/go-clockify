@@ -1,0 +1,201 @@
+{
+  "cleanup": [],
+  "endpoint_id": "updateWorkspaceUserCostRate",
+  "facts_observed": {
+    "status_code": 200,
+    "target": "current_api_user_fallback"
+  },
+  "method": "PUT",
+  "notes": "LIVE-VERIFIED: PUT returned 2xx in the sacrificial workspace. Disposable user was preferred; current-user fallback was used only if Clockify rejected the disposable account.",
+  "path": "/workspaces/{workspaceId}/users/{userId}/cost-rate",
+  "probe_kind": "happy-path",
+  "request": {
+    "body": {
+      "amount": 0
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "method": "PUT",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/users/<redacted-id:706f58c94f>/cost-rate",
+    "path_template": "/workspaces/{workspaceId}/users/{userId}/cost-rate",
+    "query": {}
+  },
+  "response": {
+    "body_sample": {
+      "cakeOrganizationId": "<redacted-id:d39f285080>",
+      "costRate": {
+        "amount": 5000,
+        "currency": "CAD"
+      },
+      "currencies": [],
+      "featureSubscriptionType": "BUNDLE_YEAR_2024",
+      "features": [
+        "<redacted-token:5e337f5622>",
+        "WORKSPACE_TIME_AUDIT",
+        "ADMIN_PANEL",
+        "PROJECT_TEMPLATES",
+        "REQUIRED_FIELDS",
+        "<redacted-token:f8e32fa113>",
+        "ALERTS",
+        "FORECASTING",
+        {
+          "...": "67 more items"
+        }
+      ],
+      "hourlyRate": {
+        "amount": 0,
+        "currency": "CAD"
+      },
+      "id": "[REDACTED-WORKSPACE]",
+      "imageUrl": "",
+      "memberships": [
+        {
+          "costRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "hourlyRate": {
+            "amount": 8000,
+            "currency": "CAD"
+          },
+          "membershipStatus": "ACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:706f58c94f>"
+        },
+        {
+          "costRate": null,
+          "hourlyRate": null,
+          "membershipStatus": "INACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:dfcffa1860>"
+        },
+        {
+          "costRate": null,
+          "hourlyRate": null,
+          "membershipStatus": "INACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:72b8e91d7b>"
+        },
+        {
+          "costRate": null,
+          "hourlyRate": {
+            "amount": 123400,
+            "currency": "CAD"
+          },
+          "membershipStatus": "ACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:2751d5291a>"
+        },
+        {
+          "costRate": null,
+          "hourlyRate": null,
+          "membershipStatus": "ACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:e80acc0d00>"
+        },
+        {
+          "costRate": {
+            "amount": 40,
+            "currency": "CAD"
+          },
+          "hourlyRate": {
+            "amount": 80,
+            "currency": "CAD"
+          },
+          "membershipStatus": "ACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:70f3ea9c39>"
+        },
+        {
+          "costRate": null,
+          "hourlyRate": null,
+          "membershipStatus": "INACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:56a33e3d02>"
+        },
+        {
+          "costRate": null,
+          "hourlyRate": null,
+          "membershipStatus": "INACTIVE",
+          "membershipType": "WORKSPACE",
+          "targetId": "[REDACTED-WORKSPACE]",
+          "userId": "<redacted-id:ccb4c17325>"
+        },
+        {
+          "...": "2 more items"
+        }
+      ],
+      "name": "WORKSPACE",
+      "subdomain": {
+        "enabled": false,
+        "name": null
+      },
+      "workspaceSettings": {
+        "...": "6 more keys",
+        "<redacted-token:3560cfbc93>": true,
+        "<redacted-token:5a1aad8661>": true,
+        "<redacted-token:6cebe75b2e>": false,
+        "<redacted-token:826cf0feb6>": false,
+        "<redacted-token:95232bb7ef>": true,
+        "activeBillableHours": true,
+        "adminOnlyPages": [],
+        "automaticLock": null,
+        "canSeeTimeSheet": true,
+        "canSeeTracker": true,
+        "currencyFormat": "CURRENCY_SPACE_VALUE",
+        "defaultBillableProjects": true,
+        "forceDescription": false,
+        "forceProjects": true,
+        "forceTags": false,
+        "forceTasks": false,
+        "lockTimeEntries": null,
+        "lockTimeZone": null,
+        "multiFactorEnabled": false,
+        "numberFormat": "SPACE_COMMA",
+        "onlyAdminsCreateProject": false,
+        "onlyAdminsCreateTag": false,
+        "onlyAdminsCreateTask": false,
+        "onlyAdminsSeeDashboard": true,
+        "projectFavorites": true,
+        "projectGroupingLabel": "CLIENT",
+        "round": {
+          "minutes": "15",
+          "round": "Round to nearest"
+        },
+        "timeRoundingInReports": false,
+        "timeTrackingMode": "DEFAULT",
+        "trackTimeDownToSecond": true
+      }
+    },
+    "content_type": "application/json",
+    "reason": "OK",
+    "shape": {
+      "key_count": 12,
+      "keys": [
+        "id",
+        "name",
+        "hourlyRate",
+        "costRate",
+        "memberships",
+        "workspaceSettings",
+        "imageUrl",
+        "featureSubscriptionType",
+        "features",
+        "currencies",
+        "subdomain",
+        "cakeOrganizationId"
+      ],
+      "type": "object"
+    },
+    "status": 200
+  },
+  "timestamp_utc": "2026-05-21T20:34:28Z"
+}

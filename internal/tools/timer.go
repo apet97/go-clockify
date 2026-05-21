@@ -44,6 +44,11 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	if entryType := stringArg(args, "type"); entryType != "" {
 		payload["type"] = entryType
 	}
+	if customFields, ok, err := entryCustomFieldsFromArgs(args); err != nil {
+		return ResultEnvelope{}, err
+	} else if ok {
+		payload["customFields"] = customFields
+	}
 	meta := map[string]any{"workspaceId": wsID}
 	if projectID != "" {
 		meta["projectId"] = projectID

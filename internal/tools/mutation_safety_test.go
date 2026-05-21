@@ -14,7 +14,7 @@ import (
 // remove_profile_image are mutually exclusive, so a payload that sets both —
 // which leaves the upstream result undefined — is rejected before the write.
 func TestUpdateMemberProfileRejectsImageConflict(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	svc := New(clockify.NewClient("k", fake.URL, time.Second, 0), fake.WorkspaceID)
 

@@ -3,8 +3,8 @@ info:
   title: Clockify Tasks API — read endpoints (Agent A live probe)
   version: 2026-05-12
   description: |
-    Captured live against workspace 65b382b606de527a7ee2b60e, project
-    69f54244755f4967f81c3723. Base host: https://api.clockify.me/api/v1.
+    Captured live against workspace <REDACTED_ID>, project
+    <REDACTED_ID>. Base host: https://api.clockify.me/api/v1.
     Auth: X-Api-Key header. Fixtures: fixtures/tasks-fresh-a/.
 servers:
   - url: https://api.clockify.me/api/v1

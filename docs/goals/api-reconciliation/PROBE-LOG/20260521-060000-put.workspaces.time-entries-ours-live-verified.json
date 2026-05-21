@@ -1,0 +1,22 @@
+{
+  "probe_id": "put.workspaces.time-entries-ours-live-verified",
+  "ts": "2026-05-21T06:00:00Z",
+  "iter": "iter22",
+  "endpoint_id": "put.workspaces.time-entries.ours",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
+  "source": "ours",
+  "probe_kind": "live-verified",
+  "tool": "clockify_entries_update",
+  "entry_id_used": "<redacted-id:1dac181586>",
+  "workspace_id": "[REDACTED-SACRIFICIAL]",
+  "code_path_confirmed": "internal/tools/entries.go:223 paths.Workspace(wsID, 'time-entries', entryID) then PutWithQuery at line 345",
+  "result": {
+    "ok": true,
+    "action": "clockify_entries_update",
+    "http_status": 200,
+    "changedFields": [],
+    "entry_id_echoed": "<redacted-id:1dac181586>"
+  },
+  "notes": "Same live evidence as official probe — identical HTTP path, only URL parameter name label differs ({id} vs {timeEntryId}). Tool uses GET-then-PUT merge with ownership guard (requireCurrentUserEntry). dry_run mode supported: returns dryrunPreviewPayloadValidated without hitting upstream. No discrepancy beyond cosmetic param label."
+}

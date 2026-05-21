@@ -109,7 +109,7 @@ All CI jobs in `.github/workflows/ci.yml` run on `ubuntu-latest`. The build-matr
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/CLAUDE.md` — agent rules and safety constraints
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/probes/lib/common.sh` — curl helper library
 
-Workspace: `65b382b606de527a7ee2b60e` (confirmed sacrificial probe workspace)
+Workspace: `<REDACTED_ID>` (confirmed sacrificial probe workspace)
 
 ## Commands run
 
@@ -212,7 +212,7 @@ N/A — no bugs found requiring reproduction.
 
 | Resource | ID | Action |
 |----------|-----|--------|
-| Time entry (qa-agent-57-cross-platform-probe) | `6a00f757284e03fc793509f7` | Deleted (204 confirmed) |
+| Time entry (qa-agent-57-cross-platform-probe) | `<REDACTED_ID>` | Deleted (204 confirmed) |
 | Temp binaries | `/tmp/clockify-mcp*` | Left in /tmp (will be cleaned by OS) |
 | Docker images | `clockify-mcp:test-amd64`, `clockify-mcp:test-arm64` | Left locally (no push, safe to prune) |
 

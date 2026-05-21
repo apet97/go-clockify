@@ -28,6 +28,23 @@ func customFieldAnyValueSchema(description string) map[string]any {
 	}
 }
 
+func entryCustomFieldsInputSchema() map[string]any {
+	return map[string]any{
+		"type":        "array",
+		"description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+		"items": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"field_id":        map[string]any{"type": "string", "description": "Custom field ID."},
+				"custom_field_id": map[string]any{"type": "string", "description": "Alias for field_id."},
+				"customFieldId":   map[string]any{"type": "string", "description": "Alias for field_id."},
+				"id":              map[string]any{"type": "string", "description": "Alias for field_id."},
+				"value":           customFieldAnyValueSchema("Value to set on the created time entry. Type depends on the custom field definition."),
+			},
+		},
+	}
+}
+
 func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 	return []mcp.ToolDescriptor{
 		// 1. List custom fields

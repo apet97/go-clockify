@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "get.workspaces.member-profile",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/member-profile/{userId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:58:01Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/member-profile/[REDACTED-USER]",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["email","hasPassword","hasPendingApprovalRequest","imageUrl","name","userCustomFieldValues","weekStart","workCapacity","workingDays","workspaceNumber"],
+    "body_sample": "{\"email\":\"[REDACTED]\",\"hasPassword\":true,\"hasPendingApprovalRequest\":true,\"imageUrl\":\"https://img.clockify.me/no-user-image.png\",\"name\":\"REGULAR USER\",\"userCustomFieldValues\":[...26 custom field bindings...],\"weekStart\":\"SUNDAY\",\"workCapacity\":\"PT10H\",\"workingDays\":[\"THURSDAY\",\"MONDAY\",\"FRIDAY\",\"WEDNESDAY\",\"TUESDAY\",\"SATURDAY\",\"SUNDAY\"],\"workspaceNumber\":4}"
+  },
+  "facts_observed": {
+    "response_shape": "single object (not wrapped, not array)",
+    "top_level_keys": ["email","hasPassword","hasPendingApprovalRequest","imageUrl","name","userCustomFieldValues","weekStart","workCapacity","workingDays","workspaceNumber"],
+    "weekStart_enum_seen": ["SUNDAY"],
+    "workCapacity_type": "ISO 8601 duration",
+    "workingDays_type": "array of day strings",
+    "workspaceNumber_type": "integer",
+    "userCustomFieldValues_item_keys": ["customField","customFieldId","name","sourceType","type","userId","value"],
+    "customField_inline_shape": "full custom field object embedded (id, name, type, allowedValues, description, entityType, onlyAdminCanEdit, placeholder, projectDefaultValues, required, status, workspaceDefaultValue, workspaceId)",
+    "entity_types_seen_in_custom_fields": ["USER"],
+    "extra_field_vs_time_entry_custom_fields": ["customField (full inline object)", "sourceType (WORKSPACE|USER)", "userId"],
+    "sourceType_enum_seen": ["WORKSPACE", "USER"]
+  },
+  "notes": "Rich member profile object. userCustomFieldValues is deeply nested — each binding embeds the full custom field definition, not just the ID. entityType USER confirmed (custom-fields endpoint only showed TIMEENTRY). workCapacity is ISO 8601 duration."
+}

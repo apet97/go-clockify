@@ -289,7 +289,7 @@ func TestListHolidaysInPeriodSchemaAllowsUserIDAlias(t *testing.T) {
 func TestUpdateHolidayAllowsPartialUpdate(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	_, err := svc.UpdateHoliday(context.Background(), map[string]any{
 		"holiday_id": "000000000000000000000001",
 		"name":       "Renamed Holiday",
@@ -302,7 +302,7 @@ func TestUpdateHolidayAllowsPartialUpdate(t *testing.T) {
 func TestCreateHolidayRejectsMalformedDate(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	_, err := svc.CreateHoliday(context.Background(), map[string]any{
 		"name":       "Bad Date Holiday",
 		"start_date": "2026-13-45",

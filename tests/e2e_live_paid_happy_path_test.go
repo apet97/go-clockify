@@ -126,14 +126,14 @@ func createPaidFeatureWorkPackage(t *testing.T, ctx context.Context, c *liveCamp
 
 	start := time.Now().UTC().Add(-72 * time.Hour).Truncate(time.Second)
 	end := start.Add(30 * time.Minute)
-	entry := c.h.callOK(ctx, "clockify_entries_create", map[string]any{
+	entry := c.h.callOK(ctx, "clockify_entries_create", addRequiredTimeEntryCustomFields(map[string]any{
 		"start":       start.Format(time.RFC3339),
 		"end":         end.Format(time.RFC3339),
 		"description": c.LivePrefix("happy-entry", 0),
 		"project_id":  projectID,
 		"task_id":     taskID,
 		"billable":    true,
-	})
+	}, c.h.requiredTimeEntryCustomFields(ctx, c.LivePrefix("happy-entry", 0))))
 	entryID := requireToolEntityID(t, entry, "entryId", "id")
 	c.RegisterCleanup("entry", entryID, func(ctx context.Context) error {
 		return c.rawDeletePath(ctx, "/time-entries/"+entryID)

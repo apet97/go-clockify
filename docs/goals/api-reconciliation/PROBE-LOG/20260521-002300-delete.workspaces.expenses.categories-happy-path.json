@@ -1,0 +1,17 @@
+{
+  "endpoint_id": "delete.workspaces.expenses.categories",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:23:00Z",
+  "method": "DELETE",
+  "path": "/workspaces/<redacted-id:7955161f32>/expenses/categories/<redacted-id:c9889ecc09>",
+  "query": {},
+  "status_code": 200,
+  "status_text": "OK",
+  "response_body_sample": {
+    "archived": true,
+    "categoryId": "<redacted-id:c9889ecc09>",
+    "deleted": true
+  },
+  "verdict": "LIVE-VERIFIED",
+  "notes": "Successfully deleted test category MCP-LIVE-RECON-20260521-002300-cat. Response includes archived:true in addition to deleted:true — Clockify archives the category before marking deleted. Both specs document this endpoint."
+}

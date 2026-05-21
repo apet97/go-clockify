@@ -1,5 +1,5 @@
 # Tasks mutation surface (Agent B, live-probed against workspace
-# 65b382b606de527a7ee2b60e on 2026-05-12). Host: api.clockify.me/api/v1.
+# <REDACTED_ID> on 2026-05-12). Host: api.clockify.me/api/v1.
 # All bodies are application/json. Verbs/paths confirmed by live calls;
 # fixtures live in fixtures/tasks-fresh-b/.
 openapi: 3.0.3

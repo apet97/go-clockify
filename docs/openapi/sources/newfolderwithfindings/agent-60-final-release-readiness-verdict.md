@@ -8,7 +8,7 @@
 1. **Build**: `go build ./cmd/clockify-mcp/` — passes cleanly.
 2. **Static analysis**: `go vet ./...` — passes, no warnings.
 3. **Full test suite**: All 29 packages pass (internal/*, tests/*, cmd/*). One pre-existing test isolation bug was found and fixed (see Fixes made).
-4. **Live E2E contract tests**: `go test -tags=livee2e -run 'TestE2EReadOnly|TestE2EErrors' ./tests/...` — passes against the real Clockify API in workspace `65b382b606de527a7ee2b60e`.
+4. **Live E2E contract tests**: `go test -tags=livee2e -run 'TestE2EReadOnly|TestE2EErrors' ./tests/...` — passes against the real Clockify API in workspace `<REDACTED_ID>`.
 5. **Doctor command**: `clockify-mcp doctor --strict` correctly audits configuration, identifies the workspace ID, and flags hosted-strict posture requirements as expected for a local deployment.
 6. **Tool catalog**: 40 Tier-1 + 88 Tier-2 = 128 tools registered, with correct input schemas, required fields, enum restrictions, and risk classifications.
 7. **Live API probe**: All primary Clockify API endpoints respond correctly:
@@ -68,7 +68,7 @@ curl -X DELETE -H "X-Api-Key: <REDACTED>" .../time-entries/<entryId> → 204
 # Auth failure probes (all confirmed)
 curl -H "X-Api-Key: bad-key" .../user → 401
 curl .../user (no key) → 401
-curl -H "X-Api-Key: <REDACTED>" .../workspaces/000000000000000000000000/projects → 404
+curl -H "X-Api-Key: <REDACTED>" .../workspaces/<REDACTED_ID>/projects → 404
 ```
 
 ## Live API probes run
@@ -144,7 +144,7 @@ curl -H "X-Api-Key: <REDACTED>" \
 
 ## Cleanup performed
 
-- Created test time entry `qa-agent-60-1778449836-test-entry` (ID: `6a00fdadd9647159dc109570`)
+- Created test time entry `qa-agent-60-1778449836-test-entry` (ID: `<REDACTED_ID>`)
 - Successfully read it back (HTTP 200)
 - Successfully deleted it (HTTP 204)
 - Verified deletion — entry no longer exists

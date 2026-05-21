@@ -1,0 +1,170 @@
+{
+  "cleanup_events": [
+    {
+      "endpoint_id": "projects.{projectId}",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": {
+          "archived": true
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:6c5be927ec>",
+        "path_template": "/workspaces/{workspaceId}/projects/{projectId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": true,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#D36F5F",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:6c5be927ec>",
+          "memberships": [
+            {
+              "costRate": "...",
+              "hourlyRate": "...",
+              "membershipStatus": "...",
+              "membershipType": "...",
+              "targetId": "...",
+              "userId": "..."
+            }
+          ],
+          "name": "<redacted-token:fd03a3173a>",
+          "note": "",
+          "public": false,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "key_count": 19,
+          "keys": [
+            "id",
+            "name",
+            "hourlyRate",
+            "clientId",
+            "workspaceId",
+            "billable",
+            "memberships",
+            "color",
+            {
+              "...": "11 more items"
+            }
+          ],
+          "type": "object"
+        },
+        "status": 200
+      },
+      "timestamp_utc": "2026-05-21T20:37:46Z"
+    },
+    {
+      "endpoint_id": "projects.{projectId}",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:6c5be927ec>",
+        "path_template": "/workspaces/{workspaceId}/projects/{projectId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": true,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#D36F5F",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:6c5be927ec>",
+          "memberships": [
+            {
+              "costRate": "...",
+              "hourlyRate": "...",
+              "membershipStatus": "...",
+              "membershipType": "...",
+              "targetId": "...",
+              "userId": "..."
+            }
+          ],
+          "name": "<redacted-token:fd03a3173a>",
+          "note": "",
+          "public": false,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "key_count": 19,
+          "keys": [
+            "id",
+            "name",
+            "hourlyRate",
+            "clientId",
+            "workspaceId",
+            "billable",
+            "memberships",
+            "color",
+            {
+              "...": "11 more items"
+            }
+          ],
+          "type": "object"
+        },
+        "status": 200
+      },
+      "timestamp_utc": "2026-05-21T20:37:46Z"
+    }
+  ],
+  "failure_receipts": {},
+  "notes": "Role follow-up used a disposable project and an existing non-self test-fixture-like user in the sacrificial workspace.",
+  "success_receipts": {
+    "grantUserRole": "docs/goals/api-reconciliation/PROBE-LOG/<redacted-token:4afdbab58c>.json"
+  },
+  "timestamp_utc": "2026-05-21T20:37:46Z"
+}

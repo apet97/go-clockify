@@ -25,7 +25,7 @@ PASS WITH CONCERNS
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/TIMEENTRYDOC.md`
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/SCHEDULINGDOC.md`
 - `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/HOLIDAYSDOC.md`
-- Workspace ID: `65b382b606de527a7ee2b60e` (confirmed probe workspace)
+- Workspace ID: `<REDACTED_ID>` (confirmed probe workspace)
 
 ## Commands run
 
@@ -186,8 +186,8 @@ go test ./internal/config/... -run Timezone # PASS
 ## Cleanup performed
 
 All QA test time entries created during live API probes were deleted:
-- `6a00f1c92568d3d29305e1a3` (qa-agent-24-tz-test-basic) — deleted
-- `6a00f21d284e03fc79324f3f` (qa-agent-24-tz-test-with-offset) — deleted
+- `<REDACTED_ID>` (qa-agent-24-tz-test-basic) — deleted
+- `<REDACTED_ID>` (qa-agent-24-tz-test-with-offset) — deleted
 
 ## Leftover test resources
 

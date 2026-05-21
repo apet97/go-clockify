@@ -1,5 +1,5 @@
 # Clockify Holidays — READ endpoints (Agent A live probe)
-# Workspace: 65b382b606de527a7ee2b60e
+# Workspace: <REDACTED_ID>
 # Base: https://api.clockify.me/api/v1
 # Auth: X-Api-Key
 # Fixtures: fixtures/holidays-fresh-a/
@@ -28,7 +28,7 @@ paths:
               - non-existent 24-hex ObjectId -> 500 {"message":"Internal server error.","code":500}.
               - literal "##default" -> 400 {"message":"Invalid ObjectId provided for field 'assigned-to'","code":501}.
               - omitted -> returns all holidays.
-          schema: { type: string, example: 6480555b7279f003c5707323 }
+          schema: { type: string, example: <REDACTED_ID> }
       responses:
         "200":
           description: Array of holidays
@@ -60,7 +60,7 @@ components:
       # occursAnnually, everyoneIncludingNew, automaticTimeEntryCreation,
       # projectId, taskId
       properties:
-        id:            { type: string, example: 6967ed48d3e5101589b553ae }
+        id:            { type: string, example: <REDACTED_ID> }
         workspaceId:   { type: string }
         name:          { type: string }
         userIds:

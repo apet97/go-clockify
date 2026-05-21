@@ -37,7 +37,7 @@ var workflowTools = []string{
 }
 
 func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	reg := svc.FullAccessRegistry()
 	names := map[string]bool{}
 	for _, descriptor := range reg {
@@ -129,7 +129,7 @@ func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 }
 
 func TestTimerAndReportDescriptorsDoNotShadowEarlierSources(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	earlierSources := map[string][]string{
 		"workflow":          descriptorNames(svc.workflowDescriptors()),
 		"first_slice":       descriptorNames(svc.FirstSliceRegistry()),
@@ -169,7 +169,7 @@ func TestRemainingHelperDescriptorBucketHasClearName(t *testing.T) {
 }
 
 func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	reg := svc.FullAccessRegistry()
 	for i, want := range workflowTools {
 		if i >= len(reg) {
@@ -210,7 +210,7 @@ func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 }
 
 func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	first := svc.FullAccessRegistry()
 	if len(first) != 156 {
 		t.Fatalf("registry size=%d, want 156", len(first))
@@ -231,7 +231,7 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 }
 
 func TestCloneToolDescriptorsDeepCopy(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	first := svc.FullAccessRegistry()
 	if len(first) == 0 {
 		t.Fatal("empty registry")
@@ -258,7 +258,7 @@ func TestCloneToolDescriptorsDeepCopy(t *testing.T) {
 }
 
 func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	tests := []struct {
 		toolset   string
 		want      []string
@@ -409,7 +409,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 }
 
 func BenchmarkFullAccessRegistry(b *testing.B) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	b.ReportAllocs()
 	for b.Loop() {
 		if got := len(svc.FullAccessRegistry()); got != 156 {
@@ -419,7 +419,7 @@ func BenchmarkFullAccessRegistry(b *testing.B) {
 }
 
 func BenchmarkRegistryForToolset(b *testing.B) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	b.ReportAllocs()
 	for b.Loop() {
 		if got := len(svc.RegistryForToolset("business")); got == 0 || got >= 156 {
@@ -514,7 +514,7 @@ func slicesEqual(left, right []string) bool {
 }
 
 func BenchmarkOneUserToolsResourceData(b *testing.B) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	b.ReportAllocs()
 	for b.Loop() {
 		data := svc.toolsResourceData()
@@ -525,7 +525,7 @@ func BenchmarkOneUserToolsResourceData(b *testing.B) {
 }
 
 func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	first := svc.toolsResourceData()
 	if svc.toolsResourceCache == nil {
 		t.Fatal("tools resource cache was not populated")
@@ -551,7 +551,7 @@ func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
 }
 
 func BenchmarkOneUserToolsListRealRegistry(b *testing.B) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)
@@ -573,7 +573,7 @@ func BenchmarkOneUserToolsListRealRegistry(b *testing.B) {
 func BenchmarkClockifyStatusDispatch(b *testing.B) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
@@ -594,7 +594,7 @@ func BenchmarkClockifyStatusDispatch(b *testing.B) {
 func BenchmarkClockifyReviewDayDispatch(b *testing.B) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
@@ -612,7 +612,7 @@ func BenchmarkClockifyReviewDayDispatch(b *testing.B) {
 func BenchmarkReportNameResolution(b *testing.B) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
-	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("bench", svc.FullAccessRegistry())
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
@@ -644,7 +644,7 @@ func assertWorkflowAnnotations(t *testing.T, tool mcp.Tool) {
 }
 
 func TestToolsGuideExplainsWorkflowAndDomainTools(t *testing.T) {
-	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	out, err := svc.ClockifyToolsGuide(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -668,7 +668,7 @@ func TestToolsGuideExplainsWorkflowAndDomainTools(t *testing.T) {
 }
 
 func TestWorkflowPackageLogReviewAndRepeatableDemoCleanup(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 	svc.DefaultTimezone = time.UTC
@@ -791,7 +791,7 @@ func TestWorkflowPackageLogReviewAndRepeatableDemoCleanup(t *testing.T) {
 }
 
 func TestInvoiceClientWorkFeatureUnavailableEnvelope(t *testing.T) {
-	const workspaceID = "65b382b606de527a7ee2b60e"
+	const workspaceID = "000000000000000000000001"
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPost && r.URL.Path == "/workspaces/"+workspaceID+"/invoices" {
@@ -807,7 +807,7 @@ func TestInvoiceClientWorkFeatureUnavailableEnvelope(t *testing.T) {
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_invoice_client_work","arguments":{"client_id":"65b382b606de527a7ee2b60e","currency":"USD"}}}`))
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_invoice_client_work","arguments":{"client_id":"000000000000000000000001","currency":"USD"}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -72,7 +72,7 @@ func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	env, err := svc.AuditLogsSearch(context.Background(), map[string]any{
 		"actions":    []any{"CREATE_PROJECT"},
@@ -83,7 +83,7 @@ func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AuditLogsSearch: %v", err)
 	}
-	if gotPath != "/workspaces/65b382b606de527a7ee2b60e/audit-log" {
+	if gotPath != "/workspaces/000000000000000000000001/audit-log" {
 		t.Fatalf("path = %s, want /workspaces/.../audit-log", gotPath)
 	}
 	authors, ok := gotBody["authors"].(map[string]any)
@@ -115,7 +115,7 @@ func TestAuditLogsSearchPostsFilterBody(t *testing.T) {
 }
 
 func TestAuditLogsSearchRejectsMissingActions(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	if _, err := svc.AuditLogsSearch(context.Background(), map[string]any{
 		"author_ids": []any{"u1"},
 		"start":      "2026-05-01",
@@ -135,7 +135,7 @@ func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	env, err := svc.EntityChangesList(context.Background(), map[string]any{
 		"change_type":  "created",
@@ -146,7 +146,7 @@ func TestEntityChangesListBuildsTypeQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EntityChangesList: %v", err)
 	}
-	if gotPath != "/workspaces/65b382b606de527a7ee2b60e/entities/created" {
+	if gotPath != "/workspaces/000000000000000000000001/entities/created" {
 		t.Fatalf("path = %s, want /workspaces/.../entities/created", gotPath)
 	}
 	if !strings.Contains(gotQuery, "type=TIME_ENTRY") || !strings.Contains(gotQuery, "type=PROJECTS") {
@@ -179,7 +179,7 @@ func TestEntityChangesListDoesNotFabricateHasMore(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	env, err := svc.EntityChangesList(context.Background(), map[string]any{
 		"change_type":  "created",
@@ -202,7 +202,7 @@ func TestEntityChangesListDoesNotFabricateHasMore(t *testing.T) {
 // Clockify's audit-log API hard-rejects wider windows with an opaque 400, so
 // the tool fails early with a recovery instruction instead. [audit P3-1]
 func TestAuditLogsSearchRejectsOverlongRange(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	_, err := svc.AuditLogsSearch(context.Background(), map[string]any{
 		"actions":    []any{"CREATE_PROJECT"},
@@ -221,7 +221,7 @@ func TestAuditLogsSearchRejectsOverlongRange(t *testing.T) {
 // TestEntityChangesListRequiresDateRange locks N-2: start/end are required so
 // the call never silently fetches an unbounded entity-change history.
 func TestEntityChangesListRequiresDateRange(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 	if _, err := svc.EntityChangesList(context.Background(), map[string]any{
 		"change_type":  "created",
@@ -232,7 +232,7 @@ func TestEntityChangesListRequiresDateRange(t *testing.T) {
 }
 
 func TestEntityChangesListRejectsBadChangeType(t *testing.T) {
-	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	if _, err := svc.EntityChangesList(context.Background(), map[string]any{
 		"change_type":  "modified",
 		"entity_types": []any{"TIME_ENTRY"},

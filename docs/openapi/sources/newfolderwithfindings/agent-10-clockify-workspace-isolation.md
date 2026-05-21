@@ -59,7 +59,7 @@ Confirmed the API key has broad workspace access — the MCP server's multi-work
 ### Probe 3: Workspace details and user context
 ```
 GET /workspaces/{ws} → workspace details with correct ID, memberships, settings
-GET /user → activeWorkspace = 696b4a47588e84dfb71c45ca (NOT the probe workspace)
+GET /user → activeWorkspace = <REDACTED_ID> (NOT the probe workspace)
 ```
 Confirmed user's activeWorkspace is different from the configured workspace — validates that CLOCKIFY_WORKSPACE_ID explicit setting is essential.
 
@@ -147,7 +147,7 @@ Also added `"github.com/apet97/go-clockify/internal/resolve"` to imports.
 
 ## Cleanup performed
 
-- Project `qa-agent-10-{ts}-cross-ws-test` (id=`6a00f43a385b9fac085a104c`) — DELETE returned 400, ARCHIVE returned 405. Could not clean up via API.
+- Project `qa-agent-10-{ts}-cross-ws-test` (id=`<REDACTED_ID>`) — DELETE returned 400, ARCHIVE returned 405. Could not clean up via API.
 - Temporary test file `workspace_isolation_agent10_test.go` — removed
 - Temporary script `/tmp/ws_iso_check.go` — removed
 
@@ -155,7 +155,7 @@ Also added `"github.com/apet97/go-clockify/internal/resolve"` to imports.
 
 | Resource | ID | Workspace | Notes |
 |----------|----|-----------|-------|
-| Project "qa-agent-10-{ts}-cross-ws-test" | `6a00f43a385b9fac085a104c` | `65b382b606de527a7ee2b60e` | Could not delete via API (400 on DELETE, 405 on PATCH archive). Safe to leave — prefixed, tiny, no time entries. |
+| Project "qa-agent-10-{ts}-cross-ws-test" | `<REDACTED_ID>` | `<REDACTED_ID>` | Could not delete via API (400 on DELETE, 405 on PATCH archive). Safe to leave — prefixed, tiny, no time entries. |
 
 ## Severity
 
@@ -176,7 +176,7 @@ Also added `"github.com/apet97/go-clockify/internal/resolve"` to imports.
 1. **Accept the fix** — the `ResolveWorkspaceID` validation is a minimal, safe defense-in-depth improvement
 2. **Add config-load validation test for workspace ID injected via New()** — the existing `TestLoad_RejectsBadWorkspaceID` tests config.Load validation, but there's no test validating that `New(client, badID)` followed by `ResolveWorkspaceID` fails (now it does, but should be locked in)
 3. **Consider adding a `CLOCKIFY_WORKSPACE_ID` presence check to `doctor --strict`** — currently doctor only checks strict-posture settings (hosted profiles). A note that workspace ID should be set when the API key has multiple workspaces would be a helpful proactive check
-4. **Clean up leftover test project** — `6a00f43a385b9fac085a104c` in workspace `65b382b606de527a7ee2b60e`. Manual cleanup via Clockify web UI or a future API call with different parameters
+4. **Clean up leftover test project** — `<REDACTED_ID>` in workspace `<REDACTED_ID>`. Manual cleanup via Clockify web UI or a future API call with different parameters
 
 ## False positives / uncertainty
 

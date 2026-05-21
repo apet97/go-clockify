@@ -1,0 +1,81 @@
+{
+  "batch": "A",
+  "ts": "2026-05-21T01:00:00Z",
+  "iter": "iter17",
+  "endpoints": [
+    {
+      "endpoint_id": "delete.workspaces.time-off.policies",
+      "method": "DELETE",
+      "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
+      "verification_status": "UNRESOLVED-NO-LIVE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-delete.workspaces.time-off.policies-path-existence.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "path parameter name",
+          "live_says": "N/A — path position identical, param name is spec-alias only",
+          "official_says": "{id}",
+          "ours_says": "{policyId}"
+        }
+      ],
+      "truth_yaml": "delete_workspaces_time_off_policies:\n  operationId: deleteWorkspacesWorkspaceIdTimeOffPoliciesPolicyId\n  summary: Delete a time off policy\n  x-verification-status: UNRESOLVED-NO-LIVE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-delete.workspaces.time-off.policies-path-existence.json\n  x-notes: |\n    Path family confirmed live (GET /workspaces/{wId}/time-off/policies/{policyId} returns 200).\n    No typed DELETE tool for policies exists; clockify_time_off_archive uses PATCH to archive.\n    Raw DELETE blocked (CLOCKIFY_ENABLE_RAW_WRITES not set).\n    Official spec uses param name {id}, our spec uses {policyId} — same path position, alias only.\n    Both PROGRESS.md rows (official {id} and ours {policyId}) covered by this probe.\n    Raw allowlist: DELETE /workspaces/{workspaceId}/time-off/policies/{policyId} in line 142.\n    Test policy MCP-LIVE-RECON-20260521-010000-A-policy-delete-test (<redacted-id:4b4f2c3686>)\n    archived but not deleted — raw writes blocked. Cleanup: archived, left in workspace.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: policyId\n      in: path\n      required: true\n      x-official-alias: id\n  responses:\n    '200':\n      description: OK (expected, not live-confirmed)\n",
+      "notes": "Covers BOTH PROGRESS.md rows (official {id} alias and ours {policyId}). Same path position — functionally identical. Cannot live-verify DELETE without raw writes. Path family confirmed. Test policy <redacted-id:4b4f2c3686> archived (raw delete blocked)."
+    },
+    {
+      "endpoint_id": "delete.workspaces.time-off.policies.requests",
+      "method": "DELETE",
+      "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-delete.workspaces.time-off.policies.requests-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "delete_workspaces_time_off_policies_requests:\n  operationId: deleteWorkspacesWorkspaceIdTimeOffPoliciesPolicyIdRequestsRequestId\n  summary: Delete a time off request under a policy\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-010000-delete.workspaces.time-off.policies.requests-happy-path.json\n  x-notes: |\n    LIVE-VERIFIED. Both official and our spec agree on this path.\n    Typed MCP tool clockify_time_off_requests_delete uses exactly\n    DELETE /workspaces/{wId}/time-off/policies/{policyId}/requests/{requestId}\n    (source: internal/tools/time_off_requests.go line 265).\n    Live probe: request <redacted-id:3f96a48955> under policy <redacted-id:1e975578e3>\n    returned {deleted:true, id, policyId, requestId} with HTTP 200.\n    Dry_run with nonexistent ID returns not_found, confirming path is live-active.\n    Note: separate non-policy-scoped path also exists (iter15 LIVE-VERIFIED):\n    DELETE /workspaces/{wId}/time-off/requests/{requestId}.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: policyId\n      in: path\n      required: true\n    - name: requestId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: OK\n      content:\n        application/json:\n          schema:\n            properties:\n              deleted:\n                type: boolean\n              id:\n                type: string\n              policyId:\n                type: string\n              requestId:\n                type: string\n",
+      "notes": "LIVE-VERIFIED. Both specs agree. Happy-path confirmed. Distinct from non-policy-scoped DELETE /workspaces/{wId}/time-off/requests/{requestId}."
+    },
+    {
+      "endpoint_id": "delete.workspaces.user.time-entries",
+      "method": "DELETE",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "verification_status": "UNRESOLVED-NO-LIVE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-delete.workspaces.user.time-entries-path-existence.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "delete_workspaces_user_time_entries:\n  operationId: deleteMany\n  summary: Delete all time entries for a user on a workspace\n  x-verification-status: UNRESOLVED-NO-LIVE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-delete.workspaces.user.time-entries-path-existence.json\n  x-notes: |\n    Path family confirmed live (GET 200 returns array of time entries).\n    DELETE on this path is bulk: requires 'time-entry-ids' query param (required array).\n    operationId: deleteMany. Response: array of TimeEntryDtoImplV1.\n    OpenAPI x-clockify-live-status: documented (not probe-documented).\n    Raw DELETE probe blocked (CLOCKIFY_ENABLE_RAW_WRITES not set).\n    Both specs agree. Raw allowlist includes this path (raw_allowlist_gen.go line 157).\n    Distinct from DELETE /workspaces/{wId}/time-entries/{timeEntryId} (single-entry).\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: userId\n      in: path\n      required: true\n    - name: time-entry-ids\n      in: query\n      required: true\n      schema:\n        type: array\n        items:\n          type: string\n  responses:\n    '200':\n      description: OK\n      content:\n        application/json:\n          schema:\n            type: array\n            items:\n              $ref: '#/components/schemas/TimeEntryDtoImplV1'\n",
+      "notes": "Path family GET confirmed 200. Both specs agree. Bulk delete — requires time-entry-ids query param. Cannot live-verify DELETE without raw writes. Distinct from single-entry delete (already LIVE-VERIFIED)."
+    },
+    {
+      "endpoint_id": "delete.workspaces.users",
+      "method": "DELETE",
+      "path": "/workspaces/{workspaceId}/users/{userId}",
+      "verification_status": "UNVERIFIABLE-DESTRUCTIVE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-delete.workspaces.users-unverifiable-destructive.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "delete_workspaces_users:\n  operationId: deleteWorkspacesWorkspaceIdUsersUserId\n  summary: Remove a user from a workspace\n  x-verification-status: UNVERIFIABLE-DESTRUCTIVE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-delete.workspaces.users-unverifiable-destructive.json\n  x-notes: |\n    Not probed live. Removing a user from the workspace could revoke admin API key\n    access; not safe to test on a single-admin workspace.\n    Source: official spec only.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n    - name: userId\n      in: path\n      required: true\n",
+      "notes": "Official spec only. Not probed. Removing workspace user risks revoking admin API key — UNVERIFIABLE-DESTRUCTIVE."
+    },
+    {
+      "endpoint_id": "patch.workspaces.balance",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/balance",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-010000-patch.workspaces.balance-path-not-found.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "path exists on live Clockify",
+          "live_says": "404 'No static resource v1/workspaces/{wId}/balance' — path completely absent from server routing",
+          "official_says": "not listed (ours-spec-only)",
+          "ours_says": "PATCH /workspaces/{workspaceId}/balance documented in our spec"
+        }
+      ],
+      "truth_yaml": "patch_workspaces_balance:\n  operationId: patchWorkspacesWorkspaceIdBalance\n  summary: Update workspace balance\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-010000-patch.workspaces.balance-path-not-found.json\n    - PROBE-LOG/20260520-221429-get.workspaces.balance-not-found.json\n  x-notes: |\n    LIVE-OVERRIDE. Path does not exist on live Clockify.\n    GET /workspaces/{wId}/balance returns Spring-MVC 404 'No static resource'\n    (not 405 Method Not Allowed), confirming the /balance segment is completely\n    absent from server routing — not a method mismatch.\n    Two independent probes confirm absence: iter7 GET, iter17 GET.\n    Source: ours only. Should be removed or flagged as phantom in our spec.\n  x-truth-iter: iter17\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n",
+      "notes": "LIVE-OVERRIDE: path does not exist on live Clockify. GET returns Spring-MVC 404 'No static resource' — complete path absence confirmed by two independent probes. Ours-spec-only phantom endpoint."
+    }
+  ]
+}

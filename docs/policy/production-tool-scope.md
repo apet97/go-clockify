@@ -1,8 +1,11 @@
 # One-User Tool Scope
 
 The current product is a local, one-user, full-access Clockify MCP for a single
-pinned workspace. There are no runtime allow lists to configure: all 156 tools
-are registered at startup and visible in `tools/list`.
+pinned workspace. The startup registry always loads all 156 tools. `tools/list`
+returns the advertised toolset: the default advertises 16 everyday tools,
+`CLOCKIFY_TOOLSET=all` advertises all 156, and the scoped `core`, `business`,
+and `admin` toolsets advertise their configured surfaces. Tools not advertised
+in `tools/list` remain loaded and dispatch-callable by name.
 
 ## Scope Rules
 
@@ -24,6 +27,7 @@ better choices:
 - `annotations.handlerKind`
 
 This metadata is descriptive. It does not hide tools at runtime.
+Only the advertised `tools/list` surface changes with `CLOCKIFY_TOOLSET`.
 
 ## Write Behavior
 

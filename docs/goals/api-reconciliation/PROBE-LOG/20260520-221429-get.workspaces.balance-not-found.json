@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.balance",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/balance",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:14:29Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/balance","query":{},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":404,"headers_redacted":{},"body_keys":["ok","error"],"body_sample":"{\"ok\":false,\"error\":{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/.../balance.\"}}"},
+  "facts_observed": {"exists":false,"error_code":"not_found","spring_mvc_path_not_found":true},
+  "notes": "In ours spec only. Live returns 404 Spring-MVC 'No static resource' - endpoint does not exist. Our generated spec is wrong."
+}

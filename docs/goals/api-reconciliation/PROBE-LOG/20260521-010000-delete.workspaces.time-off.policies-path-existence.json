@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "delete.workspaces.time-off.policies",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T01:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/policies/<redacted-id:1e975578e3>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["allowHalfDay","allowNegativeBalance","approve","archived","automaticAccrual","automaticTimeEntryCreation","everyoneIncludingNew","id","name","negativeBalance","projectId","timeUnit","userGroupIds","userIds","workspaceId"],
+    "body_sample": "{\"id\":\"<redacted-id:1e975578e3>\",\"name\":\"1111\",\"timeUnit\":\"DAYS\",\"archived\":false}"
+  },
+  "facts_observed": {
+    "path_family_exists": true,
+    "get_status": 200,
+    "delete_probe_attempted": false,
+    "delete_blocked_reason": "CLOCKIFY_ENABLE_RAW_WRITES not set; no typed delete tool for policies exists",
+    "typed_tool_available": false,
+    "archive_tool_available": "clockify_time_off_archive (PATCH-based, not DELETE)",
+    "test_policy_created": "<redacted-id:4b4f2c3686> (MCP-LIVE-RECON-20260521-010000-A-policy-delete-test)",
+    "test_policy_archived": true,
+    "test_policy_deleted": false,
+    "param_name_discrepancy": "official spec uses {id}, our spec uses {policyId} — same path position, different param name in spec only",
+    "raw_allowlist_entry": "DELETE /workspaces/{workspaceId}/time-off/policies/{policyId} is in raw_allowlist_gen.go line 142"
+  },
+  "notes": "Path family confirmed live (GET 200). No typed DELETE tool for policies; clockify_time_off_archive uses PATCH to archive, not DELETE. Raw DELETE blocked. Official spec uses param name {id} while our spec uses {policyId} — functionally the same path position. Both rows in PROGRESS.md refer to the same endpoint; the param name difference is a spec-alias discrepancy only. Test policy archived but not deleted (raw writes blocked)."
+}

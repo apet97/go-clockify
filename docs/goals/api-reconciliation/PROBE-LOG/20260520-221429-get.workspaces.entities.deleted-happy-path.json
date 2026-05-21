@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.entities.deleted",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/entities/deleted",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:14:29Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/entities/deleted","query":{"type":"PROJECTS","start":"2026-05-01T00:00:00Z"},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":200,"headers_redacted":{},"body_keys":["deletedAt","document","documentCode","id"],"body_sample":"[{\"deletedAt\":\"2026-05-20T03:55:54.071Z\",\"document\":{\"_id\":\"...\",\"auditMetadata\":{...},\"name\":\"111\",\"workspaceId\":\"[REDACTED]\"},\"documentCode\":\"PROJECTS\",\"id\":\"...\"}]"},
+  "facts_observed": {"response_shape":"bare_array","item_keys":["deletedAt","document","documentCode","id"],"document_sparse":true,"type_required":true,"valid_types":["CLIENTS","PROJECTS","SCHEDULED_ASSIGNMENT","TAGS","TASKS","TIME_ENTRY","TIME_ENTRY_CUSTOM_FIELD_VALUE","TIME_ENTRY_RATE"],"start_optional":true,"pagination_ignored":true},
+  "notes": "type required. start optional. page-size=1 returns same items as no page-size - pagination ignored. Items are sparse. Both specs document wrapped {response:[...]} but live returns bare array."
+}

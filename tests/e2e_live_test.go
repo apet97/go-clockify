@@ -19,7 +19,7 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 
 	prefix := liveWorkflowPrefix()
 	runID := strings.ToLower(prefix)
-	date := time.Now().UTC().Format("2006-01-02")
+	date := liveFutureWeekdayDate(1)
 
 	status := h.callOK(ctx, "clockify_status", nil)
 	statusIDs := extractIDs(t, status)
@@ -27,6 +27,7 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 		t.Fatalf("clockify_status missing workspace/user IDs: %#v", statusIDs)
 	}
 	h.clearRunningTimer(ctx)
+	requiredCustomFields := h.requiredTimeEntryCustomFields(ctx, prefix)
 
 	guide := h.callOK(ctx, "clockify_tools_guide", nil)
 	guideData := extractDataMap(t, guide)
@@ -47,11 +48,11 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 		}
 	}
 
-	seed := h.callOK(ctx, "clockify_demo_seed", map[string]any{
+	seed := h.callOK(ctx, "clockify_demo_seed", addRequiredTimeEntryCustomFields(map[string]any{
 		"run_id": runID,
 		"prefix": prefix,
 		"date":   date,
-	})
+	}, requiredCustomFields))
 	seedIDs := extractIDs(t, seed)
 	for _, key := range []string{"clientId", "projectId", "taskId", "tagId", "entryId"} {
 		if seedIDs[key] == "" {
@@ -59,7 +60,7 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 		}
 	}
 
-	logged := h.callOK(ctx, "clockify_log_work", map[string]any{
+	logged := h.callOK(ctx, "clockify_log_work", addRequiredTimeEntryCustomFields(map[string]any{
 		"start":       date + " 10:00",
 		"end":         date + " 10:20",
 		"description": prefix + " workflow log",
@@ -67,30 +68,30 @@ func TestLiveOneUserWorkflowMCP(t *testing.T) {
 		"task_id":     workPackageIDs["taskId"],
 		"tag_ids":     []any{workPackageIDs["tagId"]},
 		"billable":    true,
-	})
+	}, requiredCustomFields))
 	loggedIDs := extractIDs(t, logged)
 	if loggedIDs["entryId"] == "" {
 		t.Fatalf("clockify_log_work missing entryId: %#v", loggedIDs)
 	}
 
-	started := h.callOK(ctx, "clockify_start_work", map[string]any{
+	started := h.callOK(ctx, "clockify_start_work", addRequiredTimeEntryCustomFields(map[string]any{
 		"start":       time.Now().UTC().Add(-4 * time.Minute).Format(time.RFC3339),
 		"description": prefix + " workflow started",
 		"project_id":  workPackageIDs["projectId"],
 		"task_id":     workPackageIDs["taskId"],
 		"tag_ids":     []any{workPackageIDs["tagId"]},
-	})
+	}, requiredCustomFields))
 	if startedIDs := extractIDs(t, started); startedIDs["entryId"] == "" {
 		t.Fatalf("clockify_start_work missing entryId: %#v", startedIDs)
 	}
 
-	switched := h.callOK(ctx, "clockify_switch_work", map[string]any{
+	switched := h.callOK(ctx, "clockify_switch_work", addRequiredTimeEntryCustomFields(map[string]any{
 		"start":       time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339),
 		"description": prefix + " workflow switched",
 		"project_id":  workPackageIDs["projectId"],
 		"task_id":     workPackageIDs["taskId"],
 		"tag_ids":     []any{workPackageIDs["tagId"]},
-	})
+	}, requiredCustomFields))
 	if switchedIDs := extractIDs(t, switched); switchedIDs["entryId"] == "" {
 		t.Fatalf("clockify_switch_work missing entryId: %#v", switchedIDs)
 	}

@@ -1,0 +1,18 @@
+{
+  "body_bytes": 127,
+  "label": "time-off-requests-get-real-id",
+  "method": "GET",
+  "request_body": null,
+  "response_body_text": "{\"message\":\"No static resource v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/requests/<redacted-id:b431575b1a>.\",\"code\":3000}",
+  "response_headers_subset": {
+    "Content-Length": "127",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:33:45 GMT"
+  },
+  "response_json": {
+    "code": 3000,
+    "message": "No static resource v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/requests/<redacted-id:b431575b1a>."
+  },
+  "status": 404,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/requests/<redacted-id:b431575b1a>"
+}

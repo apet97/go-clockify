@@ -12,15 +12,17 @@ workspace. The environment contract is intentionally small:
 - `CLOCKIFY_WORKSPACE_ID` is required.
 - `CLOCKIFY_TIMEZONE`, `CLOCKIFY_BASE_URL`, and log-level settings are optional.
 
-The runtime registers all 156 tools at startup. Agents should call workflow
-tools first, use domain tools for precise CRUD, and use raw API fallback tools
-only when no workflow or domain tool fits.
+The runtime loads all 156 tools at startup. `tools/list` advertises the
+configured surface: 16 everyday tools by default, or all 156 with
+`CLOCKIFY_TOOLSET=all`. Unadvertised tools remain dispatch-callable by name.
+Agents should call workflow tools first, use domain tools for precise CRUD, and
+use raw API fallback tools only when no workflow or domain tool fits.
 
 ## Invariants
 
 - Keep stdio as the only runtime path.
 - Keep the one-key, one-workspace configuration model.
-- Keep all tools visible from startup.
+- Keep all tools loaded and dispatch-callable from startup.
 - Keep the catalog order: workflow, domain, raw fallback.
 - Keep write-style workflow outputs ID-rich.
 - Keep recoverable failures structured with recovery guidance.
@@ -91,12 +93,8 @@ CLOCKIFY_LIVE_PREFIX=<unique-prefix> \
 go test -count=1 ./internal/tools -run TestOneUserLiveOptionalDomainContracts
 ```
 
-## Current Follow-Ups
+## Optional Future Work
 
-- Continue converting lower-priority alias-wrapper domain tools when usage or
-  live evidence makes them hot.
-- Keep expanding live probes for domain tools that are still marked
-  `needs_live_probe` in `docs/goals/oneuser-tool-coverage.md`.
-- Keep tightening remaining generic output schemas against fake-server and
-  live outputs.
-- Keep stale docs out of the read-first path.
+No required follow-up work remains from the finalization plan. Treat release
+tagging, additional live evidence, or future Clockify API drift as new work, not
+leftover finalization.

@@ -64,7 +64,7 @@ curl -X POST http://127.0.0.1:9080/mcp \
 # tools/list → 35 Tier-1 tools registered
 # tools/call clockify_current_user → live API call succeeds
 # tools/call clockify_list_entries → 25 entries returned
-# tools/call clockify_add_entry → creates entry 6a00fc23385b9fac085a7b31
+# tools/call clockify_add_entry → creates entry <REDACTED_ID>
 # tools/call clockify_delete_entry → blocked by time_tracking_safe policy (correct)
 # tools/call clockify_get_workspace → workspace resolved
 
@@ -81,7 +81,7 @@ docker compose -f deploy/docker-compose.yml config   # validates OK
 
 # Cleanup
 docker stop clockify-mcp-smoke-39
-curl -X DELETE "https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries/6a00fc23385b9fac085a7b31" \
+curl -X DELETE "https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries/<REDACTED_ID>" \
   -H "X-Api-Key: "   # HTTP 204
 ```
 
@@ -92,7 +92,7 @@ curl -X DELETE "https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entrie
 | `clockify_current_user` | MCP tools/call via container | User returned with activeWorkspace |
 | `clockify_list_entries` | MCP tools/call via container | 25 entries returned |
 | `clockify_get_workspace` | MCP tools/call via container | Workspace resolved |
-| `clockify_add_entry` | MCP tools/call via container | Created entry `6a00fc23385b9fac085a7b31` |
+| `clockify_add_entry` | MCP tools/call via container | Created entry `<REDACTED_ID>` |
 | `clockify_delete_entry` | MCP tools/call via container | Blocked by time_tracking_safe (correct) |
 | Direct API DELETE | curl to api.clockify.me | HTTP 204, entry cleaned up |
 
@@ -169,7 +169,7 @@ No code fixes were required. The Docker build is clean and all functional paths 
 
 ## Cleanup performed
 - Stopped and removed test container `clockify-mcp-smoke-39`
-- Deleted test time entry `6a00fc23385b9fac085a7b31` via direct Clockify API (HTTP 204)
+- Deleted test time entry `<REDACTED_ID>` via direct Clockify API (HTTP 204)
 - Removed test Docker image `clockify-mcp:qa-smoke-39`
 
 ## Leftover test resources

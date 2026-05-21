@@ -145,7 +145,7 @@ curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces/<REDACTED>
 # HTTP 200 — returns workspace "WORKSPACE" with full settings
 
 # Probe 4: Nonexistent workspace (valid format, wrong ID)
-curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces/000000000000000000000000
+curl -H "X-Api-Key: " https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>
 # HTTP 404
 
 # Probe 5: Create and delete test time entry
@@ -155,7 +155,7 @@ curl -X POST -H "X-Api-Key: " -H "Content-Type: application/json" \
 # HTTP 200 — created entry
 
 curl -X DELETE -H "X-Api-Key: " \
-  https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries/6a00f5d5d9647159dc102df0
+  https://api.clockify.me/api/v1/workspaces/<REDACTED>/time-entries/<REDACTED_ID>
 # HTTP 204 — deleted successfully
 ```
 
@@ -226,7 +226,7 @@ See Findings section above. Each finding includes a complete repro command with 
 
 | Resource | ID | Action |
 |----------|----|--------|
-| Time entry | 6a00f5d5d9647159dc102df0 | Created and deleted (HTTP 204 confirmed) |
+| Time entry | <REDACTED_ID> | Created and deleted (HTTP 204 confirmed) |
 
 ## Leftover test resources
 

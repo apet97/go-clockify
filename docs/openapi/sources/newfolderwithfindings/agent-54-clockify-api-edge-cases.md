@@ -211,10 +211,10 @@ curl -s -X DELETE -H "X-Api-Key: <REDACTED>" \
 
 ## Cleanup performed
 
-- Deleted accidental empty-body time entry (`6a00f43c2568d3d29305fb7f`) created during probe — 204
-- Deleted test tag (`6a00f4d1284e03fc79326d36`) — 200
-- Deleted test project (`6a00f576d9647159dc10262a`) after archive — 200
-- Deleted test time entry (`6a00f577385b9fac085a225a`) — 204
+- Deleted accidental empty-body time entry (`<REDACTED_ID>`) created during probe — 204
+- Deleted test tag (`<REDACTED_ID>`) — 200
+- Deleted test project (`<REDACTED_ID>`) after archive — 200
+- Deleted test time entry (`<REDACTED_ID>`) — 204
 - Verified no `qa-agent-54-` prefixed resources remain in the workspace
 
 ## Leftover test resources

@@ -1,5 +1,5 @@
 # Clockify Projects — MUTATIONS (Agent B), observed against live workspace
-# 65b382b606de527a7ee2b60e on 2026-05-12. Each operation was exercised
+# <REDACTED_ID> on 2026-05-12. Each operation was exercised
 # once valid + once invalid; fixtures are in fixtures/projects-fresh-b/.
 #
 # Headline finding: the published OpenAPI says archive/template/estimate/

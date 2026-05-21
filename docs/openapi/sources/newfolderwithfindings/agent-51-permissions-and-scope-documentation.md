@@ -28,7 +28,7 @@ PASS WITH CONCERNS
 go build -o /tmp/clockify-mcp-doctor ./cmd/clockify-mcp/
 
 # Doctor command
-CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   /tmp/clockify-mcp-doctor doctor
 
 # Live API probes (all use redacted API key via source /tmp/clockify-livetest.env)
@@ -37,30 +37,30 @@ curl -s -H "X-Api-Key: ****REDACTED****" "https://api.clockify.me/api/v1/user"
 
 # GET /workspaces/{ws}/users
 curl -s -H "X-Api-Key: ****REDACTED****" \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e/users"
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>/users"
 
 # PUT /workspaces/{ws}/users/{userId}/roles (MCP's method)
 curl -s -X PUT -H "X-Api-Key: ****REDACTED****" -H "Content-Type: application/json" \
   -d '{"role":"REGULAR"}' \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e/users/64621faec4d2cc53b91fce6c/roles"
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>/users/<REDACTED_ID>/roles"
 # → HTTP 405 "Request method 'PUT' is not supported"
 
 # POST /workspaces/{ws}/users/{userId}/roles (Clockify's actual method)
 curl -s -X POST -H "X-Api-Key: ****REDACTED****" -H "Content-Type: application/json" \
-  -d '{"entityId":"64621faec4d2cc53b91fce6c","role":"TEAM_MANAGER"}' \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e/users/64621faec4d2cc53b91fce6c/roles"
+  -d '{"entityId":"<REDACTED_ID>","role":"TEAM_MANAGER"}' \
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>/users/<REDACTED_ID>/roles"
 # → HTTP 201 Created (success)
 
 # DELETE role (cleanup)
 curl -s -X DELETE -H "X-Api-Key: ****REDACTED****" -H "Content-Type: application/json" \
-  -d '{"entityId":"64621faec4d2cc53b91fce6c","role":"TEAM_MANAGER"}' \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e/users/64621faec4d2cc53b91fce6c/roles"
+  -d '{"entityId":"<REDACTED_ID>","role":"TEAM_MANAGER"}' \
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>/users/<REDACTED_ID>/roles"
 # → HTTP 204 No Content (cleanup confirmed)
 
 # PUT /workspaces/{ws}/users/{id}/status (MCP's deactivate endpoint)
 curl -s -X PUT -H "X-Api-Key: ****REDACTED****" -H "Content-Type: application/json" \
   -d '{"status":"INACTIVE"}' \
-  "https://api.clockify.me/api/v1/workspaces/65b382b606de527a7ee2b60e/users/64621faec4d2cc53b91fce6c/status"
+  "https://api.clockify.me/api/v1/workspaces/<REDACTED_ID>/users/<REDACTED_ID>/status"
 # → HTTP 404 (endpoint does not exist)
 
 # Permission broad scan (all 200)
@@ -201,7 +201,7 @@ This is a non-trivial change that needs a design decision on how `entityId` shou
 
 ## Cleanup performed
 
-- Removed the TEAM_MANAGER role assigned to user `64621faec4d2cc53b91fce6c` during testing via `DELETE /workspaces/{ws}/users/{id}/roles`. HTTP 204 confirmed.
+- Removed the TEAM_MANAGER role assigned to user `<REDACTED_ID>` during testing via `DELETE /workspaces/{ws}/users/{id}/roles`. HTTP 204 confirmed.
 
 ## Leftover test resources
 

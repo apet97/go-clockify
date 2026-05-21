@@ -1,0 +1,35 @@
+{
+  "endpoint_id": "getInvoices",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/invoices",
+  "probe_kind": "devil-empty-list",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "truth_yaml_said": {
+    "x-verification-status": "LIVE-VERIFIED",
+    "x-evidence": ["PROBE-LOG/20260520-210956-get.workspaces.invoices-happy-path.json"],
+    "x-reconciled-at": "20260520-210956",
+    "x-notes": "Response is {invoices:[], total:N} object, not a bare array. total is authoritative count. List items are lightweight — single item is much richer.",
+    "response_shape": "object with {invoices: array, total: integer}",
+    "status_enum": ["DRAFT", "SENT", "UNSENT", "OVERDUE", "PAID", "VOID"]
+  },
+  "live_probe_result": {
+    "description": "GET page=999 page_size=50 — forces empty page to verify wrapper shape on zero-result page",
+    "status": 200,
+    "ok": true,
+    "data_array_length": 0,
+    "meta_observed": {
+      "count": 0,
+      "has_more": false,
+      "page": 999,
+      "pageSize": 50,
+      "total": 0,
+      "workspaceId": "[redacted]"
+    },
+    "response_wrapper_confirmed": "yes — {invoices:[], total:0} shape confirmed",
+    "total_is_0": true,
+    "total_is_authoritative": "total=0 on empty page means workspace currently has 0 invoices (or prior cleanup removed them all)"
+  },
+  "verdict": "CONFIRMED",
+  "demotion_reason": null,
+  "notes": "TRUTH.yaml says response is {invoices:[], total:N} wrapper object, not a bare array. Confirmed live — page 999 returns the wrapper with total:0 and empty invoices array. The wrapper shape holds even on empty pages. TRUTH.yaml's status enum [DRAFT, SENT, UNSENT, OVERDUE, PAID, VOID] not re-tested here but was not the focus of this devil probe. Minor note: the MCP layer adds has_more to meta but TRUTH.yaml does not document has_more on this endpoint — this is a MCP augmentation, not a Clockify API field."
+}

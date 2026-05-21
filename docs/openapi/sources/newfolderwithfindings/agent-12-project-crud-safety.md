@@ -93,7 +93,7 @@ curl -s -X DELETE "..." -H "X-Api-Key: <REDACTED>"  # active project -> 400 "Can
 | 9 | Verify deletion | GET | `/workspaces/{ws}/projects/{id}` | 400, `"Project doesn't belong to Workspace"` |
 | 10 | Create without name | POST | `...` + `{"billable":true}` | 400, rejected by API |
 | 11 | Invalid project ID | GET | `.../invalid-id-format` | 400, `"Project doesn't belong to Workspace"` |
-| 12 | Nonexistent project | GET | `.../5b641568b07987035750505e` | 400, `"Project doesn't belong to Workspace"` |
+| 12 | Nonexistent project | GET | `.../<REDACTED_ID>` | 400, `"Project doesn't belong to Workspace"` |
 | 13 | List with archived filter | GET | `...?archived=true&page-size=3` | 200, only archived projects returned |
 | 14 | List with is-template filter | GET | `...?is-template=true&page-size=5` | 200, only template projects returned |
 | 15 | List with name filter | GET | `...?name=qa-agent-12&page-size=5` | 200, 0 items (expected — none matched after cleanup) |
@@ -169,8 +169,8 @@ All test resources created with the `qa-agent-12-` prefix were fully cleaned up:
 
 | Resource | ID | Action | Status |
 |----------|----|--------|--------|
-| qa-agent-12-1778446861-4a5d42-test-create | 6a00f2102568d3d29305e573 | Archived then deleted | Cleaned |
-| qa-agent-12-1778447148-4826f0-test-crud | 6a00f32f385b9fac085a0516 | Archived then deleted | Cleaned |
+| qa-agent-12-1778446861-4a5d42-test-create | <REDACTED_ID> | Archived then deleted | Cleaned |
+| qa-agent-12-1778447148-4826f0-test-crud | <REDACTED_ID> | Archived then deleted | Cleaned |
 
 ## Leftover test resources
 

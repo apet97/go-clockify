@@ -1,0 +1,36 @@
+{
+  "endpoint_id": "put.workspaces.clients.archive",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/clients/{clientId}/archive",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/clients/<redacted-id:5275682a76>/archive",
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null,
+    "rationale": "Spring-MVC discrimination: 404 'No static resource' = path absent; 405 'Request method GET is not supported' = path registered (PUT-only)"
+  },
+  "response": {
+    "status": 404,
+    "body_sample": "No static resource v1/workspaces/<redacted-id:7955161f32>/clients/<redacted-id:5275682a76>/archive.",
+    "error_code": "not_found",
+    "spring_mvc_signal": "No static resource — path ABSENT from router"
+  },
+  "facts_observed": {
+    "path_registered": false,
+    "accepted_method": null,
+    "spring_mvc_404": true,
+    "spring_mvc_note": "The 'No static resource v1/...' message is the Spring-MVC routing miss — the path does not exist in the live API router, not just a resource-not-found for the clientId.",
+    "client_id_used": "<redacted-id:5275682a76>",
+    "client_id_note": "This client was previously created and deleted in iter11. Since the path is absent regardless of resource existence, the result is definitive.",
+    "our_spec_says": "PUT /workspaces/{workspaceId}/clients/{clientId}/archive exists (ours-spec-only endpoint)",
+    "official_spec_says": "Absent — not in official spec",
+    "live_says": "Path entirely absent from live API router",
+    "mcp_tool_note": "clockify_clients_update does NOT use a /archive sub-path; it PUTs to /workspaces/{wId}/clients/{clientId} with archived:true in the body. The archive semantics are via the main client PUT body field, not a sub-resource.",
+    "ours_spec_discrepancy": "Our spec documents a separate PUT /clients/{clientId}/archive path, but live API uses the main PUT /clients/{clientId} with archived field in body"
+  },
+  "notes": "Spring-MVC 'No static resource' on GET /workspaces/{wId}/clients/{clientId}/archive definitively confirms the /archive sub-path is absent from live Clockify. Archive functionality exists but is handled by the main client PUT endpoint (PUT /clients/{clientId} with {archived:true} body), not a dedicated /archive sub-path. Our spec documents this as a separate path but live contradicts — LIVE-OVERRIDE."
+}

@@ -1,0 +1,16 @@
+{
+  "endpoint_id": "delete.workspaces.projects",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:31:00Z",
+  "method": "DELETE",
+  "path": "/workspaces/<redacted-id:7955161f32>/projects/<redacted-id:4cfde12df0>",
+  "query": {},
+  "status_code": 200,
+  "status_text": "OK",
+  "response_body_sample": {
+    "deleted": true,
+    "projectId": "<redacted-id:4cfde12df0>"
+  },
+  "verdict": "LIVE-VERIFIED",
+  "notes": "Created test project MCP-LIVE-RECON-20260521-003100-project, then deleted. Both specs document this endpoint."
+}

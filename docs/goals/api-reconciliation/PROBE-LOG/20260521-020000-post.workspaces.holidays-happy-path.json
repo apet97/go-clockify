@@ -1,0 +1,79 @@
+{
+  "endpoint_id": "post.workspaces.holidays",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/holidays",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "actual create via clockify_holidays_create",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/holidays",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "name": "MCP-LIVE-RECON-20260521-020000-B-holiday-probe",
+      "start_date": "2026-12-31",
+      "user_ids": ["<redacted-id:706f58c94f>"]
+    }
+  },
+  "response": {
+    "status": "200",
+    "headers_redacted": {},
+    "body_sample": {
+      "ok": true,
+      "action": "clockify_holidays_create",
+      "entity": "holiday",
+      "ids": {
+        "holidayId": "<redacted-id:594a8f475e>",
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "data": {
+        "automaticTimeEntryCreation": false,
+        "date_period": {
+          "end_date": "2026-12-31",
+          "start_date": "2026-12-31"
+        },
+        "everyoneIncludingNew": false,
+        "id": "<redacted-id:594a8f475e>",
+        "name": "MCP-LIVE-RECON-20260521-020000-B-holiday-probe",
+        "occursAnnually": false,
+        "projectId": null,
+        "taskId": null,
+        "userGroupIds": [],
+        "userIds": ["<redacted-id:706f58c94f>"],
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "changed": {
+        "created": [
+          {
+            "type": "holiday",
+            "id": "<redacted-id:594a8f475e>",
+            "name": "MCP-LIVE-RECON-20260521-020000-B-holiday-probe"
+          }
+        ]
+      }
+    }
+  },
+  "facts_observed": {
+    "dry_run_not_supported": true,
+    "dry_run_error": "MCP error -32602: invalid params at /dry_run: unknown property",
+    "actual_create_succeeded": true,
+    "created_holiday_id": "<redacted-id:594a8f475e>",
+    "response_shape": {
+      "id": "string",
+      "name": "string",
+      "workspaceId": "string",
+      "date_period": {"start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"},
+      "occursAnnually": "boolean",
+      "userIds": "array of strings",
+      "userGroupIds": "array of strings",
+      "everyoneIncludingNew": "boolean",
+      "automaticTimeEntryCreation": "boolean",
+      "projectId": "null or string",
+      "taskId": "null or string"
+    },
+    "required_fields": ["name", "start_date"],
+    "note_on_user_assignment": "at least one user_ids or user_group_ids entry is required per descriptor; probe used user_ids",
+    "cleanup": "deleted with clockify_holidays_delete immediately after creation"
+  },
+  "notes": "dry_run flag is not supported by clockify_holidays_create (schema has no dry_run property). Performed actual create + immediate delete for cleanup. POST path confirmed LIVE-VERIFIED. Response includes date_period object with start_date and end_date strings (YYYY-MM-DD format), not a flat date field."
+}

@@ -1,0 +1,43 @@
+{
+  "body_bytes": 378,
+  "label": "expense-create-with-png-file",
+  "method": "POST",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": {
+    "files": [
+      "file"
+    ],
+    "multipart_fields": {
+      "amount": "12.34",
+      "categoryId": "<redacted-id:c6f4ae2e99>",
+      "date": "2026-04-11T00:00:00Z",
+      "notes": "CODEX-VERIFY-1779332317-EXPENSE-FILE",
+      "projectId": "<redacted-id:0b0f57ad01>",
+      "userId": "<redacted-id:706f58c94f>"
+    }
+  },
+  "response_body_text": "{\"id\":\"<redacted-id:73d532425f>\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"userId\":\"<redacted-id:706f58c94f>\",\"date\":\"2026-04-11T00:00:00Z\",\"projectId\":\"<redacted-id:0b0f57ad01>\",\"taskId\":null,\"categoryId\":\"<redacted-id:c6f4ae2e99>\",\"notes\":\"CODEX-VERIFY-1779332317-EXPENSE-FILE\",\"quantity\":1.0,\"billable\":false,\"fileId\":\"<redacted-id:7b5850cb33>\",\"total\":1234.0,\"locked\":false}",
+  "response_headers_subset": {
+    "Content-Length": "378",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:58:43 GMT"
+  },
+  "response_json": {
+    "billable": false,
+    "categoryId": "<redacted-id:c6f4ae2e99>",
+    "date": "2026-04-11T00:00:00Z",
+    "fileId": "<redacted-id:7b5850cb33>",
+    "id": "<redacted-id:73d532425f>",
+    "locked": false,
+    "notes": "CODEX-VERIFY-1779332317-EXPENSE-FILE",
+    "projectId": "<redacted-id:0b0f57ad01>",
+    "quantity": 1.0,
+    "taskId": null,
+    "total": 1234.0,
+    "userId": "<redacted-id:706f58c94f>",
+    "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+  },
+  "run": "20260521T025837Z",
+  "status": 201,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses"
+}

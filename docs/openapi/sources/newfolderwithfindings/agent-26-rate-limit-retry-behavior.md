@@ -80,7 +80,7 @@ No Retry-After header
 
 ### Probe 4: Create and cleanup test resource
 ```
-Created client: qa-agent-26-1778447989-24e987-client (id=6a00f679d9647159dc103518)
+Created client: qa-agent-26-1778447989-24e987-client (id=<REDACTED_ID>)
 DELETE returned 400: "Cannot delete an active client" (code=501)
 Leftover resource documented below
 ```
@@ -155,7 +155,7 @@ No code fixes were applied. The findings are documentation/config gaps, not runt
 
 ## Cleanup performed
 
-- Created test client `qa-agent-26-1778447989-24e987-client` (id=6a00f679d9647159dc103518)
+- Created test client `qa-agent-26-1778447989-24e987-client` (id=<REDACTED_ID>)
 - Attempted DELETE — failed with 400 "Cannot delete an active client" (Clockify API restriction)
 - Docker image `clockify-mcp-qa-test:latest` built in local Docker daemon (not pushed)
 
@@ -163,7 +163,7 @@ No code fixes were applied. The findings are documentation/config gaps, not runt
 
 | Resource | ID | Name | Note |
 |----------|----|------|------|
-| client | 6a00f679d9647159dc103518 | qa-agent-26-1778447989-24e987-client | Cannot delete (active client); has no projects/tasks/time entries |
+| client | <REDACTED_ID> | qa-agent-26-1778447989-24e987-client | Cannot delete (active client); has no projects/tasks/time entries |
 
 ## Severity
 

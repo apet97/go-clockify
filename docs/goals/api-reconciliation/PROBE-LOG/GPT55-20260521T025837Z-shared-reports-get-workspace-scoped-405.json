@@ -1,0 +1,20 @@
+{
+  "body_bytes": 52,
+  "label": "shared-reports-get-workspace-scoped-405",
+  "method": "GET",
+  "prefix": "CODEX-VERIFY-1779332317",
+  "request_body": null,
+  "response_body_text": "{\"code\":405,\"message\":\"HTTP 405 Method Not Allowed\"}",
+  "response_headers_subset": {
+    "Content-Length": "52",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:58:39 GMT"
+  },
+  "response_json": {
+    "code": 405,
+    "message": "HTTP 405 Method Not Allowed"
+  },
+  "run": "20260521T025837Z",
+  "status": 405,
+  "url": "https://reports.api.clockify.me/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/shared-reports/<redacted-id:a96179c3a4>?exportType=JSON"
+}

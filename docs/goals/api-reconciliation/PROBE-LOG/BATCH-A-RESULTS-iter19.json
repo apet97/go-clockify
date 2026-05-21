@@ -1,0 +1,74 @@
+{
+  "batch": "A",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "endpoints": [
+    {
+      "endpoint_id": "post.workspaces.reports.detailed",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/reports/detailed",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.reports.detailed-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: post.workspaces.reports.detailed\n  summary: Detailed time report\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.reports.detailed-happy-path.json\n  x-notes: |\n    Confirmed live via clockify_reports_detailed tool (ok:true, 1 entry returned).\n    Response uses family-specific key 'totals_summary'. Money in minor units (cents).\n    meta.amountUnit=cents, meta.source=reports-api.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Detailed report with per-entry breakdown, financials in cents, approval/lock/audit metadata.",
+      "notes": "Path exists live. Tool POSTed successfully, returned 1 entry with full time_interval, entities, financials, customFieldValues, approval, and audit fields."
+    },
+    {
+      "endpoint_id": "post.workspaces.reports.expenses.detailed",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/reports/expenses/detailed",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.reports.expenses.detailed-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: post.workspaces.reports.expenses.detailed\n  summary: Detailed expense report\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.reports.expenses.detailed-happy-path.json\n  x-notes: |\n    Confirmed live via clockify_reports_expense tool (ok:true). Source code routes\n    to pathName 'expenses/detailed' (internal/tools/reports.go ExpenseReport()).\n    Empty expenses[] returned for date with no expenses — path exists and responds.\n    Response shape: data.expenses[], data.customFields[], data.totals{}, data.exportFields[].\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Detailed expense report with expenses list, custom fields, and totals. Money in minor units (cents).",
+      "notes": "Path exists live. Empty result (no expenses in range) still constitutes ok:true live verification. Tool uses path /reports/expenses/detailed confirmed in source at reports.go:438."
+    },
+    {
+      "endpoint_id": "post.workspaces.reports.summary",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/reports/summary",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.reports.summary-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: post.workspaces.reports.summary\n  summary: Summary time report grouped by project/user/tag\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.reports.summary-happy-path.json\n  x-notes: |\n    Confirmed live via clockify_reports_summary tool (ok:true, 1 rollup).\n    Response uses family-specific keys 'group_totals_summary' and 'totals_summary'.\n    Money in minor units (cents). meta.source=reports-api.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Summary report with project rollups, group totals, and financials in cents.",
+      "notes": "Path exists live. Returned 1 PROJECT-group rollup with duration, financials, and money_by_currency. Both group_totals_summary and totals_summary keys present."
+    },
+    {
+      "endpoint_id": "post.workspaces.reports.weekly",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/reports/weekly",
+      "verification_status": "LIVE-VERIFIED",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.reports.weekly-happy-path.json"
+      ],
+      "discrepancies": [],
+      "truth_yaml": "post:\n  operationId: post.workspaces.reports.weekly\n  summary: Weekly time report with per-day breakdown\n  x-verification-status: LIVE-VERIFIED\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.reports.weekly-happy-path.json\n  x-notes: |\n    Confirmed live via clockify_reports_weekly tool (ok:true, 5 rollups, 40 entries).\n    Response keys: weekly_day_totals, weekly_rollups, totals_summary.\n    Each rollup has weekly_day_breakdown array and children for user sub-rollups.\n    Money in minor units (cents). meta.source=reports-api.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  responses:\n    '200':\n      description: Weekly report with per-project per-day breakdown, financials in cents.",
+      "notes": "Path exists live. Rich response: 5 project rollups, 4 day-total rows, per-user children, weekly_day_breakdown per project. totalAmountCents=144000 ($1440 earned)."
+    },
+    {
+      "endpoint_id": "post.workspaces.scheduling.assignments",
+      "method": "POST",
+      "path": "/workspaces/{workspaceId}/scheduling/assignments",
+      "verification_status": "LIVE-OVERRIDE",
+      "probe_log_files": [
+        "PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments-path-probe.json"
+      ],
+      "discrepancies": [
+        {
+          "fact": "POST /workspaces/{workspaceId}/scheduling/assignments route existence",
+          "live_says": "404 No static resource — path is absent on Clockify API",
+          "official_says": "not in official Clockify OpenAPI spec",
+          "ours_says": "Listed in our OpenAPI spec as ours-source-only; clockify_scheduling_assignments_create actually uses /scheduling/assignments/recurring (scheduling.go:465)"
+        }
+      ],
+      "truth_yaml": "post:\n  operationId: post.workspaces.scheduling.assignments\n  summary: Create scheduling assignment (PHANTOM PATH)\n  x-verification-status: LIVE-OVERRIDE\n  x-evidence:\n    - PROBE-LOG/20260521-030000-post.workspaces.scheduling.assignments-path-probe.json\n  x-notes: |\n    PHANTOM: GET /workspaces/{wId}/scheduling/assignments returns 404 'No static resource'\n    confirming path is absent live (Spring-MVC: 404=absent, 405=exists/wrong-method).\n    Source code audit: clockify_scheduling_assignments_create uses POST\n    /workspaces/{wId}/scheduling/assignments/recurring (scheduling.go line 465).\n    Our OpenAPI spec lists the bare /scheduling/assignments path as ours-source-only,\n    which is incorrect — the real create path is /scheduling/assignments/recurring.\n    Recommend: remove this phantom entry from spec, add /scheduling/assignments/recurring\n    as the correct create path.\n  x-truth-iter: iter19\n  parameters:\n    - name: workspaceId\n      in: path\n      required: true\n  responses:\n    '404':\n      description: Path absent — No static resource (Spring-MVC 404).",
+      "notes": "DISCREPANCY FOUND. Bare /scheduling/assignments path is phantom — does not exist live. Actual create endpoint is /scheduling/assignments/recurring. Our spec needs correction."
+    }
+  ]
+}

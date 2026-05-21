@@ -1,0 +1,10 @@
+{
+  "endpoint_id": "delete.workspaces.clients.official",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:23:00Z",
+  "method": "DELETE",
+  "path": "/workspaces/<redacted-id:7955161f32>/clients/{id}",
+  "notes": "Official spec names path param {id}; our spec names it {clientId}. Same endpoint — already proven in iter11 (PROBE-LOG/20260521-001500-delete.workspaces.clients-happy-path.json). This entry cross-references that probe.",
+  "verdict": "LIVE-VERIFIED",
+  "cross_reference": "PROBE-LOG/20260521-001500-delete.workspaces.clients-happy-path.json"
+}

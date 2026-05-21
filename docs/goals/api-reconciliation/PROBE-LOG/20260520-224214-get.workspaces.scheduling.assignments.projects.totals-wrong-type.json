@@ -1,0 +1,41 @@
+{
+  "endpoint_id": "get.workspaces.scheduling.assignments.projects.totals",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/projects/totals",
+  "probe_kind": "wrong-type",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/projects/totals",
+    "query": {
+      "start": "2026-05-01T00:00:00Z",
+      "end": "2026-05-31T23:59:59Z",
+      "page-size": "abc"
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "code",
+      "message"
+    ],
+    "body_sample": "{\"message\":\"Method parameter 'page-size': Failed to convert value of type 'java.lang.String' to required type 'java.lang.Integer'; For input string: \\\"abc\\\"\",\"code\":3000}"
+  },
+  "facts_observed": {
+    "status": 400,
+    "response_top_keys": [
+      "code",
+      "message"
+    ],
+    "item_keys": [],
+    "item_count": {}
+  },
+  "notes": "page-size sent as non-integer string"
+}

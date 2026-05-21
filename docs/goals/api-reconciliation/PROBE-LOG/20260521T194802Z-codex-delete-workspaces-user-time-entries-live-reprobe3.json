@@ -1,0 +1,555 @@
+{
+  "cleanup": {
+    "entry_individual_delete_after_probe": {
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries/<redacted-id:f65eb58916>",
+        "path_template": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "code": 501,
+          "message": "Time entry doesn't belong to Workspace"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "code",
+            "message"
+          ],
+          "type": "object"
+        },
+        "status": 400
+      }
+    },
+    "project_archive": {
+      "request": {
+        "body": {
+          "archived": true,
+          "billable": false,
+          "color": "#5F8DD3",
+          "isPublic": true,
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-project"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:f65eb58912>",
+        "path_template": "/workspaces/{workspaceId}/projects/{projectId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": true,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#5F8DD3",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:f65eb58912>",
+          "memberships": [
+            {
+              "costRate": null,
+              "hourlyRate": null,
+              "membershipStatus": "ACTIVE",
+              "membershipType": "PROJECT",
+              "targetId": "<redacted-id:f65eb58912>",
+              "userId": "<redacted-id:53b91fce6c>"
+            }
+          ],
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-project",
+          "note": "",
+          "public": true,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "archived",
+            "billable",
+            "budgetEstimate",
+            "clientId",
+            "clientName",
+            "color",
+            "costRate",
+            "duration",
+            "estimate",
+            "estimateReset",
+            "hourlyRate",
+            "id",
+            "memberships",
+            "name",
+            "note",
+            "public",
+            "template",
+            "timeEstimate",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    "project_delete": {
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:f65eb58912>",
+        "path_template": "/workspaces/{workspaceId}/projects/{projectId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": true,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#5F8DD3",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:f65eb58912>",
+          "memberships": [
+            {
+              "costRate": null,
+              "hourlyRate": null,
+              "membershipStatus": "ACTIVE",
+              "membershipType": "PROJECT",
+              "targetId": "<redacted-id:f65eb58912>",
+              "userId": "<redacted-id:53b91fce6c>"
+            }
+          ],
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-project",
+          "note": "",
+          "public": true,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "archived",
+            "billable",
+            "budgetEstimate",
+            "clientId",
+            "clientName",
+            "color",
+            "costRate",
+            "duration",
+            "estimate",
+            "estimateReset",
+            "hourlyRate",
+            "id",
+            "memberships",
+            "name",
+            "note",
+            "public",
+            "template",
+            "timeEstimate",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  },
+  "endpoint_id": "delete.workspaces.user.time-entries",
+  "facts_observed": {
+    "bulk_delete_status": 200,
+    "bulk_delete_success": true,
+    "entry_create_success": true,
+    "entry_no_longer_readable_after_delete": true,
+    "query_param_used": "time-entry-ids",
+    "required_timeentry_custom_fields_supplied": 1
+  },
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+  "probe_kind": "live-happy-path-attempt",
+  "request": {
+    "body": null,
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "method": "DELETE",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/user/<redacted-id:53b91fce6c>/time-entries",
+    "path_template": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+    "query": {
+      "time-entry-ids": [
+        "<redacted-id:f65eb58916>"
+      ]
+    }
+  },
+  "response": {
+    "body_sample": [
+      {
+        "billable": false,
+        "customFieldValues": [],
+        "description": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-entry",
+        "id": "<redacted-id:f65eb58916>",
+        "isLocked": false,
+        "kioskId": null,
+        "projectId": "<redacted-id:f65eb58912>",
+        "tagIds": null,
+        "taskId": null,
+        "timeInterval": {
+          "duration": "PT15M",
+          "end": "2026-06-02T08:15:00Z",
+          "start": "2026-06-02T08:00:00Z"
+        },
+        "type": "REGULAR",
+        "userId": "<redacted-id:53b91fce6c>",
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      }
+    ],
+    "reason": null,
+    "shape": {
+      "first_keys": [
+        "billable",
+        "customFieldValues",
+        "description",
+        "id",
+        "isLocked",
+        "kioskId",
+        "projectId",
+        "tagIds",
+        "taskId",
+        "timeInterval",
+        "type",
+        "userId",
+        "workspaceId"
+      ],
+      "length": 1,
+      "type": "array"
+    },
+    "status": 200
+  },
+  "setup": {
+    "custom_fields_probe": {
+      "status": 200,
+      "timeentry_required_visible_count": 1,
+      "timeentry_required_visible_fields": [
+        {
+          "id": "<redacted-id:5d747ab148>",
+          "name": "MCP-TEST-FIELD",
+          "type": "TXT"
+        }
+      ]
+    },
+    "entry_create_attempts": [
+      {
+        "request": {
+          "body": {
+            "billable": false,
+            "customFields": [
+              {
+                "customFieldId": "<redacted-id:5d747ab148>",
+                "value": "codex-live-test"
+              }
+            ],
+            "description": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-entry",
+            "end": "2026-06-02T08:15:00Z",
+            "projectId": "<redacted-id:f65eb58912>",
+            "start": "2026-06-02T08:00:00Z",
+            "type": "REGULAR"
+          },
+          "headers_redacted": {
+            "X-Api-Key": "[REDACTED]"
+          },
+          "method": "POST",
+          "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries",
+          "path_template": "/workspaces/{workspaceId}/time-entries",
+          "query": {}
+        },
+        "response": {
+          "body_sample": {
+            "billable": false,
+            "customFieldValues": [
+              {
+                "customFieldId": "<redacted-id:5d747ab148>",
+                "name": "MCP-TEST-FIELD",
+                "timeEntryId": "<redacted-id:f65eb58916>",
+                "type": "TXT",
+                "value": "codex-live-test"
+              }
+            ],
+            "description": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-entry",
+            "id": "<redacted-id:f65eb58916>",
+            "isLocked": false,
+            "kioskId": null,
+            "projectId": "<redacted-id:f65eb58912>",
+            "tagIds": null,
+            "taskId": null,
+            "timeInterval": {
+              "duration": "PT15M",
+              "end": "2026-06-02T08:15:00Z",
+              "start": "2026-06-02T08:00:00Z"
+            },
+            "type": "REGULAR",
+            "userId": "<redacted-id:53b91fce6c>",
+            "workspaceId": "[REDACTED-WORKSPACE]"
+          },
+          "reason": null,
+          "shape": {
+            "keys": [
+              "billable",
+              "customFieldValues",
+              "description",
+              "id",
+              "isLocked",
+              "kioskId",
+              "projectId",
+              "tagIds",
+              "taskId",
+              "timeInterval",
+              "type",
+              "userId",
+              "workspaceId"
+            ],
+            "type": "object"
+          },
+          "status": 201
+        }
+      }
+    ],
+    "project_create": {
+      "request": {
+        "body": {
+          "billable": false,
+          "color": "#5F8DD3",
+          "isPublic": true,
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-project"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects",
+        "path_template": "/workspaces/{workspaceId}/projects",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": false,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#5F8DD3",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:f65eb58912>",
+          "memberships": [
+            {
+              "costRate": null,
+              "hourlyRate": null,
+              "membershipStatus": "ACTIVE",
+              "membershipType": "PROJECT",
+              "targetId": "<redacted-id:f65eb58912>",
+              "userId": "<redacted-id:53b91fce6c>"
+            }
+          ],
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-bulk-delete-project",
+          "note": "",
+          "public": true,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "archived",
+            "billable",
+            "budgetEstimate",
+            "clientId",
+            "clientName",
+            "color",
+            "costRate",
+            "duration",
+            "estimate",
+            "estimateReset",
+            "hourlyRate",
+            "id",
+            "memberships",
+            "name",
+            "note",
+            "public",
+            "template",
+            "timeEstimate",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    "user_probe": {
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "GET",
+        "path": "/user",
+        "path_template": "/user",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "activeWorkspace": "[REDACTED-WORKSPACE]",
+          "customFields": [],
+          "defaultWorkspace": "[REDACTED-WORKSPACE]",
+          "email": "[REDACTED-EMAIL]",
+          "id": "<redacted-id:53b91fce6c>",
+          "memberships": [],
+          "name": "Firstname Lastname",
+          "profilePicture": "https://avatar.cake.com/defaults%2FFL%2F16733986%2F2026-03-05-14-20-51.FL.jpg",
+          "settings": {
+            "alerts": false,
+            "approval": false,
+            "collapseAllProjectLists": false,
+            "dashboardPinToTop": false,
+            "dashboardSelection": "TEAM",
+            "dashboardViewType": "PROJECT",
+            "dateFormat": "MM/DD/YYYY",
+            "groupSimilarEntriesDisabled": false,
+            "invoiceReminders": false,
+            "isCompactViewOn": false,
+            "lang": "EN",
+            "longRunning": true,
+            "multiFactorEnabled": false,
+            "myStartOfDay": "08:00",
+            "onboarding": false,
+            "projectListCollapse": null,
+            "projectPickerTaskFilter": false,
+            "pto": false,
+            "reminders": false,
+            "scheduledReports": false,
+            "scheduling": false,
+            "sendNewsletter": false,
+            "showOnlyWorkingDays": false,
+            "summaryReportSettings": {
+              "group": "Project",
+              "subgroup": "Time Entry"
+            },
+            "theme": "DEFAULT",
+            "timeFormat": "HOUR12",
+            "timeTrackingManual": true,
+            "timeZone": "Europe/Belgrade",
+            "weekStart": "MONDAY",
+            "weeklyUpdates": true
+          },
+          "status": "ACTIVE"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "activeWorkspace",
+            "customFields",
+            "defaultWorkspace",
+            "email",
+            "id",
+            "memberships",
+            "name",
+            "profilePicture",
+            "settings",
+            "status"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  },
+  "timestamp_utc": "2026-05-21T19:48:02.305869Z",
+  "verdict": "LIVE-VERIFIED",
+  "verification": {
+    "get_deleted_entry": {
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "GET",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries/<redacted-id:f65eb58916>",
+        "path_template": "/workspaces/{workspaceId}/time-entries/{timeEntryId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "code": 501,
+          "message": "Time entry doesn't belong to Workspace"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "code",
+            "message"
+          ],
+          "type": "object"
+        },
+        "status": 400
+      }
+    }
+  }
+}

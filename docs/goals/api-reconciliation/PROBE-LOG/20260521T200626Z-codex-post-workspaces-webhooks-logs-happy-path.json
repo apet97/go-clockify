@@ -1,0 +1,152 @@
+{
+  "cleanup": [
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks/<redacted-id:ca41c317f4>",
+        "path_template": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": null,
+        "content_type": "",
+        "reason": "OK",
+        "shape": {
+          "type": "NoneType"
+        },
+        "status": 200
+      }
+    }
+  ],
+  "endpoint_id": "getWebhookLogs",
+  "evidence": [
+    {
+      "endpoint_id": "createWebhook",
+      "probe_kind": "happy-path",
+      "request": {
+        "body": {
+          "name": "MCP-LIVE-RECON-20260wh",
+          "triggerSource": [
+            "[REDACTED-WORKSPACE]"
+          ],
+          "triggerSourceType": "WORKSPACE_ID",
+          "url": "https://example.com/clockify-codex-webhook",
+          "webhookEvent": "NEW_TIME_ENTRY"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks",
+        "path_template": "/workspaces/{workspaceId}/webhooks",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "authToken": "[REDACTED]",
+          "deliveryEnabled": true,
+          "enabled": true,
+          "id": "<redacted-id:ca41c317f4>",
+          "name": "MCP-LIVE-RECON-20260wh",
+          "planEnabled": true,
+          "triggerSource": [
+            "[REDACTED-WORKSPACE]"
+          ],
+          "triggerSourceType": "WORKSPACE_ID",
+          "url": "https://example.com/clockify-codex-webhook",
+          "userId": "<redacted-id:706f58c94f>",
+          "webhookEvent": "NEW_TIME_ENTRY",
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "content_type": "application/json",
+        "reason": "Created",
+        "shape": {
+          "keys": [
+            "authToken",
+            "deliveryEnabled",
+            "enabled",
+            "id",
+            "name",
+            "planEnabled",
+            "triggerSource",
+            "triggerSourceType",
+            "url",
+            "userId",
+            "webhookEvent",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    {
+      "endpoint_id": "getWebhookLogs",
+      "probe_kind": "happy-path",
+      "request": {
+        "body": {
+          "sortByNewest": true,
+          "status": "ALL"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks/<redacted-id:ca41c317f4>/logs",
+        "path_template": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+        "query": {
+          "page": 1,
+          "size": 1
+        }
+      },
+      "response": {
+        "body_sample": [],
+        "content_type": "application/json",
+        "reason": "OK",
+        "shape": {
+          "first_keys": [],
+          "length": 0,
+          "type": "array"
+        },
+        "status": 200
+      }
+    },
+    {
+      "endpoint_id": "cleanup",
+      "probe_kind": "cleanup",
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks/<redacted-id:ca41c317f4>",
+        "path_template": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": null,
+        "content_type": "",
+        "reason": "OK",
+        "shape": {
+          "type": "NoneType"
+        },
+        "status": 200
+      }
+    }
+  ],
+  "method": "POST",
+  "notes": "POST logs query against the disposable webhook returned 2xx.",
+  "path_template": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+  "probe_id": "20260521T200626Z-post-workspaces-webhooks-logs-happy-path",
+  "probe_kind": "codex-live-gap-closure",
+  "request_scope": "live sacrificial workspace; disposable fixtures only; secrets and identifiers redacted",
+  "timestamp_utc": "2026-05-21T20:06:28Z",
+  "verification_status": "LIVE-VERIFIED"
+}

@@ -1,0 +1,40 @@
+{
+  "probe_id": "20260521-030000-post.workspaces.scheduling.assignments.users.totals",
+  "endpoint_id": "post.workspaces.scheduling.assignments.users.totals",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/users/totals",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "batch": "B",
+  "probes": [
+    {
+      "kind": "source-grep",
+      "description": "Check all path constructions containing 'users' and 'totals' in scheduling files",
+      "result": "scheduling.go:692 uses paths.Workspace(wsID, 'scheduling', 'assignments', 'users', userID, 'totals') — note this is /users/{userId}/totals not /users/totals. scheduling_totals.go:50 same pattern. getWorkspaceScheduleUserTotalsRaw uses 'user-filter/totals' not 'users/totals'.",
+      "finding": "GOCLMCP does NOT use /scheduling/assignments/users/totals (without userId). It uses /scheduling/assignments/users/{userId}/totals (GET, for single-user capacity) and /scheduling/assignments/user-filter/totals (POST, for multi-user totals)."
+    },
+    {
+      "kind": "live-GET-method-probe",
+      "description": "GET /workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/users/totals",
+      "http_status": 404,
+      "response_body": "{\"message\":\"No static resource v1/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/users/totals.\",\"code\":3000}",
+      "finding": "Spring-MVC 404 'No static resource' = path is NOT registered on live Clockify"
+    },
+    {
+      "kind": "live-POST-probe",
+      "description": "POST /workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/users/totals with {start, end, pageSize:5}",
+      "http_status": 404,
+      "response_body": "{\"message\":\"No static resource v1/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/users/totals.\",\"code\":3000}",
+      "finding": "POST also returns 404; the path does not exist at all on live Clockify"
+    }
+  ],
+  "verification_status": "LIVE-OVERRIDE",
+  "discrepancy": {
+    "type": "endpoint-absent",
+    "openapi_claim": "POST /workspaces/{workspaceId}/scheduling/assignments/users/totals exists (source: ours only)",
+    "live_reality": "Endpoint does not exist on live Clockify API (both GET and POST return 404 'No static resource')",
+    "goclmcp_impact": "GOCLMCP does not use this path. The workspace-wide user totals functionality is served by POST /scheduling/assignments/user-filter/totals (endpoint #4, live-verified). The path /users/{userId}/totals (GET) is used for single-user capacity queries.",
+    "recommendation": "Remove post.workspaces.scheduling.assignments.users.totals from OpenAPI spec; it is absent on live Clockify. The actual multi-user totals endpoint is post.workspaces.scheduling.assignments.user-filter.totals."
+  },
+  "notes": "LIVE-OVERRIDE: the OpenAPI spec (source: ours only) claims this endpoint exists, but live Clockify returns 404 for both GET and POST. This is not a Spring-MVC 405 (wrong method, path exists); it is a genuine 404 'No static resource' meaning the route is not registered. The correct path for workspace-wide user scheduling totals is /user-filter/totals (POST), not /users/totals. GOCLMCP correctly uses /user-filter/totals and /users/{userId}/totals — neither of which is the absent /users/totals path."
+}

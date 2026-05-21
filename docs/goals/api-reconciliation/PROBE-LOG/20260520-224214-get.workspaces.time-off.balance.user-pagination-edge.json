@@ -1,0 +1,56 @@
+{
+  "endpoint_id": "get.workspaces.time-off.balance.user",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-off/balance/user/{userId}",
+  "probe_kind": "pagination-edge",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/balance/user/[REDACTED-USER]",
+    "query": {
+      "page": 1,
+      "page-size": 1
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "balances",
+      "count"
+    ],
+    "body_sample": "{\"count\":963,\"balances\":[{\"id\":\"...\",\"workspaceId\":\"[REDACTED-WORKSPACE]\",\"policyId\":\"...\",\"policyName\":\"1111\",\"policyTimeUnit\":\"DAYS\",\"negativeBalanceLimit\":true,\"negativeBalanceAmount\":10.0,\"policyArchived\":false,\"userId\":\"[REDACTED-USER]\",\"userName\":\"Firstname Lastname\",\"balance\":-29.5,\"used\":57.5,\"total\":28.0}]}"
+  },
+  "facts_observed": {
+    "status": 200,
+    "response_top_keys": [
+      "balances",
+      "count"
+    ],
+    "item_keys": [
+      "balance",
+      "id",
+      "negativeBalanceAmount",
+      "negativeBalanceLimit",
+      "policyArchived",
+      "policyId",
+      "policyName",
+      "policyTimeUnit",
+      "total",
+      "used",
+      "userId",
+      "userName",
+      "workspaceId"
+    ],
+    "item_count": {
+      "balances": 1
+    }
+  },
+  "notes": ""
+}

@@ -148,7 +148,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	slog.Info("one_user_server_start",
 		"version", effective,
 		"transport", "stdio",
-		"workspace", cfg.WorkspaceID,
+		"workspace_id", redactIdentifier(cfg.WorkspaceID),
 		"base_url", cfg.BaseURL,
 		"toolset", cfg.Toolset,
 	)
@@ -211,7 +211,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 
 	_, _ = fmt.Fprintf(stdout, "clockify-mcp doctor - one-user configuration\n\n")
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_API_KEY       set (redacted)\n")
-	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WORKSPACE_ID  %s\n", cfg.WorkspaceID)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WORKSPACE_ID  %s\n", redactIdentifier(cfg.WorkspaceID))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TIMEZONE      %s\n", optionalValue(cfg.Timezone, "(local/default)"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_BASE_URL      %s\n", cfg.BaseURL)
 	_, _ = fmt.Fprintf(stdout, "MCP_LOG_LEVEL          %s\n", optionalValue(cfg.LogLevel, "warn"))
@@ -260,23 +260,23 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 
 	var user clockify.User
 	if err := client.Get(ctx, "/user", nil, &user); err != nil {
-		_, _ = fmt.Fprintf(stderr, "live auth check failed: %v\n", redactAPIKey(err, cfg.APIKey))
+		_, _ = fmt.Fprintf(stderr, "live auth check failed: %v\n", redactDoctorDiagnostic(err, cfg))
 		return 3
 	}
 	_, _ = fmt.Fprintf(stdout, "  GET /user                         OK\n")
-	_, _ = fmt.Fprintf(stdout, "    user_id: %s\n", optionalValue(user.ID, "(unknown)"))
+	_, _ = fmt.Fprintf(stdout, "    user_id: %s\n", redactIdentifier(optionalValue(user.ID, "")))
 
 	var workspace clockify.Workspace
 	workspacePath := "/workspaces/" + cfg.WorkspaceID
 	if err := client.Get(ctx, workspacePath, nil, &workspace); err != nil {
-		_, _ = fmt.Fprintf(stderr, "workspace check failed: %v\n", redactAPIKey(err, cfg.APIKey))
+		_, _ = fmt.Fprintf(stderr, "workspace check failed: %v\n", redactDoctorDiagnostic(err, cfg))
 		if apiStatus(err) == http.StatusUnauthorized || apiStatus(err) == http.StatusForbidden {
 			return 3
 		}
 		return 4
 	}
 	_, _ = fmt.Fprintf(stdout, "  GET /workspaces/{workspaceId}     OK\n")
-	_, _ = fmt.Fprintf(stdout, "    workspace_id: %s\n", optionalValue(workspace.ID, cfg.WorkspaceID))
+	_, _ = fmt.Fprintf(stdout, "    workspace_id: %s\n", redactIdentifier(optionalValue(workspace.ID, cfg.WorkspaceID)))
 	_, _ = fmt.Fprintf(stdout, "    workspace_name: %s\n", optionalValue(workspace.Name, "(unknown)"))
 	_, _ = fmt.Fprintf(stdout, "    feature_plan: %s\n", optionalValue(workspace.FeatureSubscriptionType, "(unknown)"))
 	_, _ = fmt.Fprintf(stdout, "    feature_flags: %s\n", optionalList(workspace.Features, "(none returned)"))
@@ -284,7 +284,7 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 
 	var ownerWorkspaces []clockify.Workspace
 	if err := client.Get(ctx, "/workspaces", map[string]string{"roles": "OWNER"}, &ownerWorkspaces); err != nil {
-		_, _ = fmt.Fprintf(stderr, "owner role check failed: %v\n", redactAPIKey(err, cfg.APIKey))
+		_, _ = fmt.Fprintf(stderr, "owner role check failed: %v\n", redactDoctorDiagnostic(err, cfg))
 		if apiStatus(err) == http.StatusUnauthorized || apiStatus(err) == http.StatusForbidden {
 			return 3
 		}
@@ -380,6 +380,26 @@ func redactAPIKey(err error, apiKey string) string {
 		msg = strings.ReplaceAll(msg, apiKey, "[redacted]")
 	}
 	return msg
+}
+
+func redactDoctorDiagnostic(err error, cfg config.OneUserConfig) string {
+	msg := redactAPIKey(err, cfg.APIKey)
+	workspaceID := strings.TrimSpace(cfg.WorkspaceID)
+	if workspaceID != "" {
+		msg = strings.ReplaceAll(msg, workspaceID, redactIdentifier(workspaceID))
+	}
+	return msg
+}
+
+func redactIdentifier(id string) string {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "(unset)"
+	}
+	if len(id) <= 4 {
+		return "[redacted]"
+	}
+	return "[redacted]..." + id[len(id)-4:]
 }
 
 func optionalValue(value, fallback string) string {

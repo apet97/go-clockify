@@ -1,0 +1,15 @@
+{
+  "body_bytes": 68,
+  "label": "expense-file-v3-get-created-file",
+  "method": "GET",
+  "request_body": null,
+  "response_body_text": "\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0004\u0000\u0000\u0000\ufffd\u001c\f\u0002\u0000\u0000\u0000\u000bIDATx^c\ufffd\ufffd\u001f\u0000\u0003\u0000\u0001\ufffd\ufffdo\u0002\ufffd\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd",
+  "response_headers_subset": {
+    "Content-Length": "68",
+    "Content-Type": "application/octet-stream",
+    "Date": "Thu, 21 May 2026 02:36:48 GMT"
+  },
+  "response_json": null,
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses/<redacted-id:5fbb3f7e95>/files/<redacted-id:577ec58cb5>"
+}

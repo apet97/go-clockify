@@ -44,10 +44,10 @@ curl -s -H "X-Api-Key: $CLOCKIFY_API_KEY" "https://api.clockify.me/api/v1/worksp
 
 # Invite validation probes (all safe — send-email=false, no real users)
 curl -s -X POST ".../users?send-email=false" -d '{"email":""}'
-curl -s -X POST ".../users?send-email=false" -d '{"email":"qa-agent-29@example.invalid"}'
+curl -s -X POST ".../users?send-email=false" -d '{"email":"<EMAIL>"}'
 curl -s -X POST ".../users?send-email=false" -d '{}'
-curl -s -X POST ".../users?send-email=false" -d '{"email":"qa-agent-29@example.invalid"}' # missing auth
-curl -s -X POST ".../users?send-email=false" -d '{"email":"qa-agent-29@example.invalid"}' # invalid workspace
+curl -s -X POST ".../users?send-email=false" -d '{"email":"<EMAIL>"}' # missing auth
+curl -s -X POST ".../users?send-email=false" -d '{"email":"<EMAIL>"}' # invalid workspace
 
 # Role endpoint probes
 curl -s -X PUT ".../users/$SELF_USER_ID/roles" -d '{"role":"WORKSPACE_ADMIN"}'   # FAILS: PUT not supported
@@ -55,7 +55,7 @@ curl -s -X POST ".../users/$SELF_USER_ID/roles" -d '{"entityId":"$WS_ID","role":
 
 # Deactivation probe (safe — on owner)
 curl -s -X PUT ".../users/$SELF_USER_ID" -d '{"status":"INACTIVE"}'  # 403 Access Denied (self-deactivation blocked)
-curl -s -X PUT ".../users/000000000000000000000001" -d '{"status":"INACTIVE"}'  # 400 not a member
+curl -s -X PUT ".../users/<REDACTED_ID>" -d '{"status":"INACTIVE"}'  # 400 not a member
 ```
 
 ## Live API probes run
@@ -66,10 +66,10 @@ curl -s -X PUT ".../users/000000000000000000000001" -d '{"status":"INACTIVE"}'  
 | 2 | `/workspaces/{ws}/users` | GET | — | 200 | User list returned (3 users) |
 | 3 | `/workspaces/{ws}/user-groups` | GET | — | 200 | Empty array (no groups) |
 | 4 | `/workspaces/{ws}/users?send-email=false` | POST | `{"email":""}` | 400 | "must not be blank" — safe gate |
-| 5 | `/workspaces/{ws}/users?send-email=false` | POST | `{"email":"qa-agent-29@example.invalid"}` | 400 | "subscription allows" — safe gate |
+| 5 | `/workspaces/{ws}/users?send-email=false` | POST | `{"email":"<EMAIL>"}` | 400 | "subscription allows" — safe gate |
 | 6 | `/workspaces/{ws}/users?send-email=false` | POST | `{}` | 400 | Missing email — safe gate |
-| 7 | `/workspaces/{ws}/users?send-email=false` | POST | `{"email":"qa-agent-29@example.invalid"}` (no auth) | 401 | Auth required |
-| 8 | `/workspaces/000...000/users?send-email=false` | POST | `{"email":"qa-agent-29@example.invalid"}` | 404 | Invalid workspace |
+| 7 | `/workspaces/{ws}/users?send-email=false` | POST | `{"email":"<EMAIL>"}` (no auth) | 401 | Auth required |
+| 8 | `/workspaces/000...000/users?send-email=false` | POST | `{"email":"<EMAIL>"}` | 404 | Invalid workspace |
 | 9 | `/workspaces/{ws}/users/{selfId}` | PUT | `{"status":"INACTIVE"}` | 403 | Self-deactivation blocked |
 | 10 | `/workspaces/{ws}/users/000...001` | PUT | `{"status":"INACTIVE"}` | 400 | Non-member |
 | 11 | `/workspaces/{ws}/users/{selfId}/roles` | PUT | `{"role":"WORKSPACE_ADMIN"}` | 400 | **PUT not supported** (code 3000) |

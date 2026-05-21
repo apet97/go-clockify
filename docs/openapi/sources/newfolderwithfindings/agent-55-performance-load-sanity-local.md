@@ -75,7 +75,7 @@ curl -s -X POST -H "X-Api-Key: <REDACTED>" -H "Content-Type: application/json" \
 
 | Probe | Result | Details |
 |-------|--------|---------|
-| User identity | 200 | `alpettest1@gmail.com`, workspace owner |
+| User identity | 200 | `<EMAIL>`, workspace owner |
 | Workspace info | 200 | "WORKSPACE", BUNDLE_YEAR_2024 plan, EUR 150/hr |
 | Create project | 200 | Created `qa-agent-55-perf-test-1778447542` |
 | Sequential 10 GETs | All 200 | Response: 372ms–1.2s per request |
@@ -154,7 +154,7 @@ go test -run='^$' -bench='BenchmarkAcquireForSubjectSteady|BenchmarkAcquireGloba
 
 | ID | Name | Type | Workspace |
 |----|------|------|-----------|
-| `6a00f4b7284e03fc79326bf9` | `qa-agent-55-perf-test-1778447542` | Project | `65b382b606de527a7ee2b60e` |
+| `<REDACTED_ID>` | `qa-agent-55-perf-test-1778447542` | Project | `<REDACTED_ID>` |
 
 The project cannot be API-deleted because it is "active" (Clockify 501). It is harmless and can be removed via the Clockify web UI.
 

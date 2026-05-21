@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "put.workspaces.projects.archive",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/archive",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T05:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/<redacted-id:7955161f32>/projects/<redacted-id:b0fdd96bd9>/archive",
+    "note": "GET probe to detect if path exists (405 = exists, Spring-MVC 404 = absent)"
+  },
+  "response": {
+    "status": 404,
+    "body_sample": "{\"code\":\"not_found\",\"message\":\"No static resource v1/workspaces/<redacted-id:7955161f32>/projects/<redacted-id:b0fdd96bd9>/archive.\"}",
+    "clockify_error_type": "Spring-MVC No static resource"
+  },
+  "facts_observed": {
+    "path_exists": false,
+    "spring_mvc_404": true,
+    "archive_mechanism": "PUT /workspaces/{workspaceId}/projects/{projectId} with body {archived: true}",
+    "clockify_projects_archive_tool_behavior": "calls UpdateProject with archived=true flag, which issues PUT to main project path",
+    "source_code_evidence": "oneuser_native_core.go line 74-78: args[archived]=true then s.UpdateProject(ctx, args); project_admin.go line 779: body={archived:true} also uses main PUT path"
+  },
+  "notes": "The /archive sub-path does NOT exist on Clockify API. Both clockify_projects_archive (single project via UpdateProject) and clockify_archive_projects (batch) use PUT /workspaces/{workspaceId}/projects/{projectId} with archived=true in the body. This is ours-only in the spec inventory because the official spec may list a separate archive endpoint but Clockify returns Spring-MVC 404 for it."
+}

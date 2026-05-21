@@ -24,7 +24,7 @@ Coverage:
 
 | File | Purpose |
 |------|---------|
-| `/tmp/clockify-livetest.env` | API key, workspace ID (65b382b606de527a7ee2b60e) |
+| `/tmp/clockify-livetest.env` | API key, workspace ID (<REDACTED_ID>) |
 | `docs/official-api-notes.md` | Per-domain API documentation notes |
 | `findings/SUMMARY.md` | 23 recommended changes in priority order |
 | `findings/custom-fields.md` | Custom field type enum discoveries |

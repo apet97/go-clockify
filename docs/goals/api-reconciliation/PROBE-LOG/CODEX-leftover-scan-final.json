@@ -1,0 +1,104 @@
+{
+  "leftover_count": 0,
+  "leftovers": [],
+  "prefix": "CODEX-VERIFY-",
+  "scans": [
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "projects",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/projects?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "clients",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/clients?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "tags",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/tags?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "user-groups",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/user-groups?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "holidays",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/holidays?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "webhooks",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/webhooks?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "expenses",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses?page=1&pageSize=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "time-off-policies",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/policies?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "time-off-requests",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/requests"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "shared-reports",
+      "matches": [],
+      "status": 200,
+      "url": "https://reports.api.clockify.me/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/shared-reports?pageSize=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "invoices",
+      "matches": [],
+      "status": 200,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/invoices?page=1&page-size=200"
+    },
+    {
+      "body_contains_prefix": false,
+      "body_sample": "",
+      "label": "scheduling-assignments-all",
+      "matches": [],
+      "status": 400,
+      "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/scheduling/assignments/all?page=1&page-size=200"
+    }
+  ],
+  "timestamp_utc": "2026-05-21T02:46:09Z"
+}

@@ -19,8 +19,9 @@
 // spinning to the hard page cap.
 //
 // After the sweep it performs a paginated post-delete rescan of every
-// collection and reports the true leftover count. A machine-readable JSON
-// summary is printed as the final stdout line.
+// prefixed-object collection and reports that leftover count. User invites are
+// outside this prefixed-delete sweep. A machine-readable JSON summary is
+// printed as the final stdout line.
 //
 // Set CLOCKIFY_LIVE_CLEAN_DRY_RUN=1 to list what would be deleted without
 // mutating the workspace; a dry run still exits non-zero when any collection

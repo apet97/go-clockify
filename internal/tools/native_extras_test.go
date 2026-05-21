@@ -25,7 +25,7 @@ func TestInvoicesInfoPagedQuery(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "000000000000000000000001")
 	env, err := svc.InvoicesInfo(context.Background(), map[string]any{
 		"page":      1,
 		"page_size": 1,
@@ -34,7 +34,7 @@ func TestInvoicesInfoPagedQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InvoicesInfo: %v", err)
 	}
-	if gotPath != "/workspaces/65b382b606de527a7ee2b60e/invoices/info" {
+	if gotPath != "/workspaces/000000000000000000000001/invoices/info" {
 		t.Fatalf("path = %s, want /workspaces/.../invoices/info", gotPath)
 	}
 	if gotBody["statuses"] == nil {
@@ -71,7 +71,7 @@ func TestSchedulingPublishReceiptAndDryRun(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "65b382b606de527a7ee2b60e")
+	svc := New(clockify.NewClient("k", ts.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
 
 	dry, err := svc.SchedulingPublish(context.Background(), map[string]any{

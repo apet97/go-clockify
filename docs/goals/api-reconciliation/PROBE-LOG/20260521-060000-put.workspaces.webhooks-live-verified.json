@@ -1,0 +1,50 @@
+{
+  "endpoint_id": "put.workspaces.webhooks",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/webhooks/{webhookId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T06:00:00Z",
+  "request": {
+    "method": "PUT",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks/<redacted-id:508f41ec5c>",
+    "tool_used": "clockify_webhooks_update",
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body_redacted": {
+      "name": "mcp webhook MCP-LIVE-202605190",
+      "url": "https://example.com/clockify",
+      "webhookEvent": "NEW_TIME_ENTRY",
+      "triggerSourceType": "WORKSPACE_ID",
+      "triggerSource": ["[REDACTED-WORKSPACE]"]
+    },
+    "rationale": "No-op same-value PUT via clockify_webhooks_update to confirm the route accepts PUT and returns 200"
+  },
+  "response": {
+    "status": 200,
+    "body_keys": ["deliveryEnabled", "enabled", "id", "name", "planEnabled", "secret_token_present", "auth_token_suffix", "triggerSource", "triggerSourceType", "url", "userId", "webhookEvent", "workspaceId"],
+    "body_sample": "{\"id\":\"<redacted-id:508f41ec5c>\",\"name\":\"mcp webhook MCP-LIVE-202605190\",\"webhookEvent\":\"NEW_TIME_ENTRY\",\"url\":\"https://example.com/clockify\",\"triggerSourceType\":\"WORKSPACE_ID\",\"enabled\":true,\"deliveryEnabled\":true,\"planEnabled\":true,\"secret_token_present\":true}",
+    "changed_fields": [{"type": "webhook", "id": "<redacted-id:508f41ec5c>", "name": "mcp webhook MCP-LIVE-202605190"}]
+  },
+  "dry_run_probe": {
+    "executed": true,
+    "result": "dry_run:true returned current webhook state with masked authToken (auth_token_suffix present), confirming GET /webhooks/{id} works and PUT payload is constructed correctly",
+    "dry_run_tool": "clockify_webhooks_update with dry_run:true"
+  },
+  "source_analysis": {
+    "mcp_tool": "clockify_webhooks_update (UpdateWebhook in webhooks.go)",
+    "http_method": "PUT",
+    "path_construction": "paths.Workspace(wsID, 'webhooks', webhookID) — resolves to /workspaces/{wId}/webhooks/{webhookId}",
+    "client_call": "s.Client.Put(ctx, path, payload, &result) at webhooks.go line 759",
+    "pre_flight": "GET /webhooks/{id} to fetch existing values and merge unchanged fields before PUT",
+    "dry_run_support": "yes — returns current + payload preview, no upstream PUT issued",
+    "claude_md_note": "CLAUDE.md says clockify_invoices_send, clockify_webhooks_test, and clockify_invoices_items_update have no Clockify endpoint. This refers to clockify_webhooks_test (the test-send operation), NOT clockify_webhooks_update. The UPDATE tool (PUT) is fully supported and LIVE-VERIFIED here."
+  },
+  "facts_observed": {
+    "route_registered_in_live_api": true,
+    "put_returns_200": true,
+    "response_includes_full_webhook_object": true,
+    "changed_fields_in_response": "meta.changed.updated shows webhook id and name",
+    "auth_token_masked": true,
+    "clarification": "CLAUDE.md unsupported-endpoint note is for clockify_webhooks_test (test-send), not clockify_webhooks_update (PUT update)"
+  },
+  "notes": "LIVE-VERIFIED. PUT /workspaces/{workspaceId}/webhooks/{webhookId} returned 200 with full webhook object via clockify_webhooks_update no-op update. The CLAUDE.md note about unsupported endpoints refers only to clockify_webhooks_test (no test-send endpoint exists) — clockify_webhooks_update is a fully working typed tool backed by real PUT. Source: webhooks.go line 759 s.Client.Put. Raw allowlist also has this entry at raw_allowlist_gen.go line 187."
+}

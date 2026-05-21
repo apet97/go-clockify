@@ -14,7 +14,7 @@ import (
 // omitted start is echoed back via meta.startWasDefaulted / resolvedStart so
 // the model never parses prose to learn the outcome.
 func TestSwitchWorkReportsStatusAndDefaultedStart(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 	svc.DefaultTimezone = time.UTC

@@ -1,0 +1,93 @@
+{
+  "body_bytes": 1688,
+  "label": "time-off-requests-list-for-single-get",
+  "method": "POST",
+  "request_body": {
+    "page": 1,
+    "pageSize": 5
+  },
+  "response_body_text": "{\"count\":2,\"requests\":[{\"id\":\"<redacted-id:b431575b1a>\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"policyId\":\"<redacted-id:0d52dd9f2c>\",\"policyName\":\"Full Policy 1768518809\",\"timeUnit\":\"DAYS\",\"userId\":\"<redacted-id:706f58c94f>\",\"userName\":\"Firstname Lastname\",\"userEmail\":\"<redacted-email:559397bdfe>\",\"userTimeZone\":\"Europe/Belgrade\",\"timeOffPeriod\":{\"period\":{\"start\":\"2025-03-02T23:00:00Z\",\"end\":\"2025-03-03T22:59:59Z\"},\"halfDay\":true,\"halfDayPeriod\":\"FIRST_HALF\",\"halfDayHours\":{\"start\":\"2025-03-03T15:30:00Z\",\"end\":\"2025-03-03T19:30:00Z\"}},\"note\":\"Half Day Test\",\"status\":{\"statusType\":\"PENDING\",\"changedByUserId\":null,\"changedByUserName\":\"alter  \",\"changedForUserName\":\"alter  \",\"changedAt\":null,\"note\":null},\"balanceDiff\":0.5,\"createdAt\":\"2026-01-15T23:19:55.239696346Z\",\"balance\":-0.5,\"requesterUserId\":\"<redacted-id:706f58c94f>\",\"requesterUserName\":\"Firstname Lastname\"},{\"id\":\"<redacted-id:43be803869>\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"policyId\":\"<redacted-id:1e975578e3>\",\"policyName\":\"1111\",\"timeUnit\":\"DAYS\",\"userId\":\"<redacted-id:706f58c94f>\",\"userName\":\"Firstname Lastname\",\"userEmail\":\"<redacted-email:559397bdfe>\",\"userTimeZone\":\"Europe/Belgrade\",\"timeOffPeriod\":{\"period\":{\"start\":\"2024-12-31T23:00:00Z\",\"end\":\"2025-01-03T22:59:59Z\"},\"halfDay\":false,\"halfDayPeriod\":\"NOT_DEFINED\",\"halfDayHours\":null},\"note\":\"AUDIT-TEST: past date request\",\"status\":{\"statusType\":\"PENDING\",\"changedByUserId\":null,\"changedByUserName\":\"Firstname Lastname\",\"changedForUserName\":\"Firstname Lastname\",\"changedAt\":null,\"note\":null},\"balanceDiff\":3.0,\"createdAt\":\"2026-05-17T17:47:08.784559437Z\",\"balance\":-30.5,\"requesterUserId\":\"<redacted-id:706f58c94f>\",\"requesterUserName\":\"Firstname Lastname\"}]}",
+  "response_headers_subset": {
+    "Content-Length": "1688",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:33:45 GMT"
+  },
+  "response_json": {
+    "count": 2,
+    "requests": [
+      {
+        "balance": -0.5,
+        "balanceDiff": 0.5,
+        "createdAt": "2026-01-15T23:19:55.239696346Z",
+        "id": "<redacted-id:b431575b1a>",
+        "note": "Half Day Test",
+        "policyId": "<redacted-id:0d52dd9f2c>",
+        "policyName": "Full Policy 1768518809",
+        "requesterUserId": "<redacted-id:706f58c94f>",
+        "requesterUserName": "Firstname Lastname",
+        "status": {
+          "changedAt": null,
+          "changedByUserId": null,
+          "changedByUserName": "alter  ",
+          "changedForUserName": "alter  ",
+          "note": null,
+          "statusType": "PENDING"
+        },
+        "timeOffPeriod": {
+          "halfDay": true,
+          "halfDayHours": {
+            "end": "2025-03-03T19:30:00Z",
+            "start": "2025-03-03T15:30:00Z"
+          },
+          "halfDayPeriod": "FIRST_HALF",
+          "period": {
+            "end": "2025-03-03T22:59:59Z",
+            "start": "2025-03-02T23:00:00Z"
+          }
+        },
+        "timeUnit": "DAYS",
+        "userEmail": "<redacted-email:559397bdfe>",
+        "userId": "<redacted-id:706f58c94f>",
+        "userName": "Firstname Lastname",
+        "userTimeZone": "Europe/Belgrade",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      },
+      {
+        "balance": -30.5,
+        "balanceDiff": 3.0,
+        "createdAt": "2026-05-17T17:47:08.784559437Z",
+        "id": "<redacted-id:43be803869>",
+        "note": "AUDIT-TEST: past date request",
+        "policyId": "<redacted-id:1e975578e3>",
+        "policyName": "1111",
+        "requesterUserId": "<redacted-id:706f58c94f>",
+        "requesterUserName": "Firstname Lastname",
+        "status": {
+          "changedAt": null,
+          "changedByUserId": null,
+          "changedByUserName": "Firstname Lastname",
+          "changedForUserName": "Firstname Lastname",
+          "note": null,
+          "statusType": "PENDING"
+        },
+        "timeOffPeriod": {
+          "halfDay": false,
+          "halfDayHours": null,
+          "halfDayPeriod": "NOT_DEFINED",
+          "period": {
+            "end": "2025-01-03T22:59:59Z",
+            "start": "2024-12-31T23:00:00Z"
+          }
+        },
+        "timeUnit": "DAYS",
+        "userEmail": "<redacted-email:559397bdfe>",
+        "userId": "<redacted-id:706f58c94f>",
+        "userName": "Firstname Lastname",
+        "userTimeZone": "Europe/Belgrade",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      }
+    ]
+  },
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/time-off/requests"
+}

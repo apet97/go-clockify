@@ -1,5 +1,5 @@
 # Clockify Tags — mutations (Agent B)
-# Live probe against api.clockify.me, workspace 65b382b606de527a7ee2b60e
+# Live probe against api.clockify.me, workspace <REDACTED_ID>
 # Date: 2026-05-12. Fixtures: fixtures/tags-fresh-b/.
 openapi: 3.0.3
 info:

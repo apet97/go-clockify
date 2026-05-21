@@ -3,7 +3,7 @@ info:
   title: Clockify Webhooks — READ endpoints (Agent A live-probe)
   version: 2026-05-12
   description: |
-    Live-observed shapes against workspace 65b382b606de527a7ee2b60e on
+    Live-observed shapes against workspace <REDACTED_ID> on
     https://api.clockify.me/api/v1 with X-Api-Key auth. See
     fixtures/webhooks-fresh-a/ for raw redacted responses.
 
@@ -26,7 +26,7 @@ components:
                  triggerSourceType, triggerSource, enabled,
                  deliveryEnabled, planEnabled]
       properties:
-        id: {type: string, example: "69e8df48f102e192ba5a12e3"}
+        id: {type: string, example: "<REDACTED_ID>"}
         userId: {type: string}
         workspaceId: {type: string}
         name: {type: string}

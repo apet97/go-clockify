@@ -10,7 +10,7 @@ PASS WITH CONCERNS
 - Consistency of patterns across handler implementations (dry_run, error handling, API calls)
 - Tool registry and annotation coverage
 - MCP server startup, doctor command, and end-to-end tool calls via stdio
-- Live Clockify API connectivity against the probe workspace (65b382b606de527a7ee2b60e)
+- Live Clockify API connectivity against the probe workspace (<REDACTED_ID>)
 - go vet static analysis pass
 - Full internal test suite run (27 packages)
 
@@ -65,7 +65,7 @@ curl -H "X-Api-Key: <REDACTED>" \
 ## Live API probes run
 | Probe | Endpoint | Result |
 |-------|----------|--------|
-| User identity | GET /api/v1/user | OK — alpettest1@gmail.com |
+| User identity | GET /api/v1/user | OK — <EMAIL> |
 | Workspace lookup | GET /api/v1/workspaces/{ws} | OK — workspace "WORKSPACE" |
 | List projects | GET .../projects?page-size=2 | OK — 2 projects returned |
 | List clients | GET .../clients?page-size=2 | OK — 2 clients returned |
@@ -188,9 +188,9 @@ The `clockify_delete_entry` tool handles deletion well (pre-fetch + delete). How
 ## Cleanup performed
 | Resource | ID | Action | Status |
 |----------|-----|--------|--------|
-| Project qa-agent-59-minimalism-test | 6a00f676385b9fac085a30ab | Archive → Delete | Soft-deleted (Clockify keeps archived) |
-| Client qa-agent-59-client-test | 6a00f6dad9647159dc103aa1 | Archive → Delete | Soft-deleted (Clockify keeps archived) |
-| Tag qa-agent-59-tag-test | 6a00f6bcd9647159dc1038a9 | Delete | Hard-deleted |
+| Project qa-agent-59-minimalism-test | <REDACTED_ID> | Archive → Delete | Soft-deleted (Clockify keeps archived) |
+| Client qa-agent-59-client-test | <REDACTED_ID> | Archive → Delete | Soft-deleted (Clockify keeps archived) |
+| Tag qa-agent-59-tag-test | <REDACTED_ID> | Delete | Hard-deleted |
 
 ## Leftover test resources
 None. All qa-agent-59- prefixed resources were cleaned up. The archived project and client are in Clockify's archived state (Clockify does not support hard-delete for projects/clients; the DELETE endpoint soft-archives them).

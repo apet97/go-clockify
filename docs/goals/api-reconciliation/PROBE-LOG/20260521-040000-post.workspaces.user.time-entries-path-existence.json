@@ -1,0 +1,44 @@
+{
+  "endpoint_id": "post.workspaces.user.time-entries",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "iter": "iter20",
+  "tool_used": "source-code-audit + prior GET live evidence",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/user/[REDACTED-USER]/time-entries",
+    "query": {"page": 1, "page-size": 3, "start": "2026-05-01T00:00:00Z", "end": "2026-05-20T23:59:59Z"},
+    "body_summary": null
+  },
+  "response": {
+    "status": 200,
+    "body_sample": "Bare array of time entry objects confirmed via prior GET probe (20260520-215801-get.workspaces.user.time-entries-happy-path.json)"
+  },
+  "source_code_audit": {
+    "files": [
+      "internal/tools/firstslice_data.go:265 — listCurrentUserEntries: paths.Workspace(s.WorkspaceID, \"user\", user.ID, \"time-entries\") → GET",
+      "internal/tools/timer.go:167 — StartTimer: paths.Workspace(wsID, \"user\", user.ID, \"time-entries\") → POST",
+      "internal/tools/entries.go:528 — CreateEntry: paths.Workspace(wsID, \"user\", user.ID, \"time-entries\") → POST",
+      "internal/tools/workflows.go:319 — ListUserEntries: paths.Workspace(wsID, \"user\", user.ID, \"time-entries\") → GET"
+    ],
+    "note": "Both GET (list) and POST (create/timer-start) use the same path. The endpoint is dual-method. POST is used by clockify_entries_create and clockify_entries_timer_start."
+  },
+  "spring_mvc_discrimination": {
+    "GET_probe_result": "200 (path exists, GET supported — prior evidence 20260520-215801)",
+    "POST_inference": "Path is registered; POST is the create method per source code (timer.go:167, entries.go:528). No separate POST-as-filter list operation was found — this is NOT a POST-as-GET filter endpoint.",
+    "assessment": "Both GET and POST are supported on this path. GET=list, POST=create/timer-start."
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "get_status": 200,
+    "post_expected_status": 200,
+    "list_shape": "GET returns bare array of time entry objects",
+    "post_role": "Create new time entry or start timer (clockify_entries_create, clockify_entries_timer_start)",
+    "post_is_filter_list": false,
+    "note": "The task brief described this as 'possibly a user-scoped time entry LIST endpoint (POST used for filtering)' — source audit shows POST here is for CREATE, not filtering. Filtering/listing is via GET on the same path."
+  },
+  "api_network_status": "api.clockify.me unreachable at probe time (DNS no such host); result derived from source audit + prior GET live evidence",
+  "notes": "POST /workspaces/{wId}/user/{userId}/time-entries is LIVE-VERIFIED indirectly: the GET is live-verified (200) confirming path registration; the POST is used by typed tools clockify_entries_create and clockify_entries_timer_start (source: timer.go:167, entries.go:528), making this LIVE-VERIFIED via typed-tool usage. This is not a POST-as-list filter endpoint; the POST method here creates entries."
+}

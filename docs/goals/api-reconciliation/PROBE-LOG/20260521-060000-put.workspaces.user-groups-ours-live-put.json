@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "put.workspaces.user-groups.ours",
+  "spec_source": "ours",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/user-groups/{groupId}",
+  "probe_kind": "live-verified-by-official-probe",
+  "timestamp_utc": "2026-05-21T06:00:00Z",
+  "iter": "iter22",
+  "batch": "B",
+  "mcp_tool": "clockify_groups_update",
+  "note": "This is the same concrete path as the official row. Our spec uses 'groupId' as the path param name; official uses 'id'. Both name the same URL segment. The live probe was performed in the official row (20260521-060000-put.workspaces.user-groups-official-live-put.json). Results are identical.",
+  "cross_reference": "PROBE-LOG/20260521-060000-put.workspaces.user-groups-official-live-put.json",
+  "source_code_analysis": {
+    "file": "internal/tools/groups_holidays.go",
+    "function": "UpdateUserGroupAdmin",
+    "http_method": "PUT",
+    "path_template": "/workspaces/{workspaceId}/user-groups/{groupId}",
+    "path_construction": "paths.Workspace(wsID, \"user-groups\", groupID)",
+    "ours_param_name": "groupId",
+    "official_param_name": "id",
+    "discrepancy": "COSMETIC — same URL segment position"
+  },
+  "claude_md_notes": {
+    "requirement": "clockify_groups_update requires group_id and name; user_ids must be sent as the full desired membership array, not a partial append",
+    "confirmed": true,
+    "user_ids_semantics": "The tool body sets userIds from args when user_ids is provided — full replacement, not append. CLAUDE.md note is accurate."
+  },
+  "facts_observed": {
+    "put_workspaces_user_groups_ours_live": true,
+    "functionally_identical_to_official": true,
+    "param_name_cosmetic_only": true
+  },
+  "verdict": "LIVE-VERIFIED"
+}

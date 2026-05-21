@@ -1,0 +1,33 @@
+{
+  "endpoint_id": "post.workspaces.approval-requests.users",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T01:00:00Z",
+  "request": {
+    "method": "POST",
+    "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"period": "WEEKLY", "periodStart": "2026-05-11T00:00:00.000Z"}
+  },
+  "response": {
+    "status": 201,
+    "headers_redacted": {},
+    "body_keys": ["id", "workspaceId", "dateRange", "owner", "status", "creator"],
+    "body_sample": "{\"id\":\"<redacted-id:ebeee2a837>\",\"workspaceId\":\"<redacted-id:7955161f32>\",\"dateRange\":{\"start\":\"2026-05-10T22:00:00Z\",\"end\":\"2026-05-17T21:59:59Z\"},\"owner\":{\"userId\":\"<redacted-id:706f58c94f>\",\"userName\":\"Firstname Lastname\",\"timeZone\":\"Europe/Belgrade\",\"startOfWeek\":\"MONDAY\"},\"status\":{\"state\":\"PENDING\",\"updatedBy\":\"<redacted-id:706f58c94f>\",\"updatedByUserName\":\"Firstname Lastname\",\"updatedAt\":\"2026-05-19T03:36:14Z\",\"note\":\"\"},\"creator\":{\"userId\":\"<redacted-id:706f58c94f>\",\"userName\":\"Firstname Lastname\",\"userEmail\":\"<redacted-email:559397bdfe>\"}}"
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "post_returns_201": true,
+    "approval_request_created": true,
+    "created_approval_id": "<redacted-id:ebeee2a837>",
+    "cleanup_performed": true,
+    "cleanup_method": "PATCH /approval-requests/<redacted-id:ebeee2a837> with state=WITHDRAWN_SUBMISSION → HTTP 200",
+    "tool_name": "clockify_approvals_submit (user-scoped variant: clockify_submit_for_user_approval)",
+    "source_path": "internal/tools/approvals.go:submitForUserApproval → postUserApprovalPeriod with parts=[\"approval-requests\",\"users\"]",
+    "get_probe_status": 405,
+    "get_probe_body": "{\"message\":\"Request method 'GET' is not supported\",\"code\":3000}"
+  },
+  "notes": "GET probe returns 405 confirming path is registered. POST probe with period+periodStart returns HTTP 201 and creates a live approval request (id=<redacted-id:ebeee2a837>). The created approval was immediately withdrawn via PATCH /approval-requests/{id} with state=WITHDRAWN_SUBMISSION (HTTP 200). The tool submitForUserApproval in approvals.go uses this path via postUserApprovalPeriod. Both specs agree. Marked LIVE-VERIFIED (201 response with full approval object)."
+}

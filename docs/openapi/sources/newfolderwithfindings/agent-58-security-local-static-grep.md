@@ -217,7 +217,7 @@ N/A -- no issues found.
 
 | Resource | ID | Action |
 |----------|----|--------|
-| Client `qa-agent-58-test-client-updated` | `6a00f4cc385b9fac085a1720` | Archived then deleted (HTTP 200) |
+| Client `qa-agent-58-test-client-updated` | `<REDACTED_ID>` | Archived then deleted (HTTP 200) |
 | Temporary response files | `/tmp/qa58_*.json` | Left on disk (no secrets, safe to remove manually) |
 
 ## Leftover test resources

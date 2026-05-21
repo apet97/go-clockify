@@ -169,10 +169,10 @@ All `qa-agent-15-*` test tags were deleted during the session:
 
 | Tag ID | Name | Action |
 |--------|------|--------|
-| `6a00ee94d9647159dc0fd41b` | qa-agent-15-tag-create-test | Created, updated, archived, deleted |
-| `6a00f5e22568d3d2930615a5` | qa-agent-15-mcp-test | Created via MCP, deleted via API |
-| `6a00f6cb385b9fac085a357c` | qa-agent-15-archived-test | Created, archived, deleted |
-| `6a00faf6284e03fc7935370c` | qa-agent-15-validation-test | Created, deleted |
+| `<REDACTED_ID>` | qa-agent-15-tag-create-test | Created, updated, archived, deleted |
+| `<REDACTED_ID>` | qa-agent-15-mcp-test | Created via MCP, deleted via API |
+| `<REDACTED_ID>` | qa-agent-15-archived-test | Created, archived, deleted |
+| `<REDACTED_ID>` | qa-agent-15-validation-test | Created, deleted |
 
 ## Leftover test resources
 

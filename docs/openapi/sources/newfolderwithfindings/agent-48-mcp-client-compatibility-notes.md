@@ -66,7 +66,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}
   | go run ./cmd/clockify-mcp
 
 # Live CRUD: clockify_add_entry → clockify_get_entry → clockify_delete_entry
-# Via MCP stdio with project_id=6899f08baa130e0232c2dcc2
+# Via MCP stdio with project_id=<REDACTED_ID>
 
 # Uninitialized access test
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/call",
@@ -199,8 +199,8 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion
 ## Cleanup performed
 
 All test resources were successfully cleaned up:
-- Deleted time entry `6a00f771d9647159dc104245` (description: `qa-agent-48-mcp-compat-test`)
-- Deleted time entry `6a00ff822568d3d2930690c4` (description: `qa-agent-48-compat-test-2`)
+- Deleted time entry `<REDACTED_ID>` (description: `qa-agent-48-mcp-compat-test`)
+- Deleted time entry `<REDACTED_ID>` (description: `qa-agent-48-compat-test-2`)
 - Deactivated webhooks group (2 sessions)
 
 ## Leftover test resources

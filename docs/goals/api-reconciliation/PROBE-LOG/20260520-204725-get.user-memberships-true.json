@@ -1,0 +1,20 @@
+{
+  "endpoint_id": "get.user",
+  "method": "GET",
+  "path": "/user",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T20:51:00Z",
+  "request": {"method": "GET", "path": "/user", "query": {"include-memberships": "true"}, "headers_redacted": {"X-Api-Key": "[REDACTED]"}},
+  "response": {
+    "status": 200,
+    "body_keys": ["activeWorkspace","customFields","defaultWorkspace","email","id","memberships","name","profilePicture","settings","status"],
+    "body_sample": "memberships array populated with 291+ entries (PROJECT, WORKSPACE, USERGROUP types)"
+  },
+  "facts_observed": {
+    "status_code": 200,
+    "include_memberships_param_works": true,
+    "membership_types_observed": ["PROJECT","WORKSPACE","USERGROUP"],
+    "membership_fields": ["costRate","hourlyRate","membershipStatus","membershipType","targetId","userId"]
+  },
+  "notes": "include-memberships=true populates memberships array. Default is omit/empty."
+}

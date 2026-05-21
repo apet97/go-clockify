@@ -1,0 +1,26 @@
+{
+  "endpoint_id": "get.workspaces.projects.single",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:24:39Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:7e50145fe4>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["archived","billable","budgetEstimate","clientId","clientName","color","costRate","duration","estimate","estimateReset","hourlyRate","id","memberships","name","note","public","template","timeEstimate","workspaceId"],
+    "body_sample": "{\"archived\":false,\"billable\":true,\"budgetEstimate\":null,\"clientId\":\"...\",\"clientName\":\"...\",\"color\":\"#...\",\"costRate\":null,\"duration\":\"PT...\",\"estimate\":{\"estimate\":\"PT0S\",\"type\":\"AUTO\"},\"estimateReset\":null,\"hourlyRate\":{\"amount\":0,\"currency\":\"USD\"},\"id\":\"<redacted-id:7e50145fe4>\",\"memberships\":[...],\"name\":\"...\",\"note\":\"\",\"public\":false,\"template\":false,\"timeEstimate\":{\"active\":false,\"estimate\":\"PT0S\",\"includeNonBillable\":false,\"resetOption\":null,\"type\":\"AUTO\"},\"workspaceId\":\"[REDACTED-WORKSPACE]\"}"
+  },
+  "facts_observed": {
+    "single_vs_list_shape": "identical — no shape difference between single-item and list items",
+    "response_type": "object (not wrapped)",
+    "item_keys": ["archived","billable","budgetEstimate","clientId","clientName","color","costRate","duration","estimate","estimateReset","hourlyRate","id","memberships","name","note","public","template","timeEstimate","workspaceId"]
+  },
+  "notes": "Single item shape is identical to list item shape. No additional fields added for single-item GET. Consistent with clients behavior."
+}

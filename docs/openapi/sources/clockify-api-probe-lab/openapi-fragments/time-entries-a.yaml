@@ -1,5 +1,5 @@
 # Clockify Time Entries — READ probes (Agent A)
-# Workspace: 65b382b606de527a7ee2b60e  User: 64621faec4d2cc53b91fce6c
+# Workspace: <REDACTED_ID>  User: <REDACTED_ID>
 # Base: https://api.clockify.me/api/v1   Auth: X-Api-Key
 # Fixtures: fixtures/time-entries-fresh-a/
 openapi: 3.0.3

@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "get.workspaces.holidays",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/holidays",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:09:56Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED]/holidays",
+    "query": {"page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["array"],
+    "body_sample": "[{\"automaticTimeEntryCreation\":false,\"datePeriod\":{\"endDate\":\"2026-12-25\",\"startDate\":\"2026-12-25\"},\"everyoneIncludingNew\":true,\"id\":\"<redacted-id:1f2fabbad9>\",\"name\":\"__api_harvest___20260114_203101_holiday_001_UPD\",\"occursAnnually\":false,\"projectId\":null,\"taskId\":null,\"userGroupIds\":[...],\"userIds\":[...],\"workspaceId\":\"[REDACTED]\"}]"
+  },
+  "facts_observed": {
+    "response_shape": "bare array (ignores page-size — returned more than 3 items)",
+    "item_top_keys": ["automaticTimeEntryCreation", "datePeriod", "everyoneIncludingNew", "id", "name", "occursAnnually", "projectId", "taskId", "userGroupIds", "userIds", "workspaceId"],
+    "date_period_keys": ["endDate", "startDate"],
+    "date_format": "YYYY-MM-DD strings (not ISO 8601 datetime)",
+    "projectId_nullable": true,
+    "taskId_nullable": true,
+    "userGroupIds_type": "array of strings (user group IDs)",
+    "userIds_type": "array of strings (user IDs)",
+    "everyoneIncludingNew_type": "boolean",
+    "occursAnnually_type": "boolean",
+    "pagination_style": "page-size param present but ignored — returned many items despite page-size=3"
+  },
+  "notes": "Server returned all holidays ignoring page-size=3. Dates are plain strings (YYYY-MM-DD), not ISO 8601 datetimes. Each holiday can target specific users AND user groups. The userGroupIds array can be very large (100+ entries). Response is a bare array."
+}

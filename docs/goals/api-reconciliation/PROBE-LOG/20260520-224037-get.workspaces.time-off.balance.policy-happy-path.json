@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.time-off.balance.policy",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:40:37Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/time-off/balance/policy/<redacted-id:1e975578e3>","query":{},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":200,"body_keys":["balances","count"],"body_sample":"{\"balances\":[{\"balance\":-29.5,\"id\":\"...\",\"negativeBalanceAmount\":10,\"negativeBalanceLimit\":true,\"policyArchived\":false,\"policyId\":\"...\",\"policyName\":\"1111\",\"policyTimeUnit\":\"DAYS\",\"total\":28,\"used\":57.5,\"userId\":\"...\",\"userName\":\"...\",\"workspaceId\":\"[REDACTED]\"},...],\"count\":5}"},
+  "facts_observed": {"response_shape":"wrapped_object","top_keys":["balances","count"],"balance_item_keys":["balance","id","negativeBalanceAmount","negativeBalanceLimit","policyArchived","policyId","policyName","policyTimeUnit","total","used","userId","userName","workspaceId"],"pagination_works":true,"page_size_1_returns_1_item":true,"count_is_authoritative":true,"count_value":5},
+  "notes": "Wrapped {balances:[...], count:N}. Pagination WORKS: page-size=1 returns 1 balance item, count=5 (total users with this policy). Both specs agree on response schema (BalanceListResponse with balances+count). LIVE-VERIFIED."
+}

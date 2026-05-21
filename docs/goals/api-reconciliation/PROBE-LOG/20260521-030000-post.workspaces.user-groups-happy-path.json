@@ -1,0 +1,45 @@
+{
+  "endpoint_id": "post.workspaces.user-groups",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/user-groups",
+  "probe_kind": "happy-path",
+  "ts": "2026-05-21T03:00:00Z",
+  "iter": "iter19",
+  "tool_used": "mcp__clockify__clockify_groups_create",
+  "params": {
+    "name": "MCP-LIVE-RECON-20260521-030000-D-group-probe"
+  },
+  "response": {
+    "ok": true,
+    "action": "clockify_groups_create",
+    "entity": "group",
+    "ids": {
+      "groupId": "<redacted-id:7005861949>",
+      "workspaceId": "[REDACTED-WORKSPACE]"
+    },
+    "data": {
+      "id": "<redacted-id:7005861949>",
+      "name": "MCP-LIVE-RECON-20260521-030000-D-group-probe",
+      "teamManagers": [],
+      "userIds": [],
+      "workspaceId": "[REDACTED-WORKSPACE]"
+    },
+    "meta": {
+      "addedUserIds": [],
+      "workspaceId": "[REDACTED-WORKSPACE]"
+    }
+  },
+  "cleanup": {
+    "tool": "mcp__clockify__clockify_groups_delete",
+    "params": {"group_id": "<redacted-id:7005861949>"},
+    "response": {
+      "ok": true,
+      "action": "clockify_groups_delete",
+      "data": {"deleted": true, "groupId": "<redacted-id:7005861949>"}
+    },
+    "cleanup_status": "CLEANED"
+  },
+  "source_path_confirmed": "internal/tools/user_admin.go:324 paths.Workspace(wsID, \"user-groups\") + POST",
+  "verification_status": "LIVE-VERIFIED",
+  "notes": "clockify_groups_create does not support dry_run; actual create was performed. Group id=<redacted-id:7005861949> created then immediately deleted via clockify_groups_delete. Live API confirmed POST /workspaces/{wId}/user-groups creates a group. Response shape: {id, name, teamManagers:[], userIds:[], workspaceId}. LIVE-VERIFIED + cleanup CLEANED."
+}

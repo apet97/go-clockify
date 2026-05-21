@@ -53,7 +53,7 @@ bash scripts/smoke-http.sh                # OK: /health 200, /ready 503 (expecte
 bash scripts/smoke-doctor-strict.sh       # OK
 
 # Doctor with live credentials (key redacted)
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   ./clockify-mcp doctor                    # Load() OK, config audit complete
 
 # Build
@@ -64,7 +64,7 @@ CGO_ENABLED=0 go build -trimpath -o clockify-mcp ./cmd/clockify-mcp  # OK
 
 | Probe | Method | Endpoint | Result |
 |-------|--------|----------|--------|
-| Workspace identity | GET | `/api/v1/workspaces/{id}` | 200 — confirmed workspace `65b382b606de527a7ee2b60e` (name: WORKSPACE, BUNDLE_YEAR_2024) |
+| Workspace identity | GET | `/api/v1/workspaces/{id}` | 200 — confirmed workspace `<REDACTED_ID>` (name: WORKSPACE, BUNDLE_YEAR_2024) |
 | Time entries (GET) | GET | `/api/v1/workspaces/{id}/time-entries?page-size=1` | 405 — confirms Clockify requires POST for listing (known API behavior) |
 
 ## Findings

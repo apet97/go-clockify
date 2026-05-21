@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "get.workspaces.expenses.categories",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/expenses/categories",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:44:36Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/expenses/categories",
+    "query": {"page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["categories","count"],
+    "body_sample": "{\"categories\":[{\"archived\":false,\"hasUnitPrice\":false,\"id\":\"<redacted-id:c6f4ae2e99>\",\"name\":\"...\",\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"},{...},{...}],\"count\":129}"
+  },
+  "facts_observed": {
+    "response_shape": "wrapped object {categories:[], count:N}",
+    "page_size_respected": true,
+    "returned_count_vs_requested": "3 requested, 3 returned",
+    "total_count": 129,
+    "item_keys": ["archived","hasUnitPrice","id","name","priceInCents","unit","workspaceId"],
+    "priceInCents_type": "integer (0 when no unit price)",
+    "unit_type": "string (empty string when not set)",
+    "hasUnitPrice_type": "boolean"
+  },
+  "notes": "LIVE-OVERRIDE: response is wrapped {categories:[], count:N} not a bare array. Both specs likely document as bare array. page-size respected. count is total across all pages."
+}

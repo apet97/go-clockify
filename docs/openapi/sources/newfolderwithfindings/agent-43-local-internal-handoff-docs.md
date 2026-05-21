@@ -154,17 +154,17 @@ CLOCKIFY_API_KEY=bad-key ./clockify-mcp doctor --profile=local-stdio
 
 | Resource | ID | Status |
 |----------|-----|--------|
-| qa-agent-43-test-client (direct API) | 6a00f3c9284e03fc79325e8b | Delete failed — "Cannot delete an active client" (associated projects/entries exist) |
-| qa-agent-43-mcp-client (MCP tool) | 6a00f7c4385b9fac085a40fb | Delete sent via MCP (isError: false), but resource persisted — "Cannot delete an active client" on direct API delete attempt |
+| qa-agent-43-test-client (direct API) | <REDACTED_ID> | Delete failed — "Cannot delete an active client" (associated projects/entries exist) |
+| qa-agent-43-mcp-client (MCP tool) | <REDACTED_ID> | Delete sent via MCP (isError: false), but resource persisted — "Cannot delete an active client" on direct API delete attempt |
 
 Both clients are prefixed `qa-agent-43-` and are safe test artifacts in the probe workspace.
 
 ## Leftover test resources
 
-- `qa-agent-43-test-client` — client ID `6a00f3c9284e03fc79325e8b` (direct API creation, active)
-- `qa-agent-43-mcp-client` — client ID `6a00f7c4385b9fac085a40fb` (MCP creation, active)
+- `qa-agent-43-test-client` — client ID `<REDACTED_ID>` (direct API creation, active)
+- `qa-agent-43-mcp-client` — client ID `<REDACTED_ID>` (MCP creation, active)
 
-Both in workspace `65b382b606de527a7ee2b60e`. Deletion blocked by Clockify API ("Cannot delete an active client"). The Clockify API requires clients to be archived or have no associated projects before deletion. Safe to leave — prefixed, test workspace only.
+Both in workspace `<REDACTED_ID>`. Deletion blocked by Clockify API ("Cannot delete an active client"). The Clockify API requires clients to be archived or have no associated projects before deletion. Safe to leave — prefixed, test workspace only.
 
 ## Severity
 

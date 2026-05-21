@@ -1,0 +1,39 @@
+{
+  "endpoint_id": "put.workspaces.projects.tasks.cost-rate",
+  "spec_source": "official",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/tasks/{id}/cost-rate",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T05:00:00Z",
+  "iter": "iter21",
+  "batch": "B",
+  "note": "Official spec uses param name {id}, ours uses {taskId}. Both resolve to the same concrete path. Probe uses our path (functionally identical).",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:b0fdd96bd9>/tasks/<redacted-id:73b1acb3da>/cost-rate",
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "rationale": "Spring-MVC discrimination: 405 = path registered for PUT only; 404 Spring-MVC = path absent"
+  },
+  "response": {
+    "status": 405,
+    "body_sample": "Request method 'GET' is not supported",
+    "spring_mvc_signal": "405 Method Not Allowed — path IS registered in the router, accepts PUT but not GET"
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "accepted_method": "PUT",
+    "spring_mvc_405": true,
+    "get_returns_405_not_404": true,
+    "both_specs_agree": true
+  },
+  "param_name_discrepancy": {
+    "official_param": "{id}",
+    "ours_param": "{taskId}",
+    "cosmetic_only": true,
+    "resolution": "Same path segment, different descriptor name. Not a functional difference."
+  },
+  "verdict": "UNCONFIRMED-AGREE",
+  "notes": "GET to .../tasks/{taskId}/cost-rate returns 405 (Spring-MVC confirms path registered for PUT). Both official and our spec document this path. The {id} vs {taskId} param name difference is cosmetic — same concrete path. Full LIVE-VERIFIED requires a live PUT call (done in companion probe file)."
+}

@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "get.workspaces.time-off.policies.single",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-20T21:44:36Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/policies/<redacted-id:1e975578e3>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["allowHalfDay","allowNegativeBalance","approve","archived","automaticAccrual","automaticTimeEntryCreation","everyoneIncludingNew","id","name","negativeBalance","projectId","timeUnit","userGroupIds","userIds","workspaceId"],
+    "body_sample": "{\"allowHalfDay\":true,\"allowNegativeBalance\":true,\"approve\":{...},\"archived\":false,\"automaticAccrual\":null,\"automaticTimeEntryCreation\":{\"defaultEntities\":{\"projectId\":\"...\",\"taskId\":null},\"enabled\":true},\"everyoneIncludingNew\":true,\"id\":\"<redacted-id:1e975578e3>\",\"name\":\"1111\",\"negativeBalance\":{\"amount\":10,\"period\":\"YEAR\",\"shouldReset\":false,\"timeUnit\":\"DAYS\"},\"projectId\":\"...\",\"timeUnit\":\"DAYS\",\"userGroupIds\":[...],\"userIds\":[...],\"workspaceId\":\"[REDACTED-WORKSPACE]\"}"
+  },
+  "facts_observed": {
+    "single_vs_list_shape": "identical — same keys as list items",
+    "item_keys": ["allowHalfDay","allowNegativeBalance","approve","archived","automaticAccrual","automaticTimeEntryCreation","everyoneIncludingNew","id","name","negativeBalance","projectId","timeUnit","userGroupIds","userIds","workspaceId"]
+  },
+  "notes": "Single policy shape identical to list items. Returns plain object (not wrapped)."
+}

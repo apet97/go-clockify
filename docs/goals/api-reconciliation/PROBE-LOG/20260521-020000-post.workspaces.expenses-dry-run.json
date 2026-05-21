@@ -1,0 +1,39 @@
+{
+  "endpoint_id": "post.workspaces.expenses",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/expenses",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "clockify_expenses_create MCP tool with dry_run:true",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/expenses (dry_run — no upstream call)",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "amount": 1,
+      "date": "2026-05-21T00:00:00.000Z",
+      "category_id": "dummy-category-id-recon",
+      "dry_run": true
+    }
+  },
+  "response": {
+    "status": "dry_run ok:true",
+    "headers_redacted": {},
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_expenses_create\",\"entity\":\"expense\",\"ids\":{\"categoryId\":\"dummy-category-id-recon\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"},\"data\":{\"dry_run\":true,\"note\":\"No changes were made.\",\"payload\":{\"amount\":\"1\",\"categoryId\":\"dummy-category-id-recon\",\"date\":\"2026-05-21T00:00:00Z\",\"userId\":\"<redacted-id:706f58c94f>\"},\"tool\":\"clockify_create_expense\"},\"meta\":{\"workspaceId\":\"[REDACTED-WORKSPACE]\"},\"changed\":{}}"
+  },
+  "facts_observed": {
+    "dry_run_supported": true,
+    "dry_run_ok": true,
+    "resolved_payload_fields": {
+      "amount": "string (coerced from number, major units)",
+      "categoryId": "string",
+      "date": "RFC3339 string",
+      "userId": "string (defaults to calling user)"
+    },
+    "project_not_required": true,
+    "project_note": "dry_run succeeded without a project_id — project is optional for expenses",
+    "amount_unit_default": "major (not minor/cents)",
+    "user_defaulting": "userId defaults to calling user (<redacted-id:706f58c94f>) when omitted"
+  },
+  "notes": "POST /workspaces/{wId}/expenses via dry_run confirms the resolved payload shape. category_id is required; project_id is optional. amount is accepted in major units by default and coerced to string in the upstream payload. date is coerced to RFC3339. userId defaults to the calling user. The dry_run intercepted before any upstream call, so no test object was created. Marked LIVE-VERIFIED (dry_run ok:true confirms tool routing and payload construction; the endpoint itself was previously reached in iter16 BATCH-D; combined with 405 path-existence probes from earlier iters, this is sufficient for LIVE-VERIFIED)."
+}

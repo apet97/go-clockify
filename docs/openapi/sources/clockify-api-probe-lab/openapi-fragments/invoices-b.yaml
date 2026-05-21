@@ -1,5 +1,5 @@
 # Clockify Invoices — MUTATIONS (Agent B live probe, 2026-05-12)
-# Workspace 65b382b606de527a7ee2b60e. All entities prefixed mcp-probe-*
+# Workspace <REDACTED_ID>. All entities prefixed mcp-probe-*
 # and cleaned up after the run. Base: https://api.clockify.me/api/v1
 openapi: 3.0.3
 info:

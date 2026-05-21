@@ -513,10 +513,7 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 	defer cancelStdio()
 
 	scanner := bufio.NewScanner(r)
-	maxMsg := int(s.MaxMessageSize)
-	if maxMsg <= 0 {
-		maxMsg = 4194304
-	}
+	maxMsg := scannerMaxMessageSize(s.MaxMessageSize)
 	// Size the initial buffer to 64 KiB or maxMsg, whichever is smaller.
 	// Passing a larger initial buffer than maxMsg silently defeats the
 	// limit because bufio.Scanner only consults max when it needs to grow
@@ -700,6 +697,17 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 			}
 		}
 	}
+}
+
+func scannerMaxMessageSize(configured int64) int {
+	if configured <= 0 {
+		return 4194304
+	}
+	maxMsg, err := strconv.Atoi(strconv.FormatInt(configured, 10))
+	if err != nil {
+		return math.MaxInt
+	}
+	return maxMsg
 }
 
 // DispatchMessage parses a single JSON-RPC message from raw bytes, invokes
@@ -887,7 +895,12 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 
 	switch req.Method {
 	case "initialize":
-		resp.Result = s.handleInitialize(req.Params)
+		result, rpcErr := s.handleInitializeStrict(req.Params)
+		if rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
 	case "notifications/initialized":
 		return Response{}
 	case "notifications/cancelled":
@@ -1070,8 +1083,22 @@ func requiresInitialized(method string) bool {
 // such as listChanged advertisement remain owned by the transport.
 func (s *Server) handleInitialize(raw any) map[string]any {
 	var params InitializeParams
-	_ = decodeParams(raw, &params) // tolerate missing / malformed params
+	// Direct tests and legacy embedders call this helper with best-effort
+	// params. The JSON-RPC dispatch path uses handleInitializeStrict and
+	// rejects malformed params with -32602 before state is mutated.
+	_ = decodeParams(raw, &params)
+	return s.finishInitialize(params)
+}
 
+func (s *Server) handleInitializeStrict(raw any) (map[string]any, *RPCError) {
+	var params InitializeParams
+	if err := decodeParams(raw, &params); err != nil {
+		return nil, &RPCError{Code: -32602, Message: "invalid initialize params"}
+	}
+	return s.finishInitialize(params), nil
+}
+
+func (s *Server) finishInitialize(params InitializeParams) map[string]any {
 	if s.initialized.Load() {
 		cancelled := s.cancelAllInflight()
 		s.mu.Lock()

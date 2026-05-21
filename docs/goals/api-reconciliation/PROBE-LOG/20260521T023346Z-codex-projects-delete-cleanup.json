@@ -1,0 +1,18 @@
+{
+  "body_bytes": 56,
+  "label": "projects-delete-cleanup",
+  "method": "DELETE",
+  "request_body": null,
+  "response_body_text": "{\"message\":\"Cannot delete an active project\",\"code\":501}",
+  "response_headers_subset": {
+    "Content-Length": "56",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:33:46 GMT"
+  },
+  "response_json": {
+    "code": 501,
+    "message": "Cannot delete an active project"
+  },
+  "status": 400,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/projects/<redacted-id:592916c247>"
+}

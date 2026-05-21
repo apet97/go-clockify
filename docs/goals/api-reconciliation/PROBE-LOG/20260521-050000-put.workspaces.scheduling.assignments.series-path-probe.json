@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "put.workspaces.scheduling.assignments.series",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T05:00:00Z",
+  "method": "GET",
+  "path": "/workspaces/[REDACTED]/scheduling/assignments/series/<redacted-id:1aaa799929>",
+  "query": {},
+  "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+  "body": null,
+  "status_code": 405,
+  "status_text": "Method Not Allowed",
+  "response_body_sample": {
+    "message": "Request method 'GET' is not supported"
+  },
+  "facts_observed": {
+    "get_status": 405,
+    "error_message": "Request method 'GET' is not supported",
+    "path_is_registered_in_live_api": true,
+    "405_means_put_may_be_valid": true,
+    "no_static_resource_404_would_mean_absent": false
+  },
+  "source_analysis": {
+    "raw_allowlist_gen_entry": "PUT /workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}",
+    "mcp_tool_using_this_path": "none",
+    "clockify_scheduling_assignments_update_uses": "PATCH /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+    "series_path_is_raw_fallback_only": true,
+    "note": "The typed MCP tool clockify_scheduling_assignments_update uses the PATCH /recurring/ path, not PUT /series/. The /series/{id} path is in the raw allowlist but has no dedicated typed tool."
+  },
+  "verdict": "UNCONFIRMED-AGREE",
+  "notes": "GET probe returned 405 'Request method GET is not supported' — Spring-MVC 405 indicates the route IS registered in the live API (not a 404 No static resource absent path). Both specs document PUT at this path. The route exists; PUT is likely valid. Cannot confirm a successful PUT without raw writes enabled. Classified UNCONFIRMED-AGREE: route present, spec agreement."
+}

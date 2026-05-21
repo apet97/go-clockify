@@ -1,0 +1,27 @@
+{
+  "endpoint_id": "get.workspaces.clients",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/clients",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T20:49:00Z",
+  "request": {"method": "GET", "path": "/workspaces/[REDACTED_WS]/clients", "query": {"page": 1, "page-size": 5}, "headers_redacted": {"X-Api-Key": "[REDACTED]"}},
+  "response": {
+    "status": 200,
+    "body_keys_item": ["address","archived","ccEmails","currencyCode","currencyId","email","id","name","note","workspaceId"],
+    "response_type": "array",
+    "body_sample": "[{\"id\":\"...\",\"name\":\"123qqqq\",\"archived\":false,...}]"
+  },
+  "facts_observed": {
+    "status_code": 200,
+    "response_type": "array",
+    "empty_response_shape": "[]",
+    "item_fields": ["address","archived","ccEmails","currencyCode","currencyId","email","id","name","note","workspaceId"],
+    "address_nullable": true,
+    "ccEmails_nullable": true,
+    "email_nullable": true,
+    "note_nullable": true,
+    "pagination_params": ["page","page-size"],
+    "param_style": "hyphenated"
+  },
+  "notes": "Returns plain array. Archived clients included by default."
+}

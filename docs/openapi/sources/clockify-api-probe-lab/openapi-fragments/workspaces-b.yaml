@@ -5,7 +5,7 @@ info:
   description: |
     Live-probe results for every documented POST/PUT/PATCH/DELETE on the
     `workspaces` domain against `https://api.clockify.me/api/v1`.
-    Workspace `65b382b606de527a7ee2b60e`, operator user `64621faec4d2cc53b91fce6c`.
+    Workspace `<REDACTED_ID>`, operator user `<REDACTED_ID>`.
 
     SKIPPED (workspace-level destructive / external email):
       - POST /workspaces                           valid body (would create org workspace)

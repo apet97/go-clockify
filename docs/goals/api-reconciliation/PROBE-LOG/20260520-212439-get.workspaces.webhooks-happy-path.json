@@ -1,0 +1,34 @@
+{
+  "endpoint_id": "get.workspaces.webhooks",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/webhooks",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:24:39Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/webhooks",
+    "query": {"page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["webhooks","workspaceWebhookCount"],
+    "body_sample": "{\"webhooks\":[{\"deliveryEnabled\":true,\"enabled\":true,\"id\":\"<redacted-id:508f41ec5c>\",\"name\":\"webhook-1\",\"planEnabled\":true,\"triggerSource\":[\"...\"],\"triggerSourceType\":\"WORKSPACE_ID\",\"url\":\"https://...\",\"userId\":\"...\",\"webhookEvent\":\"NEW_TIME_ENTRY\",\"workspaceId\":\"[REDACTED-WORKSPACE]\"},{...},...],\"workspaceWebhookCount\":35}"
+  },
+  "facts_observed": {
+    "response_shape": "wrapped object {webhooks:[], workspaceWebhookCount:N}",
+    "page_size_respected": false,
+    "returned_count_vs_requested": "3 requested, 35 returned (all webhooks despite page-size=3)",
+    "total_webhooks": 35,
+    "item_keys": ["deliveryEnabled","enabled","id","name","planEnabled","triggerSource","triggerSourceType","url","userId","webhookEvent","workspaceId"],
+    "triggerSource_type": "array of strings",
+    "spec_coverage": {
+      "both_specs_say_array": true,
+      "live_says_wrapped_object": true
+    },
+    "mirrors_addons_webhooks_shape": true
+  },
+  "notes": "Response matches addons/{addonId}/webhooks pattern — wrapped {webhooks:[], workspaceWebhookCount:N}. page-size ignored: all 35 webhooks returned. Both specs appear to document this as bare array — live says wrapped object. LIVE-OVERRIDE needed."
+}

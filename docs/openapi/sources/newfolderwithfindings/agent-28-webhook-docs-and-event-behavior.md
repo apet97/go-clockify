@@ -9,7 +9,7 @@ PASS WITH CONCERNS
 
 2. **Webhook API documentation** — Live `WEBHOOKDOC.md` (318,510 bytes) in the probe lab, covering all webhook endpoints (`GET /webhooks`, `GET /webhooks/{id}`, `POST /webhooks`, `PUT /webhooks/{id}`, `DELETE /webhooks/{id}`, `POST /webhooks/{id}/test`), response schemas, event type enums, trigger source types, entity types, feature flags, and payload types.
 
-3. **Live API probes** — All read-only and mutating webhook endpoints tested against workspace `65b382b606de527a7ee2b60e`. Verified list shape, CRUD lifecycle, error conditions, and event type enumeration against live API responses.
+3. **Live API probes** — All read-only and mutating webhook endpoints tested against workspace `<REDACTED_ID>`. Verified list shape, CRUD lifecycle, error conditions, and event type enumeration against live API responses.
 
 4. **MCP tool schemas** — Validated parameter names (`webhook_id`, `webhook_event`, `trigger_source_type`, `trigger_source`, `auth_token`, `dry_run`), required fields, enum values (trigger source types), and tool descriptions against live API behavior.
 
@@ -158,9 +158,9 @@ All `qa-agent-28-*` webhook resources created during testing were deleted succes
 
 | Resource ID | Name | Status |
 |-------------|------|--------|
-| `6a00f343284e03fc79325ad6` | qa-agent-28-d8c426-test-wh | Deleted |
-| `6a00f455385b9fac085a1197` | qa-agent-28-nonssl (HTTP URL test) | Deleted |
-| `6a00f5ffd9647159dc103141` | qa-agent-28-46b42c-puttest | Deleted |
+| `<REDACTED_ID>` | qa-agent-28-d8c426-test-wh | Deleted |
+| `<REDACTED_ID>` | qa-agent-28-nonssl (HTTP URL test) | Deleted |
+| `<REDACTED_ID>` | qa-agent-28-46b42c-puttest | Deleted |
 
 ## Leftover test resources
 

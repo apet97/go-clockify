@@ -1,0 +1,35 @@
+{
+  "endpoint_id": "put.workspaces.cost-rate",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/cost-rate",
+  "probe_kind": "path-probe",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/cost-rate",
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null,
+    "rationale": "Spring-MVC discrimination: 405 'Request method GET is not supported' = path registered for PUT only"
+  },
+  "response": {
+    "status": 405,
+    "body_sample": "Request method 'GET' is not supported",
+    "error_code": "clockify_upstream_error",
+    "spring_mvc_signal": "Method not allowed — path IS registered, accepts PUT but not GET"
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "accepted_method": "PUT",
+    "spring_mvc_405": true,
+    "spring_mvc_note": "'Request method GET is not supported' from Spring-MVC confirms the path /workspaces/{wId}/cost-rate IS registered in the router and responds to PUT (or possibly other methods), but not GET.",
+    "both_specs_agree": true,
+    "our_spec_says": "PUT /workspaces/{workspaceId}/cost-rate exists",
+    "official_spec_says": "PUT /workspaces/{workspaceId}/cost-rate exists",
+    "live_says": "Path registered, GET not supported (PUT confirmed registered)",
+    "mcp_tool_note": "No dedicated MCP tool for workspace-level cost-rate update was found. The clockify_projects_rates_update tool targets project-level rates, not workspace-level. The raw PUT would be needed for workspace cost-rate updates.",
+    "no_mcp_tool": true
+  },
+  "notes": "Spring-MVC 405 'Request method GET is not supported' on GET /workspaces/{wId}/cost-rate confirms the path is registered in the live Clockify API router. PUT is the documented method (both specs agree). This is UNCONFIRMED-AGREE: both specs document the endpoint, live evidence confirms path registration via 405, but no typed MCP tool exists to perform a full LIVE-VERIFIED happy-path. Path is live."
+}

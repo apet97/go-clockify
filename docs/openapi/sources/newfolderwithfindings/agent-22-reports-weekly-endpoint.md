@@ -30,7 +30,7 @@ PASS
 
 ## Live API probe lab files used
 
-- `/tmp/clockify-livetest.env` — credentials (API key redacted, workspace ID: 65b382b606de527a7ee2b60e)
+- `/tmp/clockify-livetest.env` — credentials (API key redacted, workspace ID: <REDACTED_ID>)
 - `clockify-api-probe-lab/CLAUDE.md` — safety rules
 - `clockify-api-probe-lab/probes/lib/common.sh` — shared probe library (probe_curl, probe_redact, etc.)
 - `clockify-api-probe-lab/docs/official-api-notes.md` — per-domain API notes (shared-reports section documents host/path/pagination)
@@ -50,7 +50,7 @@ CLOCKIFY_LIVE_FULL_SURFACE_ENABLED=true go test ./tests/ \
   -v -count=1 -timeout 120s -tags=livee2e
 
 # MCP doctor
-CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=<REDACTED> CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp doctor
 
 # Docker build
@@ -59,7 +59,7 @@ docker build -f deploy/Dockerfile -t clockify-mcp-test:qa .
 # Docker doctor
 docker run --rm \
   -e CLOCKIFY_API_KEY=<REDACTED> \
-  -e CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  -e CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   clockify-mcp-test:qa doctor
 
 # Direct API probe (time entries endpoint)
@@ -143,7 +143,7 @@ No fixes required. All tests pass, no bugs found in the weekly summary endpoint.
 docker build -f deploy/Dockerfile -t clockify-mcp:local .
 docker run --rm \
   -e CLOCKIFY_API_KEY=<REDACTED> \
-  -e CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  -e CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   clockify-mcp:local doctor
 # Expected: ERROR about OIDC issuer requirement
 # Fix: add -e MCP_TRANSPORT=stdio

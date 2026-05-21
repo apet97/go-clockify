@@ -78,7 +78,7 @@ curl -H "X-Api-Key: <REDACTED>" "https://api.clockify.me/api/v1/workspaces/<REDA
 
 ### F1: Real email hardcoded in documentation (P2)
 - **File**: `docs/testing/standard-http-dogfood-2026-05-07.md:17`
-- **Detail**: The file contained `alpettest1@gmail.com` — a real Gmail address used as a test user identifier in a dogfood evidence table.
+- **Detail**: The file contained `<EMAIL>` — a real Gmail address used as a test user identifier in a dogfood evidence table.
 - **Risk**: Real emails in a public repository are scrapable and could lead to spam or phishing targeting the test user.
 - **Fixed**: Replaced with `<REDACTED>`.
 
@@ -94,7 +94,7 @@ curl -H "X-Api-Key: <REDACTED>" "https://api.clockify.me/api/v1/workspaces/<REDA
 
 ## Fixes made
 
-1. **Redacted real email in docs**: Replaced `alpettest1@gmail.com` with `<REDACTED>` in `docs/testing/standard-http-dogfood-2026-05-07.md` line 17.
+1. **Redacted real email in docs**: Replaced `<EMAIL>` with `<REDACTED>` in `docs/testing/standard-http-dogfood-2026-05-07.md` line 17.
 
 ## Reproduction steps for each issue
 
@@ -139,7 +139,7 @@ None. All probes were read-only. No test resources were created in the probe wor
 ## Suggested next action
 
 1. Consider adding an optional `CLOCKIFY_REDACT_EMAILS` configuration variable that, when enabled, replaces email fields with `"<redacted>"` in tool outputs. This would give operators of self-hosted/delegated deployments a privacy lever.
-2. Run the public-content audit script (`scripts/test-check-public-content-audit.sh`) to catch similar real-email-in-docs issues in the future. The script already configures `user.email` as `test@example.invalid` but doesn't scan for hardcoded emails in documentation.
+2. Run the public-content audit script (`scripts/test-check-public-content-audit.sh`) to catch similar real-email-in-docs issues in the future. The script already configures `user.email` as `<EMAIL>` but doesn't scan for hardcoded emails in documentation.
 3. Add a pre-commit or CI check that greps for common real-email domains (`@gmail.com`, `@outlook.com`, `@yahoo.com`, `@hotmail.com`) in the repository and blocks commits containing them.
 
 ## False positives / uncertainty

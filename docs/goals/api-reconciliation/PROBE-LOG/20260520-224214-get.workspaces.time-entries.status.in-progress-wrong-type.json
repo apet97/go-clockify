@@ -1,0 +1,39 @@
+{
+  "endpoint_id": "get.workspaces.time-entries.status.in-progress",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-entries/status/in-progress",
+  "probe_kind": "wrong-type",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-entries/status/in-progress",
+    "query": {
+      "page-size": "abc"
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "code",
+      "message"
+    ],
+    "body_sample": "{\"message\":\"Method parameter 'page-size': Failed to convert value of type 'java.lang.String' to required type 'int'; For input string: \\\"abc\\\"\",\"code\":3000}"
+  },
+  "facts_observed": {
+    "status": 400,
+    "response_top_keys": [
+      "code",
+      "message"
+    ],
+    "item_keys": [],
+    "item_count": {}
+  },
+  "notes": ""
+}

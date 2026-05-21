@@ -1,0 +1,11 @@
+{
+  "endpoint_id": "get.workspaces.projects.custom-fields",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/projects/{projectId}/custom-fields",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T22:40:37Z",
+  "request": {"method":"GET","path":"/workspaces/[REDACTED]/projects/<redacted-id:8cd5662ca2>/custom-fields","query":{},"headers_redacted":{"X-Api-Key":"[REDACTED]"}},
+  "response": {"status":200,"body_keys":["allowedValues","description","entityType","id","name","onlyAdminCanEdit","placeholder","projectDefaultValues","required","status","type","workspaceDefaultValue","workspaceId"],"body_sample":"[{\"allowedValues\":[],\"description\":null,\"entityType\":\"TIMEENTRY\",\"id\":\"...\",\"name\":\"adasd\",\"onlyAdminCanEdit\":true,\"placeholder\":\"Enter adasd\",\"projectDefaultValues\":[...],\"required\":false,\"status\":\"VISIBLE\",\"type\":\"TXT\",...}]"},
+  "facts_observed": {"response_shape":"bare_array","item_keys":["allowedValues","description","entityType","id","name","onlyAdminCanEdit","placeholder","projectDefaultValues","required","status","type","workspaceDefaultValue","workspaceId"],"pagination_ignored":true,"page_size_1_returns_all":true,"items_returned":5,"no_required_query_params":true},
+  "notes": "Bare array of custom field objects. Same shape as workspace /custom-fields but scoped to project. page-size=1 returns all 5 items — pagination ignored. Both specs agree on path and params."
+}

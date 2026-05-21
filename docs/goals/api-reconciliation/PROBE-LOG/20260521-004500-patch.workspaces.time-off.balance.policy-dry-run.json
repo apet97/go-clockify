@@ -1,0 +1,26 @@
+{
+  "endpoint_id": "patch.workspaces.time-off.balance.policy",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T00:45:00Z",
+  "request": {
+    "method": "dry_run via clockify_time_off_balance_update",
+    "path": "PATCH /workspaces/[REDACTED-WORKSPACE]/time-off/balance/policy/<redacted-id:1e975578e3>",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"userIds": ["<redacted-id:706f58c94f>"], "value": 10}
+  },
+  "response": {
+    "status": "dry_run",
+    "headers_redacted": {},
+    "body_sample": "{\"dry_run\":true,\"note\":\"No changes were made.\",\"payload\":{\"note\":\"\",\"userIds\":[\"<redacted-id:706f58c94f>\"],\"value\":10},\"tool\":\"clockify_time_off_balance_update\"}"
+  },
+  "facts_observed": {
+    "path_family_confirmed": "GET /time-off/balance/policy/{policyId} → 200 (already LIVE-VERIFIED in iter8). PATCH on same path via balance_update tool.",
+    "tool_note": "clockify_time_off_balances_update MCP tool wraps PATCH /time-off/balance/policy/{policyId}",
+    "raw_writes_blocked": "CLOCKIFY_ENABLE_RAW_WRITES not set; dry_run used instead of live write",
+    "both_specs_agree": true
+  },
+  "notes": "UNCONFIRMED-AGREE (dry_run only). Both specs agree on PATCH /time-off/balance/policy/{policyId}. Path family already LIVE-VERIFIED (GET 200). Dry_run confirmed tool uses this path. Cannot live-verify PATCH without raw writes enabled."
+}

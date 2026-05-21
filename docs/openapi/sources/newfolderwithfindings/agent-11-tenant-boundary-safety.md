@@ -29,12 +29,12 @@ PASS WITH CONCERNS
 go build ./cmd/clockify-mcp/
 
 # Doctor
-CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp/ doctor --strict
 
 # MCP stdio initialize + tool calls
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | \
-  CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+  CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp/
 
 # MCP tools/call: clockify_list_workspaces
@@ -49,7 +49,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | \
 | 2 | List projects in configured workspace | GET /workspaces/{CONFIGURED}/projects | 50 projects returned |
 | 3 | List projects in different workspace | GET /workspaces/{OTHER}/projects | 0 projects (empty workspace, access granted) |
 | 4 | List time entries in different workspace | GET /workspaces/{OTHER}/time-entries | 3000 entries returned (cross-workspace access possible via direct API) |
-| 5 | Create test project in configured workspace | POST /workspaces/{CONFIGURED}/projects | HTTP 201, created 6a00f426d9647159dc1013d3 |
+| 5 | Create test project in configured workspace | POST /workspaces/{CONFIGURED}/projects | HTTP 201, created <REDACTED_ID> |
 | 6 | Read test project via different workspace path | GET /workspaces/{OTHER}/projects/{ID} | HTTP 400 "Project doesn't belong to Workspace" |
 | 7 | Update test project via different workspace path | PUT /workspaces/{OTHER}/projects/{ID} | HTTP 400 "Project doesn't belong to Workspace" |
 | 8 | List users in different workspace | GET /workspaces/{OTHER}/users | 1 user returned (cross-workspace listing possible) |
@@ -102,7 +102,7 @@ No code fixes were made. All findings are configuration/operational concerns, no
 ### Finding 1 — workspace enumeration
 
 ```bash
-CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=65b382b606de527a7ee2b60e \
+CLOCKIFY_API_KEY=****REDACTED**** CLOCKIFY_WORKSPACE_ID=<REDACTED_ID> \
   go run ./cmd/clockify-mcp/
 # Send initialize + tools/call for clockify_list_workspaces
 # Observe response includes ALL workspaces, not just the configured one
@@ -124,7 +124,7 @@ curl -s -H "X-Api-Key: ****REDACTED****" "https://api.clockify.me/api/v1/workspa
 
 ## Cleanup performed
 
-- Created test project `qa-agent-11-tenant-boundary-test` (ID: `6a00f426d9647159dc1013d3`) in configured workspace — archived then deleted. Confirmed deletion returned HTTP 200.
+- Created test project `qa-agent-11-tenant-boundary-test` (ID: `<REDACTED_ID>`) in configured workspace — archived then deleted. Confirmed deletion returned HTTP 200.
 
 ## Leftover test resources
 

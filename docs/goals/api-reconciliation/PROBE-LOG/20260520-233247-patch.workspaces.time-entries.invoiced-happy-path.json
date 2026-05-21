@@ -1,0 +1,40 @@
+{
+  "endpoint_id": "patch.workspaces.time-entries.invoiced",
+  "method": "PATCH",
+  "path": "/workspaces/{workspaceId}/time-entries/invoiced",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T23:32:47Z",
+  "request": {
+    "method": "PATCH",
+    "path": "/workspaces/[REDACTED]/time-entries/invoiced",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {"invoiced": true, "timeEntryIds": ["<redacted-id:b5655fe52c>"]}
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {},
+    "body_keys": ["ok", "action", "entity", "ids", "data", "meta", "changed"],
+    "body_sample": "{\"ok\":true,\"action\":\"clockify_entries_mark_invoiced\",\"entity\":\"entry\",\"ids\":{\"entryId\":\"<redacted-id:b5655fe52c>\",\"workspaceId\":\"[REDACTED]\"},\"data\":{\"invoiced\":true,\"timeEntryIds\":[\"<redacted-id:b5655fe52c>\"],\"updated\":true,\"upstreamReply\":{}},\"meta\":{\"entryId\":\"<redacted-id:b5655fe52c>\"}}"
+  },
+  "facts_observed": {
+    "endpoint_exists": true,
+    "method_correct": "PATCH",
+    "response_shape": {
+      "upstream_reply_is_empty_object": true,
+      "data_keys": ["invoiced", "timeEntryIds", "updated", "upstreamReply"],
+      "upstreamReply": "{}",
+      "updated_flag": true,
+      "bulk_operation": true,
+      "returns_count": false,
+      "returns_empty_200_upstream": true
+    },
+    "entry_created_for_probe": {
+      "entryId": "<redacted-id:b5655fe52c>",
+      "projectId": "<redacted-id:ec287c0e20>"
+    },
+    "invoiced_true_applied": true,
+    "mark_uninvoiced_also_supported": "invoiced: false param also accepted by tool"
+  },
+  "notes": "PATCH /time-entries/invoiced is a bulk operation. Upstream Clockify returns an empty 200 body (upstreamReply: {}). The tool wraps with {invoiced, timeEntryIds, updated: true}. There is no count or per-entry result in the response — just acknowledgment. Entry was created on a test project, marked invoiced, then deleted. Cleanup confirmed."
+}

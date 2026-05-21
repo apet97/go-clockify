@@ -1095,6 +1095,55 @@
             "description": "Whether the work is billable.",
             "type": "boolean"
           },
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
           "description": {
             "description": "What you are working on — free text shown on the time entry. Optional but recommended.",
             "maxLength": 2000,
@@ -1499,6 +1548,55 @@
           "billable": {
             "description": "Whether the work is billable.",
             "type": "boolean"
+          },
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
           },
           "description": {
             "description": "What you are working on — free text shown on the time entry. Optional but recommended.",
@@ -2173,6 +2271,55 @@
           "billable": {
             "description": "Whether the work is billable.",
             "type": "boolean"
+          },
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
           },
           "description": {
             "description": "What you are working on — free text shown on the time entry. Optional but recommended.",
@@ -7101,6 +7248,55 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
           "date": {
             "description": "YYYY-MM-DD date for the demo time entry. Default: 2026-01-02.",
             "type": "string"
@@ -11001,6 +11197,55 @@
           "billable": {
             "description": "Whether the work is billable.",
             "type": "boolean"
+          },
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
           },
           "description": {
             "description": "Free-text description.",
@@ -51191,6 +51436,55 @@
             "description": "Override the project's billable default. Omit to inherit the project setting.",
             "type": "boolean"
           },
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
           "description": {
             "description": "Free-text description.",
             "maxLength": 2000,
@@ -52524,6 +52818,55 @@
           "billable": {
             "description": "Whether the work is billable.",
             "type": "boolean"
+          },
+          "custom_fields": {
+            "description": "Time-entry custom field values. Use this when the workspace has required TIMEENTRY custom fields.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "customFieldId": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "custom_field_id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "field_id": {
+                  "description": "Custom field ID.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "Alias for field_id.",
+                  "type": "string"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Value to set on the created time entry. Type depends on the custom field definition."
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
           },
           "description": {
             "description": "Free-text description.",

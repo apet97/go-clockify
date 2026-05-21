@@ -1,5 +1,5 @@
 # User Groups — MUTATION endpoints (Agent B)
-# Live-probed 2026-05-12 against workspace 65b382b606de527a7ee2b60e.
+# Live-probed 2026-05-12 against workspace <REDACTED_ID>.
 # Host: https://api.clockify.me/api/v1
 # Auth: X-Api-Key (ApiKeyAuth)
 #
@@ -36,9 +36,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/UserGroup' }
               example:
-                id: "6a032e2a2568d3d2932fb46f"
+                id: "<REDACTED_ID>"
                 name: "mcp-probe-1778593322-50879a-group2"
-                workspaceId: "65b382b606de527a7ee2b60e"
+                workspaceId: "<REDACTED_ID>"
                 userIds: []
                 teamManagers: []
         '400':

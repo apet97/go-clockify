@@ -1,0 +1,33 @@
+{
+  "body_bytes": 228,
+  "label": "expense-ctype-categories",
+  "method": "GET",
+  "prefix": "CODEX-VERIFY-1779332447-CTYPE",
+  "request_body": {
+    "data": null,
+    "files": null
+  },
+  "response_body_text": "{\"count\":129,\"categories\":[{\"id\":\"<redacted-id:c6f4ae2e99>\",\"name\":\"__api_harvest___20260114_191330_expcat_001_updated\",\"hasUnitPrice\":false,\"priceInCents\":0,\"unit\":\"\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"archived\":false}]}",
+  "response_headers_subset": {
+    "Content-Length": "228",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 03:00:47 GMT"
+  },
+  "response_json": {
+    "categories": [
+      {
+        "archived": false,
+        "hasUnitPrice": false,
+        "id": "<redacted-id:c6f4ae2e99>",
+        "name": "__api_harvest___20260114_191330_expcat_001_updated",
+        "priceInCents": 0,
+        "unit": "",
+        "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+      }
+    ],
+    "count": 129
+  },
+  "run": "20260521T030047Z",
+  "status": 200,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses/categories?page-size=1&page=1"
+}

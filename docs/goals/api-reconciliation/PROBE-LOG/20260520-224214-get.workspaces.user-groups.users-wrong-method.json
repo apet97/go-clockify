@@ -1,0 +1,37 @@
+{
+  "endpoint_id": "get.workspaces.user-groups.users",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/user-groups/{groupId}/users",
+  "probe_kind": "wrong-method",
+  "timestamp_utc": "2026-05-20T22:42:14Z",
+  "request": {
+    "method": "POST",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/user-groups/[REDACTED-GROUP]/users",
+    "query": {},
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "headers_redacted": {
+      "Content-Type": "application/json"
+    },
+    "body_keys": [
+      "code",
+      "message"
+    ],
+    "body_sample": "{\"message\":\"Required request body is missing: public com.clockify.adapter.http.v1.dto.UserGroupDtoV1 com.clockify.adapter.http.v1.usergroup.UserGroupHttpAdapter.addUser(java.lang.String,java.lang.String,com.clockify.adapter.http.v1.requests.UserGroupUserRequest,com.clockify.adapter.spring.security.CurrentAuth)\",\"code\":3002}"
+  },
+  "facts_observed": {
+    "status": 400,
+    "response_top_keys": [
+      "code",
+      "message"
+    ],
+    "item_keys": [],
+    "item_count": {}
+  },
+  "notes": ""
+}

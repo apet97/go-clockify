@@ -1,0 +1,15 @@
+{
+  "endpoint_id": "get.workspaces.policies.single",
+  "probe_kind": "other",
+  "timestamp_utc": "2026-05-21T00:00:00Z",
+  "method": "GET",
+  "path": "/workspaces/<redacted-id:7955161f32>/policies/fake-policy-id-test",
+  "query": {},
+  "status_code": 404,
+  "status_text": "Not Found",
+  "response_body_sample": {
+    "message": "No static resource v1/workspaces/<redacted-id:7955161f32>/policies/fake-policy-id-test."
+  },
+  "verdict": "LIVE-OVERRIDE",
+  "notes": "404 Spring-MVC 'No static resource' — endpoint does not exist. Consistent with /policies list also returning 404. Present only in our generated spec."
+}

@@ -9,8 +9,8 @@ paths:
     patch:
       summary: Adjust time-off balance for one or more users under a policy
       description: |
-        Live-probe finding (2026-05-12, ws 65b382b606de527a7ee2b60e, policy
-        6967f523d3e5101589b5b66e, self userId 64621faec4d2cc53b91fce6c).
+        Live-probe finding (2026-05-12, ws <REDACTED_ID>, policy
+        <REDACTED_ID>, self userId <REDACTED_ID>).
 
         IMPORTANT: `value` behaves as a DELTA applied to each user's current
         balance, not as an absolute "set to" value. Doc text ("Represents a
@@ -56,12 +56,12 @@ paths:
               valid_add_one_day:
                 value:
                   note: mcp-probe-bonus
-                  userIds: ["64621faec4d2cc53b91fce6c"]
+                  userIds: ["<REDACTED_ID>"]
                   value: 1
               valid_revert_one_day:
                 value:
                   note: mcp-probe-revert
-                  userIds: ["64621faec4d2cc53b91fce6c"]
+                  userIds: ["<REDACTED_ID>"]
                   value: -1
       responses:
         "204":

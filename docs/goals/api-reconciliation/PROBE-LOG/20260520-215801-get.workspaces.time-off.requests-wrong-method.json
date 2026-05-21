@@ -1,0 +1,26 @@
+{
+  "endpoint_id": "get.workspaces.time-off.requests",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/time-off/requests",
+  "probe_kind": "wrong-method",
+  "timestamp_utc": "2026-05-20T21:58:01Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/time-off/requests",
+    "query": {"page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 405,
+    "headers_redacted": {},
+    "body_keys": [],
+    "body_sample": "{\"message\":\"Request method 'GET' is not supported\"}"
+  },
+  "facts_observed": {
+    "list_supports_get": false,
+    "error_message": "Request method 'GET' is not supported",
+    "known_method": "POST (per CLAUDE.md: time-off request listing is POST)"
+  },
+  "notes": "GET /time-off/requests returns 405. Listing is POST-based. Both specs document this as GET — spec incorrect. Matches CLAUDE.md note."
+}

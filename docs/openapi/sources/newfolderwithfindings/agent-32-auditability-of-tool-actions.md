@@ -60,7 +60,7 @@ All tests passed (exit code 0, no races detected).
 2. **Project CRUD lifecycle** — POST create → PUT archive → DELETE — all succeeded (project `qa-agent-32-audit-project-*`)
 3. **Time entry CRUD lifecycle** — POST create → GET read → PUT update end time → DELETE — all succeeded (entry `qa-agent-32 audit test entry`)
 
-All probes were against workspace `65b382b606de527a7ee2b60e` (WORKSPACE), user `alpettest1@gmail.com`. All test resources were cleaned up.
+All probes were against workspace `<REDACTED_ID>` (WORKSPACE), user `<EMAIL>`. All test resources were cleaned up.
 
 ## Findings
 
@@ -160,8 +160,8 @@ func TestAuditPhase_OutcomeWrittenOnHandlerPanic(t *testing.T) {
 
 ## Cleanup performed
 
-- Project `6a00fa30284e03fc79352ca1` (qa-agent-32-audit-project-*) — archived via PUT then deleted via DELETE (HTTP 200)
-- Time entry `6a00fa31d9647159dc1063ab` — deleted via DELETE (HTTP 204)
+- Project `<REDACTED_ID>` (qa-agent-32-audit-project-*) — archived via PUT then deleted via DELETE (HTTP 200)
+- Time entry `<REDACTED_ID>` — deleted via DELETE (HTTP 204)
 
 ## Leftover test resources
 

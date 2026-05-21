@@ -1,0 +1,65 @@
+{
+  "endpoint_id": "post.workspaces.invoices",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/invoices",
+  "probe_kind": "dry-run",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "dry_run via clockify_invoices_create",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/invoices",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "client_id": "<redacted-id:e94acbc0e2>",
+      "number": "MCP-RECON-B-INV-PROBE-001",
+      "issued_date": "2026-05-21T00:00:00Z",
+      "due_date": "2026-05-21T00:00:00Z",
+      "currency": "USD",
+      "dry_run": true
+    }
+  },
+  "response": {
+    "status": "dry_run",
+    "headers_redacted": {},
+    "body_sample": {
+      "ok": true,
+      "action": "clockify_invoices_create",
+      "entity": "invoice",
+      "ids": {
+        "clientId": "<redacted-id:e94acbc0e2>",
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "data": {
+        "dry_run": true,
+        "note": "No changes were made.",
+        "payload": {
+          "clientId": "<redacted-id:e94acbc0e2>",
+          "currency": "USD",
+          "dueDate": "2026-05-21T00:00:00Z",
+          "issuedDate": "2026-05-21T00:00:00Z",
+          "number": "MCP-RECON-B-INV-PROBE-001",
+          "status": "UNSENT"
+        },
+        "tool": "clockify_create_invoice"
+      },
+      "changed": {}
+    }
+  },
+  "facts_observed": {
+    "dry_run_accepted": true,
+    "ok": true,
+    "payload_shows_upstream_field_names": {
+      "clientId": "maps from client_id",
+      "currency": "same",
+      "dueDate": "maps from due_date (RFC3339)",
+      "issuedDate": "maps from issued_date (RFC3339)",
+      "number": "same",
+      "status": "defaults to UNSENT"
+    },
+    "required_fields": ["client_id", "number", "issued_date", "currency", "due_date"],
+    "optional_fields": ["bill_from", "client_address", "subject", "note", "tax_percent", "tax2_percent", "tax_type", "discount_percent"],
+    "default_status": "UNSENT",
+    "client_id_used": "<redacted-id:e94acbc0e2>"
+  },
+  "notes": "dry_run returned ok:true with full payload preview. Upstream field names revealed in payload: clientId, currency, dueDate, issuedDate, number, status=UNSENT. client_id resolved via prior clockify_clients_list call. No invoice was created. No cleanup required."
+}

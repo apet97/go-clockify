@@ -12,7 +12,7 @@ FAIL
 - MCP server `tests/e2e_live_test.go` — client cleanup in live tests
 - MCP server `tests/live_helpers_test.go` — `rawArchiveAndDeleteClient` helper
 - API probe lab `CLIENTDOC.md` — all 5 client endpoint specs
-- Live workspace `65b382b606de527a7ee2b60e` — full CRUD lifecycle, edge cases, pagination, sorting
+- Live workspace `<REDACTED_ID>` — full CRUD lifecycle, edge cases, pagination, sorting
 
 ## Live API probe lab files used
 
@@ -40,12 +40,12 @@ go vet ./tests/
 
 ## Live API probes run
 
-All probes against workspace `65b382b606de527a7ee2b60e` using CLOCKIFY_API_KEY=****REDACTED****.
+All probes against workspace `<REDACTED_ID>` using CLOCKIFY_API_KEY=****REDACTED****.
 
 | # | Endpoint | Method | Status | Result |
 |---|----------|--------|--------|--------|
 | 1 | `/v1/workspaces/{ws}/clients?page-size=5` | GET | 200 | Returned 5 clients, correct shape |
-| 2 | `/v1/workspaces/{ws}/clients` | POST | 201 | Created client `6a00f2542568d3d29305e74d` |
+| 2 | `/v1/workspaces/{ws}/clients` | POST | 201 | Created client `<REDACTED_ID>` |
 | 3 | `/v1/workspaces/{ws}/clients/{id}` | GET | 200 | Returned created client, correct shape |
 | 4 | `/v1/workspaces/{ws}/clients/{id}` | PUT | 200 | Updated name, note, address. **Note: clears omitted fields** |
 | 5 | `/v1/workspaces/{ws}/clients/{id}?archive-projects=true` | PUT | 200 | Archived client successfully (requires `name` in body) |
@@ -192,7 +192,7 @@ curl -s -X PUT ... -d '{"name":"test-delete","archived":true}' ...
 ### F4: PUT is full replacement
 ```bash
 # Create with all fields
-curl -s -X POST ... -d '{"name":"test","address":"123 St","email":"a@b.com"}' ...
+curl -s -X POST ... -d '{"name":"test","address":"123 St","email":"<EMAIL>"}' ...
 # Update with only name → address and email cleared to null
 curl -s -X PUT ... -d '{"name":"new-name"}' ...
 # GET shows address:null, email:null
@@ -201,9 +201,9 @@ curl -s -X PUT ... -d '{"name":"new-name"}' ...
 ## Cleanup performed
 
 All `qa-agent-13-*` prefixed test clients were cleaned up:
-- `6a00f2542568d3d29305e74d` (qa-agent-13-test-client-1) — archived → deleted
-- `6a00f42c2568d3d29305fa52` (qa-agent-13-full-crud) — archived → deleted
-- `6a00f494284e03fc79326a87` (qa-agent-13-del-test) — archived → deleted
+- `<REDACTED_ID>` (qa-agent-13-test-client-1) — archived → deleted
+- `<REDACTED_ID>` (qa-agent-13-full-crud) — archived → deleted
+- `<REDACTED_ID>` (qa-agent-13-del-test) — archived → deleted
 
 ## Leftover test resources
 

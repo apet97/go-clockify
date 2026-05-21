@@ -58,7 +58,7 @@ I audited the go-clockify MCP server's goroutine lifecycle management, memory sa
 
 ### Live API probe lab files used
 
-- `/tmp/clockify-livetest.env` — API key (****REDACTED****), workspace ID (`65b382b606de527a7ee2b60e`)
+- `/tmp/clockify-livetest.env` — API key (****REDACTED****), workspace ID (`<REDACTED_ID>`)
 - Probe lab: `/Users/15x/Downloads/WORKING/clockify-api-probe-lab/` (CLAUDE.md, README.md, docs/, probes/)
 
 ## Commands run
@@ -92,7 +92,7 @@ go test -race -bench=BenchmarkDispatch -benchtime=100ms -timeout 60s ./internal/
 
 ## Live API probes run
 
-Probe workspace: `65b382b606de527a7ee2b60e` (WORKSPACE)
+Probe workspace: `<REDACTED_ID>` (WORKSPACE)
 
 | Probe | Method | Result |
 |-------|--------|--------|
@@ -102,7 +102,7 @@ Probe workspace: `65b382b606de527a7ee2b60e` (WORKSPACE)
 | `clockify_current_user` | MCP stdio | PASS — returns user id, name, email, activeWorkspace |
 | `clockify_whoami` | MCP stdio | PASS — returns user + workspaceId |
 | `clockify_list_entries` (page_size=5) | MCP stdio | PASS — returns entries array with meta |
-| `clockify_add_entry` (create test entry) | MCP stdio | PASS — created entry `6a00fd4cd9647159dc1091be` |
+| `clockify_add_entry` (create test entry) | MCP stdio | PASS — created entry `<REDACTED_ID>` |
 | Delete test entry | Direct API (DELETE) | PASS — 204 No Content |
 | Doctor config audit (local-stdio) | Doctor | PASS — config loads, warns about strict posture |
 | Doctor config audit (single-tenant-http) | Doctor | PASS — correctly identifies missing API key |
@@ -152,7 +152,7 @@ No code fixes needed. All goroutine lifecycle patterns are correct and well-test
 
 ## Cleanup performed
 
-- Deleted test time entry `6a00fd4cd9647159dc1091be` via direct Clockify API
+- Deleted test time entry `<REDACTED_ID>` via direct Clockify API
 - No other test resources were created
 
 ## Leftover test resources

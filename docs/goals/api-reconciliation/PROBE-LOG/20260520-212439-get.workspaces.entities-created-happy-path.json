@@ -1,0 +1,39 @@
+{
+  "endpoint_id": "get.workspaces.entities-created",
+  "method": "GET",
+  "path": "/workspaces/{workspaceId}/entities/created",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-20T21:24:39Z",
+  "request": {
+    "method": "GET",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/entities/created",
+    "query": {"type": "PROJECTS", "page": 1, "page-size": 3},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers_redacted": {"Content-Type": "application/json"},
+    "body_keys": ["array"],
+    "body_sample": "[{\"archived\":false,\"billable\":true,\"budgetEstimate\":null,\"clientId\":\"...\",\"clientName\":\"...\",\"color\":\"#...\",\"costRate\":null,\"documentCode\":\"PRJ-001\",\"duration\":\"PT...\",\"estimate\":{\"estimate\":\"PT0S\",\"type\":\"AUTO\"},\"estimateReset\":null,\"hourlyRate\":{\"amount\":0,\"currency\":\"USD\"},\"id\":\"...\",\"memberships\":[...],\"name\":\"...\",\"note\":\"\",\"public\":false,\"template\":false,\"timeEstimate\":{...},\"workspaceId\":\"[REDACTED-WORKSPACE]\",\"auditMetadata\":{\"createdAt\":\"2026-01-01T00:00:00Z\",\"updatedAt\":\"2026-01-15T12:00:00Z\"}}]"
+  },
+  "facts_observed": {
+    "required_param_type": {
+      "name": "type",
+      "required": true,
+      "confirmed_valid_enum_values": ["CLIENTS","PROJECTS","SCHEDULED_ASSIGNMENT","TAGS","TASKS","TIME_ENTRY","TIME_ENTRY_CUSTOM_FIELD_VALUE","TIME_ENTRY_RATE"],
+      "error_without_type": "400 — Required request parameter 'type' for method parameter type List is not present"
+    },
+    "page_size_respected": false,
+    "returned_count_vs_requested": "3 requested, 48+ returned (truncated by MCP tool limit)",
+    "response_shape": "bare array",
+    "extra_fields_vs_projects_list": ["auditMetadata", "documentCode"],
+    "auditMetadata_shape": {"createdAt": "string (ISO 8601)", "updatedAt": "string (ISO 8601)"},
+    "documentCode_type": "string (e.g. PRJ-001)",
+    "spec_coverage": {
+      "official": "documents endpoint but MISSING required type param with enum values",
+      "ours": "documents endpoint but MISSING required type param entirely"
+    }
+  },
+  "notes": "LIVE-OVERRIDE: Both specs omit the required 'type' query parameter — first probe without it returned 400. Valid enum values confirmed from error message. page-size ignored — returned 48+ items despite page-size=3. Response adds auditMetadata.{createdAt,updatedAt} and documentCode not present in regular project list endpoint."
+}

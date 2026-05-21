@@ -1,0 +1,39 @@
+{
+  "body_bytes": 378,
+  "label": "expense-file-v3-create-with-file",
+  "method": "POST",
+  "request_body": {
+    "multipart_fields": {
+      "amount": "12.34",
+      "categoryId": "<redacted-id:c6f4ae2e99>",
+      "date": "2026-04-11T00:00:00Z",
+      "file": "codex-receipt.png",
+      "notes": "CODEX-VERIFY-1779331006-EXPENSE-FILE",
+      "projectId": "<redacted-id:c88e629588>",
+      "userId": "<redacted-id:706f58c94f>"
+    }
+  },
+  "response_body_text": "{\"id\":\"<redacted-id:5fbb3f7e95>\",\"workspaceId\":\"<CLOCKIFY_WORKSPACE_ID>\",\"userId\":\"<redacted-id:706f58c94f>\",\"date\":\"2026-04-11T00:00:00Z\",\"projectId\":\"<redacted-id:c88e629588>\",\"taskId\":null,\"categoryId\":\"<redacted-id:c6f4ae2e99>\",\"notes\":\"CODEX-VERIFY-1779331006-EXPENSE-FILE\",\"quantity\":1.0,\"billable\":false,\"fileId\":\"<redacted-id:577ec58cb5>\",\"total\":1234.0,\"locked\":false}",
+  "response_headers_subset": {
+    "Content-Length": "378",
+    "Content-Type": "application/json",
+    "Date": "Thu, 21 May 2026 02:36:48 GMT"
+  },
+  "response_json": {
+    "billable": false,
+    "categoryId": "<redacted-id:c6f4ae2e99>",
+    "date": "2026-04-11T00:00:00Z",
+    "fileId": "<redacted-id:577ec58cb5>",
+    "id": "<redacted-id:5fbb3f7e95>",
+    "locked": false,
+    "notes": "CODEX-VERIFY-1779331006-EXPENSE-FILE",
+    "projectId": "<redacted-id:c88e629588>",
+    "quantity": 1.0,
+    "taskId": null,
+    "total": 1234.0,
+    "userId": "<redacted-id:706f58c94f>",
+    "workspaceId": "<CLOCKIFY_WORKSPACE_ID>"
+  },
+  "status": 201,
+  "url": "https://api.clockify.me/api/v1/workspaces/<CLOCKIFY_WORKSPACE_ID>/expenses"
+}

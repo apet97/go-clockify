@@ -51,6 +51,81 @@ func TestListEntriesSameDayPlainDateCoversFullDay(t *testing.T) {
 // rather than short-circuiting on resolve.ValidateID.
 const otherUserEntryID = "6a00f6bc2568d3d293061e2a"
 
+func TestBuildEntryPayloadForwardsCustomFields(t *testing.T) {
+	svc := New(nil, "ws1")
+	payload, ids, err := svc.buildEntryPayload(context.Background(), map[string]any{
+		"start": "2026-05-21T09:00:00Z",
+		"custom_fields": []any{
+			map[string]any{"field_id": "6a00f6bc2568d3d293061e2a", "value": "Site A"},
+			map[string]any{"customFieldId": "6a00f6bc2568d3d293061e2b", "value": float64(7)},
+		},
+	})
+	if err != nil {
+		t.Fatalf("buildEntryPayload: %v", err)
+	}
+	if ids["workspaceId"] != "ws1" {
+		t.Fatalf("workspace id = %q, want ws1", ids["workspaceId"])
+	}
+	fields, ok := payload["customFields"].([]map[string]any)
+	if !ok {
+		t.Fatalf("customFields = %T %#v, want []map[string]any", payload["customFields"], payload["customFields"])
+	}
+	if len(fields) != 2 {
+		t.Fatalf("customFields length = %d, want 2: %#v", len(fields), fields)
+	}
+	if fields[0]["customFieldId"] != "6a00f6bc2568d3d293061e2a" || fields[0]["value"] != "Site A" {
+		t.Fatalf("first custom field not normalized: %#v", fields[0])
+	}
+	if fields[1]["customFieldId"] != "6a00f6bc2568d3d293061e2b" || fields[1]["value"] != float64(7) {
+		t.Fatalf("second custom field not normalized: %#v", fields[1])
+	}
+	if _, ok := payload["custom_fields"]; ok {
+		t.Fatalf("payload leaked user-facing custom_fields key: %#v", payload)
+	}
+}
+
+func TestBuildEntryPayloadRejectsMalformedCustomFields(t *testing.T) {
+	svc := New(nil, "ws1")
+	_, _, err := svc.buildEntryPayload(context.Background(), map[string]any{
+		"start":         "2026-05-21T09:00:00Z",
+		"custom_fields": []any{map[string]any{"value": "Site A"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "custom_fields[0].field_id is required") {
+		t.Fatalf("error = %v, want missing field_id guidance", err)
+	}
+}
+
+func TestTimeEntryCreateSchemasExposeCustomFields(t *testing.T) {
+	svc := New(nil, "ws1")
+	schemas := map[string]map[string]any{
+		"clockify_log_work":    logWorkSchema(),
+		"clockify_start_work":  startWorkSchema(),
+		"clockify_switch_work": switchWorkSchema(),
+		"clockify_demo_seed":   demoSeedSchema(),
+	}
+	for _, descriptor := range svc.FullAccessRegistry() {
+		switch descriptor.Tool.Name {
+		case "clockify_entries_create", "clockify_entries_timer_start", "clockify_entries_timer_switch":
+			schemas[descriptor.Tool.Name] = descriptor.Tool.InputSchema
+		}
+	}
+	for name, schema := range schemas {
+		props, _ := schema["properties"].(map[string]any)
+		cf, _ := props["custom_fields"].(map[string]any)
+		if cf == nil {
+			t.Fatalf("%s schema missing custom_fields: %#v", name, props)
+		}
+		if cf["type"] != "array" {
+			t.Fatalf("%s custom_fields type = %#v, want array", name, cf["type"])
+		}
+		items, _ := cf["items"].(map[string]any)
+		itemProps, _ := items["properties"].(map[string]any)
+		if itemProps["field_id"] == nil || itemProps["customFieldId"] == nil || itemProps["value"] == nil {
+			t.Fatalf("%s custom_fields item schema missing id/value aliases: %#v", name, items)
+		}
+	}
+}
+
 func TestListEntriesForwardsOpenAPIQueryParams(t *testing.T) {
 	var gotQuery url.Values
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {

@@ -21,7 +21,7 @@ func TestLoadOneUserRequiresAPIKeyAndWorkspace(t *testing.T) {
 
 func TestLoadOneUserMinimalConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_BASE_URL", "")
 	t.Setenv("CLOCKIFY_TIMEZONE", "Europe/Belgrade")
 	t.Setenv("MCP_LOG_LEVEL", "debug")
@@ -79,7 +79,7 @@ func TestLoadOneUserMinimalConfig(t *testing.T) {
 
 func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", "8")
 	t.Setenv("CLOCKIFY_TOOL_TIMEOUT", "2m")
 	t.Setenv("CLOCKIFY_MAX_MESSAGE_SIZE", "8388608")
@@ -138,7 +138,7 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 
 func TestLoadOneUserOptionalRuntimeConfigOnlyRequiresKeyAndWorkspace(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", "")
 	t.Setenv("CLOCKIFY_TOOL_TIMEOUT", "")
 	t.Setenv("CLOCKIFY_MAX_MESSAGE_SIZE", "")
@@ -235,7 +235,7 @@ func TestLoadOneUserAcceptsRuntimeConfigBoundsAndNormalization(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("CLOCKIFY_API_KEY", "test-key")
-			t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+			t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 			t.Setenv(tt.envName, tt.value)
 
 			cfg, err := LoadOneUser()
@@ -249,7 +249,7 @@ func TestLoadOneUserAcceptsRuntimeConfigBoundsAndNormalization(t *testing.T) {
 
 func TestLoadOneUserAllowsLoopbackBaseURL(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_BASE_URL", "http://127.0.0.1:18080/api/v1")
 
 	cfg, err := LoadOneUser()
@@ -268,7 +268,7 @@ func TestLoadOneUserRejectsUnsafeBaseURLAndWorkspaceID(t *testing.T) {
 		t.Fatal("expected invalid workspace id error")
 	}
 
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_BASE_URL", "http://clockify.example.test/api/v1")
 	if _, err := LoadOneUser(); err == nil {
 		t.Fatal("expected non-HTTPS base URL error")
@@ -277,7 +277,7 @@ func TestLoadOneUserRejectsUnsafeBaseURLAndWorkspaceID(t *testing.T) {
 
 func TestLoadOneUserRejectsInvalidTimezone(t *testing.T) {
 	t.Setenv("CLOCKIFY_API_KEY", "test-key")
-	t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 	t.Setenv("CLOCKIFY_TIMEZONE", "Mars/Base")
 	if _, err := LoadOneUser(); err == nil {
 		t.Fatal("expected invalid timezone error")
@@ -378,7 +378,7 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("CLOCKIFY_API_KEY", "test-key")
-			t.Setenv("CLOCKIFY_WORKSPACE_ID", "65b382b606de527a7ee2b60e")
+			t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
 			t.Setenv(tt.envName, tt.value)
 			if _, err := LoadOneUser(); err == nil {
 				t.Fatalf("expected %s=%q error", tt.envName, tt.value)

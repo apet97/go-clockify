@@ -1,0 +1,22 @@
+{
+  "endpoint_id": "inviteUserToWorkspace",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/users",
+  "probe_kind": "devil-promotion-attempt",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "prior_status": "UNCONFIRMED-AGREE",
+  "live_probe_result": {
+    "method_probed": "POST (raw write blocked by CLOCKIFY_ENABLE_RAW_WRITES guard)",
+    "body_attempted": {"email": "<redacted-email:8dfe30885e>"},
+    "status": "blocked",
+    "key_facts": {
+      "error_code": "error",
+      "message": "raw API writes are disabled; use workflow or domain tools first, or set CLOCKIFY_ENABLE_RAW_WRITES=true to allow POST",
+      "interpretation": "POST blocked before reaching Clockify. Cannot confirm path registration via this route. GET on /users returns a large user list (confirmed by prior probes: got result_too_large). GET /users is a different path than POST /users but same prefix confirms path family exists.",
+      "prior_evidence": "GET /workspaces/{wId}/users returns 200 (result_too_large — real data). Path family confirmed. POST /users is invite endpoint — raw writes blocked."
+    }
+  },
+  "verdict": "REMAINS_UNCONFIRMED",
+  "promotion_evidence": "GET /users returns live user data (result_too_large), confirming path family exists. POST (invite) is blocked by raw-writes guard. No 405 probe possible without raw writes. Cannot promote without a typed tool or live POST response.",
+  "notes": "Skipped live invite per instructions (would invite real user). Raw writes guard prevents POST. GET on the /users path family is confirmed live. Status remains UNCONFIRMED-AGREE. To promote: enable raw writes with a throwaway email, or add a typed invite tool with dry_run support."
+}

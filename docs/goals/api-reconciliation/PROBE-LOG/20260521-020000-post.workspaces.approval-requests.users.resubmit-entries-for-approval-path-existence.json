@@ -1,0 +1,31 @@
+{
+  "endpoint_id": "post.workspaces.approval-requests.users.resubmit-entries-for-approval",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval",
+  "probe_kind": "path-existence",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "GET (path-existence probe via clockify_api_get)",
+    "path": "GET /workspaces/[REDACTED-WORKSPACE]/approval-requests/users/<redacted-id:706f58c94f>/resubmit-entries-for-approval",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": null
+  },
+  "response": {
+    "status": 405,
+    "headers_redacted": {},
+    "body_sample": "{\"message\":\"Request method 'GET' is not supported\",\"code\":3000}"
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "get_returns_405": true,
+    "405_meaning": "Spring-MVC: path exists in routing table but GET not accepted — POST is the registered method",
+    "tool_path_variant": "clockify_approvals_resubmit uses NON-user-scoped path: POST /workspaces/{wId}/approval-requests/resubmit-entries-for-approval",
+    "user_scoped_path_exists_in_spec": "Both specs list /workspaces/{wId}/approval-requests/users/{userId}/resubmit-entries-for-approval",
+    "user_scoped_tool": "clockify_resubmit_for_user_approval → resubmitForUserApproval → postUserApprovalPeriod with parts=[approval-requests, users, __USER__, resubmit-entries-for-approval]",
+    "non_user_tool_live_verified": "clockify_approvals_resubmit returned biz-logic 400 code 501 in prior probe confirming non-user path is live",
+    "mcp_tool_called": "clockify_approvals_resubmit (non-user path) with dummy approval_id returned invalid_request: 'no active approval request for period'",
+    "mcp_response_code": "invalid_request (upstream 400/501)"
+  },
+  "notes": "GET /workspaces/{wId}/approval-requests/users/{userId}/resubmit-entries-for-approval returns 405, confirming the user-scoped path is registered in Clockify's router. The non-user-scoped sibling path was LIVE-VERIFIED in iter17 via a 400 biz-logic error. The user-scoped path (with userId segment) matches both specs and is confirmed registered via 405. The MCP tool clockify_approvals_resubmit uses the non-user path; the user-scoped variant is handled by clockify_resubmit_for_user_approval. Both paths are registered. Verification: UNCONFIRMED-AGREE (path registered via 405; no POST biz-logic response captured for this exact user-scoped variant — the non-user-scoped sibling is LIVE-VERIFIED)."
+}

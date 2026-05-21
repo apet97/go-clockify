@@ -1,0 +1,85 @@
+{
+  "endpoint_id": "post.workspaces.invoices.info",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/invoices/info",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T02:00:00Z",
+  "request": {
+    "method": "direct tool call via clockify_invoices_info",
+    "path": "POST /workspaces/[REDACTED-WORKSPACE]/invoices/info",
+    "query": {},
+    "headers_redacted": {"X-Api-Key": "[REDACTED]"},
+    "body": {
+      "page": 1,
+      "page_size": 5
+    }
+  },
+  "response": {
+    "status": "200",
+    "headers_redacted": {},
+    "body_sample": {
+      "ok": true,
+      "action": "clockify_invoices_info",
+      "entity": "invoice",
+      "data": [
+        {
+          "id": "<redacted-id:8491414151>",
+          "number": "12",
+          "status": "OVERDUE",
+          "clientId": "<redacted-id:0651c649db>",
+          "clientName": "Directamente asociadas a clientes",
+          "issuedDate": "2025-04-16T00:00:00Z",
+          "dueDate": "2025-04-16T00:00:00Z",
+          "currency": "AUD",
+          "amount": {
+            "amount_cents": 100000,
+            "amount_decimal": "1000.00",
+            "currency": "AUD",
+            "display": "$1000.00 AUD"
+          }
+        }
+      ],
+      "meta": {
+        "count": 5,
+        "has_more": true,
+        "page": 1,
+        "pageSize": 5,
+        "total": 121,
+        "workspaceId": "[REDACTED-WORKSPACE]"
+      },
+      "changed": {}
+    }
+  },
+  "facts_observed": {
+    "tool_returns_data": true,
+    "not_unsupported": true,
+    "response_shape_items": {
+      "id": "string",
+      "number": "string",
+      "status": "string (OVERDUE|UNSENT|SENT|PAID|PARTIALLY_PAID|VOID)",
+      "clientId": "string",
+      "clientName": "string",
+      "issuedDate": "RFC3339 string",
+      "dueDate": "RFC3339 string",
+      "currency": "string (3-char code)",
+      "amount": {
+        "amount_cents": "integer (minor units)",
+        "amount_decimal": "string decimal",
+        "currency": "string",
+        "display": "string"
+      }
+    },
+    "pagination_meta": {
+      "count": "integer (items on this page)",
+      "has_more": "boolean",
+      "page": "integer",
+      "pageSize": "integer",
+      "total": "integer (authoritative total — 121 invoices in workspace)"
+    },
+    "authoritative_total": 121,
+    "endpoint_semantics": "bulk paged invoice query via POST; returns authoritative total unlike clockify_invoices_list",
+    "filter_params_accepted": ["statuses"],
+    "pagination_params_accepted": ["page", "page_size"]
+  },
+  "notes": "clockify_invoices_info is a real live tool (not in the unsupported list). It posts to /invoices/info and returns a paged invoice list with authoritative total count (121). This is distinct from clockify_invoices_list which also lists invoices but does not always return an authoritative total. Response shape matches a list of invoice objects with normalized amount sub-object. No cleanup needed (read-only)."
+}

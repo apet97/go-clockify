@@ -1,0 +1,16 @@
+{
+  "endpoint_id": "delete.workspaces.clients",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T00:15:00Z",
+  "method": "DELETE",
+  "path": "/workspaces/<redacted-id:7955161f32>/clients/<redacted-id:5275682a76>",
+  "query": {},
+  "status_code": 200,
+  "status_text": "OK",
+  "response_body_sample": {
+    "clientId": "<redacted-id:5275682a76>",
+    "deleted": true
+  },
+  "verdict": "LIVE-VERIFIED",
+  "notes": "Successfully deleted test client MCP-LIVE-RECON-20260521-001500-recon-client. Path: /workspaces/{wId}/clients/{clientId}. Both ours ({clientId}) and official ({id}) use the same path segment. Raw response body shape observed via typed tool wrapper. Both specs document this endpoint."
+}

@@ -13,7 +13,7 @@ import (
 // dry_run:true returns a preview of the resolved payload and performs no
 // write, so a caller can preflight before a real (non-idempotent) create.
 func TestCreateExpenseDryRunSkipsWrite(t *testing.T) {
-	fake := testclockify.NewServer("65b382b606de527a7ee2b60e")
+	fake := testclockify.NewServer("000000000000000000000001")
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 

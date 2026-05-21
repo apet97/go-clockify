@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     Probed 2026-05-12 against api.clockify.me/api/v1, workspace
-    65b382b606de527a7ee2b60e, as operator's own userId.
+    <REDACTED_ID>, as operator's own userId.
     Fixtures: fixtures/approvals-fresh-b/.
 
     Key behaviours discovered:

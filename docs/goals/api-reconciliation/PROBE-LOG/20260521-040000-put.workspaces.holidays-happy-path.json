@@ -1,0 +1,26 @@
+{
+  "endpoint_id": "put.workspaces.holidays",
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/holidays/{holidayId}",
+  "probe_kind": "happy-path",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "method": "PUT",
+    "path": "/workspaces/<redacted-id:7955161f32>/holidays/<redacted-id:1f2fabbad9>",
+    "body_summary": "name=__api_harvest___20260114_203101_holiday_001_UPD datePeriod={startDate:2026-12-25,endDate:2026-12-25} occursAnnually=false everyoneIncludingNew=true (same values read back — no-op update)"
+  },
+  "response": {
+    "status": 200,
+    "body_sample": "{\"id\":\"<redacted-id:1f2fabbad9>\",\"workspaceId\":\"<redacted-id:7955161f32>\",\"name\":\"__api_harvest___20260114_203101_holiday_001_UPD\",\"userIds\":[],\"userGroupIds\":[],\"datePeriod\":{\"startDate\":\"2026-12-25\",\"endDate\":\"2026-12-25\"},\"occursAnnually\":false,\"everyoneIncludingNew\":true,\"automaticTimeEntryCreation\":false,\"projectId\":null,\"taskId\":null}"
+  },
+  "facts_observed": {
+    "path_registered": true,
+    "method_accepted": "PUT",
+    "get_probe_status": 405,
+    "put_status": 200,
+    "partial_update_confirmed": true,
+    "automaticTimeEntryCreation_must_be_omitted": true,
+    "note": "GET /workspaces/{wId}/holidays/{hId} returns 405 (Spring MVC path registered). Full body with automaticTimeEntryCreation=false triggers 400 JSON parse error. Omitting that field succeeds with 200. Partial update merges existing data as documented in CLAUDE.md."
+  },
+  "notes": "LIVE-VERIFIED. Tool: clockify_holidays_update (no dry_run param). Used real holiday ID <redacted-id:1f2fabbad9>. No-op update (same name/dates). Discovered: automaticTimeEntryCreation cannot be sent as boolean in PUT body — Clockify expects an object type for that field but the GET returns it as boolean. The MCP tool correctly omits this field in its implementation. Holiday restored to original state since we sent the exact same values."
+}

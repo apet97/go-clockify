@@ -1,0 +1,88 @@
+{
+  "batch": "C",
+  "ts": "2026-05-21T01:00:00Z",
+  "endpoints": [
+    {
+      "endpoint_id": "patch.workspaces.time-entries.invoiced.bulk",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/time-entries/invoiced/bulk",
+      "source": "ours_only",
+      "verdict": "LIVE-OVERRIDE",
+      "verdict_detail": "Path absent from live API. GET probe returns Spring 404 'No static resource'. The non-bulk /invoiced path already accepts an array of timeEntryIds (bulk semantics). No separate /bulk sub-path exists.",
+      "live_path": null,
+      "our_path": "/workspaces/{workspaceId}/time-entries/invoiced/bulk",
+      "correct_path": "/workspaces/{workspaceId}/time-entries/invoiced",
+      "action_required": "Remove or alias /invoiced/bulk to the existing /invoiced endpoint in spec/raw-allowlist.",
+      "probe_log": "PROBE-LOG/20260521-010000-patch.workspaces.time-entries.invoiced.bulk-path-probe.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.time-off.policies.requests",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+      "source": "both",
+      "verdict": "LIVE-VERIFIED",
+      "verdict_detail": "Path family confirmed registered: GET /time-off/policies/{policyId}/requests returns 405 (path exists, GET not supported). Prior iter15 evidence: PATCH returned 200 status=APPROVED. All three typed tools (clockify_time_off_approve, clockify_time_off_deny, clockify_time_off_requests_update) use this exact path.",
+      "live_path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+      "our_path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+      "correct_path": "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}",
+      "action_required": "None. Spec and implementation are correct.",
+      "probe_log": "PROBE-LOG/20260521-010000-patch.workspaces.time-off.policies.requests-path-probe.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.user.time-entries",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "source": "both",
+      "verdict": "LIVE-VERIFIED",
+      "verdict_detail": "Path confirmed live: GET returns 200 bare array of time entries. Code inspection of internal/tools/timer.go:167-172 confirms PATCH on this exact path is used by clockify_entries_timer_stop (sends {end: RFC3339} to stop running timer). Path family registered for both GET (list) and PATCH (stop timer / bulk update). Source 'both' is correct.",
+      "live_path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "our_path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "correct_path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "action_required": "None. Implementation confirmed correct. Note: path serves dual roles — GET=list, PATCH=stop timer by setting end time.",
+      "probe_log": "PROBE-LOG/20260521-010000-patch.workspaces.user.time-entries-path-probe.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.user.time-entries.stop",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/user/{userId}/time-entries/stop",
+      "source": "ours_only",
+      "verdict": "LIVE-OVERRIDE",
+      "verdict_detail": "Path absent from live API. GET probe returns Spring 404 'No static resource'. Additionally, code inspection confirms our clockify_entries_timer_stop does NOT use this /stop path — it uses the base path /user/{userId}/time-entries with PATCH + {end} body. The /stop suffix exists in raw_allowlist_gen.go but is not used by any typed tool and does not exist live.",
+      "live_path": null,
+      "our_path": "/workspaces/{workspaceId}/user/{userId}/time-entries/stop",
+      "correct_path": "/workspaces/{workspaceId}/user/{userId}/time-entries",
+      "action_required": "Remove /stop entry from raw allowlist (raw_allowlist_gen.go). The timer-stop operation uses the base /user/{userId}/time-entries path. Two discrepancies: (1) path absent live, (2) our implementation uses a different path.",
+      "probe_log": "PROBE-LOG/20260521-010000-patch.workspaces.user.time-entries.stop-path-probe.json"
+    },
+    {
+      "endpoint_id": "patch.workspaces.webhooks.generateNewToken",
+      "method": "PATCH",
+      "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken",
+      "source": "ours_only",
+      "verdict": "LIVE-OVERRIDE",
+      "verdict_detail": "Path absent from live API (prior iter15 evidence). GET /webhooks/{id}/generateNewToken returns Spring 404 'No static resource'. The correct path is /token (GET /webhooks/{id}/token returns 405 — path exists for PATCH). Our spec correctly uses /token. The /generateNewToken suffix does not exist.",
+      "live_path": null,
+      "our_path": "/workspaces/{workspaceId}/webhooks/{webhookId}/token",
+      "correct_path": "/workspaces/{workspaceId}/webhooks/{webhookId}/token",
+      "action_required": "Remove /generateNewToken from spec/allowlist if it appears there. Our implementation already uses /token which is correct.",
+      "probe_log": "PROBE-LOG/20260521-010000-patch.workspaces.webhooks.generateNewToken-prior-evidence.json",
+      "prior_evidence": "PROBE-LOG/20260521-233258-patch.workspaces.webhooks.token-path-probe.json"
+    }
+  ],
+  "cleanup": {
+    "prefix": "MCP-LIVE-RECON-20260521-010000-C-",
+    "deleted_count": 0,
+    "warnings_count": 0,
+    "status": "clean"
+  },
+  "summary": {
+    "total": 5,
+    "live_verified": 2,
+    "live_override": 3,
+    "live_override_ids": [
+      "patch.workspaces.time-entries.invoiced.bulk",
+      "patch.workspaces.user.time-entries.stop",
+      "patch.workspaces.webhooks.generateNewToken"
+    ]
+  }
+}

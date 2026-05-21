@@ -1,0 +1,25 @@
+{
+  "endpoint_id": "delete.workspaces.expenses.categories",
+  "method": "DELETE",
+  "path": "/workspaces/{workspaceId}/expenses/categories/{categoryId}",
+  "probe_kind": "devil-wrong-method",
+  "timestamp_utc": "2026-05-21T07:00:00Z",
+  "truth_yaml_said": {
+    "x-verification-status": "LIVE-VERIFIED",
+    "x-truth-iter": "iter12",
+    "x-notes": "Response includes archived:true AND deleted:true — Clockify archives the category as part of deletion. Both specs document this endpoint.",
+    "responses": {"200": "Expense category archived and deleted", "properties": ["archived:boolean", "categoryId:string", "deleted:boolean"]}
+  },
+  "live_probe_result": {
+    "method_probed": "GET",
+    "path_probed": "/workspaces/<redacted-id:7955161f32>/expenses/categories/NONEXISTENT_CAT_ID_DEVIL",
+    "status": 405,
+    "key_facts": {
+      "error_code": "clockify_upstream_error",
+      "message": "Request method 'GET' is not supported",
+      "interpretation": "405 = path is registered in Clockify router. GET not allowed on DELETE/PUT endpoint. Path family confirmed present."
+    }
+  },
+  "verdict": "CONFIRMED",
+  "notes": "GET on a DELETE-only path returned 405 'Request method GET is not supported'. This is the Spring-MVC path-exists signal per probe protocol. The path /expenses/categories/{categoryId} IS registered. DELETE is the correct method. No data mutation performed. Prior LIVE-VERIFIED status from iter12 is correct and not demoted. Note: TRUTH.yaml also documents GET /expenses/categories/{id} returns 405, which this probe independently re-confirms."
+}

@@ -1,0 +1,483 @@
+{
+  "cleanup": {
+    "assignment_delete": {
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/recurring/<redacted-id:93cc38d6b3>",
+        "path_template": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+        "query": {
+          "seriesUpdateOption": "ALL"
+        }
+      },
+      "response": {
+        "body_sample": [
+          {
+            "billable": false,
+            "excludeDays": [
+              {
+                "date": "2026-06-04T00:00:00Z",
+                "type": "TIME_OFF"
+              },
+              {
+                "date": "2026-06-06T00:00:00Z",
+                "type": "WEEKEND"
+              },
+              {
+                "date": "2026-06-03T00:00:00Z",
+                "type": "TIME_OFF"
+              },
+              {
+                "date": "2026-06-05T00:00:00Z",
+                "type": "TIME_OFF"
+              }
+            ],
+            "hoursPerDay": 1.0,
+            "id": "<redacted-id:93cc38d6b3>",
+            "includeNonWorkingDays": false,
+            "note": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-assignment-create",
+            "period": {
+              "end": "2026-06-06T17:00:00Z",
+              "start": "2026-06-03T09:00:00Z"
+            },
+            "projectId": "<redacted-id:91bcbe9bb2>",
+            "published": false,
+            "recurring": {
+              "repeat": false,
+              "seriesId": null,
+              "weeks": 0
+            },
+            "startTime": null,
+            "taskId": null,
+            "userId": "<redacted-id:53b91fce6c>",
+            "workspaceId": "[REDACTED-WORKSPACE]"
+          }
+        ],
+        "reason": null,
+        "shape": {
+          "first_keys": [
+            "billable",
+            "excludeDays",
+            "hoursPerDay",
+            "id",
+            "includeNonWorkingDays",
+            "note",
+            "period",
+            "projectId",
+            "published",
+            "recurring",
+            "startTime",
+            "taskId",
+            "userId",
+            "workspaceId"
+          ],
+          "length": 1,
+          "type": "array"
+        },
+        "status": 200
+      }
+    },
+    "project_archive": {
+      "request": {
+        "body": {
+          "archived": true,
+          "billable": false,
+          "color": "#D36F5F",
+          "isPublic": true,
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-put-assignment-project"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "PUT",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:91bcbe9bb2>",
+        "path_template": "/workspaces/{workspaceId}/projects/{projectId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": true,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#D36F5F",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:91bcbe9bb2>",
+          "memberships": [
+            {
+              "costRate": null,
+              "hourlyRate": null,
+              "membershipStatus": "ACTIVE",
+              "membershipType": "PROJECT",
+              "targetId": "<redacted-id:91bcbe9bb2>",
+              "userId": "<redacted-id:53b91fce6c>"
+            }
+          ],
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-put-assignment-project",
+          "note": "",
+          "public": true,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "archived",
+            "billable",
+            "budgetEstimate",
+            "clientId",
+            "clientName",
+            "color",
+            "costRate",
+            "duration",
+            "estimate",
+            "estimateReset",
+            "hourlyRate",
+            "id",
+            "memberships",
+            "name",
+            "note",
+            "public",
+            "template",
+            "timeEstimate",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    },
+    "project_delete": {
+      "request": {
+        "body": null,
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "DELETE",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects/<redacted-id:91bcbe9bb2>",
+        "path_template": "/workspaces/{workspaceId}/projects/{projectId}",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": true,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#D36F5F",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:91bcbe9bb2>",
+          "memberships": [
+            {
+              "costRate": null,
+              "hourlyRate": null,
+              "membershipStatus": "ACTIVE",
+              "membershipType": "PROJECT",
+              "targetId": "<redacted-id:91bcbe9bb2>",
+              "userId": "<redacted-id:53b91fce6c>"
+            }
+          ],
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-put-assignment-project",
+          "note": "",
+          "public": true,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "archived",
+            "billable",
+            "budgetEstimate",
+            "clientId",
+            "clientName",
+            "color",
+            "costRate",
+            "duration",
+            "estimate",
+            "estimateReset",
+            "hourlyRate",
+            "id",
+            "memberships",
+            "name",
+            "note",
+            "public",
+            "template",
+            "timeEstimate",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 200
+      }
+    }
+  },
+  "endpoint_id": "put.workspaces.scheduling.assignments.recurring",
+  "facts_observed": {
+    "assignment_create_success": true,
+    "put_status": 405,
+    "put_success": false,
+    "query_seriesUpdateOption_used": "THIS_ONE",
+    "response_shape": {
+      "keys": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  "method": "PUT",
+  "path": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+  "probe_kind": "live-happy-path-attempt",
+  "request": {
+    "body": {
+      "end": "2026-06-07T17:00:00Z",
+      "hoursPerDay": 2,
+      "note": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-assignment-put",
+      "start": "2026-06-04T09:00:00Z"
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "method": "PUT",
+    "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/recurring/<redacted-id:93cc38d6b3>",
+    "path_template": "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}",
+    "query": {
+      "seriesUpdateOption": "THIS_ONE"
+    }
+  },
+  "response": {
+    "body_sample": {
+      "code": 3000,
+      "message": "Request method 'PUT' is not supported"
+    },
+    "reason": null,
+    "shape": {
+      "keys": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "status": 405
+  },
+  "setup": {
+    "assignment_create": {
+      "request": {
+        "body": {
+          "end": "2026-06-06T17:00:00Z",
+          "hoursPerDay": 1,
+          "note": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-assignment-create",
+          "projectId": "<redacted-id:91bcbe9bb2>",
+          "recurringAssignment": {
+            "weeks": 1
+          },
+          "start": "2026-06-03T09:00:00Z",
+          "userId": "<redacted-id:53b91fce6c>"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/scheduling/assignments/recurring",
+        "path_template": "/workspaces/{workspaceId}/scheduling/assignments/recurring",
+        "query": {}
+      },
+      "response": {
+        "body_sample": [
+          {
+            "billable": false,
+            "excludeDays": [
+              {
+                "date": "2026-06-05T00:00:00Z",
+                "type": "TIME_OFF"
+              },
+              {
+                "date": "2026-06-04T00:00:00Z",
+                "type": "TIME_OFF"
+              },
+              {
+                "date": "2026-06-03T00:00:00Z",
+                "type": "TIME_OFF"
+              },
+              {
+                "date": "2026-06-06T00:00:00Z",
+                "type": "WEEKEND"
+              }
+            ],
+            "hoursPerDay": 1.0,
+            "id": "<redacted-id:93cc38d6b3>",
+            "includeNonWorkingDays": false,
+            "note": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-assignment-create",
+            "period": {
+              "end": "2026-06-06T17:00:00Z",
+              "start": "2026-06-03T09:00:00Z"
+            },
+            "projectId": "<redacted-id:91bcbe9bb2>",
+            "published": false,
+            "recurring": {
+              "repeat": false,
+              "seriesId": null,
+              "weeks": 0
+            },
+            "startTime": null,
+            "taskId": null,
+            "userId": "<redacted-id:53b91fce6c>",
+            "workspaceId": "[REDACTED-WORKSPACE]"
+          }
+        ],
+        "reason": null,
+        "shape": {
+          "first_keys": [
+            "billable",
+            "excludeDays",
+            "hoursPerDay",
+            "id",
+            "includeNonWorkingDays",
+            "note",
+            "period",
+            "projectId",
+            "published",
+            "recurring",
+            "startTime",
+            "taskId",
+            "userId",
+            "workspaceId"
+          ],
+          "length": 1,
+          "type": "array"
+        },
+        "status": 201
+      }
+    },
+    "project_create": {
+      "request": {
+        "body": {
+          "billable": false,
+          "color": "#D36F5F",
+          "isPublic": true,
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-put-assignment-project"
+        },
+        "headers_redacted": {
+          "X-Api-Key": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/workspaces/[REDACTED-WORKSPACE]/projects",
+        "path_template": "/workspaces/{workspaceId}/projects",
+        "query": {}
+      },
+      "response": {
+        "body_sample": {
+          "archived": false,
+          "billable": false,
+          "budgetEstimate": null,
+          "clientId": "",
+          "clientName": "",
+          "color": "#D36F5F",
+          "costRate": null,
+          "duration": "PT0S",
+          "estimate": {
+            "estimate": "PT0S",
+            "type": "AUTO"
+          },
+          "estimateReset": null,
+          "hourlyRate": {
+            "amount": 0,
+            "currency": "CAD"
+          },
+          "id": "<redacted-id:91bcbe9bb2>",
+          "memberships": [
+            {
+              "costRate": null,
+              "hourlyRate": null,
+              "membershipStatus": "ACTIVE",
+              "membershipType": "PROJECT",
+              "targetId": "<redacted-id:91bcbe9bb2>",
+              "userId": "<redacted-id:53b91fce6c>"
+            }
+          ],
+          "name": "MCP-LIVE-RECON-20260521T194802Z-codex-rest3-put-assignment-project",
+          "note": "",
+          "public": true,
+          "template": false,
+          "timeEstimate": {
+            "active": false,
+            "estimate": "PT0S",
+            "includeNonBillable": true,
+            "resetOption": null,
+            "type": "AUTO"
+          },
+          "workspaceId": "[REDACTED-WORKSPACE]"
+        },
+        "reason": null,
+        "shape": {
+          "keys": [
+            "archived",
+            "billable",
+            "budgetEstimate",
+            "clientId",
+            "clientName",
+            "color",
+            "costRate",
+            "duration",
+            "estimate",
+            "estimateReset",
+            "hourlyRate",
+            "id",
+            "memberships",
+            "name",
+            "note",
+            "public",
+            "template",
+            "timeEstimate",
+            "workspaceId"
+          ],
+          "type": "object"
+        },
+        "status": 201
+      }
+    },
+    "user_probe_status": 200
+  },
+  "timestamp_utc": "2026-05-21T19:48:02.981876Z",
+  "verdict": "LIVE-OVERRIDE"
+}

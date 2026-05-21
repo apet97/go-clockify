@@ -1,0 +1,23 @@
+{
+  "probe_id": "put.workspaces.users-path-probe",
+  "ts": "2026-05-21T06:00:00Z",
+  "method_under_test": "PUT",
+  "path": "/workspaces/{workspaceId}/users/{userId}",
+  "live_probe": {
+    "probe_method": "GET",
+    "probe_path": "/workspaces/<redacted-id:7955161f32>/users/<redacted-id:706f58c94f>",
+    "response_status": "405 Method Not Allowed",
+    "response_message": "Request method 'GET' is not supported",
+    "interpretation": "405 confirms path is registered on the live Clockify API and GET is not the supported method. PUT is the registered method."
+  },
+  "source_analysis": {
+    "typed_tool": "clockify_users_deactivate",
+    "typed_tool_actual_path": "/workspaces/{wId}/users/{userId}",
+    "typed_tool_actual_method": "PUT",
+    "file": "internal/tools/user_admin.go:835,840",
+    "note": "clockify_users_deactivate constructs paths.Workspace(wsID, 'users', userID) and calls Client.Put(ctx, path, {status: INACTIVE}, &result). This is the only typed tool using PUT on this path.",
+    "raw_allowlist_line": "raw_allowlist_gen.go:176 registers 'PUT /workspaces/{workspaceId}/users/{userId}': true",
+    "other_tools_on_path": "clockify_users_list uses GET /workspaces/{wId}/users (no userId segment). clockify_users_role uses POST/DELETE /users/{userId}/roles. No separate clockify_users_update tool exists."
+  },
+  "conclusion": "405 on GET confirms path is registered; PUT is the supported method. clockify_users_deactivate is the typed tool covering this path — it calls PUT with status=INACTIVE. No standalone clockify_users_update tool exists for general user property updates. Path is LIVE-VERIFIED (405 probe + source code confirms PUT usage)."
+}

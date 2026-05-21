@@ -15,8 +15,11 @@ Run these in order before tagging a release.
 
 - [ ] Export the live env vars from `docs/live-tests.md`
 - [ ] `make perfect-live` - runs `live-contract-local` then `live-clean-prefix`
-- [ ] Confirm `make live-clean-prefix` reported `Leftovers: 0` after its
-      post-delete rescan
+- [ ] Confirm `make live-clean-prefix` reported `Leftovers: 0` for
+      prefix-object leftovers after its prefix-object post-delete rescan. This
+      is not a whole-workspace cleanup signal; pending invites and memberships
+      remain outside the sweep and must be audited separately when the live run
+      can create them.
 
 ## Documentation
 

@@ -1,0 +1,44 @@
+{
+  "cleanup": [],
+  "endpoint_id": "post.file.image",
+  "facts_observed": {
+    "cleanup_route_available": false,
+    "file_kind": "1x1_png",
+    "status_code": 200
+  },
+  "method": "POST",
+  "notes": "LIVE-VERIFIED: multipart 1x1 PNG upload returned 2xx. Official source snapshot exposes no image delete endpoint; no cleanup route was available.",
+  "path": "/file/image",
+  "probe_kind": "happy-path",
+  "request": {
+    "body": {
+      "bytes": 244,
+      "multipart": true
+    },
+    "headers_redacted": {
+      "X-Api-Key": "[REDACTED]"
+    },
+    "method": "POST",
+    "path": "/file/image",
+    "path_template": "/file/image",
+    "query": {}
+  },
+  "response": {
+    "body_sample": {
+      "name": "codex-api-recon.png",
+      "url": "https://avatar.cake.com/2026-05-21-20-34-35.<redacted-token:5f21f688e4>.cake-avatar.png"
+    },
+    "content_type": "application/json",
+    "reason": "OK",
+    "shape": {
+      "key_count": 2,
+      "keys": [
+        "url",
+        "name"
+      ],
+      "type": "object"
+    },
+    "status": 200
+  },
+  "timestamp_utc": "2026-05-21T20:34:28Z"
+}

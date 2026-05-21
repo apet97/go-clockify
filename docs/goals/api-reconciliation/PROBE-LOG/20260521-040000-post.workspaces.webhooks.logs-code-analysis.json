@@ -1,0 +1,38 @@
+{
+  "endpoint_id": "post.workspaces.webhooks.logs",
+  "method": "POST",
+  "path": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+  "probe_kind": "code-analysis",
+  "timestamp_utc": "2026-05-21T04:00:00Z",
+  "request": {
+    "note": "No live network available (api.clockify.me DNS resolution failed). Probe based on: (1) prior iter11 GET probe showing 405, (2) code analysis of ListWebhookLogs, (3) official spec confirmation."
+  },
+  "response": {
+    "prior_probe_reference": "PROBE-LOG/20260521-001500-get.workspaces.webhooks.logs-wrong-method.json",
+    "prior_probe_result": "GET /workspaces/{wId}/webhooks/{wHookId}/logs returned HTTP 405 'Request method GET is not supported' — path IS registered, GET is wrong method",
+    "inferred_method": "POST"
+  },
+  "facts_observed": {
+    "path_constructed": "/workspaces/{workspaceId}/webhooks/{webhookId}/logs",
+    "live_method_from_code": "POST",
+    "method_confirmed_by": "s.Client.PostWithQuery at webhooks.go:901",
+    "prior_405_evidence": "PROBE-LOG/20260521-001500-get.workspaces.webhooks.logs-wrong-method.json confirms path is registered (not Spring 404)",
+    "official_spec_method": "POST (operationId: getLogsForWebhook — named GET but uses POST method)",
+    "both_specs_agree_on_post": true
+  },
+  "code_evidence": {
+    "file": "internal/tools/webhooks.go",
+    "lines": "892-901",
+    "path_snippet": "path, err := paths.Workspace(wsID, \"webhooks\", webhookID, \"logs\")",
+    "http_method_snippet": "if err := s.Client.PostWithQuery(ctx, path, query, body, &logs); err != nil {",
+    "query_params": ["page", "size"],
+    "body_fields": ["from", "to", "status", "sortByNewest"]
+  },
+  "truth_yaml_current_state": {
+    "current_operationId": "get.workspaces.webhooks.logs",
+    "current_status": "LIVE-OVERRIDE",
+    "current_note": "Live returns 405 GET not supported. Route exists but GET is wrong method. Correct method unknown.",
+    "correction_needed": "operationId should be post.workspaces.webhooks.logs; correct method is POST per both specs and code"
+  },
+  "notes": "Path is registered (405 on GET, not 404). Both official spec (POST getLogsForWebhook) and our implementation (PostWithQuery) agree on POST. The existing TRUTH YAML entry at iter11 is LIVE-OVERRIDE but leaves correct method unknown — this iter20 code analysis plus prior 405 evidence confirms POST is the correct method. No live webhook ID available to probe directly (no network). Status: UNCONFIRMED-AGREE (method agreed by both specs + code; no fresh live POST probe due to network outage)."
+}
