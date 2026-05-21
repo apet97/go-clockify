@@ -152,204 +152,260 @@ func TestUpdateExpenseCategoryMergesExistingName(t *testing.T) {
 // Clockify HTTP server. Mirrors the invoices sweep so coverage stays
 // consistent across the two domain modules.
 func TestTier2_Expenses_FullSweep(t *testing.T) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		// /user is hit by the createExpense handler when user_id is
-		// not supplied: it resolves the calling user via getCurrentUser.
-		case r.Method == "GET" && r.URL.Path == "/user":
-			respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "t@example.com"})
-		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses":
-			respondJSON(t, w, map[string]any{
-				"expenses": map[string]any{
-					"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
-					"count":    1,
-				},
-			})
-		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
-			respondJSON(t, w, map[string]any{"id": "exp1", "amount": 100})
-		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/expenses":
-			// The handler now POSTs multipart/form-data. Pin the
-			// content-type and the required form fields here so a
-			// regression to JSON surfaces locally.
-			ct := r.Header.Get("Content-Type")
-			if !strings.HasPrefix(ct, "multipart/form-data") {
-				t.Fatalf("create_expense expected multipart/form-data, got %q", ct)
+	ctx := context.Background()
+
+	t.Run("expense read handlers", func(t *testing.T) {
+		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses":
+				respondJSON(t, w, map[string]any{
+					"expenses": map[string]any{
+						"expenses": []map[string]any{{"id": "exp1", "amount": 100}},
+						"count":    1,
+					},
+				})
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+				respondJSON(t, w, map[string]any{"id": "exp1", "amount": 100})
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+				respondExpenseWorkspaceCurrency(t, w)
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 			}
-			if err := r.ParseMultipartForm(32 << 20); err != nil {
-				t.Fatalf("create_expense parse multipart: %v", err)
-			}
-			for _, field := range []string{"userId", "amount", "date", "categoryId"} {
-				if r.FormValue(field) == "" {
-					t.Fatalf("create_expense missing required field %q (form=%v)", field, r.Form)
-				}
-			}
-			if got := r.FormValue("date"); got != "2026-04-11T00:00:00Z" {
-				t.Fatalf("create_expense date = %q, want normalized RFC3339", got)
-			}
-			respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 200})
-		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
-			ct := r.Header.Get("Content-Type")
-			if !strings.HasPrefix(ct, "multipart/form-data") {
-				t.Fatalf("update_expense expected multipart/form-data, got %q", ct)
-			}
-			if err := r.ParseMultipartForm(32 << 20); err != nil {
-				t.Fatalf("update_expense parse multipart: %v", err)
-			}
-			cf := r.MultipartForm.Value["changeFields"]
-			if len(cf) == 0 {
-				t.Fatalf("update_expense missing changeFields")
-			}
-			respondJSON(t, w, map[string]any{"id": "exp1", "amount": 250})
-		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/expenses/exp1":
-			w.WriteHeader(http.StatusNoContent)
-		case r.Method == "GET" && r.URL.Path == "/workspaces/ws1/expenses/categories":
-			respondJSON(t, w, map[string]any{
-				"count":      1,
-				"categories": []map[string]any{{"id": "cat1", "name": "Travel"}},
-			})
-		case r.Method == "POST" && r.URL.Path == "/workspaces/ws1/expenses/categories":
-			if !strings.Contains(readBody(t, r), `"priceInCents":1250`) {
-				t.Fatalf("create expense category body missing priceInCents")
-			}
-			respondJSON(t, w, map[string]any{"id": "cat-new", "name": "Software", "priceInCents": 1250})
-		case r.Method == "PUT" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
-			body := readBody(t, r)
-			if !strings.Contains(body, `"hasUnitPrice":true`) || !strings.Contains(body, `"unit":"mile"`) {
-				t.Fatalf("update expense category body missing unit-price fields: %s", body)
-			}
-			respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "hasUnitPrice": true, "unit": "mile"})
-		case r.Method == "PATCH" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1/status":
-			body := readBody(t, r)
-			if !strings.Contains(body, `"archived":true`) {
-				t.Fatalf("archive expense category body missing archived=true: %s", body)
-			}
-			respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "archived": true})
-		case r.Method == "DELETE" && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
-			w.WriteHeader(http.StatusNoContent)
-		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
-			respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		})
+
+		res, err := svc.listExpenses(ctx, map[string]any{"page": 1, "page_size": 50})
+		mustOK(t, res, err, "clockify_list_expenses")
+		res, err = svc.getExpense(ctx, map[string]any{"expense_id": "exp1"})
+		mustOK(t, res, err, "clockify_get_expense")
+		if _, err := svc.getExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty expense_id")
 		}
 	})
 
-	client, cleanup := newTestClient(t, mux.ServeHTTP)
-	defer cleanup()
+	t.Run("expense create multipart and validation", func(t *testing.T) {
+		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/user":
+				respondJSON(t, w, map[string]any{"id": "u1", "name": "Tester", "email": "t@example.com"})
+			case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses":
+				assertExpenseMultipartForm(t, r, "create_expense")
+				for _, field := range []string{"userId", "amount", "date", "categoryId"} {
+					if r.FormValue(field) == "" {
+						t.Fatalf("create_expense missing required field %q (form=%v)", field, r.Form)
+					}
+				}
+				if got := r.FormValue("date"); got != "2026-04-11T00:00:00Z" {
+					t.Fatalf("create_expense date = %q, want normalized RFC3339", got)
+				}
+				if got := r.FormValue("amount"); got != "150" {
+					t.Fatalf("create_expense amount = %q, want 150", got)
+				}
+				if got := r.FormValue("projectId"); got != "p1" {
+					t.Fatalf("create_expense projectId = %q, want p1", got)
+				}
+				respondJSON(t, w, map[string]any{"id": "exp-new", "amount": 200})
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+				respondExpenseWorkspaceCurrency(t, w)
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			}
+		})
+
+		res, err := svc.createExpense(ctx, map[string]any{
+			"amount":      150.0,
+			"date":        "2026-04-11",
+			"category_id": "cat1",
+			"project_id":  "p1",
+			"description": "Lunch",
+		})
+		mustOK(t, res, err, "clockify_create_expense")
+		if _, err := svc.createExpense(ctx, map[string]any{"date": "2026-04-11"}); err == nil {
+			t.Fatal("expected error for missing amount")
+		}
+		if _, err := svc.createExpense(ctx, map[string]any{"amount": 1.0}); err == nil {
+			t.Fatal("expected error for missing date")
+		}
+	})
+
+	t.Run("expense update multipart and change-fields validation", func(t *testing.T) {
+		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+				respondJSON(t, w, map[string]any{"id": "exp1", "amount": 100, "userId": "u1", "categoryId": "cat1"})
+			case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+				assertExpenseMultipartForm(t, r, "update_expense")
+				cf := r.MultipartForm.Value["changeFields"]
+				if len(cf) == 0 {
+					t.Fatalf("update_expense missing changeFields")
+				}
+				if r.FormValue("userId") == "u-7" {
+					if len(cf) != 1 || cf[0] != "USER" {
+						t.Fatalf("update_expense USER probe changeFields=%v, want [USER]", cf)
+					}
+				} else {
+					for _, field := range []string{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES", "BILLABLE"} {
+						if !strings.Contains(strings.Join(cf, ","), field) {
+							t.Fatalf("update_expense changeFields=%v missing %s", cf, field)
+						}
+					}
+				}
+				respondJSON(t, w, map[string]any{"id": "exp1", "amount": 250})
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
+				respondExpenseWorkspaceCurrency(t, w)
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			}
+		})
+
+		res, err := svc.updateExpense(ctx, map[string]any{
+			"expense_id":    "exp1",
+			"change_fields": []any{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES", "BILLABLE"},
+			"amount":        250.0,
+			"date":          "2026-04-12T00:00:00Z",
+			"category_id":   "cat1",
+			"project_id":    "p2",
+			"notes":         "Dinner",
+			"billable":      false,
+		})
+		mustOK(t, res, err, "clockify_update_expense")
+		if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty expense_id")
+		}
+		if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1"}); err == nil {
+			t.Fatal("expected validation error for missing change_fields")
+		}
+		if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1", "change_fields": []any{"BOGUS"}}); err == nil {
+			t.Fatal("expected validation error for unsupported change_fields token")
+		}
+		if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1", "change_fields": []any{"USER"}, "user_id": "u-7"}); err != nil {
+			t.Fatalf("change_fields=[USER] with user_id should succeed; got %v", err)
+		}
+	})
+
+	t.Run("expense delete dry-run and route", func(t *testing.T) {
+		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+				respondJSON(t, w, map[string]any{"id": "exp1", "amount": 100})
+			case r.Method == http.MethodDelete && r.URL.Path == "/workspaces/ws1/expenses/exp1":
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			}
+		})
+
+		res, err := svc.deleteExpense(ctx, map[string]any{"expense_id": "exp1", "dry_run": true})
+		mustOK(t, res, err, "clockify_delete_expense")
+		res, err = svc.deleteExpense(ctx, map[string]any{"expense_id": "exp1"})
+		mustOK(t, res, err, "clockify_delete_expense")
+		if _, err := svc.deleteExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty expense_id")
+		}
+	})
+
+	t.Run("expense category list/create/update", func(t *testing.T) {
+		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/categories":
+				respondJSON(t, w, map[string]any{
+					"count":      1,
+					"categories": []map[string]any{{"id": "cat1", "name": "Travel"}},
+				})
+			case r.Method == http.MethodPost && r.URL.Path == "/workspaces/ws1/expenses/categories":
+				body := readBody(t, r)
+				if !strings.Contains(body, `"priceInCents":1250`) || !strings.Contains(body, `"unit":"seat"`) {
+					t.Fatalf("create expense category body missing unit-price fields: %s", body)
+				}
+				respondJSON(t, w, map[string]any{"id": "cat-new", "name": "Software", "priceInCents": 1250})
+			case r.Method == http.MethodPut && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
+				body := readBody(t, r)
+				if !strings.Contains(body, `"hasUnitPrice":true`) || !strings.Contains(body, `"unit":"mile"`) {
+					t.Fatalf("update expense category body missing unit-price fields: %s", body)
+				}
+				respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "hasUnitPrice": true, "unit": "mile"})
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			}
+		})
+
+		res, err := svc.listExpenseCategories(ctx, nil)
+		mustOK(t, res, err, "clockify_list_expense_categories")
+		res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software", "has_unit_price": true, "price_in_cents": 1250, "unit": "seat"})
+		mustOK(t, res, err, "clockify_create_expense_category")
+		res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software", "dry_run": true})
+		mustOK(t, res, err, "clockify_create_expense_category")
+		if _, err := svc.createExpenseCategory(ctx, map[string]any{"name": ""}); err == nil {
+			t.Fatal("expected error for missing category name")
+		}
+		res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Updated", "has_unit_price": true, "unit": "mile"})
+		mustOK(t, res, err, "clockify_update_expense_category")
+		res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Preview", "dry_run": true})
+		mustOK(t, res, err, "clockify_update_expense_category")
+		if _, err := svc.updateExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty category_id")
+		}
+	})
+
+	t.Run("expense category archive/delete", func(t *testing.T) {
+		svc := newExpenseSweepService(t, func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == http.MethodPatch && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1/status":
+				body := readBody(t, r)
+				if !strings.Contains(body, `"archived":true`) {
+					t.Fatalf("archive expense category body missing archived=true: %s", body)
+				}
+				respondJSON(t, w, map[string]any{"id": "cat1", "name": "Updated", "archived": true})
+			case r.Method == http.MethodDelete && r.URL.Path == "/workspaces/ws1/expenses/categories/cat1":
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			}
+		})
+
+		res, err := svc.archiveExpenseCategory(ctx, map[string]any{"category_id": "cat1", "dry_run": true})
+		mustOK(t, res, err, "clockify_archive_expense_category")
+		res, err = svc.archiveExpenseCategory(ctx, map[string]any{"category_id": "cat1", "archived": true})
+		mustOK(t, res, err, "clockify_archive_expense_category")
+		if _, err := svc.archiveExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty category_id")
+		}
+		res, err = svc.deleteExpenseCategory(ctx, map[string]any{"category_id": "cat1", "dry_run": true})
+		mustOK(t, res, err, "clockify_delete_expense_category")
+		res, err = svc.deleteExpenseCategory(ctx, map[string]any{"category_id": "cat1"})
+		mustOK(t, res, err, "clockify_delete_expense_category")
+		if _, err := svc.deleteExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
+			t.Fatal("expected validation error for empty category_id")
+		}
+	})
+}
+
+func newExpenseSweepService(t *testing.T, handler http.HandlerFunc) *Service {
+	t.Helper()
+	client, cleanup := newTestClient(t, handler)
+	t.Cleanup(cleanup)
 	svc := New(client, "ws1")
 	loc, err := time.LoadLocation("Europe/Belgrade")
 	if err != nil {
 		t.Fatalf("load location: %v", err)
 	}
 	svc.DefaultTimezone = loc
-	ctx := context.Background()
+	return svc
+}
 
-	// listExpenses
-	res, err := svc.listExpenses(ctx, map[string]any{"page": 1, "page_size": 50})
-	mustOK(t, res, err, "clockify_list_expenses")
+func assertExpenseMultipartForm(t *testing.T, r *http.Request, action string) {
+	t.Helper()
+	ct := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(ct, "multipart/form-data") {
+		t.Fatalf("%s expected multipart/form-data, got %q", action, ct)
+	}
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatalf("%s parse multipart: %v", action, err)
+	}
+}
 
-	// getExpense + validation
-	res, err = svc.getExpense(ctx, map[string]any{"expense_id": "exp1"})
-	mustOK(t, res, err, "clockify_get_expense")
-	if _, err := svc.getExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty expense_id")
-	}
-
-	// createExpense — happy + validation (missing amount, then missing date)
-	res, err = svc.createExpense(ctx, map[string]any{
-		"amount":      150.0,
-		"date":        "2026-04-11",
-		"category_id": "cat1",
-		"project_id":  "p1",
-		"description": "Lunch",
-	})
-	mustOK(t, res, err, "clockify_create_expense")
-	if _, err := svc.createExpense(ctx, map[string]any{"date": "2026-04-11"}); err == nil {
-		t.Fatal("expected error for missing amount")
-	}
-	if _, err := svc.createExpense(ctx, map[string]any{"amount": 1.0}); err == nil {
-		t.Fatal("expected error for missing date")
-	}
-
-	// updateExpense — every optional field set + change_fields
-	res, err = svc.updateExpense(ctx, map[string]any{
-		"expense_id":    "exp1",
-		"change_fields": []any{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES", "BILLABLE"},
-		"amount":        250.0,
-		"date":          "2026-04-12T00:00:00Z",
-		"category_id":   "cat1",
-		"project_id":    "p2",
-		"notes":         "Dinner",
-		"billable":      false,
-	})
-	mustOK(t, res, err, "clockify_update_expense")
-	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty expense_id")
-	}
-	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1"}); err == nil {
-		t.Fatal("expected validation error for missing change_fields")
-	}
-	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1", "change_fields": []any{"BOGUS"}}); err == nil {
-		t.Fatal("expected validation error for unsupported change_fields token")
-	}
-	// Drift sentinel: regression to PUT JSON would fail the
-	// content-type assertion in the mock above before this line; this
-	// extra branch ensures the change_fields enum gate also stays
-	// hot — flipping "USER" to "" disables the validator and the
-	// upstream silently no-ops the update, which the next assertion
-	// would not catch on its own.
-	if _, err := svc.updateExpense(ctx, map[string]any{"expense_id": "exp1", "change_fields": []any{"USER"}, "user_id": "u-7"}); err != nil {
-		t.Fatalf("change_fields=[USER] with user_id should succeed; got %v", err)
-	}
-
-	// deleteExpense — dry-run, executed, validation
-	res, err = svc.deleteExpense(ctx, map[string]any{"expense_id": "exp1", "dry_run": true})
-	mustOK(t, res, err, "clockify_delete_expense")
-	res, err = svc.deleteExpense(ctx, map[string]any{"expense_id": "exp1"})
-	mustOK(t, res, err, "clockify_delete_expense")
-	if _, err := svc.deleteExpense(ctx, map[string]any{"expense_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty expense_id")
-	}
-
-	// listExpenseCategories
-	res, err = svc.listExpenseCategories(ctx, nil)
-	mustOK(t, res, err, "clockify_list_expense_categories")
-
-	// createExpenseCategory + missing-name validation
-	res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software", "has_unit_price": true, "price_in_cents": 1250, "unit": "seat"})
-	mustOK(t, res, err, "clockify_create_expense_category")
-	res, err = svc.createExpenseCategory(ctx, map[string]any{"name": "Software", "dry_run": true})
-	mustOK(t, res, err, "clockify_create_expense_category")
-	if _, err := svc.createExpenseCategory(ctx, map[string]any{"name": ""}); err == nil {
-		t.Fatal("expected error for missing category name")
-	}
-
-	// updateExpenseCategory + validation
-	res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Updated", "has_unit_price": true, "unit": "mile"})
-	mustOK(t, res, err, "clockify_update_expense_category")
-	res, err = svc.updateExpenseCategory(ctx, map[string]any{"category_id": "cat1", "name": "Preview", "dry_run": true})
-	mustOK(t, res, err, "clockify_update_expense_category")
-	if _, err := svc.updateExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty category_id")
-	}
-
-	// archiveExpenseCategory — dry-run, executed, validation
-	res, err = svc.archiveExpenseCategory(ctx, map[string]any{"category_id": "cat1", "dry_run": true})
-	mustOK(t, res, err, "clockify_archive_expense_category")
-	res, err = svc.archiveExpenseCategory(ctx, map[string]any{"category_id": "cat1", "archived": true})
-	mustOK(t, res, err, "clockify_archive_expense_category")
-	if _, err := svc.archiveExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty category_id")
-	}
-
-	// deleteExpenseCategory — dry-run, executed, validation
-	res, err = svc.deleteExpenseCategory(ctx, map[string]any{"category_id": "cat1", "dry_run": true})
-	mustOK(t, res, err, "clockify_delete_expense_category")
-	res, err = svc.deleteExpenseCategory(ctx, map[string]any{"category_id": "cat1"})
-	mustOK(t, res, err, "clockify_delete_expense_category")
-	if _, err := svc.deleteExpenseCategory(ctx, map[string]any{"category_id": ""}); err == nil {
-		t.Fatal("expected validation error for empty category_id")
-	}
+func respondExpenseWorkspaceCurrency(t *testing.T, w http.ResponseWriter) {
+	t.Helper()
+	respondJSON(t, w, map[string]any{"currencies": []map[string]any{{"code": "USD", "isDefault": true}}})
 }
 
 func TestCreateExpenseContractDefaultsUserAndAllowsNoFileNoProject(t *testing.T) {
