@@ -373,8 +373,13 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live-remaining", svc.FullAccessRegistry())
+	registry := svc.FullAccessRegistry()
+	server := mcp.NewServer("live-remaining", registry)
 	initializeServer(t, server)
+	descriptors := remainingLiveDescriptorMap(registry)
+	args := func(name string, overrides ...any) map[string]any {
+		return remainingLiveArgs(t, descriptors, name, overrides...)
+	}
 
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
@@ -479,50 +484,22 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	if invoice.OK && invoice.IDs["invoiceId"] != "" {
 		invoiceID = invoice.IDs["invoiceId"]
 	}
-	// The three invoice-item tools take distinct argument shapes: add
-	// appends a line (no item_index), update edits a line by item_index,
-	// and delete only needs invoice_id + item_index. Each probe uses the
-	// shape its schema actually accepts.
-	invoiceAddItemArgs := map[string]any{
-		"invoice_id":  invoiceID,
-		"item_type":   "SERVICE",
-		"description": "Live coverage item",
-		"quantity":    1,
-		"unit_price":  1,
-	}
-	invoiceItemArgs := map[string]any{
-		"invoice_id":  invoiceID,
-		"item_index":  "0",
-		"item_type":   "SERVICE",
-		"description": "Live coverage item",
-		"quantity":    1,
-		"unit_price":  1,
-	}
-	invoiceDeleteItemArgs := map[string]any{
-		"invoice_id": invoiceID,
-		"item_index": "0",
-	}
-	for _, probe := range []struct {
-		name string
-		args map[string]any
-	}{
-		{"clockify_invoices_get", map[string]any{"invoice_id": invoiceID}},
-		{"clockify_invoices_items_list", map[string]any{"invoice_id": invoiceID}},
-		{"clockify_invoices_update", map[string]any{"invoice_id": invoiceID, "note": "live coverage probe"}},
-		{"clockify_invoices_mark_paid", map[string]any{"invoice_id": invoiceID}},
-		{"clockify_invoices_items_add", invoiceAddItemArgs},
-		{"clockify_invoices_items_update", invoiceItemArgs},
-		{"clockify_invoices_items_delete", invoiceDeleteItemArgs},
-		{"clockify_invoices_export", map[string]any{"invoice_id": invoiceID, "format": "PDF"}},
-		{"clockify_invoices_import_time", map[string]any{"invoice_id": invoiceID, "time_entry_ids": []any{entryID}}},
-		{"clockify_invoices_import_expenses", map[string]any{"invoice_id": invoiceID, "expense_ids": []any{bogusID}, "include_expenses": true}},
-		{"clockify_invoices_payments_list", map[string]any{"invoice_id": invoiceID}},
-		{"clockify_invoices_payments_create", map[string]any{"invoice_id": invoiceID, "amount": 1, "date": "2026-02-03T00:00:00Z", "note": "live coverage"}},
-		{"clockify_invoices_payments_delete", map[string]any{"invoice_id": invoiceID, "payment_id": bogusID}},
-		{"clockify_invoices_delete", map[string]any{"invoice_id": invoiceID}},
-	} {
-		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
-	}
+	runRemainingLiveProbeTable(t, server, []remainingLiveProbe{
+		{"clockify_invoices_get", args("clockify_invoices_get", "invoice_id", invoiceID)},
+		{"clockify_invoices_items_list", args("clockify_invoices_items_list", "invoice_id", invoiceID)},
+		{"clockify_invoices_update", args("clockify_invoices_update", "invoice_id", invoiceID, "note", "live coverage probe")},
+		{"clockify_invoices_mark_paid", args("clockify_invoices_mark_paid", "invoice_id", invoiceID)},
+		{"clockify_invoices_items_add", args("clockify_invoices_items_add", "invoice_id", invoiceID, "description", "Live coverage item", "quantity", 1, "unit_price", 1)},
+		{"clockify_invoices_items_update", args("clockify_invoices_items_update", "invoice_id", invoiceID, "item_index", "0", "description", "Live coverage item", "quantity", 1, "unit_price", 1)},
+		{"clockify_invoices_items_delete", args("clockify_invoices_items_delete", "invoice_id", invoiceID, "item_index", "0")},
+		{"clockify_invoices_export", args("clockify_invoices_export", "invoice_id", invoiceID, "format", "PDF")},
+		{"clockify_invoices_import_time", args("clockify_invoices_import_time", "invoice_id", invoiceID, "time_entry_ids", []any{entryID})},
+		{"clockify_invoices_import_expenses", args("clockify_invoices_import_expenses", "invoice_id", invoiceID, "expense_ids", []any{bogusID}, "include_expenses", true)},
+		{"clockify_invoices_payments_list", args("clockify_invoices_payments_list", "invoice_id", invoiceID)},
+		{"clockify_invoices_payments_create", args("clockify_invoices_payments_create", "invoice_id", invoiceID, "amount", 1, "date", "2026-02-03T00:00:00Z", "note", "live coverage")},
+		{"clockify_invoices_payments_delete", args("clockify_invoices_payments_delete", "invoice_id", invoiceID, "payment_id", bogusID)},
+		{"clockify_invoices_delete", args("clockify_invoices_delete", "invoice_id", invoiceID)},
+	})
 
 	callLiveToolDataOrRecovery(t, server, "clockify_expenses_categories_delete", map[string]any{"category_id": bogusID})
 
@@ -536,28 +513,23 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	if policy.OK && policy.IDs["policyId"] != "" {
 		policyID = policy.IDs["policyId"]
 	}
-	for _, probe := range []struct {
-		name string
-		args map[string]any
-	}{
-		{"clockify_time_off_policies_get", map[string]any{"policy_id": policyID}},
-		{"clockify_time_off_policies_update", map[string]any{"policy_id": policyID, "name": unique("policy-updated")}},
-		{"clockify_time_off_balances", map[string]any{"policy_id": policyID, "user_id": userID}},
-		{"clockify_time_off_balances_update", map[string]any{
-			"policy_id": policyID,
-			"user_ids":  []any{userID},
-			"value":     0,
-			"note":      "live coverage probe: sets the owner balance to 0 on the prefixed throwaway policy created by this run",
-		}},
-		{"clockify_time_off_requests_get", map[string]any{"policy_id": policyID, "request_id": bogusID}},
-		{"clockify_time_off_requests_update", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
-		{"clockify_time_off_requests_delete", map[string]any{"policy_id": policyID, "request_id": bogusID}},
-		{"clockify_time_off_approve", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
-		{"clockify_time_off_deny", map[string]any{"policy_id": policyID, "request_id": bogusID, "note": "live coverage"}},
-		{"clockify_time_off_archive", map[string]any{"policy_id": policyID, "archived": true}},
-	} {
-		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
-	}
+	runRemainingLiveProbeTable(t, server, []remainingLiveProbe{
+		{"clockify_time_off_policies_get", args("clockify_time_off_policies_get", "policy_id", policyID)},
+		{"clockify_time_off_policies_update", args("clockify_time_off_policies_update", "policy_id", policyID, "name", unique("policy-updated"))},
+		{"clockify_time_off_balances", args("clockify_time_off_balances", "policy_id", policyID, "user_id", userID)},
+		{"clockify_time_off_balances_update", args("clockify_time_off_balances_update",
+			"policy_id", policyID,
+			"user_ids", []any{userID},
+			"value", 0,
+			"note", "live coverage probe: sets the owner balance to 0 on the prefixed throwaway policy created by this run",
+		)},
+		{"clockify_time_off_requests_get", args("clockify_time_off_requests_get", "policy_id", policyID, "request_id", bogusID)},
+		{"clockify_time_off_requests_update", args("clockify_time_off_requests_update", "policy_id", policyID, "request_id", bogusID, "note", "live coverage")},
+		{"clockify_time_off_requests_delete", args("clockify_time_off_requests_delete", "policy_id", policyID, "request_id", bogusID)},
+		{"clockify_time_off_approve", args("clockify_time_off_approve", "policy_id", policyID, "request_id", bogusID, "note", "live coverage")},
+		{"clockify_time_off_deny", args("clockify_time_off_deny", "policy_id", policyID, "request_id", bogusID, "note", "live coverage")},
+		{"clockify_time_off_archive", args("clockify_time_off_archive", "policy_id", policyID, "archived", true)},
+	})
 
 	assignmentID := bogusID
 	assignment := callLiveToolOKOrRecovery(t, server, "clockify_scheduling_assignments_create", map[string]any{
@@ -591,17 +563,12 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	if webhook.OK && webhook.IDs["webhookId"] != "" {
 		webhookID = webhook.IDs["webhookId"]
 	}
-	for _, probe := range []struct {
-		name string
-		args map[string]any
-	}{
-		{"clockify_webhooks_get", map[string]any{"webhook_id": webhookID}},
-		{"clockify_webhooks_update", map[string]any{"webhook_id": webhookID, "name": liveOptionalName("mcp", runID, "wh-upd", 30)}},
-		{"clockify_webhooks_test", map[string]any{"webhook_id": webhookID}},
-		{"clockify_webhooks_delete", map[string]any{"webhook_id": webhookID}},
-	} {
-		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
-	}
+	runRemainingLiveProbeTable(t, server, []remainingLiveProbe{
+		{"clockify_webhooks_get", args("clockify_webhooks_get", "webhook_id", webhookID)},
+		{"clockify_webhooks_update", args("clockify_webhooks_update", "webhook_id", webhookID, "name", liveOptionalName("mcp", runID, "wh-upd", 30))},
+		{"clockify_webhooks_test", args("clockify_webhooks_test", "webhook_id", webhookID)},
+		{"clockify_webhooks_delete", args("clockify_webhooks_delete", "webhook_id", webhookID)},
+	})
 
 	groupID := bogusID
 	group := callLiveToolOKOrRecovery(t, server, "clockify_groups_create", map[string]any{"name": unique("group")})
@@ -640,26 +607,21 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	})
 	callLiveToolDataOrRecovery(t, server, "clockify_holidays_delete", map[string]any{"holiday_id": holidayID})
 
-	for _, probe := range []struct {
-		name string
-		args map[string]any
-	}{
-		{"clockify_users_deactivate", map[string]any{"user_id": bogusID}},
-		{"clockify_users_role", map[string]any{"user_id": bogusID, "role": "WORKSPACE_ADMIN"}},
+	runRemainingLiveProbeTable(t, server, []remainingLiveProbe{
+		{"clockify_users_deactivate", args("clockify_users_deactivate", "user_id", bogusID)},
+		{"clockify_users_role", args("clockify_users_role", "user_id", bogusID, "role", "WORKSPACE_ADMIN")},
 		{"clockify_workspace_settings", nil},
-		{"clockify_projects_memberships_list", map[string]any{"project_id": projectID}},
+		{"clockify_projects_memberships_list", args("clockify_projects_memberships_list", "project_id", projectID)},
 		{"clockify_reports_attendance", reportProbeArgs()},
 		{"clockify_reports_money", reportProbeArgs()},
-		{"clockify_reports_export", map[string]any{"start": "2026-02-03T00:00:00.000", "end": "2026-02-04T00:00:00.000", "export_type": "JSON"}},
-		{"clockify_approvals_get", map[string]any{"approval_id": bogusID}},
-		{"clockify_approvals_submit", map[string]any{"period": "WEEKLY", "period_start": "2026-02-02T00:00:00.000Z"}},
-		{"clockify_approvals_approve", map[string]any{"approval_id": bogusID, "note": "live coverage"}},
-		{"clockify_approvals_reject", map[string]any{"approval_id": bogusID, "reason": "live coverage"}},
-		{"clockify_approvals_withdraw", map[string]any{"approval_id": bogusID, "note": "live coverage"}},
-		{"clockify_approvals_resubmit", map[string]any{"approval_id": bogusID, "entry_ids": []any{entryID}, "note": "live coverage"}},
-	} {
-		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
-	}
+		{"clockify_reports_export", args("clockify_reports_export", "start", "2026-02-03T00:00:00.000", "end", "2026-02-04T00:00:00.000", "export_type", "JSON")},
+		{"clockify_approvals_get", args("clockify_approvals_get", "approval_id", bogusID)},
+		{"clockify_approvals_submit", args("clockify_approvals_submit", "period", "WEEKLY", "period_start", "2026-02-02T00:00:00.000Z")},
+		{"clockify_approvals_approve", args("clockify_approvals_approve", "approval_id", bogusID, "note", "live coverage")},
+		{"clockify_approvals_reject", args("clockify_approvals_reject", "approval_id", bogusID, "reason", "live coverage")},
+		{"clockify_approvals_withdraw", args("clockify_approvals_withdraw", "approval_id", bogusID, "note", "live coverage")},
+		{"clockify_approvals_resubmit", args("clockify_approvals_resubmit", "approval_id", bogusID, "entry_ids", []any{entryID}, "note", "live coverage")},
+	})
 
 	if timerEntryID != "" {
 		callLiveToolDataOrRecovery(t, server, "clockify_entries_delete", map[string]any{"entry_id": timerEntryID})
@@ -670,6 +632,72 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	requireLiveOK(t, server, "clockify_projects_delete", map[string]any{"project_id": secondProjectID})
 	requireLiveOK(t, server, "clockify_projects_delete", map[string]any{"project_id": projectID})
 	requireLiveOK(t, server, "clockify_clients_delete", map[string]any{"client_id": clientID})
+}
+
+type remainingLiveProbe struct {
+	name string
+	args map[string]any
+}
+
+func runRemainingLiveProbeTable(t *testing.T, server *mcp.Server, probes []remainingLiveProbe) {
+	t.Helper()
+	for _, probe := range probes {
+		callLiveToolDataOrRecovery(t, server, probe.name, probe.args)
+	}
+}
+
+func remainingLiveDescriptorMap(registry []mcp.ToolDescriptor) map[string]mcp.ToolDescriptor {
+	descriptors := make(map[string]mcp.ToolDescriptor, len(registry))
+	for _, descriptor := range registry {
+		descriptors[descriptor.Tool.Name] = descriptor
+	}
+	return descriptors
+}
+
+func remainingLiveArgs(t *testing.T, descriptors map[string]mcp.ToolDescriptor, name string, overrides ...any) map[string]any {
+	t.Helper()
+	if len(overrides)%2 != 0 {
+		t.Fatalf("%s overrides must be key/value pairs", name)
+	}
+	descriptor, ok := descriptors[name]
+	if !ok {
+		t.Fatalf("missing descriptor for live probe %s", name)
+	}
+	props, _ := descriptor.Tool.InputSchema["properties"].(map[string]any)
+	out := map[string]any{}
+	for _, field := range inputSchemaRequiredFields(descriptor.Tool.InputSchema) {
+		prop, _ := props[field].(map[string]any)
+		out[field] = oneUserCoverageValue(field, prop)
+	}
+	for i := 0; i < len(overrides); i += 2 {
+		key, ok := overrides[i].(string)
+		if !ok || key == "" {
+			t.Fatalf("%s override key at index %d = %#v, want non-empty string", name, i, overrides[i])
+		}
+		out[key] = overrides[i+1]
+	}
+	return out
+}
+
+func TestRemainingLiveArgsDerivesRequiredFieldsFromDescriptor(t *testing.T) {
+	descriptors := remainingLiveDescriptorMap((&Service{}).FullAccessRegistry())
+	got := remainingLiveArgs(t, descriptors, "clockify_invoices_items_add",
+		"invoice_id", "invoice-live",
+		"description", "Live coverage item",
+		"quantity", 1,
+		"unit_price", 1,
+	)
+	for _, field := range []string{"invoice_id", "item_type", "description", "quantity", "unit_price"} {
+		if _, ok := got[field]; !ok {
+			t.Fatalf("descriptor-derived args missing required field %q: %#v", field, got)
+		}
+	}
+	if got["invoice_id"] != "invoice-live" {
+		t.Fatalf("invoice_id override = %#v, want invoice-live", got["invoice_id"])
+	}
+	if got["description"] != "Live coverage item" {
+		t.Fatalf("description override = %#v", got["description"])
+	}
 }
 
 func requireRemainingCoverageLiveEnv(t *testing.T) (string, string, string) {
