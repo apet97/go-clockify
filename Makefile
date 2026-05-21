@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift mod-tidy-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench lint-test-fragility gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift mod-tidy-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
@@ -33,6 +33,9 @@ verify-bench: bench-baseline-check
 	 go test -run '^$$' -bench=. -benchmem -count=$(BENCH_COUNT) $(BENCH_PKGS) > "$$tmpdir/bench-raw.txt"; \
 	 bash scripts/filter-bench-output.sh < "$$tmpdir/bench-raw.txt" > "$$tmpdir/bench.txt"; \
 	 go run golang.org/x/perf/cmd/benchstat@latest internal/benchdata/baseline.txt "$$tmpdir/bench.txt"
+
+lint-test-fragility:
+	bash scripts/lint-test-fragility.sh
 
 # gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
 # one-user runtime registry. Run it after changing any tool descriptor.
