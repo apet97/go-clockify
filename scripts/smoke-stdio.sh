@@ -19,8 +19,8 @@
 #
 # Product note: tools/list reports the advertised surface only. The default
 # advertised surface is 16 tools, while CLOCKIFY_TOOLSET=all advertises the
-# full 156-tool startup registry. Unadvertised tools remain loaded and
-# dispatch-callable by name; this smoke checks the advertised stdio surface.
+# full 156-tool startup registry. In scoped toolsets, the advertised surface is
+# also the callable boundary; this smoke checks the advertised stdio surface.
 #
 # The audit runs against the same freshly-built temp binary in both toolset
 # modes, so a stale or mis-built binary that drops safety metadata fails before
@@ -158,7 +158,7 @@ run_stdio_surface() {
     echo "  OK: every advertised tool and input property has a description; every advertised tool has annotations.riskClass"
 
     if [ "$expect_raw_last" = "yes" ]; then
-        for tool in clockify_projects_archive clockify_invoices_send clockify_time_off_archive clockify_users_invite clockify_scheduling_publish; do
+        for tool in clockify_projects_archive clockify_time_off_archive clockify_users_invite clockify_scheduling_publish; do
             is_destructive=$(jq -r --arg t "$tool" 'select(.id == 2) | .result.tools[] | select(.name == $t) | .annotations.destructiveHint' "$OUT")
             if [ "$is_destructive" != "true" ]; then
                 audit_fail "$tool must carry annotations.destructiveHint=true, got \"${is_destructive:-missing}\""

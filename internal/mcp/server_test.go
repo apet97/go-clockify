@@ -56,7 +56,7 @@ func TestInitializeAndToolsList(t *testing.T) {
 	}
 }
 
-func TestAdvertisedToolsDoNotLimitDispatchByName(t *testing.T) {
+func TestAdvertisedToolsCanLimitDispatchByName(t *testing.T) {
 	visible := ToolDescriptor{
 		Tool:    Tool{Name: "visible_tool", Description: "visible"},
 		Handler: func(context.Context, map[string]any) (any, error) { return map[string]any{"ok": true}, nil },
@@ -71,6 +71,7 @@ func TestAdvertisedToolsDoNotLimitDispatchByName(t *testing.T) {
 	}
 	server := NewServer("test", []ToolDescriptor{visible, hidden})
 	server.SetAdvertisedTools([]ToolDescriptor{visible})
+	server.EnforceAdvertisedTools = true
 
 	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`))
 	if err != nil {
@@ -101,8 +102,40 @@ func TestAdvertisedToolsDoNotLimitDispatchByName(t *testing.T) {
 		t.Fatalf("tools/call dispatch: %v", err)
 	}
 	callPayload := string(raw)
+	if hiddenCalled {
+		t.Fatal("tools/call invoked an unadvertised loaded tool despite enforcement")
+	}
+	if !strings.Contains(callPayload, `"error"`) || !strings.Contains(callPayload, `unknown tool: hidden_tool`) {
+		t.Fatalf("tools/call should reject unadvertised loaded tool: %s", callPayload)
+	}
+}
+
+func TestAdvertisedToolsDispatchByNameWhenEnforcementDisabled(t *testing.T) {
+	visible := ToolDescriptor{
+		Tool:    Tool{Name: "visible_tool", Description: "visible"},
+		Handler: func(context.Context, map[string]any) (any, error) { return map[string]any{"ok": true}, nil },
+	}
+	hiddenCalled := false
+	hidden := ToolDescriptor{
+		Tool: Tool{Name: "hidden_tool", Description: "hidden", InputSchema: map[string]any{"type": "object"}},
+		Handler: func(context.Context, map[string]any) (any, error) {
+			hiddenCalled = true
+			return map[string]any{"ok": true, "tool": "hidden_tool"}, nil
+		},
+	}
+	server := NewServer("test", []ToolDescriptor{visible, hidden})
+	server.SetAdvertisedTools([]ToolDescriptor{visible})
+
+	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
+		t.Fatalf("initialize dispatch: %v", err)
+	}
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"hidden_tool","arguments":{}}}`))
+	if err != nil {
+		t.Fatalf("tools/call dispatch: %v", err)
+	}
+	callPayload := string(raw)
 	if !hiddenCalled {
-		t.Fatal("tools/call did not invoke the unadvertised loaded tool")
+		t.Fatal("tools/call did not invoke the unadvertised loaded tool when enforcement was disabled")
 	}
 	if strings.Contains(callPayload, `"error"`) || !strings.Contains(callPayload, `"tool":"hidden_tool"`) {
 		t.Fatalf("tools/call could not dispatch unadvertised loaded tool: %s", callPayload)
@@ -137,6 +170,58 @@ func TestSetAdvertisedToolsInvalidatesSerializedToolsListCache(t *testing.T) {
 		t.Fatalf("second tools/list dispatch: %v", err)
 	}
 	assertToolsListNames(t, raw, []string{"second_tool"})
+}
+
+func TestToolsListSupportsCursorPagination(t *testing.T) {
+	descriptors := []ToolDescriptor{
+		{Tool: Tool{Name: "a_tool", Description: "a"}, Handler: func(context.Context, map[string]any) (any, error) { return nil, nil }},
+		{Tool: Tool{Name: "b_tool", Description: "b"}, Handler: func(context.Context, map[string]any) (any, error) { return nil, nil }},
+		{Tool: Tool{Name: "c_tool", Description: "c"}, Handler: func(context.Context, map[string]any) (any, error) { return nil, nil }},
+	}
+	server := NewServer("test", descriptors)
+	server.ToolsListPageSize = 2
+	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
+		t.Fatalf("initialize dispatch: %v", err)
+	}
+
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`))
+	if err != nil {
+		t.Fatalf("first tools/list dispatch: %v", err)
+	}
+	assertToolsListNames(t, raw, []string{"a_tool", "b_tool"})
+	if got := toolsListNextCursor(t, raw); got != "2" {
+		t.Fatalf("nextCursor = %q, want 2: %s", got, raw)
+	}
+
+	raw, err = server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":3,"method":"tools/list","params":{"cursor":"2"}}`))
+	if err != nil {
+		t.Fatalf("second tools/list dispatch: %v", err)
+	}
+	assertToolsListNames(t, raw, []string{"c_tool"})
+	if got := toolsListNextCursor(t, raw); got != "" {
+		t.Fatalf("last page nextCursor = %q, want empty: %s", got, raw)
+	}
+}
+
+func TestToolsListRejectsInvalidCursor(t *testing.T) {
+	server := NewServer("test", []ToolDescriptor{{
+		Tool:    Tool{Name: "demo_tool", Description: "demo"},
+		Handler: func(context.Context, map[string]any) (any, error) { return nil, nil },
+	}})
+	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
+		t.Fatalf("initialize dispatch: %v", err)
+	}
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"cursor":2}}`))
+	if err != nil {
+		t.Fatalf("tools/list dispatch: %v", err)
+	}
+	var resp Response
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal tools/list response: %v", err)
+	}
+	if resp.Error == nil || resp.Error.Code != -32602 {
+		t.Fatalf("invalid cursor response = %s, want -32602", raw)
+	}
 }
 
 func TestInitializeRejectsMalformedParams(t *testing.T) {
@@ -235,6 +320,19 @@ func assertToolsListNames(t *testing.T, raw []byte, want []string) {
 			t.Fatalf("tools/list[%d]=%s, want %s: %s", i, tool.Name, want[i], raw)
 		}
 	}
+}
+
+func toolsListNextCursor(t *testing.T, raw []byte) string {
+	t.Helper()
+	var resp struct {
+		Result struct {
+			NextCursor string `json:"nextCursor"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal tools/list response: %v", err)
+	}
+	return resp.Result.NextCursor
 }
 
 func TestServerInstructionsPublicContract(t *testing.T) {

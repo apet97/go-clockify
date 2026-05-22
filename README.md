@@ -159,12 +159,14 @@ Operator references:
 ### Raw API fallback
 
 `clockify_api_get` and `clockify_api_request` reach Clockify endpoints that
-have no dedicated tool, scoped to your pinned workspace. Raw `GET` always
-works; raw `POST`, `PUT`, `PATCH`, and `DELETE` require
-`CLOCKIFY_ENABLE_RAW_WRITES=true`. Prefer the domain tools — raw writes are an
-explicit escape hatch. Raw writes are also limited to documented Clockify
-routes by default; see [docs/raw-fallback.md](docs/raw-fallback.md) for
-`CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY`.
+have no dedicated tool, scoped to your pinned workspace. Raw fallback is hidden
+and disabled by default unless you choose `CLOCKIFY_TOOLSET=all`; otherwise set
+`CLOCKIFY_ENABLE_RAW_TOOLS=true` and, for raw reads,
+`CLOCKIFY_ENABLE_RAW_GET=true`. Raw `POST`, `PUT`, `PATCH`, and `DELETE` also
+require `CLOCKIFY_ENABLE_RAW_WRITES=true`. Prefer the domain tools — raw
+fallback is an explicit escape hatch. Raw writes are limited to documented
+Clockify routes by default; see [docs/raw-fallback.md](docs/raw-fallback.md)
+for `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY`.
 
 ## Configuration
 
@@ -179,14 +181,18 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | --- | --- | --- |
 | `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL |
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
-| `CLOCKIFY_TOOLSET` | `default` | Tool surface advertised on the wire: `default` (16 everyday tools), `core`, `business`, `admin`, or `all` (156). The full registry of 156 tools is always loaded; `tools/list` advertises a subset. |
-| `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `0` | Optional tool-invocation rate cap per minute; `0` disables it |
+| `CLOCKIFY_TOOLSET` | `default` | Tool surface advertised and authorized on the wire: `default` (16 everyday tools), `core`, `business`, `admin`, or `all` (156). The full registry of 156 tools is loaded for self-inspection, but default/core/business/admin reject unadvertised tool calls. |
+| `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `120` | Tool-invocation rate cap per minute. Risk buckets narrow this to 30/min writes, 10/min billing/admin, and 5/min destructive tools; explicit `0` disables rate limiting. |
 | `CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS` | `4` | Max concurrent `tools/call` handlers |
 | `CLOCKIFY_MAX_MESSAGE_SIZE` | `4194304` | Max inbound JSON-RPC message bytes (`1`..`104857600`) |
 | `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation (`1`..`104857600`) |
 | `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout (`5s`..`10m`) |
-| `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` |
+| `CLOCKIFY_ENABLE_RAW_TOOLS` | `false` | Advertise and enable raw fallback outside `CLOCKIFY_TOOLSET=all` |
+| `CLOCKIFY_ENABLE_RAW_GET` | `false` | Allow raw `GET` outside `CLOCKIFY_TOOLSET=all`; sensitive workspace reads still require `admin` or `all` |
+| `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` when raw tools are enabled |
 | `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY` | `true` | Limit raw writes to documented Clockify routes |
+| `CLOCKIFY_AUDIT_LOG` | off | Optional local JSONL audit path for redacted tool-call records |
+| `CLOCKIFY_AUDIT_LOG_MODE` | `off` | Audit mode: `off`, `side_effects_only`, or `all` |
 | `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` | none | Comma-separated allowlist of webhook callback domains |
 | `CLOCKIFY_CIRCUIT_BREAKER` | `enabled` | Clockify circuit breaker: `enabled`/`auto`/`on` or `disabled`/`off` |
 | `CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `5` | Consecutive upstream failures before the breaker opens |
@@ -205,8 +211,8 @@ after upgrading, set:
 export CLOCKIFY_TOOLSET=all
 ```
 
-The full 156-tool surface remains available; only the *advertised* default has
-narrowed.
+The full 156-tool surface is advertised and callable in `all`; default, core,
+business, and admin now authorize only their advertised subset.
 
 ## Compatibility
 

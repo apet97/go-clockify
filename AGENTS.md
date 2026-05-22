@@ -13,8 +13,10 @@ Read this first. This is the tracked, binding agent contract for the repo.
 - Stdio transport only.
 - Full access from startup. The default `CLOCKIFY_TOOLSET=default` advertises
   16 everyday tools. `CLOCKIFY_TOOLSET` may also be `core`, `business`,
-  `admin`, or `all`. The startup registry always loads 156 tools regardless
-  of toolset; tools not advertised are still dispatch-callable by name.
+  `admin`, or `all`. The startup registry always loads 156 tools for
+  deterministic startup and self-inspection, but default/core/business/admin
+  reject unadvertised `tools/call` names. `CLOCKIFY_TOOLSET=all` advertises
+  and authorizes the full registry.
 - Exactly 156 tools loaded at startup; the default advertised surface is 16
   tools.
 - Workflow tools first, domain tools second, raw API fallback last.
@@ -179,14 +181,16 @@ instead of depending on Psych's exact parser wording.
 - `clockify_holidays_get` / `clockify_holidays_update` resolve the holiday by
   scanning the holiday list (no get-one endpoint); `clockify_projects_memberships_list`
   reads the hydrated project record.
-- No Clockify endpoint exists for `clockify_invoices_send`,
-  `clockify_webhooks_test`, or `clockify_invoices_items_update`; these tools
-  return a clean `unsupported` error with recovery guidance instead of calling
-  upstream.
-- Raw fallback is workspace fenced. Raw writes require
-  `CLOCKIFY_ENABLE_RAW_WRITES=true` and default to documented Clockify routes
-  only via `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=true`; raw `DELETE` preserves
-  upstream response bodies.
+- No Clockify endpoint exists for `clockify_invoices_send_guidance`,
+  `clockify_webhooks_test_guidance`, or
+  `clockify_invoices_items_update_guidance`; these read-only guidance tools
+  return a clean `unsupported` envelope instead of calling upstream.
+- Raw fallback is workspace fenced and disabled outside `CLOCKIFY_TOOLSET=all`
+  unless `CLOCKIFY_ENABLE_RAW_TOOLS=true`; raw GET additionally requires
+  `CLOCKIFY_ENABLE_RAW_GET=true`. Raw writes require
+  `CLOCKIFY_ENABLE_RAW_WRITES=true` and default to documented, pinned-workspace
+  Clockify routes only via `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=true`; raw
+  `DELETE` preserves upstream response bodies.
 - Clockify's invoice export endpoint only produces PDF; `clockify_invoices_export`
   advertises `format: PDF` only — use `clockify_reports_export` for CSV/XLSX.
 - Tool results are capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES` (default 50000):

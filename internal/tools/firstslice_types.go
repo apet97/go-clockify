@@ -15,11 +15,14 @@ type ToolResult struct {
 }
 
 type ToolError struct {
-	OK       bool         `json:"ok"`
-	Action   string       `json:"action"`
-	Error    ErrorInfo    `json:"error"`
-	Recovery RecoveryHint `json:"recovery"`
-	Warnings []Warning    `json:"warnings,omitempty"`
+	OK        bool              `json:"ok"`
+	Supported *bool             `json:"supported,omitempty"`
+	Performed *bool             `json:"performed,omitempty"`
+	Action    string            `json:"action"`
+	IDs       map[string]string `json:"ids,omitempty"`
+	Error     ErrorInfo         `json:"error"`
+	Recovery  RecoveryHint      `json:"recovery"`
+	Warnings  []Warning         `json:"warnings,omitempty"`
 }
 
 type ChangeSet struct {
@@ -52,10 +55,11 @@ type ErrorInfo struct {
 }
 
 type RecoveryHint struct {
-	Hint      string         `json:"hint"`
-	Tool      string         `json:"tool,omitempty"`
-	Args      map[string]any `json:"args,omitempty"`
-	Retryable bool           `json:"retryable,omitempty"`
+	Hint              string         `json:"hint"`
+	Tool              string         `json:"tool,omitempty"`
+	Args              map[string]any `json:"args,omitempty"`
+	Retryable         bool           `json:"retryable,omitempty"`
+	RetryAfterSeconds int            `json:"retryAfterSeconds,omitempty"`
 }
 
 type statusData struct {
@@ -69,4 +73,5 @@ type statusData struct {
 	FeatureSubscription   string             `json:"featureSubscriptionType,omitempty"`
 	FeatureStatus         map[string]string  `json:"featureStatus"`
 	RecommendedFirstTools []string           `json:"recommendedFirstTools"`
+	OperationalLimits     map[string]any     `json:"operationalLimits,omitempty"`
 }

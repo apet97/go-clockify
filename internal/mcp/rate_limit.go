@@ -2,9 +2,17 @@ package mcp
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 )
+
+type RiskRateLimits struct {
+	ReadPerMinute         int
+	WritePerMinute        int
+	BillingAdminPerMinute int
+	DestructivePerMinute  int
+}
 
 // tokenBucket is a simple per-process rate limiter for tool invocations.
 type tokenBucket struct {
@@ -32,8 +40,13 @@ func newTokenBucket(perMinute int) *tokenBucket {
 // allow consumes one token and reports whether the call may proceed. A nil
 // bucket always allows.
 func (b *tokenBucket) allow() bool {
+	ok, _ := b.allowWithRetry()
+	return ok
+}
+
+func (b *tokenBucket) allowWithRetry() (bool, int) {
 	if b == nil {
-		return true
+		return true, 0
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -44,10 +57,59 @@ func (b *tokenBucket) allow() bool {
 		b.tokens = b.capacity
 	}
 	if b.tokens < 1 {
-		return false
+		if b.refillRate <= 0 {
+			return false, 60
+		}
+		seconds := int(math.Ceil((1 - b.tokens) / b.refillRate))
+		if seconds < 1 {
+			seconds = 1
+		}
+		return false, seconds
 	}
 	b.tokens--
-	return true
+	return true, 0
+}
+
+type riskRateLimiter struct {
+	read         *tokenBucket
+	write        *tokenBucket
+	billingAdmin *tokenBucket
+	destructive  *tokenBucket
+}
+
+func newRiskRateLimiter(limits RiskRateLimits) *riskRateLimiter {
+	if limits.ReadPerMinute <= 0 &&
+		limits.WritePerMinute <= 0 &&
+		limits.BillingAdminPerMinute <= 0 &&
+		limits.DestructivePerMinute <= 0 {
+		return nil
+	}
+	return &riskRateLimiter{
+		read:         newTokenBucket(limits.ReadPerMinute),
+		write:        newTokenBucket(limits.WritePerMinute),
+		billingAdmin: newTokenBucket(limits.BillingAdminPerMinute),
+		destructive:  newTokenBucket(limits.DestructivePerMinute),
+	}
+}
+
+func (l *riskRateLimiter) allow(rc RiskClass) (bool, int) {
+	if l == nil {
+		return true, 0
+	}
+	return l.bucket(rc).allowWithRetry()
+}
+
+func (l *riskRateLimiter) bucket(rc RiskClass) *tokenBucket {
+	switch {
+	case rc.Has(RiskDestructive):
+		return l.destructive
+	case rc.Has(RiskBilling), rc.Has(RiskAdmin), rc.Has(RiskPermissionChange), rc.Has(RiskExternalSideEffect):
+		return l.billingAdmin
+	case rc.Has(RiskWrite):
+		return l.write
+	default:
+		return l.read
+	}
 }
 
 // familyLimiter caps concurrent tool execution per risk family. Reads rely only
@@ -92,17 +154,32 @@ func (l *familyLimiter) acquire(ctx context.Context, rc RiskClass) (func(), erro
 
 // rateLimitedEnvelope is the recoverable ok:false result returned when the
 // per-process tool rate limit is exceeded.
-func rateLimitedEnvelope(toolName string) map[string]any {
+func rateLimitedEnvelope(toolName string, rc RiskClass, retryAfterSeconds int) map[string]any {
+	if retryAfterSeconds <= 0 {
+		retryAfterSeconds = 60
+	}
+	message := "tool invocation rate limit exceeded"
+	switch {
+	case rc.Has(RiskDestructive):
+		message = "destructive tool rate limit exceeded"
+	case rc.Has(RiskBilling), rc.Has(RiskAdmin), rc.Has(RiskPermissionChange), rc.Has(RiskExternalSideEffect):
+		message = "high-risk tool rate limit exceeded"
+	case rc.Has(RiskWrite):
+		message = "write tool rate limit exceeded"
+	case rc.Has(RiskSensitiveRead):
+		message = "sensitive read tool rate limit exceeded"
+	}
 	return map[string]any{
 		"ok":     false,
 		"action": toolName,
 		"error": map[string]any{
 			"code":    "rate_limited",
-			"message": "tool invocation rate limit exceeded; retry shortly",
+			"message": message,
 		},
 		"recovery": map[string]any{
-			"hint":      "The server is rate-limiting tool calls (CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE). Wait a moment and retry.",
-			"retryable": true,
+			"hint":              "The server is rate-limiting tool calls. Wait and retry.",
+			"retryable":         true,
+			"retryAfterSeconds": retryAfterSeconds,
 		},
 	}
 }

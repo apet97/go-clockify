@@ -145,7 +145,6 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 }
 
 var mcpContractDestructiveHintOverrides = map[string]bool{
-	"clockify_invoices_send":      true,
 	"clockify_projects_archive":   true,
 	"clockify_scheduling_publish": true,
 	"clockify_time_off_archive":   true,

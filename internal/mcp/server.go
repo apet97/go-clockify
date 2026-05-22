@@ -184,12 +184,19 @@ type Server struct {
 	// MaxToolResultBytes caps a successful tools/call result before it is
 	// placed in the MCP content envelope. 0 disables the cap.
 	MaxToolResultBytes int
+	// AuditLogger optionally appends local redacted JSONL records for tool
+	// calls. Nil disables durable audit logging.
+	AuditLogger *AuditLogger
 
 	mu    sync.RWMutex
 	tools map[string]ToolDescriptor
-	// advertisedTools limits tools/list without limiting tools/call. Nil means
-	// every loaded tool is advertised.
+	// advertisedTools limits tools/list. When EnforceAdvertisedTools is true,
+	// it also limits tools/call so the visible surface is the callable
+	// authority boundary. Nil means every loaded tool is advertised.
 	advertisedTools map[string]bool
+	// EnforceAdvertisedTools makes SetAdvertisedTools an authorization
+	// boundary for tools/call. Leave false for explicit full-registry modes.
+	EnforceAdvertisedTools bool
 	// toolListCache stores the sorted, filtered tools/list snapshot.
 	// Protected by mu and invalidated when descriptors or visibility changes.
 	toolListCache      []Tool
@@ -207,15 +214,19 @@ type Server struct {
 	// that load their complete registry at startup and never mutate tool
 	// availability during a session.
 	StaticToolList bool
-	encoder        *json.Encoder // stored for push notifications
-	encoderMu      sync.Mutex    // protects concurrent encoder writes
-	writer         io.Writer     // raw stdio writer for cached JSON-RPC responses
-	outChan        chan []byte   // serialized stdout responses, drained by one writer goroutine
-	outCtx         context.Context
-	outDone        chan struct{}
-	outErrMu       sync.Mutex
-	outErr         error
-	requestSeq     atomic.Int64 // monotonic request ID for log correlation
+	// ToolsListPageSize controls cursor pagination for tools/list. Values <= 0
+	// use DefaultToolsListPageSize; set a larger value in tests or embedders
+	// that intentionally need the complete advertised surface in one response.
+	ToolsListPageSize int
+	encoder           *json.Encoder // stored for push notifications
+	encoderMu         sync.Mutex    // protects concurrent encoder writes
+	writer            io.Writer     // raw stdio writer for cached JSON-RPC responses
+	outChan           chan []byte   // serialized stdout responses, drained by one writer goroutine
+	outCtx            context.Context
+	outDone           chan struct{}
+	outErrMu          sync.Mutex
+	outErr            error
+	requestSeq        atomic.Int64 // monotonic request ID for log correlation
 
 	hub               notifierHub
 	setNotifierRemove func() // cleanup from previous SetNotifier call
@@ -229,12 +240,12 @@ type Server struct {
 
 	toolCallSem chan struct{} // dispatch-layer goroutine cap; nil = unlimited
 
-	// toolRateLimiter throttles tool invocations process-wide; nil = disabled.
-	// Installed by ConfigureToolLimits only when the configured rate is > 0.
+	// toolRateLimiter throttles tool invocations process-wide by risk bucket;
+	// nil = disabled. Installed only when at least one configured rate is > 0.
 	// toolFamilyCaps serializes high-risk writes. NewServer always installs it;
 	// it is nil only for a Server built by direct struct literal (some tests),
 	// which is why callTool keeps a nil guard.
-	toolRateLimiter *tokenBucket
+	toolRateLimiter *riskRateLimiter
 	toolFamilyCaps  *familyLimiter
 
 	// inflight tracks cancellable contexts for in-flight tools/call
@@ -320,9 +331,9 @@ func NewServer(version string, descriptors []ToolDescriptor) *Server {
 	return s
 }
 
-// SetAdvertisedTools limits tools/list to descriptors in advertised while
-// keeping the full loaded registry dispatch-callable by name. Passing nil
-// advertises every loaded tool.
+// SetAdvertisedTools limits tools/list to descriptors in advertised. When
+// EnforceAdvertisedTools is true, this set is also the callable boundary.
+// Passing nil advertises every loaded tool.
 func (s *Server) SetAdvertisedTools(advertised []ToolDescriptor) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -909,7 +920,11 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 	case "ping":
 		resp.Result = map[string]any{}
 	case "tools/list":
-		resp.Result = map[string]any{"tools": s.listTools()}
+		if result, rpcErr := s.handleToolsList(req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
 	case "resources/list":
 		if result, rpcErr := s.handleResourcesList(ctx); rpcErr != nil {
 			resp.Error = rpcErr
@@ -1354,7 +1369,16 @@ func (s *Server) AllowProgress(token any, progress float64) bool {
 // here, so a Server always serializes high-risk writes even when rate limiting
 // is disabled (CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE defaults to 0).
 func (s *Server) ConfigureToolLimits(ratePerMinute int) {
-	s.toolRateLimiter = newTokenBucket(ratePerMinute)
+	s.ConfigureRiskRateLimits(RiskRateLimits{
+		ReadPerMinute:         ratePerMinute,
+		WritePerMinute:        ratePerMinute,
+		BillingAdminPerMinute: ratePerMinute,
+		DestructivePerMinute:  ratePerMinute,
+	})
+}
+
+func (s *Server) ConfigureRiskRateLimits(limits RiskRateLimits) {
+	s.toolRateLimiter = newRiskRateLimiter(limits)
 }
 
 // validateRequest checks JSON-RPC 2.0 version and id type per spec.

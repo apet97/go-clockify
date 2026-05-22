@@ -15,35 +15,37 @@ type riskOverride struct {
 // handler names are guarded by risk_overrides_test.go.
 var riskOverrides = map[string]riskOverride{
 	// Sensitive reads.
-	"clockify_users_profile":               sensitiveRead("user_id"),
-	"clockify_users_list":                  sensitiveRead("workspace_id"),
-	"clockify_groups_list":                 sensitiveRead("workspace_id"),
-	"clockify_groups_get":                  sensitiveRead("group_id"),
-	"clockify_invoices_list":               sensitiveRead("client_id", "status"),
-	"clockify_invoices_get":                sensitiveRead("invoice_id"),
-	"clockify_invoices_export":             sensitiveRead("invoice_id"),
-	"clockify_invoices_items_list":         sensitiveRead("invoice_id"),
-	"clockify_invoices_payments_list":      sensitiveRead("invoice_id"),
-	"clockify_expenses_list":               sensitiveRead("user_id", "project_id", "category_id"),
-	"clockify_expenses_get":                sensitiveRead("expense_id"),
-	"clockify_expenses_categories_list":    sensitiveRead("workspace_id"),
-	"clockify_webhooks_list":               sensitiveRead("workspace_id"),
-	"clockify_webhooks_get":                sensitiveRead("webhook_id"),
-	"clockify_webhooks_events":             sensitiveRead("webhook_id"),
-	"clockify_time_off_requests_list":      sensitiveRead("user_id", "policy_id", "status"),
-	"clockify_time_off_requests_get":       sensitiveRead("request_id"),
-	"clockify_time_off_policies_list":      sensitiveRead("workspace_id"),
-	"clockify_time_off_policies_get":       sensitiveRead("policy_id"),
-	"clockify_time_off_balances":           sensitiveRead("user_id", "policy_id"),
-	"clockify_projects_memberships_list":   sensitiveRead("project_id"),
-	"clockify_scheduling_assignments_list": sensitiveRead("project_id", "user_id"),
-	"clockify_scheduling_assignments_get":  sensitiveRead("assignment_id"),
-	"clockify_scheduling_project_totals":   sensitiveRead("project_id"),
-	"clockify_scheduling_user_totals":      sensitiveRead("user_id"),
-	"clockify_scheduling_capacity":         sensitiveRead("user_ids"),
-	"clockify_approvals_list":              sensitiveRead("status", "user_id"),
-	"clockify_approvals_get":               sensitiveRead("approval_id"),
-	"clockify_workspace_settings":          sensitiveRead("workspace_id"),
+	"clockify_users_profile":                  sensitiveRead("user_id"),
+	"clockify_users_list":                     sensitiveRead("workspace_id"),
+	"clockify_groups_list":                    sensitiveRead("workspace_id"),
+	"clockify_groups_get":                     sensitiveRead("group_id"),
+	"clockify_invoices_list":                  sensitiveRead("client_id", "status"),
+	"clockify_invoices_get":                   sensitiveRead("invoice_id"),
+	"clockify_invoices_export":                sensitiveRead("invoice_id"),
+	"clockify_invoices_send_guidance":         readOnly("invoice_id"),
+	"clockify_invoices_items_list":            sensitiveRead("invoice_id"),
+	"clockify_invoices_items_update_guidance": readOnly("invoice_id"),
+	"clockify_invoices_payments_list":         sensitiveRead("invoice_id"),
+	"clockify_expenses_list":                  sensitiveRead("user_id", "project_id", "category_id"),
+	"clockify_expenses_get":                   sensitiveRead("expense_id"),
+	"clockify_expenses_categories_list":       sensitiveRead("workspace_id"),
+	"clockify_webhooks_list":                  sensitiveRead("workspace_id"),
+	"clockify_webhooks_get":                   sensitiveRead("webhook_id"),
+	"clockify_webhooks_events":                sensitiveRead("webhook_id"),
+	"clockify_time_off_requests_list":         sensitiveRead("user_id", "policy_id", "status"),
+	"clockify_time_off_requests_get":          sensitiveRead("request_id"),
+	"clockify_time_off_policies_list":         sensitiveRead("workspace_id"),
+	"clockify_time_off_policies_get":          sensitiveRead("policy_id"),
+	"clockify_time_off_balances":              sensitiveRead("user_id", "policy_id"),
+	"clockify_projects_memberships_list":      sensitiveRead("project_id"),
+	"clockify_scheduling_assignments_list":    sensitiveRead("project_id", "user_id"),
+	"clockify_scheduling_assignments_get":     sensitiveRead("assignment_id"),
+	"clockify_scheduling_project_totals":      sensitiveRead("project_id"),
+	"clockify_scheduling_user_totals":         sensitiveRead("user_id"),
+	"clockify_scheduling_capacity":            sensitiveRead("user_ids"),
+	"clockify_approvals_list":                 sensitiveRead("status", "user_id"),
+	"clockify_approvals_get":                  sensitiveRead("approval_id"),
+	"clockify_workspace_settings":             sensitiveRead("workspace_id"),
 
 	// Billing.
 	"clockify_invoices_create":            billingWrite("client_id", "number", "issued_date", "currency", "due_date"),
@@ -52,7 +54,6 @@ var riskOverrides = map[string]riskOverride{
 	"clockify_invoices_import_time":       billingWrite("invoice_id", "from", "to", "project_ids", "time_entry_group_type"),
 	"clockify_invoices_import_expenses":   billingWrite("invoice_id", "from", "to", "project_ids", "time_entry_group_type"),
 	"clockify_invoices_items_add":         billingWrite("invoice_id", "item_type", "description", "quantity", "unit_price"),
-	"clockify_invoices_items_update":      billingWrite("invoice_id", "item_index", "item_id", "item_type", "description", "quantity", "unit_price"),
 	"clockify_invoices_items_delete":      billingDelete("invoice_id", "item_index", "item_id"),
 	"clockify_invoices_mark_paid":         billingWrite("invoice_id"),
 	"clockify_invoices_payments_create":   billingWrite("invoice_id", "amount", "date"),
@@ -72,12 +73,6 @@ var riskOverrides = map[string]riskOverride{
 		auditKeys: []string{"project_id", "task_id", "rate_kind", "amount"},
 	},
 	"clockify_entries_mark_invoiced": billingWrite("time_entry_ids", "invoiced"),
-
-	// Billing plus external delivery.
-	"clockify_invoices_send": {
-		class:     mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"invoice_id"},
-	},
 
 	// Admin and permission changes.
 	"clockify_users_invite": {
@@ -203,10 +198,11 @@ var riskOverrides = map[string]riskOverride{
 		class:     mcp.RiskDestructive | mcp.RiskExternalSideEffect,
 		auditKeys: []string{"webhook_id"},
 	},
-	"clockify_webhooks_test": {
-		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
-		auditKeys: []string{"webhook_id"},
-	},
+	"clockify_webhooks_test_guidance": readOnly("webhook_id"),
+}
+
+func readOnly(auditKeys ...string) riskOverride {
+	return riskOverride{class: mcp.RiskRead, auditKeys: auditKeys}
 }
 
 func sensitiveRead(auditKeys ...string) riskOverride {

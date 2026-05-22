@@ -80,8 +80,13 @@ type Service struct {
 	// `attacker.example.com.evil.com`). Empty list = no bypass; the
 	// DNS check applies to every host.
 	WebhookAllowedDomains []string
+	// EnableRawTools allows the raw API fallback tools to run at all.
+	EnableRawTools bool
+	// EnableRawGet allows the raw API fallback to use GET. It is separate
+	// from EnableRawWrites because workspace reads can expose sensitive state.
+	EnableRawGet bool
 	// EnableRawWrites allows the raw API fallback to use mutating HTTP
-	// methods. Raw GET remains available either way.
+	// methods. The raw-tools gate must also be enabled.
 	EnableRawWrites bool
 	// RawWriteDocumentedOnly restricts raw mutating methods to routes present
 	// in the generated OpenAPI allowlist. Raw GET remains unaffected.
@@ -89,6 +94,13 @@ type Service struct {
 	// Toolset selects the startup registry surface. Empty/all exposes the
 	// full owner workbench; smaller values are filtered by RegistryForToolset.
 	Toolset string
+	// ToolRateLimitDisabled is true only when the operator explicitly sets
+	// CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE=0.
+	ToolRateLimitDisabled bool
+	// ToolRateLimits reports the active per-risk invocation rate buckets.
+	ToolRateLimits map[string]int
+	// AuditLogPath is the optional local JSONL path used by the MCP runtime.
+	AuditLogPath string
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier

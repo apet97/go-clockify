@@ -79,11 +79,11 @@ Remaining honest gaps:
 | `clockify_invoices_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_invoices_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_invoices_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_invoices_send` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_invoices_send_guidance` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_invoices_mark_paid` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_invoices_items_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_invoices_items_add` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_invoices_items_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_invoices_items_update_guidance` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_invoices_items_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_expenses_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_expenses_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
@@ -130,7 +130,7 @@ Remaining honest gaps:
 | `clockify_webhooks_create` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_webhooks_update` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_webhooks_delete` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
-| `clockify_webhooks_test` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
+| `clockify_webhooks_test_guidance` | domain | native handler | native handler; endpoint selected in code | yes | yes | no | typed | ready | maintain_recovery_probe |
 | `clockify_webhooks_events` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_groups_list` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |
 | `clockify_groups_get` | domain | native handler | native handler; endpoint selected in code | yes | yes | yes | typed | ready | maintain_contract_tests |

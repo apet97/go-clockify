@@ -7,6 +7,7 @@
   "clockify://mcp/tool-catalog",
   "clockify://mcp/api-parity",
   "clockify://mcp/live-evidence",
+  "clockify://mcp/audit-tail",
   "clockify://workflows",
   "clockify://demo/phase1",
   "clockify://recent/entries",

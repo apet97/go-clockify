@@ -24,13 +24,19 @@ func main() {
 		log.Fatal(err)
 	}
 	var routes []string
+	unsupported := map[string]string{}
 	for path, ops := range doc.Paths {
 		for method := range ops {
 			method = strings.ToUpper(method)
 			if method == "GET" || !writeMethod(method) {
 				continue
 			}
-			routes = append(routes, method+" "+canonicalPath(path))
+			route := method + " " + canonicalPath(path)
+			if rawWriteRouteSupported(route) {
+				routes = append(routes, route)
+			} else {
+				unsupported[route] = rawUnsupportedReason(route)
+			}
 		}
 	}
 	sort.Strings(routes)
@@ -60,6 +66,18 @@ func main() {
 		}
 	}
 	b.WriteString("}\n")
+	if len(unsupported) > 0 {
+		b.WriteString("\nvar documentedButRawUnsupportedRoutes = map[string]string{\n")
+		unsupportedRoutes := make([]string, 0, len(unsupported))
+		for route := range unsupported {
+			unsupportedRoutes = append(unsupportedRoutes, route)
+		}
+		sort.Strings(unsupportedRoutes)
+		for _, route := range unsupportedRoutes {
+			fmt.Fprintf(&b, "\t%q: %q,\n", route, unsupported[route])
+		}
+		b.WriteString("}\n")
+	}
 	formatted, err := format.Source(b.Bytes())
 	if err != nil {
 		log.Fatal(err)
@@ -67,7 +85,7 @@ func main() {
 	if err := os.WriteFile("internal/tools/raw_allowlist_gen.go", formatted, 0o644); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("wrote %d documented raw write routes\n", len(routes))
+	fmt.Printf("wrote %d documented raw write routes (%d unsupported by raw scope)\n", len(routes), len(unsupported))
 }
 
 func writeMethod(method string) bool {
@@ -91,6 +109,27 @@ func canonicalPath(path string) string {
 		}
 	}
 	return strings.Join(parts, "/")
+}
+
+func rawWriteRouteSupported(route string) bool {
+	_, path, ok := strings.Cut(route, " ")
+	if !ok {
+		return false
+	}
+	path = strings.ReplaceAll(path, "{workspaceId}", "ws-test")
+	return path == "/workspaces/ws-test" || strings.HasPrefix(path, "/workspaces/ws-test/")
+}
+
+func rawUnsupportedReason(route string) string {
+	_, path, _ := strings.Cut(route, " ")
+	switch path {
+	case "/file/image":
+		return "global file endpoint is outside pinned workspace; use a typed upload tool if added"
+	case "/workspaces":
+		return "workspace creation is outside one-user pinned-workspace scope"
+	default:
+		return "route is outside the one-user pinned-workspace raw fallback scope"
+	}
 }
 
 // routeSection returns the API section a "METHOD /path" route belongs to: the

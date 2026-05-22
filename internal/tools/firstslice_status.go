@@ -42,11 +42,30 @@ func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, er
 		FeatureSubscription:   workspace.FeatureSubscriptionType,
 		FeatureStatus:         featureStatus,
 		RecommendedFirstTools: []string{"clockify_tools_guide", "clockify_create_work_package", "clockify_log_work", "clockify_start_work", "clockify_review_day"},
+		OperationalLimits:     s.statusOperationalLimits(),
 	}, ChangeSet{}, warnings, []NextAction{
 		{Tool: "clockify_tools_guide", Reason: "Pick the best workflow tool before falling back to domain tools."},
 		{Tool: "clockify_create_work_package", Reason: "Create or reuse a client/project/task/tag package for work tracking."},
 		{Tool: "clockify_log_work", Reason: "Log finished work with human-friendly project, task, and tag names."},
 	}), nil
+}
+
+func (s *Service) statusOperationalLimits() map[string]any {
+	if s == nil {
+		return nil
+	}
+	limits := map[string]any{}
+	if len(s.ToolRateLimits) > 0 {
+		limits["toolRateLimitPerMinute"] = s.ToolRateLimits
+	}
+	if s.ToolRateLimitDisabled {
+		limits["toolRateLimitDisabled"] = true
+		limits["warning"] = "Tool invocation rate limiting is disabled by explicit CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE=0."
+	}
+	if len(limits) == 0 {
+		return nil
+	}
+	return limits
 }
 
 func statusWeekStart(workspace clockify.Workspace, user clockify.User) string {

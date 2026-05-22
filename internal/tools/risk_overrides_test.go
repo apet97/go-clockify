@@ -15,11 +15,11 @@ func TestRiskOverridesApplyToRenamedOneUserTools(t *testing.T) {
 	tests := map[string]mcp.RiskClass{
 		"clockify_invoices_create":             mcp.RiskWrite | mcp.RiskBilling,
 		"clockify_invoices_delete":             mcp.RiskDestructive | mcp.RiskBilling,
-		"clockify_invoices_send":               mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskExternalSideEffect,
+		"clockify_invoices_send_guidance":      mcp.RiskRead,
 		"clockify_invoices_payments_create":    mcp.RiskWrite | mcp.RiskBilling,
 		"clockify_expenses_categories_delete":  mcp.RiskDestructive | mcp.RiskBilling,
 		"clockify_projects_rates_update":       mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin,
-		"clockify_webhooks_test":               mcp.RiskWrite | mcp.RiskExternalSideEffect,
+		"clockify_webhooks_test_guidance":      mcp.RiskRead,
 		"clockify_users_invite":                mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange | mcp.RiskExternalSideEffect,
 		"clockify_groups_remove_user":          mcp.RiskDestructive | mcp.RiskAdmin | mcp.RiskPermissionChange,
 		"clockify_projects_memberships_update": mcp.RiskWrite | mcp.RiskAdmin | mcp.RiskPermissionChange,
@@ -61,12 +61,12 @@ func TestRiskOverridesCoverSideEffectToolFamilies(t *testing.T) {
 		{"clockify_invoices_import_time", mcp.RiskWrite | mcp.RiskBilling},
 		{"clockify_invoices_import_expenses", mcp.RiskWrite | mcp.RiskBilling},
 		{"clockify_invoices_items_add", mcp.RiskWrite | mcp.RiskBilling},
-		{"clockify_invoices_items_update", mcp.RiskWrite | mcp.RiskBilling},
+		{"clockify_invoices_items_update_guidance", mcp.RiskRead},
 		{"clockify_invoices_items_delete", mcp.RiskDestructive | mcp.RiskBilling},
 		{"clockify_invoices_mark_paid", mcp.RiskWrite | mcp.RiskBilling},
 		{"clockify_invoices_payments_create", mcp.RiskWrite | mcp.RiskBilling},
 		{"clockify_invoices_payments_delete", mcp.RiskDestructive | mcp.RiskBilling},
-		{"clockify_invoices_send", mcp.RiskDestructive | mcp.RiskBilling | mcp.RiskExternalSideEffect},
+		{"clockify_invoices_send_guidance", mcp.RiskRead},
 
 		// Expenses and expense categories affect billable money.
 		{"clockify_expenses_create", mcp.RiskWrite | mcp.RiskBilling},
@@ -89,10 +89,10 @@ func TestRiskOverridesCoverSideEffectToolFamilies(t *testing.T) {
 		{"clockify_projects_rates_update", mcp.RiskWrite | mcp.RiskBilling | mcp.RiskAdmin},
 		{"clockify_tasks_rates_update", mcp.RiskWrite | mcp.RiskBilling},
 
-		// Webhooks create/update/test/delete affect outbound delivery.
+		// Webhooks create/update/delete affect outbound delivery; test guidance is read-only.
 		{"clockify_webhooks_create", mcp.RiskWrite | mcp.RiskExternalSideEffect},
 		{"clockify_webhooks_update", mcp.RiskWrite | mcp.RiskExternalSideEffect},
-		{"clockify_webhooks_test", mcp.RiskWrite | mcp.RiskExternalSideEffect},
+		{"clockify_webhooks_test_guidance", mcp.RiskRead},
 		{"clockify_webhooks_delete", mcp.RiskDestructive | mcp.RiskExternalSideEffect},
 
 		// Approval state changes are admin-sensitive; decision-state changes alter permissions/workflow state.

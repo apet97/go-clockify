@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"syscall"
@@ -117,9 +118,19 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	defer client.Close()
 
 	service := tools.New(client, cfg.WorkspaceID)
+	rawToolsEnabled := cfg.EnableRawTools || cfg.Toolset == "all"
 	service.EnableRawWrites = cfg.EnableRawWrites
+	service.EnableRawTools = rawToolsEnabled
+	service.EnableRawGet = rawToolsEnabled && (cfg.EnableRawGet || cfg.Toolset == "all")
 	service.RawWriteDocumentedOnly = cfg.RawWriteDocumentedOnly
 	service.Toolset = cfg.Toolset
+	service.ToolRateLimitDisabled = cfg.ToolRateLimitDisabled
+	service.ToolRateLimits = map[string]int{
+		"read":          cfg.ReadRateLimitPerMinute,
+		"write":         cfg.WriteRateLimitPerMinute,
+		"billing_admin": cfg.BillingAdminRateLimitPerMinute,
+		"destructive":   cfg.DestructiveRateLimitPerMinute,
+	}
 	service.WebhookValidateDNS = true
 	service.WebhookAllowedDomains = cfg.WebhookAllowedDomains
 	if cfg.Timezone != "" {
@@ -131,11 +142,29 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	}
 	fullRegistry := service.FullAccessRegistry()
 	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
+	if rawToolsEnabled && cfg.Toolset != "all" {
+		advertisedRegistry = appendRawDescriptors(advertisedRegistry, fullRegistry)
+	}
 	server := mcp.NewServer(effective, fullRegistry)
 	server.SetAdvertisedTools(advertisedRegistry)
+	server.EnforceAdvertisedTools = cfg.Toolset != "all"
 	server.StaticToolList = true
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
-	server.ConfigureToolLimits(cfg.ToolRateLimitPerMinute)
+	server.ConfigureRiskRateLimits(mcp.RiskRateLimits{
+		ReadPerMinute:         cfg.ReadRateLimitPerMinute,
+		WritePerMinute:        cfg.WriteRateLimitPerMinute,
+		BillingAdminPerMinute: cfg.BillingAdminRateLimitPerMinute,
+		DestructivePerMinute:  cfg.DestructiveRateLimitPerMinute,
+	})
+	auditLogger, err := mcp.NewAuditLogger(cfg.AuditLogPath, mcp.AuditLogMode(cfg.AuditLogMode), cfg.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	if auditLogger != nil {
+		defer auditLogger.Close()
+		server.AuditLogger = auditLogger
+		service.AuditLogPath = cfg.AuditLogPath
+	}
 	server.ToolTimeout = cfg.ToolTimeout
 	server.MaxMessageSize = cfg.MaxMessageSize
 	server.MaxToolResultBytes = cfg.MaxToolResultBytes
@@ -154,6 +183,24 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	)
 
 	return server.Run(ctx, stdin, stdout)
+}
+
+func appendRawDescriptors(advertised, full []mcp.ToolDescriptor) []mcp.ToolDescriptor {
+	seen := make(map[string]bool, len(advertised)+2)
+	for _, descriptor := range advertised {
+		seen[descriptor.Tool.Name] = true
+	}
+	out := append([]mcp.ToolDescriptor(nil), advertised...)
+	for _, descriptor := range full {
+		switch descriptor.Tool.Name {
+		case "clockify_api_get", "clockify_api_request":
+			if !seen[descriptor.Tool.Name] {
+				out = append(out, descriptor)
+				seen[descriptor.Tool.Name] = true
+			}
+		}
+	}
+	return out
 }
 
 // parseLogLevel maps MCP_LOG_LEVEL to a slog level. An unset or unrecognised
@@ -206,8 +253,14 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 0)
 	defer client.Close()
 	service := tools.New(client, cfg.WorkspaceID)
-	registryLoaded := len(service.FullAccessRegistry())
-	advertisedSurface := len(service.RegistryForToolset(cfg.Toolset))
+	service.EnableRawTools = cfg.EnableRawTools || cfg.Toolset == "all"
+	fullRegistry := service.FullAccessRegistry()
+	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
+	if (cfg.EnableRawTools || cfg.Toolset == "all") && cfg.Toolset != "all" {
+		advertisedRegistry = appendRawDescriptors(advertisedRegistry, fullRegistry)
+	}
+	registryLoaded := len(fullRegistry)
+	advertisedSurface := len(advertisedRegistry)
 
 	_, _ = fmt.Fprintf(stdout, "clockify-mcp doctor - one-user configuration\n\n")
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_API_KEY       set (redacted)\n")
@@ -220,11 +273,24 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_MESSAGE_SIZE          %d\n", cfg.MaxMessageSize)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_MAX_TOOL_RESULT_BYTES     %d\n", cfg.MaxToolResultBytes)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE %d\n", cfg.ToolRateLimitPerMinute)
+	if cfg.ToolRateLimitDisabled {
+		_, _ = fmt.Fprintf(stdout, "Warning: tool invocation rate limiting is disabled by explicit CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE=0\n")
+	}
+	_, _ = fmt.Fprintf(stdout, "Risk rate limits: read=%d/min write=%d/min billing_admin=%d/min destructive=%d/min\n",
+		cfg.ReadRateLimitPerMinute,
+		cfg.WriteRateLimitPerMinute,
+		cfg.BillingAdminRateLimitPerMinute,
+		cfg.DestructiveRateLimitPerMinute,
+	)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_TOOLSET                   %s\n", cfg.Toolset)
 	_, _ = fmt.Fprintf(stdout, "Registry loaded:    %d tools\n", registryLoaded)
 	_, _ = fmt.Fprintf(stdout, "Advertised surface: %d tools (toolset=%s)\n", advertisedSurface, cfg.Toolset)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_TOOLS          %t\n", cfg.EnableRawTools)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_GET            %t\n", cfg.EnableRawGet)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_ENABLE_RAW_WRITES         %t\n", cfg.EnableRawWrites)
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY %t\n", cfg.RawWriteDocumentedOnly)
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_AUDIT_LOG                 %s\n", optionalValue(redactPath(cfg.AuditLogPath), "(off)"))
+	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_AUDIT_LOG_MODE            %s\n", optionalValue(cfg.AuditLogMode, "off"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   %s\n", optionalList(cfg.WebhookAllowedDomains, "(none)"))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER           %s\n", circuitBreakerStatus(cfg.CircuitBreaker.Enabled))
 	_, _ = fmt.Fprintf(stdout, "CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD  %d\n", cfg.CircuitBreaker.FailureThreshold)
@@ -402,6 +468,14 @@ func redactIdentifier(id string) string {
 	return "[redacted]..." + id[len(id)-4:]
 }
 
+func redactPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	return filepath.Base(path)
+}
+
 func optionalValue(value, fallback string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -442,8 +516,13 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_MESSAGE_SIZE          optional, defaults to 4194304, allowed 1..104857600")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_MAX_TOOL_RESULT_BYTES     optional, defaults to 50000, allowed 1..104857600")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOLSET                   optional: default, core, business, admin, all; defaults to default")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE optional, defaults to 120; set 0 to explicitly disable")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_TOOLS          optional, defaults to false unless CLOCKIFY_TOOLSET=all")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_GET            optional, defaults to false unless CLOCKIFY_TOOLSET=all")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_ENABLE_RAW_WRITES         optional, defaults to false")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY optional, defaults to true")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_AUDIT_LOG                 optional JSONL audit path")
+	_, _ = fmt.Fprintln(w, "  CLOCKIFY_AUDIT_LOG_MODE            optional: off, side_effects_only, all")
 	_, _ = fmt.Fprintln(w, "  CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS   optional comma-separated allowlist")
 	_, _ = fmt.Fprintln(w, "  MCP_LOG_LEVEL          optional: debug, info, warn, error (default warn)")
 }

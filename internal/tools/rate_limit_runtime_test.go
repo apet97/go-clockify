@@ -13,13 +13,16 @@ import (
 
 // dispatchToolCall sends one tools/call request through the MCP server and
 // returns the decoded `result` object.
-func dispatchToolCall(t *testing.T, srv *mcp.Server, id int, tool string) map[string]any {
+func dispatchToolCall(t *testing.T, srv *mcp.Server, id int, tool string, args map[string]any) map[string]any {
 	t.Helper()
+	if args == nil {
+		args = map[string]any{}
+	}
 	req := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      id,
 		"method":  "tools/call",
-		"params":  map[string]any{"name": tool, "arguments": map[string]any{}},
+		"params":  map[string]any{"name": tool, "arguments": args},
 	}
 	msg, err := json.Marshal(req)
 	if err != nil {
@@ -51,18 +54,6 @@ func TestRateLimitedStructuredContentConformsToOutputSchema(t *testing.T) {
 		schemas[d.Tool.Name] = d.Tool.OutputSchema
 	}
 
-	srv := mcp.NewServer("test", reg)
-	srv.ConfigureToolLimits(1) // token bucket: capacity 1
-	srv.MarkInitialized("2025-06-18", "rate-limit-test", "1")
-
-	// Drain the single token with a warm-up call. Its handler runs against a
-	// dead Clockify address and errors; we only need the token consumed. The
-	// rate limiter is checked before the handler, so the token is spent
-	// regardless of the handler's outcome.
-	_ = dispatchToolCall(t, srv, 1, "clockify_status")
-
-	// The rate limiter is checked before schema validation and before the
-	// handler, so empty arguments still yield the rate_limited envelope.
 	cases := []struct {
 		id   int
 		tool string
@@ -73,7 +64,15 @@ func TestRateLimitedStructuredContentConformsToOutputSchema(t *testing.T) {
 		{4, "clockify_clients_delete", "destructive"},
 	}
 	for _, tc := range cases {
-		result := dispatchToolCall(t, srv, tc.id, tc.tool)
+		srv := mcp.NewServer("test", reg)
+		srv.ConfigureToolLimits(1) // token bucket: capacity 1 per risk bucket
+		srv.MarkInitialized("2025-06-18", "rate-limit-test", "1")
+
+		// Drain the selected tool's risk bucket. The rate limiter is checked
+		// before schema validation and before the handler, so even empty
+		// arguments consume the bucket token.
+		_ = dispatchToolCall(t, srv, tc.id*10, tc.tool, nil)
+		result := dispatchToolCall(t, srv, tc.id*10+1, tc.tool, nil)
 		structured, ok := result["structuredContent"].(map[string]any)
 		if !ok {
 			t.Fatalf("%s (%s): rate-limited result has no structuredContent object: %v", tc.tool, tc.kind, result)

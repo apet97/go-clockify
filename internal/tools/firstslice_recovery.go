@@ -114,11 +114,11 @@ func defaultRecovery(action string, args map[string]any) RecoveryHint {
 		return RecoveryHint{Hint: "Reports need an explicit date range. Pass date_range_start and date_range_end as YYYY-MM-DD (the money and summary reports also accept an optional summary_filter object). The weekly report needs start and end exactly 7 days apart.", Tool: "clockify_reports_summary"}
 	case action == "clockify_invoices_mark_paid":
 		return RecoveryHint{Hint: "Clockify records paid invoices through payments. Create a payment with invoice_id, amount, and date, then reload the invoice.", Tool: "clockify_invoices_payments_create"}
-	case action == "clockify_invoices_send":
+	case action == "clockify_invoices_send_guidance":
 		return RecoveryHint{Hint: "Clockify does not expose invoice email sending in this API surface. Use the Clockify UI for email delivery, or inspect the invoice with the get tool.", Tool: "clockify_invoices_get"}
-	case action == "clockify_webhooks_test":
+	case action == "clockify_webhooks_test_guidance":
 		return RecoveryHint{Hint: "Clockify does not expose a webhook test-send endpoint. Trigger a real event or inspect delivery logs in the Clockify UI.", Tool: "clockify_webhooks_get"}
-	case action == "clockify_invoices_items_update":
+	case action == "clockify_invoices_items_update_guidance":
 		return RecoveryHint{Hint: "Clockify has no update endpoint for invoice line items. Delete the line with clockify_invoices_items_delete, then re-add it with clockify_invoices_items_add.", Tool: "clockify_invoices_items_delete"}
 	case strings.Contains(action, "invoice"):
 		return RecoveryHint{Hint: "If invoicing is unavailable, report that and continue. Otherwise list clients or invoices, then retry with returned IDs.", Tool: "clockify_invoices_list"}

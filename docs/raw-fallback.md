@@ -31,11 +31,31 @@ Prefer relative paths such as:
 }
 ```
 
-## Raw Writes
+## Raw Enablement
 
-Raw `GET` is always available. Raw write methods require:
+Raw fallback is disabled and unadvertised by default. It becomes available when
+`CLOCKIFY_TOOLSET=all`, or when explicitly enabled:
 
 ```sh
+export CLOCKIFY_ENABLE_RAW_TOOLS=true
+```
+
+Raw `GET` has a separate read gate:
+
+```sh
+export CLOCKIFY_ENABLE_RAW_GET=true
+```
+
+Sensitive workspace reads such as invoices, users, audit logs, approvals, time
+off, balances, webhooks, and workspace settings are rejected unless the selected
+toolset is `admin` or `all`. Use the typed tools first.
+
+## Raw Writes
+
+Raw write methods require raw tools plus the write gate:
+
+```sh
+export CLOCKIFY_ENABLE_RAW_TOOLS=true
 export CLOCKIFY_ENABLE_RAW_WRITES=true
 ```
 
@@ -48,6 +68,11 @@ export CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=true
 Set `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false` only for deliberate endpoint
 probes. That relaxes the documented-route allowlist but does not relax the
 workspace/path fence.
+
+Documented global write routes outside the pinned workspace scope, such as
+`POST /file/image` and `POST /workspaces`, are deliberately excluded from the
+raw write allowlist. Add a typed tool if one of those operations becomes part of
+the product.
 
 ## DELETE Bodies
 

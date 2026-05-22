@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -83,6 +84,13 @@ func oneUserResources() []mcp.Resource {
 			Title:       "Live Test Evidence",
 			Description: "Committed live-test evidence and gates for the current MCP surface.",
 			MimeType:    "text/markdown",
+		},
+		{
+			URI:         "clockify://mcp/audit-tail",
+			Name:        "MCP audit tail",
+			Title:       "Audit Tail",
+			Description: "Tail of the optional local Clockify MCP audit JSONL log.",
+			MimeType:    "application/jsonl",
 		},
 		{
 			URI:         "clockify://workflows",
@@ -216,6 +224,12 @@ func (s *Service) readOneUserResource(ctx context.Context, uri string) ([]mcp.Re
 		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectAPIParityMatrix}}, true, nil
 	case uri == "clockify://mcp/live-evidence":
 		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectLiveTests}}, true, nil
+	case uri == "clockify://mcp/audit-tail":
+		text, err := s.auditTailText()
+		if err != nil {
+			return nil, true, err
+		}
+		return []mcp.ResourceContents{{URI: uri, MimeType: "application/jsonl", Text: text}}, true, nil
 	case uri == "clockify://workflows":
 		out, err := s.ClockifyToolsGuide(ctx, nil)
 		if err != nil {
@@ -257,6 +271,27 @@ func (s *Service) readOneUserResource(ctx context.Context, uri string) ([]mcp.Re
 	default:
 		return nil, false, nil
 	}
+}
+
+func (s *Service) auditTailText() (string, error) {
+	if s == nil || strings.TrimSpace(s.AuditLogPath) == "" {
+		return "", nil
+	}
+	raw, err := os.ReadFile(s.AuditLogPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	const maxTailBytes = 64 * 1024
+	if len(raw) > maxTailBytes {
+		raw = raw[len(raw)-maxTailBytes:]
+		if idx := strings.IndexByte(string(raw), '\n'); idx >= 0 && idx+1 < len(raw) {
+			raw = raw[idx+1:]
+		}
+	}
+	return string(raw), nil
 }
 
 func (s *Service) requireClockifyClient() error {

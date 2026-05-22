@@ -408,6 +408,38 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 	}
 }
 
+func TestUnsupportedOperationsAreGuidanceTools(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	registry := svc.FullAccessRegistry()
+	toolsByName := map[string]mcp.ToolDescriptor{}
+	for _, descriptor := range registry {
+		toolsByName[descriptor.Tool.Name] = descriptor
+	}
+	for _, oldName := range []string{
+		"clockify_invoices_send",
+		"clockify_invoices_items_update",
+		"clockify_webhooks_test",
+	} {
+		if _, ok := toolsByName[oldName]; ok {
+			t.Fatalf("old unsupported operation name %s still exists", oldName)
+		}
+	}
+	for _, newName := range []string{
+		"clockify_invoices_send_guidance",
+		"clockify_invoices_items_update_guidance",
+		"clockify_webhooks_test_guidance",
+	} {
+		descriptor, ok := toolsByName[newName]
+		if !ok {
+			t.Fatalf("missing guidance tool %s", newName)
+		}
+		if !descriptor.ReadOnlyHint || descriptor.DestructiveHint || descriptor.RiskClass != mcp.RiskRead {
+			t.Fatalf("%s guidance metadata = readOnly:%v destructive:%v risk:%v",
+				newName, descriptor.ReadOnlyHint, descriptor.DestructiveHint, descriptor.RiskClass)
+		}
+	}
+}
+
 func BenchmarkFullAccessRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	b.ReportAllocs()
@@ -474,6 +506,7 @@ func toolNameSet(descriptors []mcp.ToolDescriptor) map[string]bool {
 func assertToolsetToolsListMatchesRegistry(t *testing.T, descriptors []mcp.ToolDescriptor) {
 	t.Helper()
 	server := mcp.NewServer("test", descriptors)
+	server.ToolsListPageSize = 1000
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}

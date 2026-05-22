@@ -37,6 +37,8 @@ func TestResultEnvelopeRawAPIOutputRedactsCredentialFields(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
+	svc.EnableRawGet = true
 	out, err := svc.RawAPIGet(context.Background(), map[string]any{"path": "/workspaces/{workspaceId}/clients"})
 	if err != nil {
 		t.Fatalf("RawAPIGet failed: %v", err)

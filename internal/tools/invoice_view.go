@@ -304,7 +304,7 @@ func invoiceSuggestions(invoiceID, status string, balance *MoneyView) []ToolSugg
 	var out []ToolSuggestion
 	switch status {
 	case "UNSENT":
-		out = append(out, ToolSuggestion{Tool: "clockify_invoices_send", Reason: "Send this unsent invoice to the client.", Arguments: map[string]any{"invoice_id": invoiceID}})
+		out = append(out, ToolSuggestion{Tool: "clockify_invoices_send_guidance", Reason: "Show how to send this unsent invoice through the Clockify UI.", Arguments: map[string]any{"invoice_id": invoiceID}})
 	case "SENT", "OVERDUE", "PARTIALLY_PAID":
 		if balance == nil || balance.AmountCents != 0 {
 			out = append(out, ToolSuggestion{Tool: "clockify_invoices_mark_paid", Reason: "Mark this invoice paid after confirming payment.", Arguments: map[string]any{"invoice_id": invoiceID, "dry_run": true}})

@@ -90,12 +90,43 @@ func TestRawFallbackCannotHitFileImage(t *testing.T) {
 	if _, err := svc.RawAPIGet(context.Background(), map[string]any{"path": "/file/image"}); err == nil {
 		t.Fatal("RawAPIGet(/file/image) succeeded, want rejection")
 	}
+	svc.EnableRawTools = true
+	svc.EnableRawGet = true
 	svc.EnableRawWrites = true
 	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{"method": "POST", "path": "/file/image", "body": map[string]any{}}); err == nil {
 		t.Fatal("RawAPIRequest(POST /file/image) succeeded, want rejection")
 	}
 	if called {
 		t.Fatal("raw fallback must reject /file/image before any upstream request")
+	}
+}
+
+func TestRawAPIGetRequiresExplicitEnablement(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("disabled raw GET reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawTools = true
+	_, err := svc.RawAPIGet(context.Background(), map[string]any{"path": "/workspaces/{workspaceId}/clients"})
+	if err == nil || !strings.Contains(err.Error(), "CLOCKIFY_ENABLE_RAW_GET") {
+		t.Fatalf("disabled raw GET err = %v, want CLOCKIFY_ENABLE_RAW_GET gate", err)
+	}
+}
+
+func TestRawAPIGetSensitivePathRequiresAdminOrAllToolset(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("sensitive raw GET reached upstream outside admin/all: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawTools = true
+	svc.EnableRawGet = true
+	_, err := svc.RawAPIGet(context.Background(), map[string]any{"path": "/workspaces/{workspaceId}/invoices"})
+	if err == nil || !strings.Contains(err.Error(), "admin or all") {
+		t.Fatalf("sensitive raw GET err = %v, want admin/all gate", err)
 	}
 }
 
@@ -109,6 +140,7 @@ func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	_, err := svc.RawAPIRequest(context.Background(), map[string]any{
 		"method": "POST",
 		"path":   "/workspaces/{workspaceId}/clients",
@@ -118,6 +150,7 @@ func TestRawFallbackNonGETMethodsRequireExplicitEnablement(t *testing.T) {
 		t.Fatalf("disabled raw POST err = %v, want CLOCKIFY_ENABLE_RAW_WRITES gate", err)
 	}
 
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
 		"method": "POST",
@@ -148,6 +181,7 @@ func TestRawAPIWriteDocumentedOnly(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.RawWriteDocumentedOnly = true
 	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
@@ -177,6 +211,7 @@ func TestRawAPIWriteDocumentedOnlyAllowsByIDRoute(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.RawWriteDocumentedOnly = true
 	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
@@ -197,6 +232,7 @@ func TestRawAPIWriteDocumentedOnlyRejectsUndocumented(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.RawWriteDocumentedOnly = true
 	_, err := svc.RawAPIRequest(context.Background(), map[string]any{
@@ -219,6 +255,7 @@ func TestRawAPIWriteDocumentedOnlyFalseAllowsUndocumented(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.RawWriteDocumentedOnly = false
 	if _, err := svc.RawAPIRequest(context.Background(), map[string]any{
@@ -240,6 +277,7 @@ func TestRawAPIDeletePreservesBody(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
 		"method": "DELETE",
@@ -268,6 +306,7 @@ func TestRawAPIDeleteEmptyBody(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
 		"method": "DELETE",

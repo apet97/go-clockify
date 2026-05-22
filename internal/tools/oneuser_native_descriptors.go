@@ -23,16 +23,24 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 		}
 		out = append(out, nativeDirectDescriptor(priority, name, old, entity, change, handler))
 	}
+	addGuidance := func(priority int, name, oldName string, handler mcp.ToolHandler) {
+		old, ok := sources[oldName]
+		if !ok {
+			fmt.Fprintf(os.Stderr, "WARNING: descriptor source %q missing for tool %q — skipping\n", oldName, name)
+			return
+		}
+		out = append(out, nativeGuidanceDescriptor(priority, name, old, handler))
+	}
 	add(200, "clockify_invoices_list", "clockify_list_invoices", "invoice", "", s.listInvoices)
 	add(201, "clockify_invoices_get", "clockify_get_invoice", "invoice", "", s.getInvoice)
 	add(202, "clockify_invoices_create", "clockify_create_invoice", "invoice", "created", s.createInvoice)
 	add(203, "clockify_invoices_update", "clockify_update_invoice", "invoice", "updated", s.updateInvoice)
 	add(204, "clockify_invoices_delete", "clockify_delete_invoice", "invoice", "deleted", s.deleteInvoice)
-	add(205, "clockify_invoices_send", "clockify_send_invoice", "invoice", "updated", s.sendInvoice)
+	addGuidance(205, "clockify_invoices_send_guidance", "clockify_send_invoice", s.sendInvoiceGuidance)
 	add(206, "clockify_invoices_mark_paid", "clockify_mark_invoice_paid", "invoice", "updated", s.markInvoicePaid)
 	add(207, "clockify_invoices_items_list", "clockify_list_invoice_items", "invoice_item", "", s.listInvoiceItems)
 	add(208, "clockify_invoices_items_add", "clockify_add_invoice_item", "invoice_item", "created", s.addInvoiceItem)
-	add(209, "clockify_invoices_items_update", "clockify_update_invoice_item", "invoice_item", "updated", s.updateInvoiceItem)
+	addGuidance(209, "clockify_invoices_items_update_guidance", "clockify_update_invoice_item", s.updateInvoiceItemGuidance)
 	add(216, "clockify_invoices_items_delete", "clockify_delete_invoice_item", "invoice_item", "deleted", s.deleteInvoiceItem)
 	add(36, "clockify_projects_templates_list", "clockify_list_project_templates", "project_template", "", s.ListProjectTemplates)
 	add(37, "clockify_projects_templates_create", "clockify_create_project_template", "project_template", "created", s.CreateProjectTemplate)
@@ -83,7 +91,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	add(802, "clockify_webhooks_create", "clockify_create_webhook", "webhook", "created", s.CreateWebhook)
 	add(803, "clockify_webhooks_update", "clockify_update_webhook", "webhook", "updated", s.UpdateWebhook)
 	add(804, "clockify_webhooks_delete", "clockify_delete_webhook", "webhook", "deleted", s.DeleteWebhook)
-	add(805, "clockify_webhooks_test", "clockify_test_webhook", "webhook", "updated", s.TestWebhook)
+	addGuidance(805, "clockify_webhooks_test_guidance", "clockify_test_webhook", s.testWebhookGuidance)
 	add(806, "clockify_webhooks_events", "clockify_list_webhook_events", "webhook_event", "", s.ListWebhookEvents)
 	add(900, "clockify_groups_list", "clockify_list_user_groups_admin", "group", "", s.ListUserGroupsAdmin)
 	add(901, "clockify_groups_get", "clockify_get_user_group", "group", "", s.GetUserGroup)
@@ -269,6 +277,28 @@ func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, e
 	delete(tool.Annotations, "wraps")
 	tool.Annotations["handlerKind"] = "native handler"
 	return firstSliceDescriptor(priority, tool, aliasHandler(name, entity, change, handler))
+}
+
+func nativeGuidanceDescriptor(priority int, name string, old mcp.ToolDescriptor, handler mcp.ToolHandler) mcp.ToolDescriptor {
+	tool := toolRO(name, guidanceDescription(name), old.Tool.InputSchema)
+	if tool.Annotations == nil {
+		tool.Annotations = map[string]any{}
+	}
+	tool.Annotations["handlerKind"] = "native handler"
+	return firstSliceDescriptor(priority, tool, handler)
+}
+
+func guidanceDescription(name string) string {
+	switch name {
+	case "clockify_invoices_send_guidance":
+		return "Explain that Clockify does not expose an invoice send-email endpoint through the public API; use the Clockify UI for email delivery."
+	case "clockify_invoices_items_update_guidance":
+		return "Explain that Clockify does not expose an update endpoint for invoice line items; delete the line and re-add it instead."
+	case "clockify_webhooks_test_guidance":
+		return "Explain that Clockify does not expose a webhook test delivery endpoint; trigger a real event or inspect delivery logs in the Clockify UI."
+	default:
+		return "Explain that this operation is unsupported by the Clockify public API."
+	}
 }
 
 func adjustOneUserNativeSchema(name string, schema map[string]any) {

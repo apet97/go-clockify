@@ -18,10 +18,8 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | `clockify_invoices_create` | billing | Creates an invoice. | yes |
 | `clockify_invoices_update` | billing | Updates invoice fields or status. | yes |
 | `clockify_invoices_delete` | billing, destructive | Deletes an invoice. | yes |
-| `clockify_invoices_send` | billing, external side effect, destructive | Unsupported by Clockify API; returns guidance for UI email send. | no |
 | `clockify_invoices_mark_paid` | billing | Checks status and guides payment creation when needed. | yes |
 | `clockify_invoices_items_add` | billing | Adds invoice line items. | yes |
-| `clockify_invoices_items_update` | billing | Unsupported by Clockify API; delete and re-add the line instead. | no |
 | `clockify_invoices_items_delete` | billing, destructive | Deletes an invoice line by index. | yes |
 | `clockify_invoices_import_time` | billing | Imports billable time into an invoice. | no |
 | `clockify_invoices_import_expenses` | billing | Imports billable time and expenses into an invoice. | no |
@@ -57,7 +55,6 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | `clockify_webhooks_create` | external side effect | Creates a subscription that delivers to an HTTPS URL. | yes |
 | `clockify_webhooks_update` | external side effect | Changes future outbound webhook deliveries. | yes |
 | `clockify_webhooks_delete` | external side effect, destructive | Stops future deliveries by deleting a webhook. | yes |
-| `clockify_webhooks_test` | external side effect | Unsupported by Clockify API; returns guidance for triggering a real event. | no |
 | `clockify_groups_create` | admin | Creates a user group. | no |
 | `clockify_groups_update` | admin | Updates a user group. | no |
 | `clockify_groups_delete` | admin, destructive | Deletes a user group. | yes |
@@ -69,7 +66,10 @@ campaigns limited to the sacrificial workspace described in `docs/live-tests.md`
 | `clockify_users_invite` | admin, permission change, external side effect, destructive | Invites users by email when `send_email` is true. | yes |
 | `clockify_entries_mark_invoiced` | billing | Marks time entries invoiced or not invoiced. | no |
 
-Unsupported tools with risky labels do not call upstream; they return clean
-`unsupported` guidance. `dry_run:true` previews the resolved payload and should
-not be treated as live happy-path evidence unless the live test explicitly says
-that recovery-only evidence is the target.
+Unsupported Clockify operations are exposed as read-only guidance tools
+(`clockify_invoices_send_guidance`,
+`clockify_invoices_items_update_guidance`, and
+`clockify_webhooks_test_guidance`) rather than dangerous action tools.
+`dry_run:true` previews the resolved payload and should not be treated as live
+happy-path evidence unless the live test explicitly says that recovery-only
+evidence is the target.

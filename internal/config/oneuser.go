@@ -25,6 +25,11 @@ const (
 	MaxMessageSize                        = 100 * 1024 * 1024
 	MaxToolResultBytes                    = 100 * 1024 * 1024
 	DefaultToolset                        = "default"
+	DefaultToolRateLimitPerMinute         = 120
+	DefaultReadRateLimitPerMinute         = 120
+	DefaultWriteRateLimitPerMinute        = 30
+	DefaultBillingAdminRateLimitPerMinute = 10
+	DefaultDestructiveRateLimitPerMinute  = 5
 	DefaultCircuitBreakerFailureThreshold = 5
 	DefaultCircuitBreakerOpenDuration     = 45 * time.Second
 	DefaultCircuitBreakerHalfOpenProbes   = 1
@@ -33,21 +38,30 @@ const (
 // OneUserConfig is the complete runtime configuration for the
 // one-user/full-access stdio product path.
 type OneUserConfig struct {
-	APIKey                 string
-	WorkspaceID            string
-	Timezone               string
-	BaseURL                string
-	LogLevel               string
-	MaxInFlightToolCalls   int
-	ToolTimeout            time.Duration
-	MaxMessageSize         int64
-	MaxToolResultBytes     int
-	ToolRateLimitPerMinute int
-	Toolset                string
-	EnableRawWrites        bool
-	RawWriteDocumentedOnly bool
-	WebhookAllowedDomains  []string
-	CircuitBreaker         clockify.CircuitBreakerConfig
+	APIKey                         string
+	WorkspaceID                    string
+	Timezone                       string
+	BaseURL                        string
+	LogLevel                       string
+	MaxInFlightToolCalls           int
+	ToolTimeout                    time.Duration
+	MaxMessageSize                 int64
+	MaxToolResultBytes             int
+	ToolRateLimitPerMinute         int
+	ToolRateLimitDisabled          bool
+	ReadRateLimitPerMinute         int
+	WriteRateLimitPerMinute        int
+	BillingAdminRateLimitPerMinute int
+	DestructiveRateLimitPerMinute  int
+	Toolset                        string
+	EnableRawTools                 bool
+	EnableRawGet                   bool
+	EnableRawWrites                bool
+	RawWriteDocumentedOnly         bool
+	AuditLogPath                   string
+	AuditLogMode                   string
+	WebhookAllowedDomains          []string
+	CircuitBreaker                 clockify.CircuitBreakerConfig
 }
 
 // LoadOneUser reads the intentionally tiny environment surface used by the
@@ -55,18 +69,23 @@ type OneUserConfig struct {
 // matrix by design.
 func LoadOneUser() (OneUserConfig, error) {
 	cfg := OneUserConfig{
-		APIKey:                 strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY")),
-		WorkspaceID:            strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID")),
-		Timezone:               strings.TrimSpace(os.Getenv("CLOCKIFY_TIMEZONE")),
-		BaseURL:                strings.TrimSpace(os.Getenv("CLOCKIFY_BASE_URL")),
-		LogLevel:               strings.TrimSpace(os.Getenv("MCP_LOG_LEVEL")),
-		MaxInFlightToolCalls:   DefaultMaxInFlightToolCalls,
-		ToolTimeout:            DefaultToolTimeout,
-		MaxMessageSize:         DefaultMaxMessageSize,
-		MaxToolResultBytes:     DefaultMaxToolResultBytes,
-		Toolset:                DefaultToolset,
-		RawWriteDocumentedOnly: true,
-		WebhookAllowedDomains:  parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
+		APIKey:                         strings.TrimSpace(os.Getenv("CLOCKIFY_API_KEY")),
+		WorkspaceID:                    strings.TrimSpace(os.Getenv("CLOCKIFY_WORKSPACE_ID")),
+		Timezone:                       strings.TrimSpace(os.Getenv("CLOCKIFY_TIMEZONE")),
+		BaseURL:                        strings.TrimSpace(os.Getenv("CLOCKIFY_BASE_URL")),
+		LogLevel:                       strings.TrimSpace(os.Getenv("MCP_LOG_LEVEL")),
+		MaxInFlightToolCalls:           DefaultMaxInFlightToolCalls,
+		ToolTimeout:                    DefaultToolTimeout,
+		MaxMessageSize:                 DefaultMaxMessageSize,
+		MaxToolResultBytes:             DefaultMaxToolResultBytes,
+		ToolRateLimitPerMinute:         DefaultToolRateLimitPerMinute,
+		ReadRateLimitPerMinute:         DefaultReadRateLimitPerMinute,
+		WriteRateLimitPerMinute:        DefaultWriteRateLimitPerMinute,
+		BillingAdminRateLimitPerMinute: DefaultBillingAdminRateLimitPerMinute,
+		DestructiveRateLimitPerMinute:  DefaultDestructiveRateLimitPerMinute,
+		Toolset:                        DefaultToolset,
+		RawWriteDocumentedOnly:         true,
+		WebhookAllowedDomains:          parseCommaListEnv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS"),
 		CircuitBreaker: clockify.CircuitBreakerConfig{
 			Enabled:          true,
 			FailureThreshold: DefaultCircuitBreakerFailureThreshold,
@@ -99,11 +118,27 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.EnableRawWrites = enableRawWrites
+	enableRawTools, err := parseBoolEnv("CLOCKIFY_ENABLE_RAW_TOOLS")
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.EnableRawTools = enableRawTools
+	enableRawGet, err := parseBoolEnv("CLOCKIFY_ENABLE_RAW_GET")
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.EnableRawGet = enableRawGet
 	rawWriteDocumentedOnly, err := parseBoolEnvDefault("CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY", true)
 	if err != nil {
 		return OneUserConfig{}, err
 	}
 	cfg.RawWriteDocumentedOnly = rawWriteDocumentedOnly
+	cfg.AuditLogPath = strings.TrimSpace(os.Getenv("CLOCKIFY_AUDIT_LOG"))
+	auditLogMode, err := parseAuditLogModeEnv()
+	if err != nil {
+		return OneUserConfig{}, err
+	}
+	cfg.AuditLogMode = auditLogMode
 	maxInFlight, err := parsePositiveIntEnv("CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS", DefaultMaxInFlightToolCalls)
 	if err != nil {
 		return OneUserConfig{}, err
@@ -124,11 +159,23 @@ func LoadOneUser() (OneUserConfig, error) {
 		return OneUserConfig{}, err
 	}
 	cfg.MaxToolResultBytes = maxToolResultBytes
-	rateLimit, err := parseNonNegativeIntEnv("CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE", 0)
+	rateLimit, rateLimitSet, err := parseNonNegativeIntEnvPresence("CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE", DefaultToolRateLimitPerMinute)
 	if err != nil {
 		return OneUserConfig{}, err
 	}
 	cfg.ToolRateLimitPerMinute = rateLimit
+	if rateLimitSet && rateLimit == 0 {
+		cfg.ToolRateLimitDisabled = true
+		cfg.ReadRateLimitPerMinute = 0
+		cfg.WriteRateLimitPerMinute = 0
+		cfg.BillingAdminRateLimitPerMinute = 0
+		cfg.DestructiveRateLimitPerMinute = 0
+	} else {
+		cfg.ReadRateLimitPerMinute = rateLimit
+		cfg.WriteRateLimitPerMinute = min(rateLimit, DefaultWriteRateLimitPerMinute)
+		cfg.BillingAdminRateLimitPerMinute = min(rateLimit, DefaultBillingAdminRateLimitPerMinute)
+		cfg.DestructiveRateLimitPerMinute = min(rateLimit, DefaultDestructiveRateLimitPerMinute)
+	}
 	toolset, err := parseToolsetEnv()
 	if err != nil {
 		return OneUserConfig{}, err
@@ -188,15 +235,20 @@ func parsePositiveIntEnv(name string, fallback int) (int, error) {
 // parseNonNegativeIntEnv reads name as a non-negative integer, returning def
 // when the variable is unset. Zero is permitted (it means "disabled").
 func parseNonNegativeIntEnv(name string, def int) (int, error) {
+	v, _, err := parseNonNegativeIntEnvPresence(name, def)
+	return v, err
+}
+
+func parseNonNegativeIntEnvPresence(name string, def int) (int, bool, error) {
 	raw := strings.TrimSpace(os.Getenv(name))
 	if raw == "" {
-		return def, nil
+		return def, false, nil
 	}
 	v, err := strconv.Atoi(raw)
 	if err != nil || v < 0 {
-		return 0, fmt.Errorf("%s must be a non-negative integer", name)
+		return 0, true, fmt.Errorf("%s must be a non-negative integer", name)
 	}
-	return v, nil
+	return v, true, nil
 }
 
 func parseBoundedPositiveIntEnv(name string, fallback, maxValue int) (int, error) {
@@ -258,6 +310,19 @@ func parseToolsetEnv() (string, error) {
 		return raw, nil
 	default:
 		return "", fmt.Errorf("CLOCKIFY_TOOLSET must be one of default, core, business, admin, all")
+	}
+}
+
+func parseAuditLogModeEnv() (string, error) {
+	raw := strings.ToLower(strings.TrimSpace(os.Getenv("CLOCKIFY_AUDIT_LOG_MODE")))
+	if raw == "" {
+		return "off", nil
+	}
+	switch raw {
+	case "off", "side_effects_only", "all":
+		return raw, nil
+	default:
+		return "", fmt.Errorf("CLOCKIFY_AUDIT_LOG_MODE must be one of off, side_effects_only, all")
 	}
 }
 

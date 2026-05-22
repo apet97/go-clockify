@@ -39,9 +39,6 @@ var documentedWriteRoutes = map[string]bool{
 	"PUT /workspaces/{workspaceId}/expenses/categories/{categoryId}":          true,
 	"PUT /workspaces/{workspaceId}/expenses/{expenseId}":                      true,
 
-	// file
-	"POST /file/image": true,
-
 	// holidays
 	"DELETE /workspaces/{workspaceId}/holidays/{holidayId}": true,
 	"POST /workspaces/{workspaceId}/holidays":               true,
@@ -187,6 +184,10 @@ var documentedWriteRoutes = map[string]bool{
 	"PUT /workspaces/{workspaceId}/webhooks/{webhookId}":                    true,
 
 	// workspaces
-	"POST /workspaces":              true,
 	"PUT /workspaces/{workspaceId}": true,
+}
+
+var documentedButRawUnsupportedRoutes = map[string]string{
+	"POST /file/image": "global file endpoint is outside pinned workspace; use a typed upload tool if added",
+	"POST /workspaces": "workspace creation is outside one-user pinned-workspace scope",
 }

@@ -17,8 +17,8 @@ func TestOneUserToolDescriptionsCallOutOperationalSideEffects(t *testing.T) {
 	}
 
 	cases := map[string][]string{
-		"clockify_invoices_send":            {"does not expose", "email", "external side effect", "clockify ui"},
-		"clockify_webhooks_test":            {"test delivery", "does not expose", "external side effect", "real event"},
+		"clockify_invoices_send_guidance":   {"does not expose", "email", "clockify ui"},
+		"clockify_webhooks_test_guidance":   {"test delivery", "does not expose", "real event"},
 		"clockify_users_invite":             {"invite", "email", "external side effect", "dry_run"},
 		"clockify_invoices_delete":          {"delete", "dry_run"},
 		"clockify_webhooks_delete":          {"delete", "destructive", "dry_run"},
@@ -114,6 +114,9 @@ func TestOneUserDestructiveLookingToolsAdvertiseDestructiveHint(t *testing.T) {
 }
 
 func contractAuditDestructiveName(name string) bool {
+	if strings.HasSuffix(name, "_guidance") {
+		return false
+	}
 	destructiveTerms := map[string]bool{
 		"delete":  true,
 		"remove":  true,

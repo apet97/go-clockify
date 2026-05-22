@@ -288,7 +288,7 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 		"due_date":    "2026-01-31T00:00:00Z",
 		"currency":    "USD",
 	})
-	callLiveToolOKOrRecovery(t, server, "clockify_invoices_send", map[string]any{"invoice_id": "65b382b606de527a7ee2b619"})
+	callLiveToolOKOrRecovery(t, server, "clockify_invoices_send_guidance", map[string]any{"invoice_id": "65b382b606de527a7ee2b619"})
 	callLiveToolOKOrRecovery(t, server, "clockify_expenses_create", map[string]any{
 		"amount":      float64(5),
 		"date":        "2026-01-06T00:00:00Z",
@@ -496,7 +496,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 		{"clockify_invoices_update", args("clockify_invoices_update", "invoice_id", invoiceID, "note", "live coverage probe")},
 		{"clockify_invoices_mark_paid", args("clockify_invoices_mark_paid", "invoice_id", invoiceID)},
 		{"clockify_invoices_items_add", args("clockify_invoices_items_add", "invoice_id", invoiceID, "description", "Live coverage item", "quantity", 1, "unit_price", 1)},
-		{"clockify_invoices_items_update", args("clockify_invoices_items_update", "invoice_id", invoiceID, "item_index", "0", "description", "Live coverage item", "quantity", 1, "unit_price", 1)},
+		{"clockify_invoices_items_update_guidance", args("clockify_invoices_items_update_guidance", "invoice_id", invoiceID, "item_index", "0", "description", "Live coverage item", "quantity", 1, "unit_price", 1)},
 		{"clockify_invoices_items_delete", args("clockify_invoices_items_delete", "invoice_id", invoiceID, "item_index", "0")},
 		{"clockify_invoices_export", args("clockify_invoices_export", "invoice_id", invoiceID, "format", "PDF")},
 		{"clockify_invoices_import_time", args("clockify_invoices_import_time", "invoice_id", invoiceID, "time_entry_ids", []any{entryID})},
@@ -572,7 +572,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	runRemainingLiveProbeTable(t, server, []remainingLiveProbe{
 		{"clockify_webhooks_get", args("clockify_webhooks_get", "webhook_id", webhookID)},
 		{"clockify_webhooks_update", args("clockify_webhooks_update", "webhook_id", webhookID, "name", liveOptionalName("mcp", runID, "wh-upd", 30))},
-		{"clockify_webhooks_test", args("clockify_webhooks_test", "webhook_id", webhookID)},
+		{"clockify_webhooks_test_guidance", args("clockify_webhooks_test_guidance", "webhook_id", webhookID)},
 		{"clockify_webhooks_delete", args("clockify_webhooks_delete", "webhook_id", webhookID)},
 	})
 

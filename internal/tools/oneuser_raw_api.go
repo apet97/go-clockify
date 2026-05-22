@@ -37,12 +37,21 @@ func (s *Service) RawAPIRequest(ctx context.Context, args map[string]any) (any, 
 }
 
 func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any) (any, error) {
-	if method != "GET" && (s == nil || !s.EnableRawWrites) {
+	if s == nil || !s.EnableRawTools {
+		return nil, fmt.Errorf("raw API tools are disabled; use workflow or domain tools first, or set CLOCKIFY_ENABLE_RAW_TOOLS=true")
+	}
+	if method == "GET" && !s.EnableRawGet {
+		return nil, fmt.Errorf("raw API GET is disabled; use workflow or domain tools first, or set CLOCKIFY_ENABLE_RAW_GET=true")
+	}
+	if method != "GET" && !s.EnableRawWrites {
 		return nil, fmt.Errorf("raw API writes are disabled; use workflow or domain tools first, or set CLOCKIFY_ENABLE_RAW_WRITES=true to allow %s", method)
 	}
 	path, err := safeRawPath(s.WorkspaceID, stringArg(args, "path"))
 	if err != nil {
 		return nil, err
+	}
+	if method == "GET" && sensitiveRawReadPath(path) && !rawSensitiveReadToolsetAllowed(s.Toolset) {
+		return nil, fmt.Errorf("raw GET %s may expose sensitive workspace data; use a typed tool, or select CLOCKIFY_TOOLSET=admin or all", path)
 	}
 	if method != "GET" && s.RawWriteDocumentedOnly && !isDocumentedRawWriteRoute(method, path) {
 		return nil, fmt.Errorf("raw write %s %s is not a documented Clockify endpoint; use a typed domain tool if one exists, or set CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY=false only for endpoints you have confirmed are documented or probed", method, path)
@@ -82,6 +91,42 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 		ids[key] = value
 	}
 	return result(action, "raw_api", ids, data, changedFor(rawChange(method), "raw_api", data, ids), nil, nil), nil
+}
+
+func rawSensitiveReadToolsetAllowed(toolset string) bool {
+	switch strings.ToLower(strings.TrimSpace(toolset)) {
+	case "admin", "all":
+		return true
+	default:
+		return false
+	}
+}
+
+func sensitiveRawReadPath(path string) bool {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) < 3 || parts[0] != "workspaces" {
+		return false
+	}
+	segments := map[string]bool{
+		"approvals":          true,
+		"audit-log":          true,
+		"balances":           true,
+		"billing":            true,
+		"groups":             true,
+		"invoices":           true,
+		"payments":           true,
+		"settings":           true,
+		"time-off":           true,
+		"users":              true,
+		"webhooks":           true,
+		"workspace-settings": true,
+	}
+	for _, segment := range parts[2:] {
+		if segments[segment] {
+			return true
+		}
+	}
+	return false
 }
 
 func safeRawPath(workspaceID, raw string) (string, error) {

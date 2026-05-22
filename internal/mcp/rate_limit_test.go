@@ -93,7 +93,7 @@ func TestFamilyLimiterDoesNotCapReads(t *testing.T) {
 }
 
 func TestRateLimitedEnvelopeHasStructuredRecovery(t *testing.T) {
-	env := rateLimitedEnvelope("clockify_status")
+	env := rateLimitedEnvelope("clockify_status", RiskRead, 60)
 	if env["ok"] != false {
 		t.Fatalf("ok = %v, want false", env["ok"])
 	}
@@ -107,6 +107,49 @@ func TestRateLimitedEnvelopeHasStructuredRecovery(t *testing.T) {
 	rec, ok := env["recovery"].(map[string]any)
 	if !ok || rec["retryable"] != true || rec["hint"] == "" {
 		t.Fatalf("recovery = %v, want a retryable hint", env["recovery"])
+	}
+	if rec["retryAfterSeconds"] != 60 {
+		t.Fatalf("retryAfterSeconds = %v, want 60", rec["retryAfterSeconds"])
+	}
+}
+
+func TestRiskRateLimiterSelectsSeparateBuckets(t *testing.T) {
+	limits := RiskRateLimits{
+		ReadPerMinute:         2,
+		WritePerMinute:        1,
+		BillingAdminPerMinute: 1,
+		DestructivePerMinute:  1,
+	}
+	limiter := newRiskRateLimiter(limits)
+	if limiter == nil {
+		t.Fatal("newRiskRateLimiter returned nil")
+	}
+	if ok, _ := limiter.allow(RiskRead); !ok {
+		t.Fatal("first read should be allowed")
+	}
+	if ok, _ := limiter.allow(RiskRead); !ok {
+		t.Fatal("second read should be allowed from the read bucket")
+	}
+	if ok, _ := limiter.allow(RiskRead); ok {
+		t.Fatal("third read should be rate-limited")
+	}
+	if ok, _ := limiter.allow(RiskWrite); !ok {
+		t.Fatal("write should use its own bucket")
+	}
+	if ok, _ := limiter.allow(RiskWrite); ok {
+		t.Fatal("second write should be rate-limited")
+	}
+	if ok, _ := limiter.allow(RiskBilling); !ok {
+		t.Fatal("billing should use high-risk bucket")
+	}
+	if ok, _ := limiter.allow(RiskAdmin); ok {
+		t.Fatal("admin should share the billing/admin bucket")
+	}
+	if ok, _ := limiter.allow(RiskDestructive); !ok {
+		t.Fatal("destructive should use its own bucket")
+	}
+	if ok, _ := limiter.allow(RiskDestructive); ok {
+		t.Fatal("second destructive call should be rate-limited")
 	}
 }
 

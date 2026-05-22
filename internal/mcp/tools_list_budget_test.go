@@ -33,6 +33,33 @@ func TestToolsListBudgetWire(t *testing.T) {
 	}
 }
 
+func TestDefaultToolsListAdvertisesOutputSchemas(t *testing.T) {
+	raw := dispatchToolsList(t, "default")
+	var resp struct {
+		Result struct {
+			Tools []struct {
+				Name         string         `json:"name"`
+				OutputSchema map[string]any `json:"outputSchema"`
+			} `json:"tools"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal tools/list: %v\n%s", err, raw)
+	}
+	if len(resp.Result.Tools) != 16 {
+		t.Fatalf("default tools/list returned %d tools, want 16", len(resp.Result.Tools))
+	}
+	for _, tool := range resp.Result.Tools {
+		if len(tool.OutputSchema) == 0 {
+			t.Fatalf("%s missing advertised outputSchema in default tools/list", tool.Name)
+		}
+		required, _ := tool.OutputSchema["required"].([]any)
+		if len(required) == 0 {
+			t.Fatalf("%s outputSchema missing required envelope keys: %+v", tool.Name, tool.OutputSchema)
+		}
+	}
+}
+
 func dispatchToolsList(t *testing.T, toolset string) []byte {
 	t.Helper()
 	svc := &tools.Service{}

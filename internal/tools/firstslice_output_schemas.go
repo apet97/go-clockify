@@ -44,17 +44,19 @@ func firstSliceOutputSchema(action string, dataSchema map[string]any) map[string
 			"action",
 		},
 		"properties": map[string]any{
-			"ok":       map[string]any{"type": "boolean"},
-			"action":   map[string]any{"type": "string", "const": action},
-			"entity":   map[string]any{"type": "string"},
-			"ids":      map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
-			"data":     dataSchema,
-			"meta":     map[string]any{"type": "object", "additionalProperties": true},
-			"changed":  schemaFor[ChangeSet](),
-			"warnings": schemaFor[[]Warning](),
-			"next":     schemaFor[[]NextAction](),
-			"error":    schemaFor[ErrorInfo](),
-			"recovery": schemaFor[RecoveryHint](),
+			"ok":        map[string]any{"type": "boolean"},
+			"supported": map[string]any{"type": "boolean"},
+			"performed": map[string]any{"type": "boolean"},
+			"action":    map[string]any{"type": "string", "const": action},
+			"entity":    map[string]any{"type": "string"},
+			"ids":       map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
+			"data":      dataSchema,
+			"meta":      map[string]any{"type": "object", "additionalProperties": true},
+			"changed":   schemaFor[ChangeSet](),
+			"warnings":  schemaFor[[]Warning](),
+			"next":      schemaFor[[]NextAction](),
+			"error":     schemaFor[ErrorInfo](),
+			"recovery":  schemaFor[RecoveryHint](),
 		},
 	}
 }
@@ -186,14 +188,18 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		})
 	case "clockify_invoices_list":
 		return schemaFor[[]CompactInvoiceView]()
-	case "clockify_invoices_get", "clockify_invoices_create", "clockify_invoices_update", "clockify_invoices_send", "clockify_invoices_mark_paid":
+	case "clockify_invoices_get", "clockify_invoices_create", "clockify_invoices_update", "clockify_invoices_mark_paid":
 		return entityObjectDataSchema("id", "number", "status", "clientId")
+	case "clockify_invoices_send_guidance":
+		return guidanceDataSchema()
 	case "clockify_invoices_delete":
 		return entityObjectDataSchema("deleted", "invoiceId")
 	case "clockify_invoices_items_list":
 		return entityArrayDataSchema("id", "invoiceItemId", "description", "quantity", "unitPrice")
-	case "clockify_invoices_items_add", "clockify_invoices_items_update":
+	case "clockify_invoices_items_add":
 		return entityObjectDataSchema("id", "invoiceItemId", "description", "quantity", "unitPrice")
+	case "clockify_invoices_items_update_guidance":
+		return guidanceDataSchema()
 	case "clockify_invoices_items_delete":
 		return entityObjectDataSchema("deleted", "invoiceId", "itemIndex", "itemId")
 	case "clockify_invoices_export":
@@ -272,8 +278,8 @@ func firstSliceDataOutputSchema(action string) map[string]any {
 		return entityObjectDataSchema("id", "name", "url", "webhookEvent")
 	case "clockify_webhooks_delete":
 		return entityObjectDataSchema("deleted", "webhookId")
-	case "clockify_webhooks_test":
-		return entityObjectDataSchema("id", "webhookId", "status")
+	case "clockify_webhooks_test_guidance":
+		return guidanceDataSchema()
 	case "clockify_webhooks_events":
 		return stringArraySchema("Supported Clockify webhook event names.")
 	case "clockify_groups_list":
@@ -379,6 +385,14 @@ func objectDataSchema(properties map[string]any) map[string]any {
 		"additionalProperties": true,
 		"properties":           properties,
 	}
+}
+
+func guidanceDataSchema() map[string]any {
+	return objectDataSchema(map[string]any{
+		"supported": map[string]any{"type": "boolean"},
+		"performed": map[string]any{"type": "boolean"},
+		"hint":      map[string]any{"type": "string"},
+	})
 }
 
 func nullableObjectSchema() map[string]any {

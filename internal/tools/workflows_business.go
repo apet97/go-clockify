@@ -208,7 +208,7 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 	}
 	standard.Next = []NextAction{
 		{Tool: "clockify_invoices_items_add", Args: map[string]any{"invoice_id": standard.IDs["invoiceId"]}, Reason: "Add manual invoice items if needed."},
-		{Tool: "clockify_invoices_send", Args: map[string]any{"invoice_id": standard.IDs["invoiceId"]}, Reason: "Send the invoice when it is ready."},
+		{Tool: "clockify_invoices_send_guidance", Args: map[string]any{"invoice_id": standard.IDs["invoiceId"]}, Reason: "Show how to send the invoice through the Clockify UI when it is ready."},
 	}
 	return standard, nil
 }
@@ -365,7 +365,7 @@ func (s *Service) ClockifySetupWebhook(ctx context.Context, args map[string]any)
 		return nil, err
 	}
 	standard := standardizeDomainResult("clockify_setup_webhook", "webhook", "created", out, webhookArgs)
-	standard.Next = []NextAction{{Tool: "clockify_webhooks_test", Args: map[string]any{"webhook_id": standard.IDs["webhookId"]}, Reason: "Send a test event after setup if desired."}}
+	standard.Next = []NextAction{{Tool: "clockify_webhooks_test_guidance", Args: map[string]any{"webhook_id": standard.IDs["webhookId"]}, Reason: "Show webhook testing options after setup if desired."}}
 	return standard, nil
 }
 

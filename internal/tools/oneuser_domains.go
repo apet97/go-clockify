@@ -25,7 +25,11 @@ func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
 	}
 	full := s.FullAccessRegistry()
 	out := make([]mcp.ToolDescriptor, 0, len(full))
+	raw := make([]mcp.ToolDescriptor, 0, 2)
 	for _, descriptor := range full {
+		if descriptor.Tool.Name == "clockify_api_get" || descriptor.Tool.Name == "clockify_api_request" {
+			raw = append(raw, descriptor)
+		}
 		if toolset == "default" {
 			if descriptorInTier(descriptor, "default") {
 				out = append(out, descriptor)
@@ -35,6 +39,9 @@ func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
 		if toolAllowedForToolset(toolset, descriptor.Tool.Name) {
 			out = append(out, descriptor)
 		}
+	}
+	if s != nil && s.EnableRawTools {
+		out = append(out, raw...)
 	}
 	return out
 }

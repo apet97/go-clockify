@@ -13,6 +13,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 	defer upstream.Close()
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
+	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
 	server := mcp.NewServer("test", svc.FullAccessRegistry())
@@ -24,10 +25,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 		"clockify_demo_cleanup":       "idempotent cleanup has no matching fake demo resources to delete",
 	}
 	recoverableWrites := map[string]string{
-		"clockify_invoices_send":         "clockify_invoices_get",
-		"clockify_invoices_mark_paid":    "clockify_invoices_payments_create",
-		"clockify_webhooks_test":         "clockify_webhooks_get",
-		"clockify_invoices_items_update": "clockify_invoices_items_delete",
+		"clockify_invoices_mark_paid": "clockify_invoices_payments_create",
 	}
 
 	for _, descriptor := range svc.FullAccessRegistry() {

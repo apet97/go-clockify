@@ -51,11 +51,33 @@ func TestLoadOneUserMinimalConfig(t *testing.T) {
 	if cfg.MaxToolResultBytes != DefaultMaxToolResultBytes {
 		t.Fatalf("MaxToolResultBytes = %d", cfg.MaxToolResultBytes)
 	}
+	if cfg.ToolRateLimitPerMinute != DefaultToolRateLimitPerMinute {
+		t.Fatalf("ToolRateLimitPerMinute = %d, want %d", cfg.ToolRateLimitPerMinute, DefaultToolRateLimitPerMinute)
+	}
+	if cfg.ToolRateLimitDisabled {
+		t.Fatal("ToolRateLimitDisabled defaulted true")
+	}
+	if cfg.ReadRateLimitPerMinute != DefaultReadRateLimitPerMinute ||
+		cfg.WriteRateLimitPerMinute != DefaultWriteRateLimitPerMinute ||
+		cfg.BillingAdminRateLimitPerMinute != DefaultBillingAdminRateLimitPerMinute ||
+		cfg.DestructiveRateLimitPerMinute != DefaultDestructiveRateLimitPerMinute {
+		t.Fatalf("risk rate limits = read:%d write:%d billing_admin:%d destructive:%d",
+			cfg.ReadRateLimitPerMinute,
+			cfg.WriteRateLimitPerMinute,
+			cfg.BillingAdminRateLimitPerMinute,
+			cfg.DestructiveRateLimitPerMinute)
+	}
 	if cfg.Toolset != DefaultToolset {
 		t.Fatalf("Toolset = %q, want %q", cfg.Toolset, DefaultToolset)
 	}
 	if cfg.EnableRawWrites {
 		t.Fatal("EnableRawWrites defaulted true")
+	}
+	if cfg.EnableRawTools {
+		t.Fatal("EnableRawTools defaulted true")
+	}
+	if cfg.EnableRawGet {
+		t.Fatal("EnableRawGet defaulted true")
 	}
 	if !cfg.RawWriteDocumentedOnly {
 		t.Fatal("RawWriteDocumentedOnly defaulted false")
@@ -84,9 +106,14 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	t.Setenv("CLOCKIFY_TOOL_TIMEOUT", "2m")
 	t.Setenv("CLOCKIFY_MAX_MESSAGE_SIZE", "8388608")
 	t.Setenv("CLOCKIFY_MAX_TOOL_RESULT_BYTES", "12345")
+	t.Setenv("CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE", "60")
 	t.Setenv("CLOCKIFY_TOOLSET", "business")
 	t.Setenv("CLOCKIFY_ENABLE_RAW_WRITES", "true")
+	t.Setenv("CLOCKIFY_ENABLE_RAW_TOOLS", "true")
+	t.Setenv("CLOCKIFY_ENABLE_RAW_GET", "true")
 	t.Setenv("CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY", "false")
+	t.Setenv("CLOCKIFY_AUDIT_LOG", "/tmp/clockify-audit.jsonl")
+	t.Setenv("CLOCKIFY_AUDIT_LOG_MODE", "all")
 	t.Setenv("CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS", "hooks.example.com, .trusted.test, , api.example.com ")
 	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER", "disabled")
 	t.Setenv("CLOCKIFY_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "7")
@@ -109,14 +136,37 @@ func TestLoadOneUserOptionalRuntimeConfig(t *testing.T) {
 	if cfg.MaxToolResultBytes != 12345 {
 		t.Fatalf("MaxToolResultBytes = %d", cfg.MaxToolResultBytes)
 	}
+	if cfg.ToolRateLimitPerMinute != 60 {
+		t.Fatalf("ToolRateLimitPerMinute = %d", cfg.ToolRateLimitPerMinute)
+	}
+	if cfg.ReadRateLimitPerMinute != 60 || cfg.WriteRateLimitPerMinute != 30 ||
+		cfg.BillingAdminRateLimitPerMinute != 10 || cfg.DestructiveRateLimitPerMinute != 5 {
+		t.Fatalf("risk rate limits = read:%d write:%d billing_admin:%d destructive:%d",
+			cfg.ReadRateLimitPerMinute,
+			cfg.WriteRateLimitPerMinute,
+			cfg.BillingAdminRateLimitPerMinute,
+			cfg.DestructiveRateLimitPerMinute)
+	}
 	if cfg.Toolset != "business" {
 		t.Fatalf("Toolset = %q", cfg.Toolset)
 	}
 	if !cfg.EnableRawWrites {
 		t.Fatal("EnableRawWrites = false")
 	}
+	if !cfg.EnableRawTools {
+		t.Fatal("EnableRawTools = false")
+	}
+	if !cfg.EnableRawGet {
+		t.Fatal("EnableRawGet = false")
+	}
 	if cfg.RawWriteDocumentedOnly {
 		t.Fatal("RawWriteDocumentedOnly = true")
+	}
+	if cfg.AuditLogPath != "/tmp/clockify-audit.jsonl" {
+		t.Fatalf("AuditLogPath = %q", cfg.AuditLogPath)
+	}
+	if cfg.AuditLogMode != "all" {
+		t.Fatalf("AuditLogMode = %q", cfg.AuditLogMode)
 	}
 	wantDomains := []string{"hooks.example.com", ".trusted.test", "api.example.com"}
 	if !reflect.DeepEqual(cfg.WebhookAllowedDomains, wantDomains) {
@@ -169,8 +219,39 @@ func TestLoadOneUserOptionalRuntimeConfigOnlyRequiresKeyAndWorkspace(t *testing.
 	if cfg.EnableRawWrites {
 		t.Fatal("EnableRawWrites defaulted true")
 	}
+	if cfg.EnableRawTools {
+		t.Fatal("EnableRawTools defaulted true")
+	}
+	if cfg.EnableRawGet {
+		t.Fatal("EnableRawGet defaulted true")
+	}
 	if len(cfg.WebhookAllowedDomains) != 0 {
 		t.Fatalf("WebhookAllowedDomains = %#v", cfg.WebhookAllowedDomains)
+	}
+}
+
+func TestLoadOneUserToolRateLimitExplicitZeroDisablesLimiter(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+	t.Setenv("CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE", "0")
+
+	cfg, err := LoadOneUser()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ToolRateLimitPerMinute != 0 {
+		t.Fatalf("ToolRateLimitPerMinute = %d, want 0", cfg.ToolRateLimitPerMinute)
+	}
+	if !cfg.ToolRateLimitDisabled {
+		t.Fatal("ToolRateLimitDisabled = false, want true")
+	}
+	if cfg.ReadRateLimitPerMinute != 0 || cfg.WriteRateLimitPerMinute != 0 ||
+		cfg.BillingAdminRateLimitPerMinute != 0 || cfg.DestructiveRateLimitPerMinute != 0 {
+		t.Fatalf("risk rate limits should be disabled, got read:%d write:%d billing_admin:%d destructive:%d",
+			cfg.ReadRateLimitPerMinute,
+			cfg.WriteRateLimitPerMinute,
+			cfg.BillingAdminRateLimitPerMinute,
+			cfg.DestructiveRateLimitPerMinute)
 	}
 }
 
@@ -353,9 +434,21 @@ func TestLoadOneUserRejectsInvalidRuntimeConfig(t *testing.T) {
 			envName: "CLOCKIFY_ENABLE_RAW_WRITES",
 			value:   "maybe",
 		},
+		"bad raw tools": {
+			envName: "CLOCKIFY_ENABLE_RAW_TOOLS",
+			value:   "maybe",
+		},
+		"bad raw get": {
+			envName: "CLOCKIFY_ENABLE_RAW_GET",
+			value:   "maybe",
+		},
 		"bad toolset": {
 			envName: "CLOCKIFY_TOOLSET",
 			value:   "everything",
+		},
+		"bad audit log mode": {
+			envName: "CLOCKIFY_AUDIT_LOG_MODE",
+			value:   "sometimes",
 		},
 		"bad circuit breaker mode": {
 			envName: "CLOCKIFY_CIRCUIT_BREAKER",

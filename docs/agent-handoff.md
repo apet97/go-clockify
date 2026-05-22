@@ -14,15 +14,17 @@ workspace. The environment contract is intentionally small:
 
 The runtime loads all 156 tools at startup. `tools/list` advertises the
 configured surface: 16 everyday tools by default, or all 156 with
-`CLOCKIFY_TOOLSET=all`. Unadvertised tools remain dispatch-callable by name.
-Agents should call workflow tools first, use domain tools for precise CRUD, and
-use raw API fallback tools only when no workflow or domain tool fits.
+`CLOCKIFY_TOOLSET=all`. For default/core/business/admin, unadvertised tools are
+not dispatch-callable. Agents should call workflow tools first, use domain tools
+for precise CRUD, and use raw API fallback tools only when no workflow or domain
+tool fits.
 
 ## Invariants
 
 - Keep stdio as the only runtime path.
 - Keep the one-key, one-workspace configuration model.
-- Keep all tools loaded and dispatch-callable from startup.
+- Keep all tools loaded from startup, with dispatch bounded by the advertised
+  toolset unless `CLOCKIFY_TOOLSET=all`.
 - Keep the catalog order: workflow, domain, raw fallback.
 - Keep write-style workflow outputs ID-rich.
 - Keep recoverable failures structured with recovery guidance.

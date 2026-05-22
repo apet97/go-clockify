@@ -18,36 +18,40 @@ Long-running tools emit `notifications/progress` when the client supplies a
 increase per token, and emissions are capped at 10 per second per token. Progress
 stops once the originating call is cancelled or times out.
 
-## `tools/list` is intentionally single-page
+## `tools/list` pagination
 
 The full tool registry (156 tools) is fixed at startup and never changes during a
-session. `tools/list` returns the advertised toolset in one response with no
-`nextCursor`: `default` advertises 16 everyday tools, while
-`CLOCKIFY_TOOLSET=all` advertises all 156. The full registry remains
-dispatch-callable by name regardless of advertisement, so a client that already
-knows an unadvertised tool can call it. `TestToolsListBudgetWire` pins both the
-default and all-tool serialized payloads below fixed budgets, far below the 4
-MiB default message size, so a single-page response is always safe to deliver.
+session. `tools/list` returns the advertised toolset. Small advertised surfaces,
+including the default 16 everyday tools, fit in one response. Larger advertised
+surfaces are cursor-paginated over the stable sorted tool list using numeric
+string cursors:
+
+```json
+{
+  "tools": [],
+  "nextCursor": "80"
+}
+```
+
+Omit `nextCursor` on the last page. The current default page size is 80 tools.
 
 ## Wire vs. validation: outputSchema
 
-`tools/list` advertises `outputSchema` only for the 14 composed workflow tools
-whose synthesized response shape helps an agent chain calls. Domain CRUD, raw
-fallback, and the non-composed workflows (`clockify_tools_guide`,
-`clockify_demo_seed`, `clockify_demo_cleanup`) omit `outputSchema` on the wire.
-Server-side output validation is unchanged: every tool still validates its result
-against the schema in its `mcp.ToolDescriptor`. The generated dev catalog at
-`clockify://mcp/tool-catalog` exposes full schemas for clients that want them.
+`tools/list` advertises a compact shared `outputSchema` for the 16 default
+everyday tools so clients can rely on the common `ok`/`action` envelope. More
+detailed per-tool schemas remain in the generated dev catalog at
+`clockify://mcp/tool-catalog`.
 
 ## Advertised tier vs. loaded registry
 
-`CLOCKIFY_TOOLSET` controls only model-visible advertisement, not startup
-capability. The stdio process always loads the 156-tool registry. The default
-`CLOCKIFY_TOOLSET=default` advertises the daily 16-tool surface; `core`,
-`business`, and `admin` widen that advertised surface; `all` restores the
-previous full `tools/list` behavior. There is no runtime environment reload path
-today, so `notifications/tools/list_changed` is not advertised for toolset
-changes.
+`CLOCKIFY_TOOLSET` controls model-visible advertisement and callable authority.
+The stdio process still loads the 156-tool registry for deterministic startup
+and self-inspection, but default/core/business/admin reject `tools/call` for
+unadvertised names. The default `CLOCKIFY_TOOLSET=default` advertises the daily
+16-tool surface; `core`, `business`, and `admin` widen that surface; `all`
+advertises and authorizes the complete registry. There is no runtime environment
+reload path today, so `notifications/tools/list_changed` is not advertised for
+toolset changes.
 
 ## Rate-control model
 
@@ -59,9 +63,12 @@ This local one-user MCP controls tool throughput with several layers:
   and destructive / billing / admin / permission-change / external-side-effect tools at
   1 concurrent, so high-risk writes are serialized. Reads are bounded only by the
   global cap.
-- **`CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE`** — optional token-bucket rate cap on tool
-  invocations. `0` (the default) disables it. When exceeded, a call returns a
-  recoverable `ok:false` envelope with `error.code = "rate_limited"`.
+- **`CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE`** — token-bucket rate cap on tool
+  invocations (default 120/min). Explicit `0` disables it and doctor reports a
+  warning. Risk buckets narrow the cap to 30/min writes, 10/min billing/admin/
+  permission/external-side-effect calls, and 5/min destructive calls. When
+  exceeded, a call returns a recoverable `ok:false` envelope with
+  `error.code = "rate_limited"` and `recovery.retryAfterSeconds`.
 - **`CLOCKIFY_TOOL_TIMEOUT`** — per-call deadline.
 - The Clockify HTTP client adds retry/backoff and a circuit breaker, and tool results
   are size-capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES`.

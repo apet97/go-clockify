@@ -356,7 +356,7 @@ func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"cmd-smoke","version":"test"}}}`,
 		`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`,
-		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"clockify_clients_create","arguments":{"name":"Command Smoke Client"}}}`,
+		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"clockify_tools_guide","arguments":{}}}`,
 	}, "\n") + "\n"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -392,12 +392,42 @@ func TestRunWithContextStdioSmokeUsesCommandWiring(t *testing.T) {
 
 	call := responses[3]
 	structured := resultObject(t, call, "structuredContent")
-	if structured["ok"] != true || structured["action"] != "clockify_clients_create" {
-		t.Fatalf("bad client-create structuredContent: %+v", structured)
+	if structured["ok"] != true || structured["action"] != "clockify_tools_guide" {
+		t.Fatalf("bad tools-guide structuredContent: %+v", structured)
 	}
 	ids := mapObject(t, structured, "ids")
-	if ids["workspaceId"] != fake.WorkspaceID || ids["clientId"] == "" {
-		t.Fatalf("client-create missing IDs: %+v", ids)
+	if ids["workspaceId"] != fake.WorkspaceID {
+		t.Fatalf("tools-guide missing workspace ID: %+v", ids)
+	}
+}
+
+func TestRunWithContextDefaultToolsetRejectsUnadvertisedDispatch(t *testing.T) {
+	fake := testclockify.NewServer("000000000000000000000001")
+	defer fake.Close()
+
+	t.Setenv("CLOCKIFY_API_KEY", "stdio-secret-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", fake.WorkspaceID)
+	t.Setenv("CLOCKIFY_BASE_URL", fake.URL)
+
+	input := strings.Join([]string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"cmd-smoke","version":"test"}}}`,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"clockify_clients_create","arguments":{"name":"Hidden Client"}}}`,
+	}, "\n") + "\n"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var stdout bytes.Buffer
+	if err := runWithContext(ctx, strings.NewReader(input), &stdout); err != nil {
+		t.Fatalf("runWithContext: %v\nstdout=%s", err, stdout.String())
+	}
+	responses := decodeRunResponses(t, stdout.Bytes())
+	call := responses[2]
+	if call.Error == nil {
+		t.Fatalf("expected hidden default tool to be rejected, got: %+v", call)
+	}
+	if call.Error["code"] != float64(-32602) || !strings.Contains(stringFromTestAny(call.Error["message"]), "unknown tool: clockify_clients_create") {
+		t.Fatalf("unexpected hidden-tool error: %+v", call.Error)
 	}
 }
 
@@ -489,6 +519,13 @@ func arrayField(t *testing.T, parent map[string]any, key string) []any {
 		t.Fatalf("%s type=%T want array: %+v", key, raw, raw)
 	}
 	return arr
+}
+
+func stringFromTestAny(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 func respondDoctorJSON(t *testing.T, w http.ResponseWriter, v any) {

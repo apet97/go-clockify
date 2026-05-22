@@ -4,8 +4,10 @@ The current product is a local, one-user, full-access Clockify MCP for a single
 pinned workspace. The startup registry always loads all 156 tools. `tools/list`
 returns the advertised toolset: the default advertises 16 everyday tools,
 `CLOCKIFY_TOOLSET=all` advertises all 156, and the scoped `core`, `business`,
-and `admin` toolsets advertise their configured surfaces. Tools not advertised
-in `tools/list` remain loaded and dispatch-callable by name.
+and `admin` toolsets advertise their configured surfaces. For
+default/core/business/admin, tools not advertised in `tools/list` are rejected
+by `tools/call`; `CLOCKIFY_TOOLSET=all` advertises and authorizes the complete
+registry.
 
 ## Scope Rules
 
@@ -26,8 +28,8 @@ better choices:
 - `annotations.riskClass`
 - `annotations.handlerKind`
 
-This metadata is descriptive. It does not hide tools at runtime.
-Only the advertised `tools/list` surface changes with `CLOCKIFY_TOOLSET`.
+This metadata is descriptive, but the selected toolset is also an authorization
+boundary for runtime dispatch except in the explicit `all` mode.
 
 ## Write Behavior
 

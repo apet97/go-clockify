@@ -5,7 +5,7 @@ re-run `make gen-tool-catalog` after changing any tool descriptor.
 
 - Tools: **156** (all registered at startup; workflow tools first, domain tools second, raw API fallback last).
 
-- `tools/list` returns the advertised toolset, not the loaded registry. The default toolset advertises 16 everyday tools; `CLOCKIFY_TOOLSET=all` advertises all 156 startup tools; unadvertised tools remain dispatch-callable by name. No cursor pagination.
+- `tools/list` returns the advertised toolset, not the loaded registry. The default toolset advertises 16 everyday tools; `CLOCKIFY_TOOLSET=all` advertises all 156 startup tools. For default/core/business/admin, unadvertised tools are not dispatch-callable. Large advertised surfaces are cursor-paginated.
 
 ## Agent cookbook recipes
 
@@ -103,11 +103,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_invoices_create` | `domain` | no | no | no | yes | `write`, `billing` | Create a new invoice for a client. Supports dry_run:true. |
 | `clockify_invoices_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an existing invoice. Status changes use Clockify's live PATCH status route. Supports dry_run:true. |
 | `clockify_invoices_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Delete an invoice permanently by ID. Supports dry_run preview. |
-| `clockify_invoices_send` | `domain` | no | yes | no | no | `billing`, `external_side_effect`, `destructive` | Explain that this Clockify API surface does not expose an invoice send-email endpoint; no destructive or external side effect occurs and the Clockify UI must send email delivery. |
+| `clockify_invoices_send_guidance` | `domain` | yes | no | yes | no | `read` | Explain that Clockify does not expose an invoice send-email endpoint through the public API; use the Clockify UI for email delivery. |
 | `clockify_invoices_mark_paid` | `domain` | no | no | no | yes | `write`, `billing` | Check whether an invoice is already paid. If not, returns recovery guidance to create a payment with clockify_invoices_payments_create. |
 | `clockify_invoices_items_list` | `domain` | yes | no | yes | no | `read` | List the line items on an invoice, paginated via page and page_size. |
 | `clockify_invoices_items_add` | `domain` | no | no | no | yes | `write`, `billing` | Add an item to an invoice. unit_price is sent to Clockify in minor units (cents) by default; pass unit_price_unit:"major" to enter the value in major currency units and let the MCP multiply by 100 before the POST. |
-| `clockify_invoices_items_update` | `domain` | no | no | no | no | `write`, `billing` | Explain that Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add. |
+| `clockify_invoices_items_update_guidance` | `domain` | yes | no | yes | no | `read` | Explain that Clockify does not expose an update endpoint for invoice line items; delete the line and re-add it instead. |
 | `clockify_invoices_items_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice item by line index. Billing impact; destructive; supports dry_run preview. |
 | `clockify_projects_templates_list` | `domain` | yes | no | yes | no | `read` | List project templates in the workspace with pagination |
 | `clockify_projects_templates_create` | `domain` | no | no | no | no | `write` | Create a new project template |
@@ -158,7 +158,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_webhooks_create` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Create a new webhook subscription that delivers Clockify events to an external URL. URL must use HTTPS and cannot target private/loopback addresses. Supports dry_run:true. |
 | `clockify_webhooks_update` | `domain` | no | no | no | yes | `write`, `external_side_effect` | Update an existing webhook subscription. Changes affect every future outbound delivery to the configured URL. Supports dry_run:true. |
 | `clockify_webhooks_delete` | `domain` | no | yes | no | yes | `external_side_effect`, `destructive` | Permanently delete a webhook subscription. Destructive: stops all future outbound deliveries to the configured URL. Supports dry_run preview. |
-| `clockify_webhooks_test` | `domain` | no | no | no | no | `write`, `external_side_effect` | Explain that Clockify does not expose a webhook test delivery/test-send endpoint; no external side effect occurs, so trigger a real event or inspect delivery logs in the Clockify UI. |
+| `clockify_webhooks_test_guidance` | `domain` | yes | no | yes | no | `read` | Explain that Clockify does not expose a webhook test delivery endpoint; trigger a real event or inspect delivery logs in the Clockify UI. |
 | `clockify_webhooks_events` | `domain` | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | `domain` | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
 | `clockify_groups_get` | `domain` | yes | no | yes | no | `read` | Get a user group by ID from the pinned workspace. |
@@ -252,13 +252,13 @@ list also surfaces in `docs/tool-catalog.json`.
 | `clockify_invoices_items_add` | `invoice_id`, `item_type`, `description`, `quantity`, `unit_price` |
 | `clockify_invoices_items_delete` | `invoice_id`, `item_index`, `item_id` |
 | `clockify_invoices_items_list` | `invoice_id` |
-| `clockify_invoices_items_update` | `invoice_id`, `item_index`, `item_id`, `item_type`, `description`, `quantity`, `unit_price` |
+| `clockify_invoices_items_update_guidance` | `invoice_id` |
 | `clockify_invoices_list` | `client_id`, `status` |
 | `clockify_invoices_mark_paid` | `invoice_id` |
 | `clockify_invoices_payments_create` | `invoice_id`, `amount`, `date` |
 | `clockify_invoices_payments_delete` | `invoice_id`, `payment_id` |
 | `clockify_invoices_payments_list` | `invoice_id` |
-| `clockify_invoices_send` | `invoice_id` |
+| `clockify_invoices_send_guidance` | `invoice_id` |
 | `clockify_invoices_update` | `invoice_id`, `status`, `client_id` |
 | `clockify_projects_memberships_list` | `project_id` |
 | `clockify_projects_memberships_update` | `project_id`, `user_ids`, `memberships`, `remove` |
@@ -293,6 +293,6 @@ list also surfaces in `docs/tool-catalog.json`.
 | `clockify_webhooks_events` | `webhook_id` |
 | `clockify_webhooks_get` | `webhook_id` |
 | `clockify_webhooks_list` | `workspace_id` |
-| `clockify_webhooks_test` | `webhook_id` |
+| `clockify_webhooks_test_guidance` | `webhook_id` |
 | `clockify_webhooks_update` | `webhook_id`, `name`, `url`, `webhook_event`, `trigger_source_type`, `trigger_source` |
 | `clockify_workspace_settings` | `workspace_id` |
