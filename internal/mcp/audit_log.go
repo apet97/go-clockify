@@ -94,9 +94,12 @@ func (l *AuditLogger) Record(descriptor ToolDescriptor, args map[string]any, res
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	enc := json.NewEncoder(f)
-	return enc.Encode(record)
+	if err := enc.Encode(record); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 func (l *AuditLogger) rotateIfNeededLocked() error {

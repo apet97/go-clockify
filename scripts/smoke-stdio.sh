@@ -5,7 +5,7 @@
 #   - asserts:
 #       initialize  -> serverInfo.name == clockify-go-mcp,
 #       default tools/list -> exactly 16 advertised tools,
-#       all tools/list     -> exactly 156 advertised tools,
+#       all tools/list     -> cursor-paginated exactly 156 advertised tools,
 #                             first=clockify_status, last=clockify_api_request,
 #       no old activation/policy helper tools in any response,
 #       prompts/list  -> >=1,
@@ -36,10 +36,11 @@ EXPECTED_ALL_ADVERTISED_TOOLS=156
 BIN="${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke"
 OUT="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.out.XXXXXX")"
 ERR="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.err.XXXXXX")"
+TOOLS_OUT="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.tools.XXXXXX")"
 CURRENT_LABEL=""
 
 cleanup() {
-    rm -f "$BIN" "$OUT" "$ERR"
+    rm -f "$BIN" "$OUT" "$ERR" "$TOOLS_OUT"
 }
 trap cleanup EXIT
 
@@ -59,27 +60,35 @@ fi
 
 go build -o "$BIN" ./cmd/clockify-mcp
 
-REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","clientInfo":{"name":"smoke","version":"0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{}}\n{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}\n'
+DEFAULT_REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","clientInfo":{"name":"smoke","version":"0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{}}\n{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}\n'
+ALL_REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","clientInfo":{"name":"smoke","version":"0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n{"jsonrpc":"2.0","id":5,"method":"tools/list","params":{"cursor":"80"}}\n{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{}}\n{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}\n'
 
 run_stdio_surface() {
     local label="$1"
     local toolset="$2"
     local expected_tools="$3"
     local expect_raw_last="$4"
+    local requests="$DEFAULT_REQUESTS"
+    local expected_lines=4
+    if [ "$expect_raw_last" = "yes" ]; then
+        requests="$ALL_REQUESTS"
+        expected_lines=5
+    fi
     CURRENT_LABEL="$label"
     : >"$OUT"
     : >"$ERR"
+    : >"$TOOLS_OUT"
 
     set +e
     if [ -z "$toolset" ]; then
-        printf '%s' "$REQUESTS" \
+        printf '%s' "$requests" \
             | env -u CLOCKIFY_TOOLSET \
               CLOCKIFY_API_KEY="${CLOCKIFY_API_KEY:-smoke-test-dummy}" \
               CLOCKIFY_WORKSPACE_ID="${CLOCKIFY_WORKSPACE_ID:-00000000000000000000abcd}" \
               "$BIN" \
               >"$OUT" 2>"$ERR"
     else
-        printf '%s' "$REQUESTS" \
+        printf '%s' "$requests" \
             | CLOCKIFY_TOOLSET="$toolset" \
               CLOCKIFY_API_KEY="${CLOCKIFY_API_KEY:-smoke-test-dummy}" \
               CLOCKIFY_WORKSPACE_ID="${CLOCKIFY_WORKSPACE_ID:-00000000000000000000abcd}" \
@@ -99,8 +108,8 @@ run_stdio_surface() {
     fi
 
     line_count=$(grep -c . "$OUT" || true)
-    if [ "$line_count" -lt 4 ]; then
-        echo "FAIL: [$label] expected >=4 JSON-RPC responses on stdout, got $line_count" >&2
+    if [ "$line_count" -lt "$expected_lines" ]; then
+        echo "FAIL: [$label] expected >=$expected_lines JSON-RPC responses on stdout, got $line_count" >&2
         echo "--- stdout ---" >&2
         cat "$OUT" >&2
         echo "--- stderr ---" >&2
@@ -116,9 +125,25 @@ run_stdio_surface() {
     fi
     echo "OK: [$label] initialize -> serverInfo.name=$init_name"
 
-    tool_count=$(jq -r 'select(.id == 2) | .result.tools | length' "$OUT")
-    first_tool=$(jq -r 'select(.id == 2) | .result.tools[0].name' "$OUT")
-    last_tool=$(jq -r 'select(.id == 2) | .result.tools[-1].name' "$OUT")
+    if [ "$expect_raw_last" = "yes" ]; then
+        first_next=$(jq -r 'select(.id == 2) | .result.nextCursor // empty' "$OUT")
+        second_next=$(jq -r 'select(.id == 5) | .result.nextCursor // empty' "$OUT")
+        if [ "$first_next" != "80" ]; then
+            echo "FAIL: [$label] first tools/list page nextCursor=${first_next:-empty} (expected 80)" >&2
+            exit 1
+        fi
+        if [ -n "$second_next" ]; then
+            echo "FAIL: [$label] second tools/list page nextCursor=$second_next (expected empty)" >&2
+            exit 1
+        fi
+        jq -s '[.[] | select(.id == 2 or .id == 5) | .result.tools[]]' "$OUT" >"$TOOLS_OUT"
+    else
+        jq 'select(.id == 2) | .result.tools' "$OUT" >"$TOOLS_OUT"
+    fi
+
+    tool_count=$(jq -r 'length' "$TOOLS_OUT")
+    first_tool=$(jq -r '.[0].name' "$TOOLS_OUT")
+    last_tool=$(jq -r '.[-1].name' "$TOOLS_OUT")
     if [ -z "$tool_count" ] || [ "$tool_count" -ne "$expected_tools" ]; then
         echo "FAIL: [$label] tools/list returned ${tool_count:-?} tools (expected exactly $expected_tools advertised tools)" >&2
         exit 1
@@ -131,7 +156,7 @@ run_stdio_surface() {
         echo "FAIL: [$label] tools/list[-1] = $last_tool (expected clockify_api_request)" >&2
         exit 1
     fi
-    echo "OK: [$label] tools/list -> exactly $tool_count advertised tools (first=$first_tool, last=$last_tool)"
+    echo "OK: [$label] tools/list -> exactly $tool_count advertised tools across page(s) (first=$first_tool, last=$last_tool)"
 
     for forbidden in clockify_activate_group clockify_activate_tool clockify_deactivate_group clockify_search_tools clockify_list_tools clockify_policy_info; do
         if grep -q "\"$forbidden\"" "$OUT"; then
@@ -143,23 +168,23 @@ run_stdio_surface() {
 
     echo "Source MCP surface audit [$label]:"
 
-    missing_desc=$(jq -r 'select(.id == 2) | [.result.tools[] | select((.description // "") == "") | .name] | join(", ")' "$OUT")
+    missing_desc=$(jq -r '[.[] | select((.description // "") == "") | .name] | join(", ")' "$TOOLS_OUT")
     [ -z "$missing_desc" ] || audit_fail "tools/list has tool(s) with an empty description: $missing_desc"
 
-    missing_prop_desc=$(jq -r 'select(.id == 2) | [.result.tools[] as $t | ($t.inputSchema.properties // {}) | to_entries[] | select((.value.description // "") == "") | "\($t.name).\(.key)"] | join(", ")' "$OUT")
+    missing_prop_desc=$(jq -r '[.[] as $t | ($t.inputSchema.properties // {}) | to_entries[] | select((.value.description // "") == "") | "\($t.name).\(.key)"] | join(", ")' "$TOOLS_OUT")
     [ -z "$missing_prop_desc" ] || audit_fail "tools/list has input propert(ies) with no description: $missing_prop_desc"
 
-    missing_risk=$(jq -r 'select(.id == 2) | [.result.tools[] | select((.annotations.riskClass // [] | length) == 0) | .name] | join(", ")' "$OUT")
+    missing_risk=$(jq -r '[.[] | select((.annotations.riskClass // [] | length) == 0) | .name] | join(", ")' "$TOOLS_OUT")
     [ -z "$missing_risk" ] || audit_fail "tools/list has tool(s) with no annotations.riskClass: $missing_risk"
 
-    bad_destructive=$(jq -r 'select(.id == 2) | [.result.tools[] | select(.annotations.destructiveHint == true) | select((.annotations.riskClass // []) | index("destructive") | not) | .name] | join(", ")' "$OUT")
+    bad_destructive=$(jq -r '[.[] | select(.annotations.destructiveHint == true) | select((.annotations.riskClass // []) | index("destructive") | not) | .name] | join(", ")' "$TOOLS_OUT")
     [ -z "$bad_destructive" ] || audit_fail "destructiveHint:true tool(s) missing \"destructive\" in riskClass: $bad_destructive"
 
     echo "  OK: every advertised tool and input property has a description; every advertised tool has annotations.riskClass"
 
     if [ "$expect_raw_last" = "yes" ]; then
         for tool in clockify_projects_archive clockify_time_off_archive clockify_users_invite clockify_scheduling_publish; do
-            is_destructive=$(jq -r --arg t "$tool" 'select(.id == 2) | .result.tools[] | select(.name == $t) | .annotations.destructiveHint' "$OUT")
+            is_destructive=$(jq -r --arg t "$tool" '.[] | select(.name == $t) | .annotations.destructiveHint' "$TOOLS_OUT")
             if [ "$is_destructive" != "true" ]; then
                 audit_fail "$tool must carry annotations.destructiveHint=true, got \"${is_destructive:-missing}\""
             fi

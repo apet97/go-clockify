@@ -232,13 +232,6 @@ func parsePositiveIntEnv(name string, fallback int) (int, error) {
 	return v, nil
 }
 
-// parseNonNegativeIntEnv reads name as a non-negative integer, returning def
-// when the variable is unset. Zero is permitted (it means "disabled").
-func parseNonNegativeIntEnv(name string, def int) (int, error) {
-	v, _, err := parseNonNegativeIntEnvPresence(name, def)
-	return v, err
-}
-
 func parseNonNegativeIntEnvPresence(name string, def int) (int, bool, error) {
 	raw := strings.TrimSpace(os.Getenv(name))
 	if raw == "" {

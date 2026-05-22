@@ -129,7 +129,7 @@
 - Regenerate: `internal/tools/selfinspect_assets/*`
 
 - [x] Write failing tests that the old names are absent and new `_guidance` names are read-only.
-- [x] Rename `clockify_invoices_send`, `clockify_invoices_items_update`, and `clockify_webhooks_test` to `_guidance` names.
+- [x] Rename the invoice-send, invoice-line-item-update, and webhook-test unsupported operations to `_guidance` names.
 - [x] Return `ok:false`, `supported:false`, `performed:false`, and recovery guidance.
 - [x] Update workflow suggestions and generated docs.
 - [x] Run `go test -count=1 ./internal/tools`.

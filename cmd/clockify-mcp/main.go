@@ -161,7 +161,9 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		return err
 	}
 	if auditLogger != nil {
-		defer auditLogger.Close()
+		defer func() {
+			_ = auditLogger.Close()
+		}()
 		server.AuditLogger = auditLogger
 		service.AuditLogPath = cfg.AuditLogPath
 	}
