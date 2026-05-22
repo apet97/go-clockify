@@ -12,6 +12,8 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
+var stopTimerNoRunningRetryDelays = []time.Duration{150 * time.Millisecond, 350 * time.Millisecond}
+
 func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, description string) (ResultEnvelope, error) {
 	return s.startTimer(ctx, map[string]any{
 		"project_id":  projectID,
@@ -147,7 +149,7 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	if err != nil {
 		return nil, err
 	}
-	running, _, _, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
+	running, _, _, err := s.listRunningEntriesForStop(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +188,40 @@ func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, erro
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
 	return ok("clockify_entries_timer_stop", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "userId": user.ID}, financialMeta)), nil
+}
+
+func (s *Service) listRunningEntriesForStop(ctx context.Context) ([]clockify.TimeEntry, string, string, error) {
+	running, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
+	if err != nil || firstEntryIsRunning(running) {
+		return running, wsID, userID, err
+	}
+	for _, delay := range stopTimerNoRunningRetryDelays {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, wsID, userID, ctx.Err()
+			case <-timer.C:
+			}
+		}
+		retry, retryWSID, retryUserID, retryErr := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
+		if retryWSID != "" {
+			wsID = retryWSID
+		}
+		if retryUserID != "" {
+			userID = retryUserID
+		}
+		if retryErr != nil || firstEntryIsRunning(retry) {
+			return retry, wsID, userID, retryErr
+		}
+		running = retry
+	}
+	return running, wsID, userID, nil
+}
+
+func firstEntryIsRunning(entries []clockify.TimeEntry) bool {
+	return len(entries) > 0 && entries[0].IsRunning()
 }
 
 func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 )
@@ -157,5 +158,63 @@ func TestStopTimer_ProjectErrorIsExplained(t *testing.T) {
 	_, err := svc.StopTimer(context.Background(), map[string]any{})
 	if err == nil || !strings.Contains(err.Error(), "assign a project with clockify_entries_update") {
 		t.Fatalf("expected project recovery error, got %v", err)
+	}
+}
+
+func TestStopTimerRetriesTransientEmptyRunningList(t *testing.T) {
+	oldDelays := stopTimerNoRunningRetryDelays
+	stopTimerNoRunningRetryDelays = []time.Duration{0}
+	t.Cleanup(func() {
+		stopTimerNoRunningRetryDelays = oldDelays
+	})
+
+	runningReads := 0
+	patches := 0
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/user" && r.Method == http.MethodGet:
+			respondJSON(t, w, clockify.User{ID: "u1", Name: "Test"})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodGet:
+			runningReads++
+			if runningReads == 1 {
+				respondJSON(t, w, []clockify.TimeEntry{})
+				return
+			}
+			respondJSON(t, w, []clockify.TimeEntry{{
+				ID:           "running1",
+				UserID:       "u1",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-16T10:00:00Z"},
+			}})
+		case r.URL.Path == "/workspaces/ws1/user/u1/time-entries" && r.Method == http.MethodPatch:
+			patches++
+			respondJSON(t, w, clockify.TimeEntry{
+				ID:           "running1",
+				UserID:       "u1",
+				TimeInterval: clockify.TimeInterval{Start: "2026-05-16T10:00:00Z", End: "2026-05-16T10:15:00Z"},
+			})
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.StopTimer(context.Background(), map[string]any{})
+	if err != nil {
+		t.Fatalf("stop timer: %v", err)
+	}
+	env, ok := out.(ResultEnvelope)
+	if !ok {
+		t.Fatalf("result type = %T, want ResultEnvelope", out)
+	}
+	entry, ok := env.Data.(EntryView)
+	if !ok || entry.ID != "running1" {
+		t.Fatalf("stopped entry = %T %#v, want running1", env.Data, env.Data)
+	}
+	if runningReads != 2 {
+		t.Fatalf("running timer reads = %d, want 2", runningReads)
+	}
+	if patches != 1 {
+		t.Fatalf("patches = %d, want 1", patches)
 	}
 }

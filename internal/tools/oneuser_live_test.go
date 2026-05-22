@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -929,9 +930,20 @@ func callLiveToolDataOrRecovery(t *testing.T, server *mcp.Server, name string, a
 func requireLiveID(t *testing.T, envelope liveToolEnvelope, key string) string {
 	t.Helper()
 	if envelope.IDs[key] == "" {
-		t.Fatalf("live tool result missing %s: %+v", key, envelope.IDs)
+		t.Fatalf("live tool result missing %s; present ID keys: %v", key, liveIDKeys(envelope.IDs))
 	}
 	return envelope.IDs[key]
+}
+
+func liveIDKeys(ids map[string]string) []string {
+	keys := make([]string, 0, len(ids))
+	for key, value := range ids {
+		if strings.TrimSpace(value) != "" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func assertNoDryRunArgs(t *testing.T, name string, args map[string]any) {
