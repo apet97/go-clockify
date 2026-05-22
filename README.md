@@ -1,6 +1,7 @@
 # Clockify MCP
 
 ![MCP Protocol](https://img.shields.io/badge/MCP-2025--11--25-blue)
+[![SafeSkill 87/100](https://img.shields.io/badge/SafeSkill-87%2F100_Passes%20with%20Notes-yellow)](https://safeskill.dev/scan/apet97-go-clockify)
 
 A local, single-user Model Context Protocol (MCP) server for Clockify. It runs
 on your machine over stdio, holds one Clockify API key, and exposes one
