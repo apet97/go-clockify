@@ -154,7 +154,8 @@ Operator references:
 [permissions](docs/permissions.md),
 [dangerous tools](docs/dangerous-tools.md),
 [raw fallback](docs/raw-fallback.md), and
-[error recovery](docs/error-recovery.md).
+[error recovery](docs/error-recovery.md). Contributors should also read
+[development guide](docs/development.md).
 
 ### Raw API fallback
 
@@ -163,10 +164,11 @@ have no dedicated tool, scoped to your pinned workspace. Raw fallback is hidden
 and disabled by default unless you choose `CLOCKIFY_TOOLSET=all`; otherwise set
 `CLOCKIFY_ENABLE_RAW_TOOLS=true` and, for raw reads,
 `CLOCKIFY_ENABLE_RAW_GET=true`. Raw `POST`, `PUT`, `PATCH`, and `DELETE` also
-require `CLOCKIFY_ENABLE_RAW_WRITES=true`. Prefer the domain tools — raw
-fallback is an explicit escape hatch. Raw writes are limited to documented
-Clockify routes by default; see [docs/raw-fallback.md](docs/raw-fallback.md)
-for `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY`.
+require `CLOCKIFY_ENABLE_RAW_WRITES=true` and a dry-run `confirm_token`
+before live execution. Prefer the domain tools — raw fallback is an explicit
+escape hatch. Raw writes are limited to documented Clockify routes by default;
+see [docs/raw-fallback.md](docs/raw-fallback.md) for
+`CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY`.
 
 ## Configuration
 
@@ -185,8 +187,8 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `120` | Tool-invocation rate cap per minute. Risk buckets narrow this to 30/min writes, 10/min billing/admin, and 5/min destructive tools; explicit `0` disables rate limiting. |
 | `CLOCKIFY_MAX_IN_FLIGHT_TOOL_CALLS` | `4` | Max concurrent `tools/call` handlers |
 | `CLOCKIFY_MAX_MESSAGE_SIZE` | `4194304` | Max inbound JSON-RPC message bytes (`1`..`104857600`) |
-| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation (`1`..`104857600`) |
-| `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout (`5s`..`10m`) |
+| `CLOCKIFY_MAX_TOOL_RESULT_BYTES` | `50000` | Result-size cap before truncation (`1`..`104857600`); the upstream response cap is at least 10 MiB and rises with this value for large exports |
+| `CLOCKIFY_TOOL_TIMEOUT` | `45s` | Per-tool timeout (`5s`..`10m`); the Clockify HTTP client uses the same deadline |
 | `CLOCKIFY_ENABLE_RAW_TOOLS` | `false` | Advertise and enable raw fallback outside `CLOCKIFY_TOOLSET=all` |
 | `CLOCKIFY_ENABLE_RAW_GET` | `false` | Allow raw `GET` outside `CLOCKIFY_TOOLSET=all`; sensitive workspace reads still require `admin` or `all` |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` when raw tools are enabled |

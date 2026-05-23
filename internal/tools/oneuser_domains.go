@@ -9,10 +9,22 @@ import (
 // FullAccessRegistry is the one-user product registry: every supported tool is
 // visible from startup, with workflows first and raw API fallback last.
 func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
+	reg, err := s.FullAccessRegistryChecked()
+	if err != nil {
+		panic(err)
+	}
+	return reg
+}
+
+func (s *Service) FullAccessRegistryChecked() ([]mcp.ToolDescriptor, error) {
 	s.registryOnce.Do(func() {
 		s.registry = s.buildFullAccessRegistry()
+		s.registryErr = ValidateRegistry(s.registry)
 	})
-	return cloneToolDescriptors(s.registry)
+	if s.registryErr != nil {
+		return nil, s.registryErr
+	}
+	return cloneToolDescriptors(s.registry), nil
 }
 
 // RegistryForToolset returns the one-user startup registry for a narrower
@@ -55,7 +67,7 @@ func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
 	out = append(out, s.nativeDomainExtras()...)
 	out = append(out, s.timerAndReportDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
-	return normalizeDescriptors(dedupeToolDescriptors(out))
+	return normalizeDescriptors(out)
 }
 
 // cloneToolDescriptors returns an independent copy of the descriptor slice.
@@ -213,18 +225,4 @@ var adminWorkflowTools = map[string]bool{
 	"clockify_request_time_off": true,
 	"clockify_schedule_work":    true,
 	"clockify_setup_webhook":    true,
-}
-
-func dedupeToolDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
-	seen := map[string]bool{}
-	out := make([]mcp.ToolDescriptor, 0, len(in))
-	for _, descriptor := range in {
-		name := descriptor.Tool.Name
-		if seen[name] {
-			continue
-		}
-		seen[name] = true
-		out = append(out, descriptor)
-	}
-	return out
 }

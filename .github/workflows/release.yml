@@ -3,8 +3,9 @@ name: Release
 # Builds the clockify-mcp binary matrix, packages the npm stdio launcher with
 # those binaries under vendor/, and publishes the artifacts to the GitHub Release
 # when a v* tag is pushed. The tagged commit has already been verified by the
-# CI workflow (the release checklist requires a green run before tagging), so
-# this workflow only builds/packages and publishes — it does not re-test.
+# CI workflow should already be green before tagging; the release workflow still
+# repeats the fast deterministic preflight so a tag cannot publish an untested
+# binary/npm launcher pair.
 #
 # Injection-safe: the only ${{ }} expansions (github.ref_name, github.token)
 # are bound through env: and used as quoted shell variables, never expanded
@@ -30,6 +31,14 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "20"
+      - name: Go release preflight
+        run: go test -count=1 ./internal/mcp ./internal/tools ./internal/config ./internal/clockify ./cmd/clockify-mcp
+      - name: npm launcher preflight
+        working-directory: npm/clockify-mcp-launcher
+        run: |
+          npm ci
+          npm test
+          npm run build
       - name: Cross-compile clockify-mcp
         env:
           VERSION: ${{ github.ref_name }}
@@ -64,9 +73,11 @@ jobs:
           cp "dist/clockify-mcp_${VERSION}_windows_amd64.exe" "$vendor_dir/clockify-mcp_windows_amd64.exe"
 
           cd "$package_dir"
-          npm install
+          npm ci
           npm version --no-git-tag-version "${VERSION#v}"
+          npm test
           npm run build
+          node bin/clockify-mcp.js --version
           npm pack --pack-destination "$GITHUB_WORKSPACE/dist"
       - name: Generate release checksums
         run: |

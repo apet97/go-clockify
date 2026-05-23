@@ -8,7 +8,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/apet97/go-clockify/internal/safety"
 )
 
 func TestAuditLoggerRecordsSideEffectToolCall(t *testing.T) {
@@ -117,6 +120,130 @@ func TestAuditLoggerModeControlsReadCalls(t *testing.T) {
 	}
 	if records := readAuditRecords(t, allPath); len(records) != 1 {
 		t.Fatalf("all mode records=%d want 1: %#v", len(records), records)
+	}
+}
+
+func TestAuditLoggerLinksConfirmationMetadataWithoutLeakingToken(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	logger, err := NewAuditLogger(path, AuditLogModeAll, "000000000000000000000001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logger.Close()
+
+	server := NewServer("test", []ToolDescriptor{{
+		Tool: Tool{
+			Name:        "danger_tool",
+			Description: "danger",
+			InputSchema: map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]any{
+					"target_id":     map[string]any{"type": "string"},
+					"dry_run":       map[string]any{"type": "boolean"},
+					"confirm_token": map[string]any{"type": "string"},
+				},
+			},
+		},
+		RiskClass: RiskDestructive,
+		AuditKeys: []string{"target_id", "confirm_token"},
+		Handler: func(_ context.Context, args map[string]any) (any, error) {
+			if args["dry_run"] == true {
+				return map[string]any{"ok": true, "action": "danger_tool", "dry_run": true}, nil
+			}
+			return map[string]any{"ok": true, "action": "danger_tool"}, nil
+		},
+	}})
+	server.AuditLogger = logger
+	server.ConfirmationStore = safety.NewTokenStore(safety.TokenStoreOptions{})
+	server.WorkspaceIDForSafety = "workspace_123"
+
+	preview, err := server.callTool(context.Background(), ToolCallParams{
+		Name:      "danger_tool",
+		Arguments: map[string]any{"target_id": "t1", "dry_run": true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := preview.(map[string]any)["confirmation"].(map[string]any)["confirm_token"].(string)
+
+	if _, err := server.callTool(context.Background(), ToolCallParams{
+		Name:      "danger_tool",
+		Arguments: map[string]any{"target_id": "t1", "confirm_token": token},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), token) {
+		t.Fatalf("audit log leaked full confirmation token:\n%s", raw)
+	}
+
+	records := readAuditRecords(t, path)
+	if len(records) != 2 {
+		t.Fatalf("records=%d want 2: %#v", len(records), records)
+	}
+	issued, ok := records[0]["confirmation"].(map[string]any)
+	if !ok {
+		t.Fatalf("first record missing confirmation metadata: %#v", records[0])
+	}
+	accepted, ok := records[1]["confirmation"].(map[string]any)
+	if !ok {
+		t.Fatalf("second record missing confirmation metadata: %#v", records[1])
+	}
+	if issued["status"] != "issued" || accepted["status"] != "accepted" {
+		t.Fatalf("bad confirmation statuses: issued=%#v accepted=%#v", issued, accepted)
+	}
+	if issued["tokenSuffix"] == "" || issued["tokenSuffix"] != accepted["tokenSuffix"] {
+		t.Fatalf("token suffix should link preview and confirmed call: issued=%#v accepted=%#v", issued, accepted)
+	}
+	if issued["previewHash"] == "" {
+		t.Fatalf("preview hash missing: %#v", issued)
+	}
+	args := records[1]["arguments"].(map[string]any)
+	if _, ok := args["confirm_token"]; ok {
+		t.Fatalf("confirmation token appeared in audited arguments: %#v", args)
+	}
+}
+
+func TestAuditLoggerRecordsUnconfirmedHighRiskRejectionInAllMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	logger, err := NewAuditLogger(path, AuditLogModeAll, "000000000000000000000001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logger.Close()
+
+	server := confirmationTestServer(func(context.Context, map[string]any) (any, error) {
+		t.Fatal("handler should not run without confirmation")
+		return nil, nil
+	})
+	server.AuditLogger = logger
+
+	res, err := server.callTool(context.Background(), ToolCallParams{
+		Name:      "danger",
+		Arguments: map[string]any{"target_id": "t1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.(map[string]any)["ok"] != false {
+		t.Fatalf("expected rejected envelope, got %#v", res)
+	}
+
+	records := readAuditRecords(t, path)
+	if len(records) != 1 {
+		t.Fatalf("records=%d want 1: %#v", len(records), records)
+	}
+	if records[0]["result"] != "rejected" || records[0]["errorCode"] != "confirmation_required" {
+		t.Fatalf("unexpected rejection audit record: %#v", records[0])
+	}
+	confirmation, ok := records[0]["confirmation"].(map[string]any)
+	if !ok || confirmation["status"] != "required" {
+		t.Fatalf("missing required confirmation metadata: %#v", records[0])
 	}
 }
 

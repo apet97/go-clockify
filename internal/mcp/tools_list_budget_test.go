@@ -60,6 +60,67 @@ func TestDefaultToolsListAdvertisesOutputSchemas(t *testing.T) {
 	}
 }
 
+func TestEveryAdvertisedToolHasOutputSchema(t *testing.T) {
+	for _, toolset := range []string{"default", "core", "business", "admin", "all"} {
+		t.Run(toolset, func(t *testing.T) {
+			for _, tool := range collectToolsListPages(t, toolset) {
+				if len(tool.OutputSchema) == 0 {
+					t.Fatalf("%s tool %s missing advertised outputSchema", toolset, tool.Name)
+				}
+			}
+		})
+	}
+}
+
+type listedToolForBudget struct {
+	Name         string         `json:"name"`
+	OutputSchema map[string]any `json:"outputSchema"`
+}
+
+func collectToolsListPages(t *testing.T, toolset string) []listedToolForBudget {
+	t.Helper()
+	var out []listedToolForBudget
+	cursor := ""
+	for {
+		raw := dispatchToolsListWithCursor(t, toolset, cursor)
+		var resp struct {
+			Result struct {
+				Tools      []listedToolForBudget `json:"tools"`
+				NextCursor string                `json:"nextCursor"`
+			} `json:"result"`
+		}
+		if err := json.Unmarshal(raw, &resp); err != nil {
+			t.Fatalf("unmarshal tools/list page: %v\n%s", err, raw)
+		}
+		out = append(out, resp.Result.Tools...)
+		if resp.Result.NextCursor == "" {
+			return out
+		}
+		cursor = resp.Result.NextCursor
+	}
+}
+
+func dispatchToolsListWithCursor(t *testing.T, toolset, cursor string) []byte {
+	t.Helper()
+	svc := &tools.Service{}
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server.SetAdvertisedTools(svc.RegistryForToolset(toolset))
+	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "test", "0")
+
+	params := ""
+	if cursor != "" {
+		params = `,"params":{"cursor":"` + cursor + `"}`
+	}
+	raw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list"`+params+`}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !json.Valid(raw) {
+		t.Fatalf("tools/list response is not JSON: %s", raw)
+	}
+	return raw
+}
+
 func dispatchToolsList(t *testing.T, toolset string) []byte {
 	t.Helper()
 	svc := &tools.Service{}

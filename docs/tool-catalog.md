@@ -83,7 +83,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_projects_get` | `domain` | yes | no | yes | no | `read` | Get one project by name or ID. |
 | `clockify_projects_update` | `domain` | no | no | yes | no | `write` | Update a project by name or ID. |
 | `clockify_projects_delete` | `domain` | no | yes | no | yes | `destructive` | Permanently delete a project by name or ID. Destructive; supports dry_run preview. |
-| `clockify_projects_archive` | `domain` | no | yes | yes | no | `destructive` | Archive a project by name or ID. Destructive safety hint: archiving removes the project from active work. |
+| `clockify_projects_archive` | `domain` | no | yes | yes | yes | `destructive` | Archive a project by name or ID. Destructive safety hint: archiving removes the project from active work. |
 | `clockify_projects_rates_update` | `domain` | no | no | yes | yes | `write`, `billing`, `admin` | Set a project member hourly or cost rate. Admin and billing impact: rate changes flow through every future time entry on this project. |
 | `clockify_tasks_get` | `domain` | yes | no | yes | no | `read` | Get one task by name or ID within a project. |
 | `clockify_tasks_update` | `domain` | no | no | yes | no | `write` | Update a task by name or ID within a project. |
@@ -116,7 +116,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_expenses_list` | `domain` | yes | no | yes | no | `read` | List expenses in the workspace with pagination and optional date range |
 | `clockify_expenses_get` | `domain` | yes | no | yes | no | `read` | Get a single expense by ID |
 | `clockify_expenses_create` | `domain` | no | no | no | yes | `write`, `billing` | Create an expense. amount defaults to major currency units; pass amount_unit:"minor" for cents. Receipt upload is optional; provide all three file_* fields together to attach one. |
-| `clockify_expenses_update` | `domain` | no | no | no | no | `write`, `billing` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
+| `clockify_expenses_update` | `domain` | no | no | no | yes | `write`, `billing` | Update an existing expense (multipart form). change_fields enumerates which fields the upstream should apply; every listed token must include its matching argument. |
 | `clockify_expenses_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an expense by ID. Billing impact; destructive; supports dry_run preview. |
 | `clockify_expenses_categories_list` | `domain` | yes | no | yes | no | `read` | List expense categories in the workspace, paginated via page and page_size. |
 | `clockify_expenses_categories_create` | `domain` | no | no | no | yes | `write`, `billing` | Create a new expense category, optionally including upstream unit-price fields. |
@@ -124,21 +124,21 @@ prefer the documented format on each tool descriptor.
 | `clockify_expenses_categories_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an expense category. Billing impact; destructive; supports dry_run preview. |
 | `clockify_custom_fields_list` | `domain` | yes | no | yes | no | `read` | List custom fields in the workspace with optional pagination |
 | `clockify_custom_fields_get` | `domain` | yes | no | yes | no | `read` | Get a custom field definition by ID from the pinned workspace. |
-| `clockify_custom_fields_create` | `domain` | no | no | no | no | `write`, `admin` | Create a custom field. Valid type values are TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK. allowed_values is required for dropdown fields. |
-| `clockify_custom_fields_update` | `domain` | no | no | no | no | `write`, `admin` | Update an existing custom field by ID |
+| `clockify_custom_fields_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a custom field. Valid type values are TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, or LINK. allowed_values is required for dropdown fields. |
+| `clockify_custom_fields_update` | `domain` | no | no | no | yes | `write`, `admin` | Update an existing custom field by ID |
 | `clockify_custom_fields_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Delete a custom field by ID (supports dry_run preview) |
-| `clockify_custom_fields_set_value` | `domain` | no | no | no | no | `write`, `admin` | Set a custom field value on a project or time entry. Project values use the documented custom-fields route; entry values preserve the existing entry and replace customFields. |
+| `clockify_custom_fields_set_value` | `domain` | no | no | no | yes | `write`, `admin` | Set a custom field value on a project or time entry. Project values use the documented custom-fields route; entry values preserve the existing entry and replace customFields. |
 | `clockify_time_off_requests_list` | `domain` | yes | no | yes | no | `read` | List time off requests with an optional status filter, paginated via page and page_size. |
 | `clockify_time_off_requests_get` | `domain` | yes | no | yes | no | `read` | Get a time off request by policy ID and request ID |
 | `clockify_time_off_requests_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a time off request under a policy. Changes leave balances/approval workflow. |
 | `clockify_time_off_requests_update` | `domain` | no | no | no | yes | `write`, `admin` | Update an existing time off request approval status. |
 | `clockify_time_off_requests_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Permanently delete a time off request from the workspace policy. Admin scope; destructive; supports dry_run preview. |
-| `clockify_time_off_approve` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Approve a pending time off request and update its approval state. |
-| `clockify_time_off_deny` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Deny a pending time off request and update its approval state. |
+| `clockify_time_off_approve` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Approve a pending time off request and update its approval state. |
+| `clockify_time_off_deny` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Deny a pending time off request and update its approval state. |
 | `clockify_time_off_policies_list` | `domain` | yes | no | yes | no | `read` | List time off policies for the workspace, paginated via page and page_size. |
 | `clockify_time_off_policies_get` | `domain` | yes | no | yes | no | `read` | Get a time off policy by ID |
-| `clockify_time_off_policies_create` | `domain` | no | no | no | no | `write`, `admin` | Create a simplified time off policy for the current user. Supports approval and days_per_year accrual basics; use clockify_api_request for advanced Clockify fields such as color, icon, expiration, half days, approval stages, or filters. |
-| `clockify_time_off_policies_update` | `domain` | no | no | no | no | `write`, `admin` | Update a time off policy by merging supplied fields into the current upstream body. Preserves advanced Clockify fields outside this simplified schema; use clockify_api_request for full-surface updates. |
+| `clockify_time_off_policies_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a simplified time off policy for the current user. Supports approval and days_per_year accrual basics; use clockify_api_request for advanced Clockify fields such as color, icon, expiration, half days, approval stages, or filters. |
+| `clockify_time_off_policies_update` | `domain` | no | no | no | yes | `write`, `admin` | Update a time off policy by merging supplied fields into the current upstream body. Preserves advanced Clockify fields outside this simplified schema; use clockify_api_request for full-surface updates. |
 | `clockify_time_off_balances` | `domain` | yes | no | yes | no | `read` | Get time off balance. user_id defaults to the current user; omit policy_id to return all policy balances for that user (page through them with page/page_size). |
 | `clockify_time_off_balances_update` | `domain` | no | no | no | yes | `write`, `billing`, `admin` | Adjust time off balances for one or more users under a policy. Admin and billing impact: balances drive future PTO accrual and approval. Supports dry_run preview. |
 | `clockify_scheduling_assignments_list` | `domain` | yes | no | yes | no | `read` | List scheduling assignments within a date range, paginated via page and page_size. |
@@ -162,8 +162,8 @@ prefer the documented format on each tool descriptor.
 | `clockify_webhooks_events` | `domain` | yes | no | yes | no | `read` | List available webhook event types |
 | `clockify_groups_list` | `domain` | yes | no | yes | no | `read` | List user groups in the workspace (admin view) with pagination |
 | `clockify_groups_get` | `domain` | yes | no | yes | no | `read` | Get a user group by ID from the pinned workspace. |
-| `clockify_groups_create` | `domain` | no | no | no | no | `write`, `admin` | Create a new user group with optional member user IDs |
-| `clockify_groups_update` | `domain` | no | no | no | no | `write`, `admin` | Update an existing user group by ID |
+| `clockify_groups_create` | `domain` | no | no | no | yes | `write`, `admin` | Create a new user group with optional member user IDs |
+| `clockify_groups_update` | `domain` | no | no | no | yes | `write`, `admin` | Update an existing user group by ID |
 | `clockify_groups_delete` | `domain` | no | yes | no | yes | `admin`, `destructive` | Delete a user group by ID (supports dry_run preview) |
 | `clockify_groups_add_user` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Add a user to a user group |
 | `clockify_groups_remove_user` | `domain` | no | yes | no | yes | `admin`, `permission_change`, `destructive` | Remove a user from a user group. Admin and permission-change impact; destructive; supports dry_run preview. |
@@ -179,18 +179,18 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_expense` | `domain` | yes | no | yes | no | `read` | Run the detailed expense report. Raw report amounts are in minor units (cents); meta.totalAmount gives normalized major-unit totals per currency. Large results truncate to the size cap. |
 | `clockify_reports_export` | `domain` | yes | no | yes | no | `read` | Export a detailed report. JSON returns contentType, filename, bytes, bodyEncoding, body base64 payload, base64Bytes, truncated:false. CSV/PDF/XLSX/ZIP use bodyEncoding:"file" and path. Amounts are minor units. |
 | `clockify_invoices_export` | `domain` | yes | no | yes | no | `read` | Export invoice PDF only; Clockify invoice export has no CSV/XLSX (use clockify_reports_export). Returns contentType, filename, bytes, bodyEncoding, body/base64 payload, base64Bytes, truncated:false, or path. |
-| `clockify_invoices_import_time` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids. |
-| `clockify_invoices_import_expenses` | `domain` | no | no | no | no | `write`, `billing` | Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses. |
+| `clockify_invoices_import_time` | `domain` | no | no | no | yes | `write`, `billing` | Import a client's billable time entries onto an invoice. Clockify imports every billable time entry in the from..to date range; narrow it with project_ids. |
+| `clockify_invoices_import_expenses` | `domain` | no | no | no | yes | `write`, `billing` | Import a client's billable time and expenses onto an invoice for a date range. Clockify's import endpoint always imports time; this tool also imports billable expenses. |
 | `clockify_invoices_payments_list` | `domain` | yes | no | yes | no | `read` | List the payments recorded against an invoice, paginated via page and page_size. |
-| `clockify_invoices_payments_create` | `domain` | no | no | no | no | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
+| `clockify_invoices_payments_create` | `domain` | no | no | no | yes | `write`, `billing` | Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:"major" to enter the value in major currency units instead. |
 | `clockify_invoices_payments_delete` | `domain` | no | yes | no | yes | `billing`, `destructive` | Permanently delete an invoice payment. Billing impact; destructive; supports dry_run preview. |
-| `clockify_time_off_archive` | `domain` | no | yes | yes | no | `admin`, `destructive` | Archive or reactivate a time off policy. Destructive safety hint: archived policies leave active use. |
+| `clockify_time_off_archive` | `domain` | no | yes | yes | yes | `admin`, `destructive` | Archive or reactivate a time off policy. Destructive safety hint: archived policies leave active use. |
 | `clockify_scheduling_user_totals` | `domain` | yes | no | yes | no | `read` | Get scheduled assignment totals for one user. |
 | `clockify_scheduling_capacity` | `domain` | yes | no | yes | no | `read` | Get workspace capacity totals. Defaults to every workspace user; pass user_ids to scope to specific users. |
-| `clockify_approvals_resubmit` | `domain` | no | no | no | no | `write`, `admin`, `permission_change` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
+| `clockify_approvals_resubmit` | `domain` | no | no | no | yes | `write`, `admin`, `permission_change` | Resubmit rejected or withdrawn entries and expenses and update approval state. |
 | `clockify_holidays_get` | `domain` | yes | no | yes | no | `read` | Get one holiday by ID from the pinned workspace. |
 | `clockify_holidays_update` | `domain` | no | no | yes | no | `write` | Update a holiday by ID; unspecified fields merge from the existing record. |
-| `clockify_entries_mark_invoiced` | `domain` | no | no | yes | no | `write`, `billing` | Mark time entries as invoiced or not invoiced. |
+| `clockify_entries_mark_invoiced` | `domain` | no | no | yes | yes | `write`, `billing` | Mark time entries as invoiced or not invoiced. |
 | `clockify_users_invite` | `domain` | no | yes | no | yes | `admin`, `permission_change`, `external_side_effect`, `destructive` | Invite users by email. Destructive permission-changing external side effect when send_email is true; supports dry_run. |
 | `clockify_audit_logs_search` | `domain` | yes | no | yes | no | `read` | Search the workspace audit log for create/update/delete actions by author and date range. Reads the dedicated Clockify audit-log API. Results paginate via page and page_size, though Clockify caps the effective page size server-side. |
 | `clockify_entity_changes_list` | `domain` | yes | no | yes | no | `read` | List entities created, updated, or deleted within a date range. Experimental Clockify API: the response is a bare array of change documents whose fields vary by entity type. Results paginate via the page parameter. |
@@ -205,7 +205,7 @@ prefer the documented format on each tool descriptor.
 | `clockify_reports_summary` | `domain` | yes | no | yes | no | `read` | Run the local summary report helper. Large results truncate to the size cap. |
 | `clockify_reports_weekly` | `domain` | yes | no | yes | no | `read` | Run the local weekly report helper. Range must be exactly 7 days; pass week_start (YYYY-MM-DD) alone to auto-derive the week end. Large results truncate to the size cap. |
 | `clockify_api_get` | `raw` | yes | no | yes | no | `read` | Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. |
-| `clockify_api_request` | `raw` | no | no | no | no | `write` | Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. |
+| `clockify_api_request` | `raw` | no | no | no | yes | `write` | Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. |
 
 ## Audit-tracked argument capture
 

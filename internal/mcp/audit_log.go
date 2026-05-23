@@ -34,6 +34,7 @@ type auditRecord struct {
 	WorkspaceIDSuffix string         `json:"workspaceIdSuffix,omitempty"`
 	Arguments         map[string]any `json:"arguments,omitempty"`
 	DryRun            bool           `json:"dryRun,omitempty"`
+	Confirmation      map[string]any `json:"confirmation,omitempty"`
 	Result            string         `json:"result"`
 	ErrorCode         string         `json:"errorCode,omitempty"`
 	Upstream          map[string]any `json:"upstream,omitempty"`
@@ -69,6 +70,10 @@ func (l *AuditLogger) Close() error {
 }
 
 func (l *AuditLogger) Record(descriptor ToolDescriptor, args map[string]any, result, errorCode string) error {
+	return l.RecordWithConfirmation(descriptor, args, result, errorCode, nil)
+}
+
+func (l *AuditLogger) RecordWithConfirmation(descriptor ToolDescriptor, args map[string]any, result, errorCode string, confirmation map[string]any) error {
 	if l == nil || l.mode == AuditLogModeOff {
 		return nil
 	}
@@ -82,6 +87,7 @@ func (l *AuditLogger) Record(descriptor ToolDescriptor, args map[string]any, res
 		WorkspaceIDSuffix: l.workspaceIDSuffix,
 		Arguments:         auditArguments(descriptor.AuditKeys, args),
 		DryRun:            boolAuditArg(args, "dry_run", "dryRun"),
+		Confirmation:      auditConfirmation(confirmation),
 		Result:            result,
 		ErrorCode:         errorCode,
 	}
@@ -100,6 +106,23 @@ func (l *AuditLogger) Record(descriptor ToolDescriptor, args map[string]any, res
 		return err
 	}
 	return f.Close()
+}
+
+func auditConfirmation(in map[string]any) map[string]any {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		if key != "tokenSuffix" && (auditKeyBlocked(key) || auditValueBlocked(value)) {
+			continue
+		}
+		out[key] = value
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (l *AuditLogger) rotateIfNeededLocked() error {

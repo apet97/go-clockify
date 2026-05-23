@@ -74,6 +74,13 @@ Documented global write routes outside the pinned workspace scope, such as
 raw write allowlist. Add a typed tool if one of those operations becomes part of
 the product.
 
+Every raw `POST`, `PUT`, `PATCH`, and `DELETE` is high risk. Run the same call
+with `dry_run:true` first; the server returns a preview with method, safe path,
+query hash, body hash, documented-route status, and a short-lived
+`confirm_token`. The live retry must omit `dry_run`, keep the same method/path/
+query/body, and include that `confirm_token`. A changed payload, expired token,
+or reused token returns `ok:false` before any upstream request.
+
 ## DELETE Bodies
 
 Raw `DELETE` now preserves Clockify response bodies. If Clockify returns JSON,

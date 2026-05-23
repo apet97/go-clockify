@@ -9,6 +9,11 @@ Each successful write returns `ok=true`, useful `ids`, a `changed` summary,
 metadata when relevant, and `next` actions. On recoverable failure, read `error.code` and
 `recovery.hint`; use `recovery.tool` when it is present.
 
+High-risk writes use a two-step confirmation flow. Run the tool with
+`dry_run:true`, inspect the preview, then retry the same arguments without
+`dry_run` and with the returned `confirm_token`. If the token expires, is reused,
+or the arguments change, run a fresh dry run.
+
 Every MCP `tools/call` is schema-validated before handlers run. Missing required
 arguments or unknown properties return JSON-RPC `-32602` with
 `error.data.pointer`; fix the arguments instead of retrying the same payload.
@@ -160,6 +165,8 @@ arguments or unknown properties return JSON-RPC `-32602` with
 4. Raw paths must stay inside `/user`, `/workspaces/{workspaceId}`, or pinned
    workspace descendants. Absolute URLs, hosts, path traversal, backslashes, and
    encoded traversal are rejected before the API call.
+5. For raw writes, call `clockify_api_request` with `dry_run:true` first and
+   reuse the returned `confirm_token` only for the identical live retry.
 
 ## Demo Smoke
 

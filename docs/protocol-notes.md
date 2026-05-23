@@ -37,10 +37,21 @@ Omit `nextCursor` on the last page. The current default page size is 80 tools.
 
 ## Wire vs. validation: outputSchema
 
-`tools/list` advertises a compact shared `outputSchema` for the 16 default
-everyday tools so clients can rely on the common `ok`/`action` envelope. More
-detailed per-tool schemas remain in the generated dev catalog at
+`tools/list` advertises an `outputSchema` for every advertised tool. Workflow
+tools keep their detailed schemas; tools whose full schema would make the wire
+surface too large use the compact shared `ok`/`action` envelope. More detailed
+per-tool schemas remain in the generated dev catalog at
 `clockify://mcp/tool-catalog`.
+
+## High-risk confirmation
+
+Destructive, billing, admin, permission-change, external-side-effect, and raw
+mutating tools require a local `confirm_token` before live execution. First
+call the tool with `dry_run:true`; the response includes confirmation metadata
+and a short-lived `confirm_token`. The live retry must keep the same arguments,
+omit `dry_run`, and include `confirm_token`. Tokens are bound to tool name, the
+pinned workspace, risk class, and a canonical argument hash; they expire quickly
+and are single-use.
 
 ## Advertised tier vs. loaded registry
 
@@ -70,5 +81,9 @@ This local one-user MCP controls tool throughput with several layers:
   exceeded, a call returns a recoverable `ok:false` envelope with
   `error.code = "rate_limited"` and `recovery.retryAfterSeconds`.
 - **`CLOCKIFY_TOOL_TIMEOUT`** — per-call deadline.
-- The Clockify HTTP client adds retry/backoff and a circuit breaker, and tool results
-  are size-capped by `CLOCKIFY_MAX_TOOL_RESULT_BYTES`.
+- The Clockify HTTP client uses the same timeout, adds retry/backoff and a
+  circuit breaker, and tool results are size-capped by
+  `CLOCKIFY_MAX_TOOL_RESULT_BYTES`. The upstream response cap remains at least
+  10 MiB and rises when the tool-result cap is configured higher, so large
+  export downloads can spill to a local temp file before the small MCP envelope
+  is returned.

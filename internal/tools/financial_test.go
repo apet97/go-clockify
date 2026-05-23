@@ -49,6 +49,22 @@ func TestInvoiceHandlersCount(t *testing.T) {
 	}
 }
 
+func TestRecordExpenseRequiresCategoryOrCategoryIDBeforeUpstream(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("record_expense missing category reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.ClockifyRecordExpense(context.Background(), map[string]any{
+		"amount": 12.34,
+		"date":   "2026-05-23T00:00:00Z",
+	})
+	if err == nil || !strings.Contains(err.Error(), "missing required alternative: provide category or category_id") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestExpenseHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs, ok := domainHandlers(svc, "expenses")

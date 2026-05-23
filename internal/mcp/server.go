@@ -16,6 +16,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/apet97/go-clockify/internal/safety"
 )
 
 // SupportedProtocolVersions lists MCP protocol versions this server can
@@ -154,9 +156,18 @@ type ToolDescriptor struct {
 	// (billing, admin, permission_change, external_side_effect) override it
 	// in internal/tools/risk_overrides.go.
 	RiskClass RiskClass
-	// AuditKeys is kept as neutral legacy metadata for typed tool descriptors.
-	// The one-user stdio runtime does not wire an audit durability pipeline.
+	// AuditKeys names non-secret arguments that may be copied into the optional
+	// local JSONL audit log.
 	AuditKeys []string
+	// SafetyRequirementFunc can refine confirmation policy from call
+	// arguments, primarily for raw method/path fallback tools.
+	SafetyRequirementFunc func(args map[string]any) safety.Requirement
+	// CentralDryRunPreview lets dispatch answer dry_run:true for high-risk
+	// tools that do not need handler-specific preview enrichment.
+	CentralDryRunPreview bool
+	// SafetyExemption documents a high-risk descriptor that is deliberately
+	// safe without central confirmation.
+	SafetyExemption string
 }
 
 type Server struct {
@@ -187,6 +198,16 @@ type Server struct {
 	// AuditLogger optionally appends local redacted JSONL records for tool
 	// calls. Nil disables durable audit logging.
 	AuditLogger *AuditLogger
+	// ConfirmationStore issues short-lived local confirmation tokens for
+	// high-risk tool dry-runs. Nil leaves confirmation enforcement disabled
+	// for tests and embedders that have not opted in.
+	ConfirmationStore *safety.TokenStore
+	// WorkspaceIDForSafety binds confirmation tokens to the pinned workspace
+	// without exposing the ID in the token.
+	WorkspaceIDForSafety string
+	// ConfirmationMode is "required" by default when ConfirmationStore is set.
+	// "disabled_for_local_dev" bypasses enforcement for explicit local tests.
+	ConfirmationMode string
 
 	mu    sync.RWMutex
 	tools map[string]ToolDescriptor

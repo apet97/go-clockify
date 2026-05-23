@@ -19,6 +19,7 @@ import (
 	"github.com/apet97/go-clockify/internal/config"
 	logslog "github.com/apet97/go-clockify/internal/logging"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/safety"
 	"github.com/apet97/go-clockify/internal/tools"
 )
 
@@ -112,7 +113,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		return &startupConfigError{err}
 	}
 	effective := effectiveVersion()
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 2)
+	client := newClockifyClient(cfg, 2)
 	client.SetUserAgent("clockify-mcp-one-user/" + effective)
 	client.SetCircuitBreaker(cfg.CircuitBreaker)
 	defer client.Close()
@@ -131,6 +132,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		"billing_admin": cfg.BillingAdminRateLimitPerMinute,
 		"destructive":   cfg.DestructiveRateLimitPerMinute,
 	}
+	service.ConfirmationMode = "required"
 	service.WebhookValidateDNS = true
 	service.WebhookAllowedDomains = cfg.WebhookAllowedDomains
 	if cfg.Timezone != "" {
@@ -140,14 +142,23 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		}
 		service.DefaultTimezone = loc
 	}
-	fullRegistry := service.FullAccessRegistry()
+	fullRegistry, err := service.FullAccessRegistryChecked()
+	if err != nil {
+		return fmt.Errorf("invalid full tool registry: %w", err)
+	}
 	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
 	if rawToolsEnabled && cfg.Toolset != "all" {
 		advertisedRegistry = appendRawDescriptors(advertisedRegistry, fullRegistry)
 	}
+	if err := tools.ValidateRegistry(advertisedRegistry); err != nil {
+		return fmt.Errorf("invalid advertised tool registry: %w", err)
+	}
 	server := mcp.NewServer(effective, fullRegistry)
 	server.SetAdvertisedTools(advertisedRegistry)
 	server.EnforceAdvertisedTools = cfg.Toolset != "all"
+	server.ConfirmationStore = safety.NewTokenStore(safety.TokenStoreOptions{})
+	server.WorkspaceIDForSafety = cfg.WorkspaceID
+	server.ConfirmationMode = "required"
 	server.StaticToolList = true
 	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
 	server.ConfigureRiskRateLimits(mcp.RiskRateLimits{
@@ -185,6 +196,20 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 	)
 
 	return server.Run(ctx, stdin, stdout)
+}
+
+func newClockifyClient(cfg config.OneUserConfig, maxRetries int) *clockify.Client {
+	timeout := cfg.ToolTimeout
+	if timeout <= 0 {
+		timeout = config.DefaultToolTimeout
+	}
+	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, timeout, maxRetries)
+	responseCap := cfg.MaxToolResultBytes
+	if responseCap < clockify.DefaultMaxResponseBodyBytes {
+		responseCap = clockify.DefaultMaxResponseBodyBytes
+	}
+	client.SetMaxResponseBodyBytes(responseCap)
+	return client
 }
 
 func appendRawDescriptors(advertised, full []mcp.ToolDescriptor) []mcp.ToolDescriptor {
@@ -252,11 +277,18 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "config error: %v\n", err)
 		return 2
 	}
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 0)
+	client := newClockifyClient(cfg, 0)
 	defer client.Close()
 	service := tools.New(client, cfg.WorkspaceID)
 	service.EnableRawTools = cfg.EnableRawTools || cfg.Toolset == "all"
-	fullRegistry := service.FullAccessRegistry()
+	fullRegistry, err := service.FullAccessRegistryChecked()
+	if err != nil {
+		_, _ = fmt.Fprintf(stdout, "clockify-mcp doctor - one-user configuration\n\n")
+		_, _ = fmt.Fprintf(stdout, "Result: ERROR\n")
+		_, _ = fmt.Fprintf(stdout, "Recovery: report invalid tool registry details to the maintainer; startup stops before MCP stdio begins.\n")
+		_, _ = fmt.Fprintf(stderr, "registry error: %v\n", err)
+		return 2
+	}
 	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
 	if (cfg.EnableRawTools || cfg.Toolset == "all") && cfg.Toolset != "all" {
 		advertisedRegistry = appendRawDescriptors(advertisedRegistry, fullRegistry)
@@ -322,7 +354,7 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, cfg.ToolTimeout)
 	defer cancel()
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 0)
+	client := newClockifyClient(cfg, 0)
 	client.SetUserAgent("clockify-mcp-one-user/" + effectiveVersion() + " doctor")
 	defer client.Close()
 

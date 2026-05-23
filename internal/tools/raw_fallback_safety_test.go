@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/safety"
 )
 
 func TestSafeRawPathRejectsEscapingAttempts(t *testing.T) {
@@ -193,6 +194,68 @@ func TestRawAPIWriteDocumentedOnly(t *testing.T) {
 	}
 	if !called {
 		t.Fatal("documented raw write did not reach upstream")
+	}
+}
+
+func TestRawAPIWriteDryRunDoesNotCallUpstream(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("raw write dry_run reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawTools = true
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	result, err := svc.RawAPIRequest(context.Background(), map[string]any{
+		"method":  "DELETE",
+		"path":    "/workspaces/{workspaceId}/projects/proj-1",
+		"query":   map[string]any{"seriesUpdateOption": "ALL"},
+		"dry_run": true,
+	})
+	if err != nil {
+		t.Fatalf("raw write dry_run failed: %v", err)
+	}
+	envelope := result.(ToolResult)
+	data := envelope.Data.(map[string]any)
+	if data["dry_run"] != true || data["method"] != "DELETE" || data["path"] != "/workspaces/ws1/projects/proj-1" {
+		t.Fatalf("bad raw dry_run data: %+v", data)
+	}
+	if data["query_hash"] == "" || data["body_hash"] == "" || data["documented_route"] != true {
+		t.Fatalf("raw dry_run missing hashes/documented flag: %+v", data)
+	}
+}
+
+func TestRawAPIWriteRequiresConfirmationAtMCPBoundary(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unconfirmed raw write reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.EnableRawTools = true
+	svc.EnableRawWrites = true
+	svc.RawWriteDocumentedOnly = true
+	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server.ConfirmationStore = safety.NewTokenStore(safety.TokenStoreOptions{})
+	server.WorkspaceIDForSafety = "ws1"
+	initializeServer(t, server)
+
+	errResult := callToolError(t, server, "clockify_api_request", map[string]any{
+		"method": "DELETE",
+		"path":   "/workspaces/{workspaceId}/projects/proj-1",
+	})
+	if errResult.Error.Code != "confirmation_required" {
+		t.Fatalf("error code = %s, want confirmation_required; %+v", errResult.Error.Code, errResult)
+	}
+
+	preview := decodeStructuredContentMap(t, "clockify_api_request", callToolRaw(t, server, "clockify_api_request", map[string]any{
+		"method":  "DELETE",
+		"path":    "/workspaces/{workspaceId}/projects/proj-1",
+		"dry_run": true,
+	}))
+	if preview["confirmation"] == nil {
+		t.Fatalf("raw dry_run preview missing confirmation metadata: %+v", preview)
 	}
 }
 

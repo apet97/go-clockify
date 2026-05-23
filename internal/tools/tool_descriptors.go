@@ -139,6 +139,7 @@ func normalizeDescriptors(in []mcp.ToolDescriptor) []mcp.ToolDescriptor {
 			tightenInputSchema(in[i].Tool.InputSchema)
 		}
 		applyRiskMetadata(&in[i])
+		applyConfirmationSchema(&in[i])
 		applyAgentToolMetadata(&in[i])
 	}
 	return in
@@ -229,6 +230,34 @@ func applyRiskMetadata(d *mcp.ToolDescriptor) {
 		d.Tool.Annotations["riskClass"] = names
 	}
 	d.Tool.Annotations["dryRun"] = schemaHasDryRun(d.Tool.InputSchema)
+}
+
+func applyConfirmationSchema(d *mcp.ToolDescriptor) {
+	if d.Tool.InputSchema == nil || !d.RiskClass.IsHighRisk() || d.SafetyExemption != "" {
+		return
+	}
+	props, ok := d.Tool.InputSchema["properties"].(map[string]any)
+	if !ok {
+		props = map[string]any{}
+		d.Tool.InputSchema["properties"] = props
+	}
+	if _, exists := props["confirm_token"]; !exists {
+		props["confirm_token"] = map[string]any{
+			"type":        "string",
+			"description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+			"minLength":   16,
+			"maxLength":   512,
+		}
+	}
+	if _, exists := props["dry_run"]; !exists {
+		props["dry_run"] = map[string]any{
+			"type":        "boolean",
+			"description": "Preview the operation without making changes.",
+		}
+		d.CentralDryRunPreview = true
+	}
+	d.Tool.Annotations["confirmationRequired"] = true
+	d.Tool.Annotations["dryRun"] = true
 }
 
 func riskClassAnnotationNames(rc mcp.RiskClass) []string {

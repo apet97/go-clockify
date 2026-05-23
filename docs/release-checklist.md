@@ -49,6 +49,19 @@ commit-status API.
       means CI never executed for that exact commit - push it, wait for CI to
       finish green, and only then tag.
 
+## Release workflow preflight
+
+The tag-triggered release workflow repeats the fast deterministic release
+preflight before upload:
+
+- `go test -count=1 ./internal/mcp ./internal/tools ./internal/config ./internal/clockify ./cmd/clockify-mcp`
+- `npm ci`, `npm test`, and `npm run build` in `npm/clockify-mcp-launcher`
+- packaged launcher smoke via `node bin/clockify-mcp.js --version` after the
+  vendored Linux binary is copied into `vendor/`
+
+If any of these fail, fix the release commit and retag; do not upload artifacts
+from a failed release run.
+
 ## Branch protection
 
 `main` must require every CI check listed in

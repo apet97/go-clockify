@@ -7,20 +7,28 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/safety"
 )
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
+	rawRequest := firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+		"method":        map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
+		"path":          map[string]any{"type": "string"},
+		"query":         map[string]any{"type": "object", "additionalProperties": true},
+		"body":          map[string]any{"type": "object", "additionalProperties": true},
+		"dry_run":       map[string]any{"type": "boolean", "description": "Preview a raw mutating request without calling Clockify."},
+		"confirm_token": map[string]any{"type": "string", "description": "Short-lived token returned by a dry_run preview for this exact raw request.", "minLength": 16, "maxLength": 512},
+	}})), s.RawAPIRequest)
+	rawRequest.SafetyRequirementFunc = func(args map[string]any) safety.Requirement {
+		method := strings.ToUpper(strings.TrimSpace(stringArg(args, "method")))
+		return safety.RequirementForRisk([]string{"write"}, false, method)
+	}
 	return []mcp.ToolDescriptor{
 		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
 			"path":  map[string]any{"type": "string"},
 			"query": map[string]any{"type": "object", "additionalProperties": true},
 		}})), s.RawAPIGet),
-		firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
-			"method": map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
-			"path":   map[string]any{"type": "string"},
-			"query":  map[string]any{"type": "object", "additionalProperties": true},
-			"body":   map[string]any{"type": "object", "additionalProperties": true},
-		}})), s.RawAPIRequest),
+		rawRequest,
 	}
 }
 
@@ -58,6 +66,17 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 	}
 	query := rawQuery(args["query"])
 	body, _ := args["body"].(map[string]any)
+	if method != "GET" && boolArg(args, "dry_run") {
+		data := map[string]any{
+			"dry_run":          true,
+			"method":           method,
+			"path":             path,
+			"query_hash":       safety.HashCanonical(query),
+			"body_hash":        safety.HashCanonical(body),
+			"documented_route": !s.RawWriteDocumentedOnly || isDocumentedRawWriteRoute(method, path),
+		}
+		return result(actionForRawMethod(method), "raw_api", map[string]string{"workspaceId": s.WorkspaceID}, data, ChangeSet{}, []Warning{{Code: "dry_run", Message: "No raw API request was sent to Clockify."}}, nil), nil
+	}
 	var data any
 	switch method {
 	case "GET":
@@ -91,6 +110,13 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 		ids[key] = value
 	}
 	return result(action, "raw_api", ids, data, changedFor(rawChange(method), "raw_api", data, ids), nil, nil), nil
+}
+
+func actionForRawMethod(method string) string {
+	if method == "GET" {
+		return "clockify_api_get"
+	}
+	return "clockify_api_request"
 }
 
 func rawSensitiveReadToolsetAllowed(toolset string) bool {

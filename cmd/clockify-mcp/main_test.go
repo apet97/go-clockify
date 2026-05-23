@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/testclockify"
 )
@@ -75,6 +76,41 @@ func TestParseLogLevel(t *testing.T) {
 		if got := isKnownLogLevel(input); got != tt.known {
 			t.Fatalf("isKnownLogLevel(%q)=%v want %v", input, got, tt.known)
 		}
+	}
+}
+
+func TestNewClockifyClientUsesToolTimeoutAndRaisedResultCap(t *testing.T) {
+	cfg := config.OneUserConfig{
+		APIKey:             "test-key",
+		BaseURL:            "http://127.0.0.1:1",
+		ToolTimeout:        2 * time.Minute,
+		MaxToolResultBytes: 32 * 1024 * 1024,
+	}
+
+	client := newClockifyClient(cfg, 0)
+	defer client.Close()
+
+	if got := client.HTTPTimeout(); got != 2*time.Minute {
+		t.Fatalf("HTTPTimeout = %s, want 2m", got)
+	}
+	if got, want := client.MaxResponseBodyBytes(), int64(32*1024*1024); got != want {
+		t.Fatalf("MaxResponseBodyBytes = %d, want %d", got, want)
+	}
+}
+
+func TestNewClockifyClientKeepsDefaultResponseCapWhenToolResultCapIsSmall(t *testing.T) {
+	cfg := config.OneUserConfig{
+		APIKey:             "test-key",
+		BaseURL:            "http://127.0.0.1:1",
+		ToolTimeout:        15 * time.Second,
+		MaxToolResultBytes: config.DefaultMaxToolResultBytes,
+	}
+
+	client := newClockifyClient(cfg, 0)
+	defer client.Close()
+
+	if got, want := client.MaxResponseBodyBytes(), int64(clockify.DefaultMaxResponseBodyBytes); got != want {
+		t.Fatalf("MaxResponseBodyBytes = %d, want default %d", got, want)
 	}
 }
 

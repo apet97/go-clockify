@@ -25,9 +25,13 @@ import (
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
-// maxResponseBody is the maximum number of bytes read from API responses
-// to prevent OOM on unexpectedly large or malicious responses.
-const maxResponseBody = 10 * 1024 * 1024 // 10 MB
+// DefaultMaxResponseBodyBytes is the default maximum number of bytes read from
+// API responses to prevent OOM on unexpectedly large or malicious responses.
+const DefaultMaxResponseBodyBytes = 10 * 1024 * 1024 // 10 MB
+
+// maxResponseBody is kept as a package-local compatibility alias for older
+// tests that assert the default cap boundary.
+const maxResponseBody = DefaultMaxResponseBodyBytes
 
 // responseDrainLimit caps best-effort connection-reuse drains once the caller
 // no longer needs the response body. Past this, close the connection instead
@@ -85,12 +89,13 @@ func valuesFromQueryMap(query map[string]string) url.Values {
 }
 
 type Client struct {
-	apiKey     string
-	baseURL    string
-	httpClient *http.Client
-	maxRetries int
-	userAgent  string
-	breaker    *CircuitBreaker
+	apiKey               string
+	baseURL              string
+	httpClient           *http.Client
+	maxRetries           int
+	userAgent            string
+	maxResponseBodyBytes int64
+	breaker              *CircuitBreaker
 }
 
 const (
@@ -133,8 +138,9 @@ func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *C
 				return nil
 			},
 		},
-		maxRetries: maxRetries,
-		userAgent:  "clockify-mcp-go/dev",
+		maxRetries:           maxRetries,
+		userAgent:            "clockify-mcp-go/dev",
+		maxResponseBodyBytes: DefaultMaxResponseBodyBytes,
 	}
 }
 
@@ -146,6 +152,28 @@ func (c *Client) Close() {
 // SetUserAgent sets the User-Agent string sent with every request.
 func (c *Client) SetUserAgent(ua string) {
 	c.userAgent = ua
+}
+
+func (c *Client) HTTPTimeout() time.Duration {
+	if c == nil || c.httpClient == nil {
+		return 0
+	}
+	return c.httpClient.Timeout
+}
+
+func (c *Client) SetMaxResponseBodyBytes(n int) {
+	if n <= 0 {
+		c.maxResponseBodyBytes = DefaultMaxResponseBodyBytes
+		return
+	}
+	c.maxResponseBodyBytes = int64(n)
+}
+
+func (c *Client) MaxResponseBodyBytes() int64 {
+	if c == nil || c.maxResponseBodyBytes <= 0 {
+		return DefaultMaxResponseBodyBytes
+	}
+	return c.maxResponseBodyBytes
 }
 
 func (c *Client) SetCircuitBreaker(cfg CircuitBreakerConfig) {
@@ -709,15 +737,16 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 	// and stash headers — no JSON unmarshal. Same size cap as the
 	// JSON path so an oversize binary still surfaces a clear error.
 	if raw, ok := out.(*RawResponse); ok {
+		limit := c.MaxResponseBodyBytes()
 		respBuf := getBodyBuf()
 		defer putBodyBuf(respBuf)
-		n, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody+1))
+		n, err := io.Copy(respBuf, io.LimitReader(resp.Body, limit+1))
 		if err != nil {
 			return err
 		}
-		if n > maxResponseBody {
+		if n > limit {
 			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
-			return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
+			return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", limit, method, path)
 		}
 		body := make([]byte, n)
 		copy(body, respBuf.Bytes())
@@ -738,19 +767,20 @@ func (c *Client) doOnceValues(ctx context.Context, baseURL, method, path, endpoi
 	// upstream response is a different operator concern than a
 	// genuinely malformed one, and operators couldn't distinguish
 	// them.
+	limit := c.MaxResponseBodyBytes()
 	respBuf := getBodyBuf()
 	defer putBodyBuf(respBuf)
-	n, err := io.Copy(respBuf, io.LimitReader(resp.Body, maxResponseBody+1))
+	n, err := io.Copy(respBuf, io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return err
 	}
-	if n > maxResponseBody {
+	if n > limit {
 		// Drain whatever is left so the connection can be reused
 		// (bounded). The 1 MiB ceiling on the drain mirrors the
 		// error-path drain — past that, we throw the connection
 		// away.
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, responseDrainLimit))
-		return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", maxResponseBody, method, path)
+		return fmt.Errorf("clockify response too large: > %d bytes (method=%s path=%s)", limit, method, path)
 	}
 	if n == 0 {
 		// Some Clockify endpoints (notably the scheduling per-user

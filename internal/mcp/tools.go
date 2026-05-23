@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/apet97/go-clockify/internal/jsonschema"
+	"github.com/apet97/go-clockify/internal/safety"
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
@@ -223,11 +224,7 @@ func (s *Server) buildToolListLocked() []Tool {
 		}
 		tool := descriptor.Tool
 		if !descriptor.AdvertiseOutputSchema {
-			if descriptorInTier(descriptor, "default") {
-				tool.OutputSchema = compactToolResultOutputSchema()
-			} else {
-				tool.OutputSchema = nil
-			}
+			tool.OutputSchema = compactToolResultOutputSchema()
 		}
 		items = append(items, struct {
 			name string
@@ -407,6 +404,54 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
 		return nil, err
 	}
+	requirement := s.confirmationRequirement(d, params.Arguments)
+	handlerArgs := stripConfirmationToken(params.Arguments)
+	issueConfirmationToken := false
+	var confirmationAudit map[string]any
+	if s.confirmationEnabled() && requirement.RequiresConfirmation {
+		if boolArg(params.Arguments, "dry_run") {
+			issueConfirmationToken = true
+			if d.CentralDryRunPreview {
+				preview := centralDryRunPreview(d, requirement)
+				result, auditMeta, err := s.issueConfirmationTokenForResult(d, handlerArgs, preview)
+				if err != nil {
+					outcome = "tool_error"
+					slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
+					s.auditToolCall(d, handlerArgs, "error", "confirmation_issue_failed")
+					return nil, err
+				}
+				s.auditToolCallWithConfirmation(d, handlerArgs, "success", "", auditMeta)
+				return result, nil
+			}
+		} else {
+			token, _ := params.Arguments["confirm_token"].(string)
+			token = strings.TrimSpace(token)
+			if token == "" {
+				outcome = "confirmation_required"
+				slog.Warn("tool_call", "tool", params.Name, "error", "confirmation_required", "req_id", reqID)
+				s.auditToolCallWithConfirmation(d, params.Arguments, "rejected", "confirmation_required", map[string]any{
+					"status":   "required",
+					"required": true,
+					"reason":   requirement.Reason,
+				})
+				return confirmationRequiredEnvelope(params.Name, requirement), nil
+			}
+			payload := s.confirmationPayload(d, handlerArgs)
+			if err := s.ConfirmationStore.Validate(token, payload); err != nil {
+				outcome = "confirmation_rejected"
+				slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "req_id", reqID)
+				s.auditToolCallWithConfirmation(d, params.Arguments, "rejected", "confirmation_mismatch", map[string]any{
+					"status":      "rejected",
+					"tokenSuffix": safety.TokenAuditSuffix(token),
+				})
+				return confirmationRejectedEnvelope(params.Name, err), nil
+			}
+			confirmationAudit = map[string]any{
+				"status":      "accepted",
+				"tokenSuffix": safety.TokenAuditSuffix(token),
+			}
+		}
+	}
 
 	start := time.Now()
 	timeout := s.ToolTimeout
@@ -426,7 +471,7 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		defer release()
 	}
 
-	result, err := d.Handler(callCtx, params.Arguments)
+	result, err := d.Handler(callCtx, handlerArgs)
 	duration := time.Since(start)
 	if err != nil {
 		switch {
@@ -441,17 +486,170 @@ func (s *Server) callTool(ctx context.Context, params ToolCallParams) (any, erro
 		s.auditToolCall(d, params.Arguments, "error", outcome)
 		return nil, err
 	}
+	if issueConfirmationToken {
+		var auditMeta map[string]any
+		result, auditMeta, err = s.issueConfirmationTokenForResult(d, handlerArgs, result)
+		if err != nil {
+			outcome = "tool_error"
+			slog.Warn("tool_call", "tool", params.Name, "error", err.Error(), "duration_ms", duration.Milliseconds(), "req_id", reqID)
+			s.auditToolCall(d, handlerArgs, "error", "confirmation_issue_failed")
+			return nil, err
+		}
+		confirmationAudit = auditMeta
+	}
 	slog.Info("tool_call", "tool", params.Name, "duration_ms", duration.Milliseconds(), "req_id", reqID)
-	s.auditToolCall(d, params.Arguments, "success", "")
+	s.auditToolCallWithConfirmation(d, handlerArgs, "success", "", confirmationAudit)
 
 	return result, nil
 }
 
+func (s *Server) issueConfirmationTokenForResult(d ToolDescriptor, args map[string]any, result any) (any, map[string]any, error) {
+	token, previewHash, expiresAt, err := s.ConfirmationStore.Issue(s.confirmationPayload(d, args))
+	if err != nil {
+		return nil, nil, err
+	}
+	auditMeta := map[string]any{
+		"status":      "issued",
+		"tokenSuffix": safety.TokenAuditSuffix(token),
+		"previewHash": previewHash,
+		"expiresAt":   expiresAt.UTC().Format(time.RFC3339),
+	}
+	return mergeConfirmationMetadata(result, map[string]any{
+		"required":      true,
+		"risk_class":    riskClassNames(d.RiskClass),
+		"preview_hash":  previewHash,
+		"confirm_token": token,
+		"expires_at":    expiresAt.UTC().Format(time.RFC3339),
+		"instructions":  "Call the same tool with these arguments, omit dry_run, and include confirm_token to execute.",
+	}), auditMeta, nil
+}
+
+func (s *Server) confirmationEnabled() bool {
+	if s == nil || s.ConfirmationStore == nil {
+		return false
+	}
+	return strings.TrimSpace(s.ConfirmationMode) != "disabled_for_local_dev"
+}
+
+func (s *Server) confirmationRequirement(d ToolDescriptor, args map[string]any) safety.Requirement {
+	if strings.TrimSpace(d.SafetyExemption) != "" {
+		return safety.Requirement{}
+	}
+	if d.SafetyRequirementFunc != nil {
+		return d.SafetyRequirementFunc(args)
+	}
+	return safety.RequirementForRisk(riskClassNames(d.RiskClass), d.RiskClass.Has(RiskDestructive), "")
+}
+
+func (s *Server) confirmationPayload(d ToolDescriptor, args map[string]any) safety.Payload {
+	return safety.Payload{
+		ToolName:    d.Tool.Name,
+		WorkspaceID: s.WorkspaceIDForSafety,
+		RiskClass:   strings.Join(riskClassNames(d.RiskClass), "+"),
+		ArgsHash:    safety.HashCanonical(args),
+	}
+}
+
+func stripConfirmationToken(args map[string]any) map[string]any {
+	if len(args) == 0 {
+		return args
+	}
+	if _, ok := args["confirm_token"]; !ok {
+		return args
+	}
+	out := make(map[string]any, len(args)-1)
+	for key, value := range args {
+		if key == "confirm_token" {
+			continue
+		}
+		out[key] = value
+	}
+	return out
+}
+
+func boolArg(args map[string]any, key string) bool {
+	value, _ := args[key].(bool)
+	return value
+}
+
+func confirmationRequiredEnvelope(toolName string, req safety.Requirement) map[string]any {
+	return map[string]any{
+		"ok":     false,
+		"action": toolName,
+		"error": map[string]any{
+			"code":    "confirmation_required",
+			"message": "Run this high-risk tool with dry_run:true first, inspect the preview, then retry with confirm_token.",
+		},
+		"recovery": map[string]any{
+			"tool": toolName,
+			"hint": "Use dry_run:true to get a short-lived confirmation token.",
+		},
+		"confirmation": map[string]any{
+			"required": true,
+			"reason":   req.Reason,
+		},
+	}
+}
+
+func confirmationRejectedEnvelope(toolName string, err error) map[string]any {
+	return map[string]any{
+		"ok":     false,
+		"action": toolName,
+		"error": map[string]any{
+			"code":    "confirmation_mismatch",
+			"message": err.Error(),
+		},
+		"recovery": map[string]any{
+			"tool": toolName,
+			"hint": "Run dry_run:true again and retry with the new confirm_token before it expires.",
+		},
+	}
+}
+
+func centralDryRunPreview(d ToolDescriptor, req safety.Requirement) map[string]any {
+	return map[string]any{
+		"ok":      true,
+		"action":  d.Tool.Name,
+		"dry_run": true,
+		"changed": false,
+		"data": map[string]any{
+			"would_execute": map[string]any{
+				"tool":       d.Tool.Name,
+				"risk_class": riskClassNames(d.RiskClass),
+				"reason":     req.Reason,
+			},
+		},
+		"warnings": []string{"No changes were made. Re-run with confirm_token to execute this high-risk operation."},
+	}
+}
+
+func mergeConfirmationMetadata(result any, confirmation map[string]any) any {
+	if m, ok := result.(map[string]any); ok {
+		out := deepCopyAnyMap(m)
+		out["confirmation"] = confirmation
+		return out
+	}
+	b, err := json.Marshal(result)
+	if err != nil {
+		return map[string]any{"ok": true, "confirmation": confirmation, "data": result}
+	}
+	var out map[string]any
+	if err := json.Unmarshal(b, &out); err != nil || out == nil {
+		return map[string]any{"ok": true, "confirmation": confirmation, "data": result}
+	}
+	out["confirmation"] = confirmation
+	return out
+}
+
 func (s *Server) auditToolCall(descriptor ToolDescriptor, args map[string]any, result, errorCode string) {
+	s.auditToolCallWithConfirmation(descriptor, args, result, errorCode, nil)
+}
+
+func (s *Server) auditToolCallWithConfirmation(descriptor ToolDescriptor, args map[string]any, result, errorCode string, confirmation map[string]any) {
 	if s == nil || s.AuditLogger == nil {
 		return
 	}
-	if err := s.AuditLogger.Record(descriptor, args, result, errorCode); err != nil {
+	if err := s.AuditLogger.RecordWithConfirmation(descriptor, args, result, errorCode, confirmation); err != nil {
 		slog.Warn("audit_log_write_failed", "tool", descriptor.Tool.Name, "error", err.Error())
 	}
 }

@@ -76,6 +76,37 @@ func TestSchedulingCapacityUserIDsOptional(t *testing.T) {
 	}
 }
 
+func TestHighRiskToolsAcceptConfirmTokenWithoutOpeningSchema(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	for _, d := range svc.FullAccessRegistry() {
+		hasConfirmToken := schemaHasProperty(d.Tool.InputSchema, "confirm_token")
+		if d.RiskClass.IsHighRisk() {
+			if !hasConfirmToken {
+				t.Fatalf("%s is high-risk but lacks confirm_token", d.Tool.Name)
+			}
+			if got := d.Tool.InputSchema["additionalProperties"]; got != false {
+				t.Fatalf("%s additionalProperties = %v, want false", d.Tool.Name, got)
+			}
+			continue
+		}
+		if d.RiskClass.Has(mcp.RiskRead) && hasConfirmToken {
+			t.Fatalf("%s is read-only but unexpectedly accepts confirm_token", d.Tool.Name)
+		}
+	}
+}
+
+func TestHighRiskToolsSupportDryRunForConfirmationPreview(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	for _, d := range svc.FullAccessRegistry() {
+		if !d.RiskClass.IsHighRisk() || strings.TrimSpace(d.SafetyExemption) != "" {
+			continue
+		}
+		if !schemaHasProperty(d.Tool.InputSchema, "dry_run") {
+			t.Fatalf("%s is high-risk but lacks dry_run for confirmation preview", d.Tool.Name)
+		}
+	}
+}
+
 func TestEveryToolParameterHasADescription(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	for _, d := range svc.FullAccessRegistry() {

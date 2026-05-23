@@ -1759,6 +1759,22 @@ func TestRequestTimeOffWorkflowResolvesPolicyNameAndAllowsMissingNote(t *testing
 	}
 }
 
+func TestRequestTimeOffRequiresPolicyOrPolicyIDBeforeUpstream(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("request_time_off missing policy reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	_, err := svc.ClockifyRequestTimeOff(context.Background(), map[string]any{
+		"start": "2026-06-01",
+		"end":   "2026-06-02",
+	})
+	if err == nil || !strings.Contains(err.Error(), "missing required alternative: provide policy or policy_id") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestRequestTimeOffSchemaNoteOptionalAndPolicyOneOfDocumented(t *testing.T) {
 	schema := requestTimeOffSchema()
 	required := schema["required"].([]string)

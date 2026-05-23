@@ -101,6 +101,8 @@ type Service struct {
 	ToolRateLimits map[string]int
 	// AuditLogPath is the optional local JSONL path used by the MCP runtime.
 	AuditLogPath string
+	// ConfirmationMode reports the central high-risk confirmation posture.
+	ConfirmationMode string
 	// Notifier delivers server→client notifications (progress, resource updates,
 	// etc.) emitted by tool handlers. nil = drop silently.
 	Notifier mcp.Notifier
@@ -135,6 +137,7 @@ type Service struct {
 	demoResources      map[string]demoResourceState
 	registryOnce       sync.Once
 	registry           []mcp.ToolDescriptor
+	registryErr        error
 	toolsResourceOnce  sync.Once
 	toolsResourceCache map[string]any
 }

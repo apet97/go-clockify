@@ -1221,6 +1221,47 @@ func TestClientOversizeResponseReturnsClearError(t *testing.T) {
 	}
 }
 
+func TestClientResponseBodyLimitIsConfigurable(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"value":"1234567890"}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	defer c.Close()
+	c.SetMaxResponseBodyBytes(8)
+
+	var out map[string]any
+	err := c.Get(context.Background(), "/items", nil, &out)
+	if err == nil {
+		t.Fatal("expected response-too-large error")
+	}
+	if !contains(err.Error(), "response too large: > 8 bytes") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestClientRawResponseBodyLimitIsConfigurable(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write([]byte("0123456789"))
+	}))
+	defer ts.Close()
+
+	c := NewClient("test-key", ts.URL, 5*time.Second, 0)
+	defer c.Close()
+	c.SetMaxResponseBodyBytes(4)
+
+	_, err := c.RequestRawValues(context.Background(), false, http.MethodGet, "/export", nil, nil)
+	if err == nil {
+		t.Fatal("expected raw response-too-large error")
+	}
+	if !contains(err.Error(), "response too large: > 4 bytes") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // TestClientUnderLimitResponseStillSucceeds is the symmetric
 // guardrail: a body just under the cap must still parse cleanly,
 // otherwise we'd push the boundary too low and break legitimate

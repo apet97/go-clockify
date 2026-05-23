@@ -13231,6 +13231,12 @@
             "description": "Clockify client ID.",
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -13462,6 +13468,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -16160,6 +16167,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -16399,6 +16412,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -16421,13 +16435,23 @@
       "read_only": false,
       "destructive": true,
       "idempotent": true,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "destructive"
       ],
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "project": {
             "description": "Project name or ID.",
             "type": "string"
@@ -17708,8 +17732,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": true,
         "openWorldHint": true,
@@ -17749,6 +17774,12 @@
             "description": "Rate amount in minor currency units (cents): 1000 = $10.00/hr.",
             "minimum": 0,
             "type": "integer"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
           },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
@@ -18008,6 +18039,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -19390,6 +19422,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -19639,6 +19677,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -19679,6 +19718,12 @@
             "description": "Rate amount in minor currency units (cents): 1000 = $10.00/hr.",
             "minimum": 0,
             "type": "integer"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
           },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
@@ -19946,6 +19991,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -20543,6 +20589,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -20782,6 +20834,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -22469,6 +22522,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -22704,6 +22763,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -24465,6 +24525,12 @@
             "description": "Client ID (required)",
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "currency": {
             "description": "Currency code (required; e.g. USD, EUR)",
             "maxLength": 3,
@@ -24752,6 +24818,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -24798,6 +24865,12 @@
           },
           "client_id": {
             "description": "Clockify client ID.",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "currency": {
@@ -25099,6 +25172,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -25133,6 +25207,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -25368,6 +25448,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -25672,6 +25753,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -25909,6 +25996,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -26227,6 +26315,12 @@
             ],
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "description": {
             "description": "Free-text description.",
             "maxLength": 2000,
@@ -26491,6 +26585,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -26797,6 +26892,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -27042,6 +27143,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -28029,6 +28131,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -28378,6 +28486,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -29038,6 +29147,12 @@
             "description": "Expense category ID (required)",
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "date": {
             "description": "Expense date as an ISO 8601 / RFC 3339 timestamp, e.g. 2026-05-16T14:30:00Z or 2026-05-16T14:30:00+02:00.",
             "type": "string"
@@ -29308,6 +29423,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -29331,7 +29447,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -29383,9 +29499,19 @@
             },
             "type": "array"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "date": {
             "description": "Expense date as an ISO 8601 / RFC 3339 timestamp, e.g. 2026-05-16T14:30:00Z or 2026-05-16T14:30:00+02:00.",
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "expense_id": {
             "description": "Clockify expense ID.",
@@ -29640,8 +29766,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -29674,6 +29801,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -29909,6 +30042,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -30221,6 +30355,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -30474,6 +30614,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -30519,6 +30660,12 @@
           },
           "category_id": {
             "description": "Clockify expense category ID.",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "dry_run": {
@@ -30774,6 +30921,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -30810,6 +30958,12 @@
         "properties": {
           "category_id": {
             "description": "Clockify expense category ID.",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "dry_run": {
@@ -31043,6 +31197,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -31599,7 +31754,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -31617,6 +31772,16 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "field_type": {
             "description": "Upstream-accepted custom-field type",
@@ -31902,8 +32067,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -31925,7 +32091,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -31944,6 +32110,16 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "field_id": {
             "description": "Clockify custom field ID.",
@@ -32232,8 +32408,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -32266,6 +32443,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -32501,6 +32684,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -32524,7 +32708,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -32536,6 +32720,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "entry_id": {
             "description": "Time entry ID (set value on entry)",
             "type": "string"
@@ -32803,8 +32997,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -33401,6 +33596,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -33662,6 +33863,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -33700,6 +33902,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -33951,6 +34159,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -33985,6 +34194,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -34226,6 +34441,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -34249,7 +34465,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin",
@@ -34261,6 +34477,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "note": {
             "description": "Optional approval note",
             "maxLength": 500,
@@ -34504,8 +34730,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -34528,7 +34755,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin",
@@ -34540,6 +34767,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "note": {
             "description": "Optional denial reason",
             "maxLength": 500,
@@ -34783,8 +35020,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -35371,7 +35609,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -35392,9 +35630,19 @@
             "description": "Auto-approve requests",
             "type": "boolean"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "days_per_year": {
             "description": "Days granted per year by the policy.",
             "type": "number"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "name": {
             "description": "Display name.",
@@ -35643,8 +35891,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -35666,7 +35915,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -35688,9 +35937,19 @@
             "description": "Whether matching requests are approved automatically.",
             "type": "boolean"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "days_per_year": {
             "description": "Days granted per year by the policy.",
             "type": "number"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "name": {
             "description": "Display name.",
@@ -35943,8 +36202,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -36260,6 +36520,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -36519,6 +36785,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -37781,6 +38048,12 @@
             "description": "Clockify scheduling assignment ID.",
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -38021,6 +38294,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -38930,6 +39204,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -39184,6 +39464,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -39221,6 +39502,12 @@
         "properties": {
           "approval_id": {
             "description": "Clockify approval request ID.",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "dry_run": {
@@ -39463,6 +39750,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -39501,6 +39789,12 @@
         "properties": {
           "approval_id": {
             "description": "Clockify approval request ID.",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "dry_run": {
@@ -39747,6 +40041,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -39785,6 +40080,12 @@
         "properties": {
           "approval_id": {
             "description": "Clockify approval request ID.",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "dry_run": {
@@ -40035,6 +40336,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -40617,6 +40919,12 @@
             "description": "Optional HMAC signing secret for webhook delivery; sent upstream as authToken and never returned unmasked",
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -40887,6 +41195,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -40928,6 +41237,12 @@
         "properties": {
           "auth_token": {
             "description": "Optional replacement HMAC signing secret; sent upstream as authToken and never returned unmasked",
+            "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
             "type": "string"
           },
           "dry_run": {
@@ -41202,6 +41517,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -41236,6 +41552,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -41471,6 +41793,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -42586,7 +42909,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -42597,6 +42920,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "name": {
             "description": "Display name.",
             "maxLength": 150,
@@ -42838,8 +43171,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -42861,7 +43195,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin"
@@ -42873,6 +43207,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "group_id": {
             "description": "Clockify user group ID.",
             "type": "string"
@@ -43119,8 +43463,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -43153,6 +43498,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -43388,6 +43739,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -43424,6 +43776,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -43664,6 +44022,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -43701,6 +44060,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -43941,6 +44306,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -44800,6 +45166,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -45035,6 +45407,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -45068,6 +45441,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -45305,6 +45684,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -45341,6 +45721,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -45663,6 +46049,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -47464,7 +47851,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -47479,6 +47866,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "from": {
             "description": "Start of the billing period (YYYY-MM-DD or RFC3339). All billable time on or after this is imported.",
             "type": "string"
@@ -47747,8 +48144,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -47770,7 +48168,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -47785,6 +48183,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "from": {
             "description": "Start of the billing period (YYYY-MM-DD or RFC3339).",
             "type": "string"
@@ -48053,8 +48461,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -48357,7 +48766,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -48382,9 +48791,19 @@
             ],
             "type": "string"
           },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "date": {
             "description": "Payment date",
             "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "invoice_id": {
             "description": "Clockify invoice ID.",
@@ -48627,8 +49046,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -48662,6 +49082,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -48903,6 +49329,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -48926,7 +49353,7 @@
       "read_only": false,
       "destructive": true,
       "idempotent": true,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "admin",
         "destructive"
@@ -48940,6 +49367,16 @@
         "properties": {
           "archived": {
             "description": "Required. Pass true to archive the policy; pass false to reactivate it.",
+            "type": "boolean"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
             "type": "boolean"
           },
           "policy_id": {
@@ -49175,8 +49612,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": true,
         "openWorldHint": true,
@@ -49751,7 +50189,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "admin",
@@ -49768,6 +50206,16 @@
           "approval_id": {
             "description": "Approval request ID",
             "type": "string"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
           },
           "entry_ids": {
             "description": "Time entry IDs to resubmit",
@@ -50033,8 +50481,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,
@@ -50612,7 +51061,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": true,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write",
         "billing"
@@ -50624,6 +51073,16 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the operation without making changes.",
+            "type": "boolean"
+          },
           "invoiced": {
             "description": "Whether the time entries are marked as invoiced.",
             "type": "boolean"
@@ -50878,8 +51337,9 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": true,
         "openWorldHint": true,
@@ -50916,6 +51376,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -51163,6 +51629,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -52207,6 +52674,12 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact risky action.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
           "dry_run": {
             "description": "Preview the resolved request without making changes.",
             "type": "boolean"
@@ -52465,6 +52938,7 @@
       },
       "annotations": {
         "category": "domain",
+        "confirmationRequired": true,
         "destructiveHint": true,
         "dryRun": true,
         "handlerKind": "native handler",
@@ -55752,7 +56226,7 @@
       "read_only": false,
       "destructive": false,
       "idempotent": false,
-      "dry_run": false,
+      "dry_run": true,
       "risk_class": [
         "write"
       ],
@@ -55763,6 +56237,16 @@
             "additionalProperties": true,
             "description": "Raw JSON request body forwarded to the Clockify API.",
             "type": "object"
+          },
+          "confirm_token": {
+            "description": "Short-lived token returned by a dry_run preview for this exact raw request.",
+            "maxLength": 512,
+            "minLength": 16,
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "Preview the resolved request without making changes.",
+            "type": "boolean"
           },
           "method": {
             "description": "HTTP method: GET, POST, PUT, PATCH, or DELETE.",
@@ -56009,7 +56493,7 @@
       "annotations": {
         "category": "raw",
         "destructiveHint": false,
-        "dryRun": false,
+        "dryRun": true,
         "handlerKind": "native handler",
         "idempotentHint": false,
         "openWorldHint": true,

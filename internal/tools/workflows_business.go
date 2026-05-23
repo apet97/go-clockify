@@ -221,7 +221,7 @@ func (s *Service) ClockifyRecordExpense(ctx context.Context, args map[string]any
 	if strings.TrimSpace(stringArg(expenseArgs, "category_id")) == "" {
 		category := strings.TrimSpace(stringArg(expenseArgs, "category"))
 		if category == "" {
-			return nil, fmt.Errorf("category or category_id is required")
+			return nil, fmt.Errorf("missing required alternative: provide category or category_id")
 		}
 		categoryID, err := s.resolveExpenseCategoryID(ctx, category)
 		if err != nil {
@@ -252,7 +252,7 @@ func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]an
 	if strings.TrimSpace(stringArg(reqArgs, "policy_id")) == "" {
 		policy := strings.TrimSpace(stringArg(reqArgs, "policy"))
 		if policy == "" {
-			return nil, fmt.Errorf("policy or policy_id is required")
+			return nil, fmt.Errorf("missing required alternative: provide policy or policy_id")
 		}
 		policyID, err := s.resolveTimeOffPolicyID(ctx, policy)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, error) {
@@ -58,14 +59,39 @@ func (s *Service) statusOperationalLimits() map[string]any {
 	if len(s.ToolRateLimits) > 0 {
 		limits["toolRateLimitPerMinute"] = s.ToolRateLimits
 	}
+	toolset := strings.TrimSpace(s.Toolset)
+	if toolset == "" {
+		toolset = "all"
+	}
+	limits["toolset"] = toolset
+	full := s.FullAccessRegistry()
+	advertised := s.RegistryForToolset(toolset)
+	limits["loadedTools"] = len(full)
+	limits["advertisedTools"] = len(advertised)
+	limits["rawToolsEnabled"] = s.EnableRawTools
+	limits["rawGetEnabled"] = s.EnableRawGet
+	limits["rawWritesEnabled"] = s.EnableRawWrites
+	limits["highRiskAdvertisedTools"] = countHighRiskTools(advertised)
+	confirmationMode := strings.TrimSpace(s.ConfirmationMode)
+	if confirmationMode == "" {
+		confirmationMode = "required"
+	}
+	limits["confirmationMode"] = confirmationMode
 	if s.ToolRateLimitDisabled {
 		limits["toolRateLimitDisabled"] = true
 		limits["warning"] = "Tool invocation rate limiting is disabled by explicit CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE=0."
 	}
-	if len(limits) == 0 {
-		return nil
-	}
 	return limits
+}
+
+func countHighRiskTools(reg []mcp.ToolDescriptor) int {
+	count := 0
+	for _, descriptor := range reg {
+		if descriptor.RiskClass.IsHighRisk() {
+			count++
+		}
+	}
+	return count
 }
 
 func statusWeekStart(workspace clockify.Workspace, user clockify.User) string {
