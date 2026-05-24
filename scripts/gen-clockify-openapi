@@ -1073,7 +1073,74 @@ SDK_METHOD_NAMES = {
   ["post",   "/workspaces/{workspaceId}/reports/attendance"]                => {group: "reports", name: "attendance"},
   ["post",   "/workspaces/{workspaceId}/reports/detailed"]                  => {group: "reports", name: "detailed"},
   ["post",   "/workspaces/{workspaceId}/reports/summary"]                   => {group: "reports", name: "summary"},
-  ["post",   "/workspaces/{workspaceId}/reports/weekly"]                    => {group: "reports", name: "weekly"}
+  ["post",   "/workspaces/{workspaceId}/reports/weekly"]                    => {group: "reports", name: "weekly"},
+  # Action-verb cleanups inside stamped modules — each entry replaces a
+  # long operationId-derived name with the domain verb the upstream
+  # operationId already implies. Conservative: ambiguous cases stay
+  # operationId-derived; the rename only fires when the new name is
+  # unambiguous and matches Clockify's own terminology.
+
+  # projects — action verbs (CRUDL already stamped above).
+  ["post",   "/workspaces/{workspaceId}/projects/from-template"]                            => {group: "projects", name: "createFromTemplate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/archive"]                      => {group: "projects", name: "archive"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/cost-rate"]                    => {group: "projects", name: "updateCostRate"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/estimate"]                     => {group: "projects", name: "updateEstimate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate"]                  => {group: "projects", name: "updateHourlyRate"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/memberships"]                  => {group: "projects", name: "updateMemberships"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/template"]                     => {group: "projects", name: "updateTemplate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate"]     => {group: "projects", name: "updateUserCostRate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate"]   => {group: "projects", name: "updateUserHourlyRate"},
+  # tasks — rate verbs.
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate"]     => {group: "tasks", name: "updateCostRate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate"]   => {group: "tasks", name: "updateBillableRate"},
+  # timeEntries — the action-verb roster: timer flows, invoiced flags,
+  # per-user shape. `startTimer` is the PUT on /user/{userId}/time-entries
+  # (Clockify's "start a running entry" call); `stopTimer` is the PATCH
+  # on /stop. `duplicate` matches the explicit /duplicate sub-route.
+  ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced"]                                                 => {group: "timeEntries", name: "markInvoiced"},
+  ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced/bulk"]                                            => {group: "timeEntries", name: "markInvoicedBulk"},
+  ["get",    "/workspaces/{workspaceId}/time-entries/status/in-progress"]                                       => {group: "timeEntries", name: "listInProgress"},
+  ["get",    "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "listForUser"},
+  ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "createForUser"},
+  ["put",    "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "startTimer"},
+  ["patch",  "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "updateForUser"},
+  ["patch",  "/workspaces/{workspaceId}/user/{userId}/time-entries/stop"]                                       => {group: "timeEntries", name: "stopTimer"},
+  ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate"]                    => {group: "timeEntries", name: "duplicate"},
+  # holidays — the in-period filter route.
+  ["get",    "/workspaces/{workspaceId}/holidays/in-period"]                                => {group: "holidays", name: "listInPeriod"},
+  # sharedReports — the bare /shared-reports/{srid} public-view route
+  # (no workspace prefix; unauthenticated read). The verb `view` is
+  # short and avoids confusion with the workspace-scoped `get` we
+  # would have liked to stamp (but Clockify's API doesn't expose a
+  # workspace-scoped GET-by-id on shared-reports, hence `view` here).
+  ["get",    "/shared-reports/{sharedReportId}"]                                            => {group: "sharedReports", name: "view"},
+  # timeOffPolicies — status toggle (PATCH on the policy path; the PUT
+  # on the same path is `update`).
+  ["patch",  "/workspaces/{workspaceId}/time-off/policies/{policyId}"]                      => {group: "timeOffPolicies", name: "updateStatus"},
+  # userGroups — membership sub-resource actions.
+  ["get",    "/workspaces/{workspaceId}/user-groups/{groupId}/users"]                       => {group: "userGroups", name: "listMembers"},
+  ["post",   "/workspaces/{workspaceId}/user-groups/{groupId}/users"]                       => {group: "userGroups", name: "addMembers"},
+  ["delete", "/workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}"]              => {group: "userGroups", name: "removeMember"},
+  # webhooks — addon-scoped listing + token rotation + log read/search.
+  # The `/logs` route accepts both GET (read) and POST (filtered search)
+  # so we stamp them as listLogs vs searchLogs to disambiguate.
+  ["get",    "/workspaces/{workspaceId}/addons/{addonId}/webhooks"]                         => {group: "webhooks", name: "listForAddon"},
+  ["patch",  "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken"]             => {group: "webhooks", name: "rotateToken"},
+  ["get",    "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"]                         => {group: "webhooks", name: "listLogs"},
+  ["post",   "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"]                         => {group: "webhooks", name: "searchLogs"},
+  ["patch",  "/workspaces/{workspaceId}/webhooks/{webhookId}/token"]                        => {group: "webhooks", name: "updateToken"},
+  # expenses — receipt download (binary file).
+  ["get",    "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}"]               => {group: "expenses", name: "downloadReceipt"},
+  # scheduling — per-project + per-user capacity views, plus the PUT
+  # replace variant for recurring assignments.
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/projects/totals"]                  => {group: "scheduling", name: "listPerProject"},
+  ["get",    "/workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}"]      => {group: "scheduling", name: "listOnProject"},
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "replaceRecurring"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals"]               => {group: "scheduling", name: "getUsersCapacityFiltered"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/users/totals"]                     => {group: "scheduling", name: "calculateUsersTotals"},
+  ["get",    "/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals"]            => {group: "scheduling", name: "getUserCapacity"},
+  # timeOff — admin submits a TOR on behalf of a specific user.
+  ["post",   "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests"]    => {group: "timeOff", name: "submitForUser"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)
