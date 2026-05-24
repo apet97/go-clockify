@@ -359,26 +359,7 @@ paths:
       security:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
-      parameters:
-      - description: If provided, returns workspaces where the user has any of the
-          specified roles. Owners are not counted as admins when filtering.
-        example:
-        - WORKSPACE_ADMIN
-        - OWNER
-        explode: true
-        in: query
-        name: roles
-        required: false
-        schema:
-          items:
-            enum:
-            - WORKSPACE_ADMIN
-            - OWNER
-            - TEAM_MANAGER
-            - PROJECT_MANAGER
-            type: string
-          type: array
-        style: form
+      parameters: []
       requestBody:
         content:
           application/json:
@@ -777,20 +758,6 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - description: Filters results based on the provided approval state.
-        example: PENDING
-        in: query
-        name: status
-        required: false
-        schema:
-          "$ref": "#/components/schemas/ApprovalRequestFilterState"
-      - description: Column name to use as sorting criteria.
-        example: START
-        in: query
-        name: sort-column
-        required: false
-        schema:
-          "$ref": "#/components/schemas/ApprovalRequestSortColumn"
       requestBody:
         content:
           application/json:
@@ -1208,14 +1175,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: policyId
-        schema:
-          type: string
-      - in: query
-        name: userId
-        schema:
-          type: string
       - in: path
         name: workspaceId
         required: true
@@ -1328,37 +1287,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: name
-        schema:
-          type: string
-      - in: query
-        name: archived
-        schema:
-          type: boolean
-      - in: query
-        name: address
-        schema:
-          type: string
-      - in: query
-        name: note
-        schema:
-          type: string
-      - in: query
-        name: sort-column
-        schema:
-          enum:
-          - NAME
-          - EMAIL
-          - NOTE
-          type: string
-      - in: query
-        name: sort-order
-        schema:
-          enum:
-          - ASCENDING
-          - DESCENDING
-          type: string
       - in: path
         name: workspaceId
         required: true
@@ -1738,7 +1666,6 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - "$ref": "#/components/parameters/workspaceId"
       requestBody:
         content:
           application/json:
@@ -1872,7 +1799,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - "$ref": "#/components/parameters/workspaceId"
       - "$ref": "#/components/parameters/workspaceId"
       - in: path
         name: customFieldId
@@ -2890,14 +2816,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - description: If provided, returns a filtered list of holidays assigned to
-          the user.
-        example: 60f924bafdaf031696ec6218
-        in: query
-        name: assigned-to
-        required: false
-        schema:
-          type: string
       - in: path
         name: workspaceId
         required: true
@@ -4532,10 +4450,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: archived
-        schema:
-          type: boolean
       - in: path
         name: workspaceId
         required: true
@@ -5262,225 +5176,6 @@ paths:
         required: true
         schema:
           type: string
-      - description: If provided, returns projects whose name contains the provided
-          string.
-        example: Software Development
-        in: query
-        name: name
-        required: false
-        schema:
-          type: string
-      - description: When true, search by name returns only projects whose name exactly
-          matches the name parameter.
-        example: false
-        in: query
-        name: strict-name-search
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: If true, returns only archived projects. If omitted, returns
-          both archived and non-archived projects.
-        example: false
-        in: query
-        name: archived
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: If true, returns only billable projects. If omitted, returns
-          both billable and non-billable projects.
-        example: false
-        in: query
-        name: billable
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: If provided, returns projects that contain clients matching any
-          provided ids.
-        example:
-        - 5a0ab5acb07987125438b60f
-        - 64c777ddd3fcab07cfbb210c
-        explode: true
-        in: query
-        name: clients
-        required: false
-        schema:
-          items:
-            type: string
-          type: array
-          uniqueItems: true
-        style: form
-      - description: Controls whether the clients filter includes or excludes matching
-          client ids.
-        example: true
-        in: query
-        name: contains-client
-        required: false
-        schema:
-          default: true
-          type: boolean
-      - description: Filters projects based on client status.
-        example: ACTIVE
-        in: query
-        name: client-status
-        required: false
-        schema:
-          enum:
-          - ACTIVE
-          - ARCHIVED
-          - ALL
-          type: string
-      - description: If provided, returns projects that contain users matching any
-          provided ids.
-        example:
-        - 5a0ab5acb07987125438b60f
-        - 64c777ddd3fcab07cfbb210c
-        explode: true
-        in: query
-        name: users
-        required: false
-        schema:
-          items:
-            type: string
-          type: array
-          uniqueItems: true
-        style: form
-      - description: Controls whether the users filter includes or excludes matching
-          user ids.
-        example: true
-        in: query
-        name: contains-user
-        required: false
-        schema:
-          default: true
-          type: boolean
-      - description: Filters projects based on user status.
-        example: ALL
-        in: query
-        name: user-status
-        required: false
-        schema:
-          enum:
-          - PENDING
-          - ACTIVE
-          - DECLINED
-          - INACTIVE
-          - ALL
-          type: string
-      - description: Filters projects based on whether they are used as a template
-          or not.
-        example: false
-        in: query
-        name: is-template
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: Sorts the results by the given column/field.
-        example: NAME
-        in: query
-        name: sort-column
-        required: false
-        schema:
-          enum:
-          - ID
-          - NAME
-          - CLIENT_NAME
-          - DURATION
-          - BUDGET
-          - PROGRESS
-          type: string
-      - description: Sorting mode.
-        example: ASCENDING
-        in: query
-        name: sort-order
-        required: false
-        schema:
-          enum:
-          - ASCENDING
-          - DESCENDING
-          type: string
-      - description: If true, results contain additional information about the project.
-        example: false
-        in: query
-        name: hydrated
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: Page number.
-        example: 1
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          type: integer
-      - description: Page size.
-        example: 50
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          minimum: 1
-          type: integer
-      - description: If provided, returns projects that match the provided access.
-        example: PUBLIC
-        in: query
-        name: access
-        required: false
-        schema:
-          enum:
-          - PUBLIC
-          - PRIVATE
-          type: string
-      - description: Represents the maximum number of expenses to fetch.
-        example: 10
-        in: query
-        name: expense-limit
-        required: false
-        schema:
-          default: 20
-          format: int32
-          type: integer
-      - description: If provided, returns expenses dated before the provided yyyy-MM-dd
-          date.
-        example: '2024-12-31'
-        in: query
-        name: expense-date
-        required: false
-        schema:
-          format: date
-          type: string
-      - description: If provided, returns projects that contain groups matching any
-          provided ids.
-        example:
-        - 5a0ab5acb07987125438b60f
-        - 64c777ddd3fcab07cfbb210c
-        explode: true
-        in: query
-        name: userGroups
-        required: false
-        schema:
-          items:
-            type: string
-          type: array
-          uniqueItems: true
-        style: form
-      - description: Controls whether the userGroups filter includes or excludes matching
-          group ids.
-        example: true
-        in: query
-        name: contains-group
-        required: false
-        schema:
-          default: true
-          type: boolean
       requestBody:
         content:
           application/json:
@@ -5878,40 +5573,6 @@ paths:
         required: true
         schema:
           type: string
-      - description: If true, results contain additional information about the project.
-        example: false
-        in: query
-        name: hydrated
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: Filters custom fields by custom field entity type.
-        example: TIMEENTRY
-        in: query
-        name: custom-field-entity-type
-        required: false
-        schema:
-          default: TIMEENTRY
-          type: string
-      - description: Represents the maximum number of expenses to fetch.
-        example: 10
-        in: query
-        name: expense-limit
-        required: false
-        schema:
-          default: 20
-          format: int32
-          type: integer
-      - description: If provided, returns expenses dated before the provided yyyy-MM-dd
-          date.
-        example: '2024-12-31'
-        in: query
-        name: expense-date
-        required: false
-        schema:
-          format: date
-          type: string
       requestBody:
         content:
           application/json:
@@ -6038,40 +5699,6 @@ paths:
         name: projectId
         required: true
         schema:
-          type: string
-      - description: If true, results contain additional information about the project.
-        example: false
-        in: query
-        name: hydrated
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: Filters custom fields by custom field entity type.
-        example: TIMEENTRY
-        in: query
-        name: custom-field-entity-type
-        required: false
-        schema:
-          default: TIMEENTRY
-          type: string
-      - description: Represents the maximum number of expenses to fetch.
-        example: 10
-        in: query
-        name: expense-limit
-        required: false
-        schema:
-          default: 20
-          format: int32
-          type: integer
-      - description: If provided, returns expenses dated before the provided yyyy-MM-dd
-          date.
-        example: '2024-12-31'
-        in: query
-        name: expense-date
-        required: false
-        schema:
-          format: date
           type: string
       responses:
         '200':
@@ -6408,7 +6035,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - "$ref": "#/components/parameters/workspaceId"
       - "$ref": "#/components/parameters/workspaceId"
       - in: path
         name: projectId
@@ -6991,32 +6617,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - description: If provided, you'll get a filtered list of tasks that matches
-          the provided string in their name.
-        example: Bugfixing
-        in: query
-        name: name
-        required: false
-        schema:
-          default: "##default"
-          type: string
-      - description: Flag to toggle strict search mode. When true, search by name
-          returns only exact matches.
-        example: false
-        in: query
-        name: strict-name-search
-        required: false
-        schema:
-          default: false
-          type: boolean
-      - description: Filters search results whether task is active or not.
-        example: false
-        in: query
-        name: is-active
-        required: false
-        schema:
-          default: false
-          type: boolean
       - in: path
         name: workspaceId
         required: true
@@ -9558,27 +9158,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: name
-        schema:
-          type: string
-      - in: query
-        name: archived
-        schema:
-          type: boolean
-      - in: query
-        name: sort-column
-        schema:
-          enum:
-          - NAME
-          type: string
-      - in: query
-        name: sort-order
-        schema:
-          enum:
-          - ASCENDING
-          - DESCENDING
-          type: string
       - in: path
         name: workspaceId
         required: true
@@ -9985,14 +9564,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: hydrated
-        schema:
-          type: boolean
-      - in: query
-        name: consider-duration-format
-        schema:
-          type: boolean
       - in: path
         name: workspaceId
         required: true
@@ -10040,14 +9611,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: hydrated
-        schema:
-          type: boolean
-      - in: query
-        name: consider-duration-format
-        schema:
-          type: boolean
       - in: path
         name: workspaceId
         required: true
@@ -10184,41 +9747,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - description: Page number.
-        example: 1
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          maximum: 1000
-          type: integer
-      - description: Page size.
-        example: 50
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
-      - description: If provided, the result is sorted by this column.
-        example: USER
-        in: query
-        name: sort
-        required: false
-        schema:
-          "$ref": "#/components/schemas/BalanceSortColumn"
-      - description: Sort results in ascending or descending order.
-        example: ASCENDING
-        in: query
-        name: sort-order
-        required: false
-        schema:
-          "$ref": "#/components/schemas/BalanceSortOrder"
       - in: path
         name: workspaceId
         required: true
@@ -10514,56 +10042,6 @@ paths:
         name: workspaceId
         required: true
         schema:
-          type: string
-      - description: Page number.
-        in: query
-        name: page
-        required: false
-        schema:
-          maxLength: 1000
-          type: string
-      - description: Page size.
-        example: 50
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
-      - description: Filters policies to names that contain the provided string.
-        example: Holidays
-        in: query
-        name: name
-        required: false
-        schema:
-          type: string
-      - description: Filters policies by status.
-        example: ACTIVE
-        in: query
-        name: status
-        required: false
-        schema:
-          enum:
-          - ACTIVE
-          - ARCHIVED
-          - ALL
-          type: string
-      - description: Column to use for sorting policies.
-        in: query
-        name: sort-column
-        required: false
-        schema:
-          default: DEFAULT_SORT
-          type: string
-      - description: Sort order.
-        in: query
-        name: sort-order
-        required: false
-        schema:
-          default: ASCENDING
           type: string
       requestBody:
         content:
@@ -12169,55 +11647,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: query
-        name: description
-        schema:
-          type: string
-      - in: query
-        name: start
-        schema:
-          format: date-time
-          type: string
-      - in: query
-        name: end
-        schema:
-          format: date-time
-          type: string
-      - in: query
-        name: project
-        schema:
-          type: string
-      - in: query
-        name: task
-        schema:
-          type: string
-      - in: query
-        name: tags
-        schema:
-          items:
-            type: string
-          type: array
-      - in: query
-        name: project-required
-        schema:
-          type: boolean
-      - in: query
-        name: task-required
-        schema:
-          type: boolean
-      - in: query
-        name: hydrated
-        schema:
-          type: boolean
-      - in: query
-        name: in-progress
-        schema:
-          type: boolean
-      - in: query
-        name: get-week-before
-        schema:
-          format: date-time
-          type: string
       - in: path
         name: workspaceId
         required: true
@@ -12275,16 +11704,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: page
-        schema:
-          default: 1
-          type: integer
-      - in: query
-        name: page-size
-        schema:
-          default: 50
-          type: integer
       requestBody:
         content:
           application/json:
@@ -12334,16 +11753,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: page
-        schema:
-          default: 1
-          type: integer
-      - in: query
-        name: page-size
-        schema:
-          default: 50
-          type: integer
       requestBody:
         content:
           application/json:
@@ -12402,153 +11811,6 @@ paths:
         schema:
           description: Represents a user identifier across the system.
           example: 5a0ab5acb07987125438b60f
-          type: string
-      - description: Represents a term for searching time entries by description.
-        example: Description keywords
-        in: query
-        name: description
-        required: false
-        schema:
-          description: Represents a term for searching time entries by description.
-          example: Description keywords
-          type: string
-      - description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
-        example: '2020-01-01T00:00:00Z'
-        in: query
-        name: start
-        required: false
-        schema:
-          description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
-          example: '2020-01-01T00:00:00Z'
-          type: string
-      - description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
-        example: '2021-01-01T00:00:00Z'
-        in: query
-        name: end
-        required: false
-        schema:
-          description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
-          example: '2021-01-01T00:00:00Z'
-          type: string
-      - description: If provided, you'll get a filtered list of time entries that
-          matches the provided string in their project id.
-        example: 5b641568b07987035750505e
-        in: query
-        name: project
-        required: false
-        schema:
-          description: If provided, you'll get a filtered list of time entries that
-            matches the provided string in their project id.
-          example: 5b641568b07987035750505e
-          type: string
-      - description: If provided, you'll get a filtered list of time entries that
-          matches the provided string in their task id.
-        example: 64c777ddd3fcab07cfbb210c
-        in: query
-        name: task
-        required: false
-        schema:
-          description: If provided, you'll get a filtered list of time entries that
-            matches the provided string in their task id.
-          example: 64c777ddd3fcab07cfbb210c
-          type: string
-      - description: If provided, you'll get a filtered list of time entries that
-          matches the provided string(s) in their tag id(s).
-        example:
-        - 5e4117fe8c625f38930d57b7
-        - 7e4117fe8c625f38930d57b8
-        in: query
-        name: tags
-        required: false
-        schema:
-          description: If provided, you'll get a filtered list of time entries that
-            matches the provided string(s) in their tag id(s).
-          example:
-          - 5e4117fe8c625f38930d57b7
-          - 7e4117fe8c625f38930d57b8
-          items:
-            description: If provided, you'll get a filtered list of time entries that
-              matches the provided string(s) in their tag id(s).
-            example: '["5e4117fe8c625f38930d57b7","7e4117fe8c625f38930d57b8"]'
-            type: string
-          type: array
-          uniqueItems: true
-      - description: Flag to set whether to only get time entries which have a project.
-        in: query
-        name: project-required
-        required: false
-        schema:
-          default: false
-          description: Flag to set whether to only get time entries which have a project.
-          type: boolean
-      - description: Flag to set whether to only get time entries which have tasks.
-        in: query
-        name: task-required
-        required: false
-        schema:
-          default: false
-          description: Flag to set whether to only get time entries which have tasks.
-          type: boolean
-      - description: Flag to set whether to include additional information on time
-          entries or not.
-        in: query
-        name: hydrated
-        required: false
-        schema:
-          default: false
-          description: Flag to set whether to include additional information on time
-            entries or not.
-          type: boolean
-      - description: Page number.
-        example: 1
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          description: Page number.
-          example: 1
-          format: int32
-          type: integer
-      - description: Page size.
-        example: 50
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          description: Page size.
-          example: 50
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Flag to set whether to filter only in progress time entries.
-        in: query
-        name: in-progress
-        required: false
-        schema:
-          type: string
-      - description: Valid yyyy-MM-ddThh:mm:ssZ format date. If provided, filters
-          results within the week before the datetime provided and only those entries
-          with assigned project or task.
-        example: '2020-01-01T00:00:00Z'
-        in: query
-        name: get-week-before
-        required: false
-        schema:
-          description: Valid yyyy-MM-ddThh:mm:ssZ format date. If provided, filters
-            results within the week before the datetime provided and only those entries
-            with assigned project or task.
-          example: '2020-01-01T00:00:00Z'
-          type: string
-      - description: Represents a time entry identifier across the system.
-        example: 64c777ddd3fcab07cfbb210c
-        in: query
-        name: from-entry
-        required: false
-        schema:
-          description: Represents a time entry identifier across the system.
-          example: 64c777ddd3fcab07cfbb210c
           type: string
       - description: Represents a list of time entry ids to delete.
         example: 5a0ab5acb07987125438b60f
@@ -13794,13 +13056,6 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - description: Represents a webhook type.
-        example: USER_CREATED
-        in: query
-        name: type
-        required: false
-        schema:
-          "$ref": "#/components/schemas/WebhookType"
       - in: path
         name: workspaceId
         required: true
