@@ -866,7 +866,62 @@ SDK_METHOD_NAMES = {
   ["get",    "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "get"},
   ["put",    "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "update"},
   ["delete", "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "delete"},
-  ["put",    "/workspaces/{workspaceId}/clients/{clientId}/archive"]    => {group: "clients", name: "archive"}
+  ["put",    "/workspaces/{workspaceId}/clients/{clientId}/archive"]    => {group: "clients", name: "archive"},
+  # projects — pure CRUDL (rate/template/membership/archive verbs left
+  # on operationId-derived names; they're action verbs, not CRUDL)
+  ["get",    "/workspaces/{workspaceId}/projects"]                      => {group: "projects", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/projects"]                      => {group: "projects", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}"]          => {group: "projects", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}"]          => {group: "projects", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/projects/{projectId}"]          => {group: "projects", name: "delete"},
+  # tasks — pure CRUDL (rate verbs left on operationId-derived names)
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}/tasks"]            => {group: "tasks", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/projects/{projectId}/tasks"]            => {group: "tasks", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}"]   => {group: "tasks", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}"]   => {group: "tasks", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}"]   => {group: "tasks", name: "delete"},
+  # timeEntries — core CRUD on /time-entries/{teId} only. The per-user
+  # /user/{userId}/time-entries family (list/create/update/stop/duplicate)
+  # uses different shapes and naming conventions; left on operationId-
+  # derived names. No top-level workspace LIST exists on Clockify.
+  ["post",   "/workspaces/{workspaceId}/time-entries"]                       => {group: "timeEntries", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/time-entries/{timeEntryId}"]         => {group: "timeEntries", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/time-entries/{timeEntryId}"]         => {group: "timeEntries", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/time-entries/{timeEntryId}"]         => {group: "timeEntries", name: "delete"},
+  # holidays — list/create/update/delete (no GET-by-id exists on the API;
+  # the /holidays/in-period filtered route is left operationId-derived)
+  ["get",    "/workspaces/{workspaceId}/holidays"]                      => {group: "holidays", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/holidays"]                      => {group: "holidays", name: "create"},
+  ["put",    "/workspaces/{workspaceId}/holidays/{holidayId}"]          => {group: "holidays", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/holidays/{holidayId}"]          => {group: "holidays", name: "delete"},
+  # sharedReports — workspace-scoped CRUDL. The bare /shared-reports/{srid}
+  # public-view route is left operationId-derived (no auth on that one).
+  ["get",    "/workspaces/{workspaceId}/shared-reports"]                              => {group: "sharedReports", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/shared-reports"]                              => {group: "sharedReports", name: "create"},
+  ["put",    "/workspaces/{workspaceId}/shared-reports/{sharedReportId}"]             => {group: "sharedReports", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/shared-reports/{sharedReportId}"]             => {group: "sharedReports", name: "delete"},
+  # timeOffPolicies — full CRUDL. (changeTimeOffPolicyStatus left on
+  # operationId-derived name; status flips are an action, not CRUDL.)
+  ["get",    "/workspaces/{workspaceId}/time-off/policies"]             => {group: "timeOffPolicies", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/time-off/policies"]             => {group: "timeOffPolicies", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/time-off/policies/{policyId}"]  => {group: "timeOffPolicies", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/time-off/policies/{policyId}"]  => {group: "timeOffPolicies", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/time-off/policies/{policyId}"]  => {group: "timeOffPolicies", name: "delete"},
+  # userGroups — full CRUDL on the group resource. Membership operations
+  # (list users in group, add user, remove user) are sub-resource actions;
+  # left on operationId-derived names.
+  ["get",    "/workspaces/{workspaceId}/user-groups"]                   => {group: "userGroups", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/user-groups"]                   => {group: "userGroups", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/user-groups/{groupId}"]         => {group: "userGroups", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/user-groups/{groupId}"]         => {group: "userGroups", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/user-groups/{groupId}"]         => {group: "userGroups", name: "delete"},
+  # webhooks — full CRUDL. (token rotation, logs, addon-webhooks listing
+  # are special endpoints; left on operationId-derived names.)
+  ["get",    "/workspaces/{workspaceId}/webhooks"]                      => {group: "webhooks", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/webhooks"]                      => {group: "webhooks", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "delete"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)
