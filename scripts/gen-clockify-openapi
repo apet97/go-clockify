@@ -667,7 +667,12 @@ TAG_RENAMES = {
   "Balance" => "Balances",
   "Client" => "Clients",
   "Policy" => "Policies",
-  "Tag" => "Tags"
+  "Tag" => "Tags",
+  # SharedReport spans a collection (list / get / create / update /
+  # delete + a public bare GET) — five operations under a single
+  # PascalCase tag. Plural canonicalisation keeps the SDK module
+  # naming consistent with the other collection resources above.
+  "SharedReport" => "Shared Reports"
 }.freeze
 
 # Path parameters whose route shares a parent with a literal sibling

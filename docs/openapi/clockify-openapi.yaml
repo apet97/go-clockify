@@ -37,7 +37,7 @@ tags:
 - name: Reports
 - name: Roles
 - name: Scheduling
-- name: SharedReport
+- name: Shared Reports
 - name: Tags
 - name: Tasks
 - name: Time Entries
@@ -112,7 +112,7 @@ paths:
   "/shared-reports/{sharedReportId}":
     get:
       tags:
-      - SharedReport
+      - Shared Reports
       summary: Public/bare GET of a shared report or export
       description: |
         Bare path (no workspace segment). Pass `?exportType=PDF|CSV|XLSX|JSON_V1`
@@ -9048,7 +9048,7 @@ paths:
   "/workspaces/{workspaceId}/shared-reports":
     get:
       tags:
-      - SharedReport
+      - Shared Reports
       summary: List shared reports
       description: |
         VERIFIED LIVE: uses `pageSize` (camelCase). Hyphenated
@@ -9100,7 +9100,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     post:
       tags:
-      - SharedReport
+      - Shared Reports
       summary: Create shared report
       description: |
         Body uses `type` (not `reportType`) and `filter` (singular,
@@ -9149,7 +9149,7 @@ paths:
   "/workspaces/{workspaceId}/shared-reports/{sharedReportId}":
     put:
       tags:
-      - SharedReport
+      - Shared Reports
       summary: Update shared report (merge semantics)
       description: |
         Workspace-prefixed PUT works (bare-id PUT/PATCH return 405).
@@ -9202,7 +9202,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     delete:
       tags:
-      - SharedReport
+      - Shared Reports
       summary: Delete shared report
       operationId: deleteWorkspacesWorkspaceIdSharedReportsSharedReportId
       servers:
