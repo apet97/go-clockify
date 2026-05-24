@@ -1140,7 +1140,48 @@ SDK_METHOD_NAMES = {
   ["post",   "/workspaces/{workspaceId}/scheduling/assignments/users/totals"]                     => {group: "scheduling", name: "calculateUsersTotals"},
   ["get",    "/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals"]            => {group: "scheduling", name: "getUserCapacity"},
   # timeOff — admin submits a TOR on behalf of a specific user.
-  ["post",   "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests"]    => {group: "timeOff", name: "submitForUser"}
+  ["post",   "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests"]    => {group: "timeOff", name: "submitForUser"},
+  # Remaining small / read-only / single-resource modules (G.1 final
+  # batch). Each stamp here uses the obvious domain verb so the SDK
+  # surface across all 21 stamped modules is uniformly idiomatic.
+  # Modules where the existing operationId is already a clean
+  # verb-noun (files.uploadImage, roles.giveUserManagerRole/
+  # removeUserManagerRole, expenseReport.generateDetailedReportV1)
+  # are intentionally left operationId-derived -- the rename would
+  # not improve clarity.
+
+  # auditLogReport — single search op (POST .../audit-log with body).
+  ["post",   "/workspaces/{workspaceId}/audit-log"]                                 => {group: "auditLogReport", name: "search"},
+  # balances — policy-scoped list + user-scoped get + policy-scoped
+  # update. The two paginated routes (GET .../policy/{pid} and
+  # GET .../user/{uid}) live here because the upstream tag is
+  # `Balances`; the PATCH-on-policy route is balance adjustment.
+  ["get",    "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"]        => {group: "balances", name: "listForPolicy"},
+  ["patch",  "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"]        => {group: "balances", name: "update"},
+  ["get",    "/workspaces/{workspaceId}/time-off/balance/user/{userId}"]            => {group: "balances", name: "getForUser"},
+  # entityChangesExperimental — three read ops for the change-event
+  # feed; one per event type (created / updated / deleted).
+  ["get",    "/workspaces/{workspaceId}/entities/created"]                          => {group: "entityChangesExperimental", name: "listCreated"},
+  ["get",    "/workspaces/{workspaceId}/entities/updated"]                          => {group: "entityChangesExperimental", name: "listUpdated"},
+  ["get",    "/workspaces/{workspaceId}/entities/deleted"]                          => {group: "entityChangesExperimental", name: "listDeleted"},
+  # invoiceSettings — single-resource get + update.
+  ["get",    "/workspaces/{workspaceId}/invoices/settings"]                         => {group: "invoiceSettings", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/invoices/settings"]                         => {group: "invoiceSettings", name: "update"},
+  # memberProfiles — per-user profile read + partial update.
+  ["get",    "/workspaces/{workspaceId}/member-profile/{userId}"]                   => {group: "memberProfiles", name: "get"},
+  ["patch",  "/workspaces/{workspaceId}/member-profile/{userId}"]                   => {group: "memberProfiles", name: "update"},
+  # workspaces — CRUDL on the workspace resource itself, plus the two
+  # workspace-level rate updates and the addUser action verb. Per-user
+  # status / cost-rate / hourly-rate are kept operationId-derived
+  # (already verb-noun shaped; `client.workspaces.updateUserStatus`
+  # etc. read fine as-is).
+  ["get",    "/workspaces"]                                                         => {group: "workspaces", name: "list"},
+  ["post",   "/workspaces"]                                                         => {group: "workspaces", name: "create"},
+  ["get",    "/workspaces/{workspaceId}"]                                           => {group: "workspaces", name: "get"},
+  ["put",    "/workspaces/{workspaceId}"]                                           => {group: "workspaces", name: "update"},
+  ["put",    "/workspaces/{workspaceId}/cost-rate"]                                 => {group: "workspaces", name: "updateCostRate"},
+  ["put",    "/workspaces/{workspaceId}/hourly-rate"]                               => {group: "workspaces", name: "updateBillableRate"},
+  ["post",   "/workspaces/{workspaceId}/users"]                                     => {group: "workspaces", name: "addUser"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)
