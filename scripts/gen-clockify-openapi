@@ -1000,7 +1000,31 @@ SDK_METHOD_NAMES = {
   ["post",   "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy"]              => {group: "scheduling", name: "copy"},
   ["post",   "/workspaces/{workspaceId}/scheduling/assignments/recurring"]                        => {group: "scheduling", name: "createRecurring"},
   ["patch",  "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "updateRecurring"},
-  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "deleteRecurring"}
+  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "deleteRecurring"},
+  # invoices — full CRUDL + the workflow actions (duplicate, export,
+  # filter, updateStatus). `filter` is a POST-with-body filter route
+  # at /invoices/info (distinct from the bare GET /invoices list).
+  # `updateStatus` is PATCH .../status — same shape as the approvals
+  # / timeOff / policies updateStatus pattern. There is no `send`
+  # endpoint on the live API (the upstream tool returns "unsupported");
+  # nothing to stamp there.
+  ["get",    "/workspaces/{workspaceId}/invoices"]                          => {group: "invoices", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/invoices"]                          => {group: "invoices", name: "create"},
+  ["post",   "/workspaces/{workspaceId}/invoices/info"]                     => {group: "invoices", name: "filter"},
+  ["get",    "/workspaces/{workspaceId}/invoices/{invoiceId}"]              => {group: "invoices", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/invoices/{invoiceId}"]              => {group: "invoices", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/invoices/{invoiceId}"]              => {group: "invoices", name: "delete"},
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate"]    => {group: "invoices", name: "duplicate"},
+  ["get",    "/workspaces/{workspaceId}/invoices/{invoiceId}/export"]       => {group: "invoices", name: "export"},
+  ["patch",  "/workspaces/{workspaceId}/invoices/{invoiceId}/status"]       => {group: "invoices", name: "updateStatus"},
+  # reports — one per family. Each report is a POST-with-body call
+  # (filters in the body, not the URL). Naming uses the family name
+  # directly (e.g. `reports.summary({...})`) — short, idiomatic, and
+  # matches how Clockify users talk about the reports surface.
+  ["post",   "/workspaces/{workspaceId}/reports/attendance"]                => {group: "reports", name: "attendance"},
+  ["post",   "/workspaces/{workspaceId}/reports/detailed"]                  => {group: "reports", name: "detailed"},
+  ["post",   "/workspaces/{workspaceId}/reports/summary"]                   => {group: "reports", name: "summary"},
+  ["post",   "/workspaces/{workspaceId}/reports/weekly"]                    => {group: "reports", name: "weekly"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)

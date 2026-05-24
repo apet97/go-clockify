@@ -3399,6 +3399,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Invoices
@@ -3451,6 +3453,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/invoices/info":
     post:
       tags:
@@ -3525,6 +3529,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: filter
   "/workspaces/{workspaceId}/invoices/settings":
     get:
       tags:
@@ -3679,6 +3685,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Invoices
@@ -3746,6 +3754,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Invoices
@@ -3792,6 +3802,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate":
     post:
       tags:
@@ -3835,6 +3847,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: duplicate
   "/workspaces/{workspaceId}/invoices/{invoiceId}/export":
     get:
       tags:
@@ -3891,6 +3905,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: export
   "/workspaces/{workspaceId}/invoices/{invoiceId}/items":
     post:
       tags:
@@ -4302,6 +4318,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: updateStatus
   "/workspaces/{workspaceId}/member-profile/{userId}":
     get:
       tags:
@@ -7660,6 +7678,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: attendance
   "/workspaces/{workspaceId}/reports/detailed":
     post:
       tags:
@@ -7799,6 +7819,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: detailed
   "/workspaces/{workspaceId}/reports/expenses/detailed":
     post:
       tags:
@@ -7984,6 +8006,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: summary
   "/workspaces/{workspaceId}/reports/weekly":
     post:
       tags:
@@ -8104,6 +8128,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: weekly
   "/workspaces/{workspaceId}/scheduling/assignments":
     post:
       tags:
