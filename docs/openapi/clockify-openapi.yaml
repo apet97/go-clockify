@@ -16,10 +16,10 @@ servers:
 security:
 - ApiKeyAuth: []
 tags:
-- name: Approval
+- name: Approvals
 - name: Audit Log Report
-- name: Balance
-- name: Client
+- name: Balances
+- name: Clients
 - name: Custom Fields
 - name: Entity changes (Experimental)
 - name: Expense Report
@@ -32,13 +32,13 @@ tags:
 - name: Invoice settings
 - name: Invoices
 - name: Member profiles
-- name: Policy
+- name: Policies
 - name: Projects
 - name: Reports
 - name: Roles
 - name: Scheduling
 - name: SharedReport
-- name: Tag
+- name: Tags
 - name: Tasks
 - name: Time Entries
 - name: Time Off
@@ -594,7 +594,7 @@ paths:
   "/workspaces/{workspaceId}/approval-requests":
     get:
       tags:
-      - Approval
+      - Approvals
       summary: Get approval requests
       operationId: getApprovalRequests
       security:
@@ -616,6 +616,25 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/ApprovalRequestSortColumn"
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -750,7 +769,7 @@ paths:
       - realOPENAPI/APPROVALOPENAPI.YAML
     post:
       tags:
-      - Approval
+      - Approvals
       summary: Submit approval request
       operationId: submitApprovalRequest
       security:
@@ -811,7 +830,7 @@ paths:
   "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval":
     post:
       tags:
-      - Approval
+      - Approvals
       summary: Submit non pending/approved entries/expenses for approval to an existing
         approval request
       operationId: resubmitEntriesForApproval
@@ -873,7 +892,7 @@ paths:
   "/workspaces/{workspaceId}/approval-requests/users/{userId}":
     post:
       tags:
-      - Approval
+      - Approvals
       summary: Submit an approval request for a user
       operationId: submitApprovalRequestForUser
       security:
@@ -939,7 +958,7 @@ paths:
   "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval":
     post:
       tags:
-      - Approval
+      - Approvals
       summary: Re-submit rejected/withdrawn entries/expenses for an approval of a
         user
       operationId: resubmitEntriesForApprovalForUser
@@ -1006,7 +1025,7 @@ paths:
   "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}":
     patch:
       tags:
-      - Approval
+      - Approvals
       summary: Update an approval request
       operationId: updateApprovalRequest
       security:
@@ -1128,7 +1147,7 @@ paths:
   "/workspaces/{workspaceId}/balance":
     get:
       tags:
-      - Balance
+      - Balances
       summary: Get balances (admin)
       operationId: getWorkspacesWorkspaceIdBalance
       security:
@@ -1168,7 +1187,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     patch:
       tags:
-      - Balance
+      - Balances
       summary: Adjust user balance
       operationId: patchWorkspacesWorkspaceIdBalance
       security:
@@ -1210,7 +1229,7 @@ paths:
   "/workspaces/{workspaceId}/clients":
     get:
       tags:
-      - Client
+      - Clients
       summary: List clients
       operationId: getWorkspacesWorkspaceIdClients
       security:
@@ -1253,6 +1272,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -1280,7 +1318,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     post:
       tags:
-      - Client
+      - Clients
       summary: Create client
       operationId: postWorkspacesWorkspaceIdClients
       security:
@@ -1324,7 +1362,7 @@ paths:
   "/workspaces/{workspaceId}/clients/{clientId}":
     get:
       tags:
-      - Client
+      - Clients
       summary: Get client
       operationId: getWorkspacesWorkspaceIdClientsClientId
       security:
@@ -1366,7 +1404,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     put:
       tags:
-      - Client
+      - Clients
       summary: Update client
       operationId: putWorkspacesWorkspaceIdClientsClientId
       security:
@@ -1414,7 +1452,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     delete:
       tags:
-      - Client
+      - Clients
       summary: Delete client
       operationId: deleteWorkspacesWorkspaceIdClientsClientId
       security:
@@ -1455,7 +1493,7 @@ paths:
   "/workspaces/{workspaceId}/clients/{clientId}/archive":
     put:
       tags:
-      - Client
+      - Clients
       summary: Archive / unarchive client
       operationId: putWorkspacesWorkspaceIdClientsClientIdArchive
       security:
@@ -1602,6 +1640,25 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -2744,6 +2801,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -4034,6 +4110,25 @@ paths:
         schema:
           pattern: "^[0-9a-fA-F]{24}$"
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           "$ref": "#/components/responses/InvoicePaymentsResponse"
@@ -4407,7 +4502,7 @@ paths:
   "/workspaces/{workspaceId}/policies":
     get:
       tags:
-      - Policy
+      - Policies
       summary: List time-off policies
       operationId: getWorkspacesWorkspaceIdPolicies
       security:
@@ -4443,7 +4538,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     post:
       tags:
-      - Policy
+      - Policies
       summary: Create time-off policy
       operationId: postWorkspacesWorkspaceIdPolicies
       security:
@@ -4480,7 +4575,7 @@ paths:
   "/workspaces/{workspaceId}/policies/{policyId}":
     get:
       tags:
-      - Policy
+      - Policies
       summary: Get policy
       operationId: getWorkspacesWorkspaceIdPoliciesPolicyId
       security:
@@ -4515,7 +4610,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     put:
       tags:
-      - Policy
+      - Policies
       summary: Update policy
       operationId: putWorkspacesWorkspaceIdPoliciesPolicyId
       security:
@@ -4555,7 +4650,7 @@ paths:
         values observed from GET before PUT.
     delete:
       tags:
-      - Policy
+      - Policies
       summary: Delete (archive) policy
       operationId: deleteWorkspacesWorkspaceIdPoliciesPolicyId
       security:
@@ -4589,7 +4684,7 @@ paths:
   "/workspaces/{workspaceId}/policies/{policyId}/archive":
     patch:
       tags:
-      - Policy
+      - Policies
       summary: Archive / unarchive policy
       operationId: patchWorkspacesWorkspaceIdPoliciesPolicyIdArchive
       security:
@@ -5896,6 +5991,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -6577,6 +6691,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           "$ref": "#/components/responses/TaskArrayResponse"
@@ -8052,6 +8185,25 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/SortOrder"
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -9090,7 +9242,7 @@ paths:
   "/workspaces/{workspaceId}/tags":
     get:
       tags:
-      - Tag
+      - Tags
       summary: List tags
       operationId: getWorkspacesWorkspaceIdTags
       security:
@@ -9123,6 +9275,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -9151,7 +9322,7 @@ paths:
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
     post:
       tags:
-      - Tag
+      - Tags
       summary: Create tag
       operationId: postWorkspacesWorkspaceIdTags
       security:
@@ -9196,7 +9367,7 @@ paths:
   "/workspaces/{workspaceId}/tags/{tagId}":
     get:
       tags:
-      - Tag
+      - Tags
       summary: Get tag
       operationId: getWorkspacesWorkspaceIdTagsTagId
       security:
@@ -9239,7 +9410,7 @@ paths:
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
     put:
       tags:
-      - Tag
+      - Tags
       summary: Update tag
       operationId: putWorkspacesWorkspaceIdTagsTagId
       security:
@@ -9293,7 +9464,7 @@ paths:
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
     delete:
       tags:
-      - Tag
+      - Tags
       summary: Delete tag
       operationId: deleteWorkspacesWorkspaceIdTagsTagId
       security:
@@ -9642,7 +9813,7 @@ paths:
   "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}":
     get:
       tags:
-      - Balance
+      - Balances
       summary: Get balances for a policy
       description: Get time-off balances for a specific policy in a workspace.
       operationId: getBalancesForPolicy
@@ -9739,7 +9910,7 @@ paths:
       - realOPENAPI/BALANCEOPEANI.yaml
     patch:
       tags:
-      - Balance
+      - Balances
       summary: Update a balance
       description: Update time-off balances for one or more users under a policy.
       operationId: updateBalance
@@ -9794,7 +9965,7 @@ paths:
   "/workspaces/{workspaceId}/time-off/balance/user/{userId}":
     get:
       tags:
-      - Balance
+      - Balances
       summary: Get balance for a user
       description: Get time-off balances for a specific user in a workspace.
       operationId: getBalanceForUser
@@ -9949,6 +10120,9 @@ paths:
         required: false
         schema:
           default: ASCENDING
+          enum:
+          - ASCENDING
+          - DESCENDING
           type: string
       responses:
         '200':
@@ -10787,7 +10961,7 @@ paths:
   "/workspaces/{workspaceId}/time-off/requests":
     get:
       tags:
-      - Balance
+      - Balances
       summary: Get all time off requests
       operationId: getWorkspacesWorkspaceIdTimeOffRequests
       security:
@@ -11060,6 +11234,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -11614,6 +11807,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -12956,7 +13168,7 @@ paths:
   "/workspaces/{workspaceId}/users/{userId}/time-off/balances":
     get:
       tags:
-      - Balance
+      - Balances
       summary: Get balance for a user
       operationId: getWorkspacesWorkspaceIdUsersUserIdTimeOffBalances
       security:
@@ -21320,7 +21532,8 @@ components:
               type: string
             changedByUserName:
               type: string
-            changedForUserName:{ type: string }
+            changedForUserName:
+              type: string
             note:
               nullable: true
               type: string
@@ -23584,7 +23797,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 8c2d15249cc19e449d25fb5ffa282191678d73c37d0517be9ad2d8b52a9510ca
+    sha256: 7afaa391781abc38fd821400ca100dc952618bb3ba5f72d0d1844772564860dd
     files: 86
   sourcePrecedence:
   - live/probe findings metadata

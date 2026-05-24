@@ -77,6 +77,9 @@ paths:
         description: Sort order.
         schema:
           type: string
+          enum:
+          - ASCENDING
+          - DESCENDING
           default: ASCENDING
       responses:
         '200':

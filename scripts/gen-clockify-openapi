@@ -658,7 +658,16 @@ TAG_RENAMES = {
   "Webhook" => "Webhooks",
   "TimeEntry" => "Time Entries",
   "Time entry" => "Time Entries",
-  "TimeOff" => "Time Off"
+  "TimeOff" => "Time Off",
+  # Singular tags that name a collection — collapse into the plural so
+  # Fern emits one resource module per concept rather than singular +
+  # plural siblings. Tracked under
+  # addons-me/fern/spec/evidence/discrepancies.md → item 7.
+  "Approval" => "Approvals",
+  "Balance" => "Balances",
+  "Client" => "Clients",
+  "Policy" => "Policies",
+  "Tag" => "Tags"
 }.freeze
 
 # Path parameters whose route shares a parent with a literal sibling
@@ -674,6 +683,64 @@ PATH_PARAM_PATTERNS = {
   "expenseId" => "^[0-9a-fA-F]{24}$",
   "invoiceId" => "^[0-9a-fA-F]{24}$",
   "assignmentId" => "^[0-9a-fA-F]{24}$"
+}.freeze
+
+# Operations that paginate via page + page-size query params.
+# Live-probed against sandbox workspace 65b382b606de527a7ee2b60e on
+# 2026-05-24. The Clockify API uses 1-based page numbers and a default
+# page-size of 50 (max 200). Response shape is a bare JSON array; the
+# Last-Page response header carries the boolean "is this the final page?"
+# signal. Each entry below is an [http_method, canonical_path] pair —
+# match by exact pair to avoid colliding with non-paginated GETs
+# (e.g. POST /workspaces/{workspaceId}/expenses with the same path).
+# Adding a new entry must be backed by a live probe captured in
+# addons-me/fern/spec/evidence/probes/.
+PAGINATED_LIST_OPS = Set.new([
+  ["get", "/workspaces/{workspaceId}/approval-requests"],
+  ["get", "/workspaces/{workspaceId}/clients"],
+  ["get", "/workspaces/{workspaceId}/custom-fields"],
+  ["get", "/workspaces/{workspaceId}/holidays"],
+  ["get", "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"],
+  ["get", "/workspaces/{workspaceId}/projects"],
+  ["get", "/workspaces/{workspaceId}/projects/{projectId}/custom-fields"],
+  ["get", "/workspaces/{workspaceId}/projects/{projectId}/tasks"],
+  ["get", "/workspaces/{workspaceId}/scheduling/assignments/all"],
+  ["get", "/workspaces/{workspaceId}/tags"],
+  ["get", "/workspaces/{workspaceId}/time-entries/status/in-progress"],
+  ["get", "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"],
+  ["get", "/workspaces/{workspaceId}/time-off/balance/user/{userId}"],
+  ["get", "/workspaces/{workspaceId}/time-off/policies"],
+  ["get", "/workspaces/{workspaceId}/user-groups"],
+  ["get", "/workspaces/{workspaceId}/user/{userId}/time-entries"],
+  ["get", "/workspaces/{workspaceId}/users"],
+  ["get", "/workspaces/{workspaceId}/users/{userId}/managers"]
+]).freeze
+
+PAGE_PARAM_DEFAULT = {
+  "in" => "query",
+  "name" => "page",
+  "required" => false,
+  "description" => "1-based page index. Default 1.",
+  "schema" => {
+    "type" => "integer",
+    "format" => "int32",
+    "default" => 1,
+    "minimum" => 1
+  }
+}.freeze
+
+PAGE_SIZE_PARAM_DEFAULT = {
+  "in" => "query",
+  "name" => "page-size",
+  "required" => false,
+  "description" => "Page size (number of items per page). Default 50; maximum 200.",
+  "schema" => {
+    "type" => "integer",
+    "format" => "int32",
+    "default" => 50,
+    "minimum" => 1,
+    "maximum" => 200
+  }
 }.freeze
 
 def normalize_op_tags!(op)
@@ -695,6 +762,60 @@ def stamp_path_param_patterns!(op)
     schema["pattern"] ||= pattern
   end
 end
+
+# Ensure paginated list operations declare the page + page-size query
+# parameters. Idempotent: pre-existing page / page-size parameters in
+# upstream sources are kept as-is (some declare type:string with
+# default '0', some declare int32 with default 1 — both are accepted
+# by the live API). Only missing names are appended with the canonical
+# integer-typed shape.
+#
+# Note: this function INTENTIONALLY does not stamp x-fern-pagination.
+# Clockify list endpoints return bare top-level JSON arrays with no
+# envelope object — e.g. GET /workspaces/{wsId}/tags responds with
+# [{...},{...}] not {"results":[...]}. Fern's offset-pagination
+# annotation requires `results` to be a dot-delimited sub-path of the
+# response body (e.g. `$response.results`); bare arrays are rejected
+# at fern generate time with errors like:
+#   Pagination configuration for endpoint X specifies 'results'
+#   $response.body, which is not a valid 'results' type.
+# Tested 2026-05-24 against fern CLI 5.37.9. The page + page-size
+# params themselves are still a real spec improvement (the live API
+# supports them but the upstream source spec omits them on 11 of the
+# 18 list operations); a hand-written iterator helper in the SDK
+# wrapper picks up the slack until Fern adds bare-array support
+# (tracked in addons-me/fern/spec/evidence/discrepancies.md →
+# fern.x-fern-pagination.bare-array-unsupported).
+def ensure_pagination!(op, method, path)
+  return unless PAGINATED_LIST_OPS.include?([method.to_s, path.to_s])
+
+  params = (op["parameters"] ||= [])
+  param_names = params.map { |p| p.is_a?(Hash) ? p["name"].to_s : "" }
+  params << deep_copy(PAGE_PARAM_DEFAULT) unless param_names.include?("page")
+  params << deep_copy(PAGE_SIZE_PARAM_DEFAULT) unless param_names.include?("page-size")
+end
+
+# NOTE 2026-05-24: a `stamp_sdk_method_name!` heuristic was prototyped
+# here that derived CRUDL verbs (list / get / create / update / delete /
+# partialUpdate / archive) from each operation's method + URL shape and
+# stamped them as `x-fern-sdk-method-name`. It applied to 135 of 193
+# operations after one regen — but ALSO caused Fern CLI 5.37.9 to drop
+# 12 entire resource modules from the generated TypeScript SDK
+# (tags, holidays, expenses, expenseCategories, expenseReport, files,
+# memberProfiles, reports, sharedReport, timeOffPolicies,
+# auditLogReport, entityChangesExperimental). The IR (intermediate
+# representation) retained all 31 services, but the TS generator
+# container silently emitted only 19 resource modules. fern check
+# reported no warnings or errors. The drop reproduced with the
+# heuristic enabled and stopped reproducing the moment the stamp
+# call was removed from the per-op finalization loop. Root cause
+# uncertain; possibly an interaction with Fern's IR-level name-
+# mangling for tag groups that already collide with type names
+# (e.g. `TagDto` exists, so `Tags` module emission is suppressed).
+# Tracked in addons-me/fern/spec/evidence/discrepancies.md →
+# fern.x-fern-sdk-method-name.drops-resource-modules. Re-enable only
+# after the Fern interaction is understood — until then, callers get
+# the upstream operationId-derived method names (long but stable).
 
 def ensure_path_parameters!(op, path)
   wanted = path.scan(/\{([^}]+)\}/).flatten
@@ -876,6 +997,7 @@ class Merger
       ensure_path_parameters!(op, path)
       normalize_op_tags!(op)
       stamp_path_param_patterns!(op)
+      ensure_pagination!(op, method, path)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
       op["servers"] = [{"url" => record[:host]}] if record[:host] != MAIN_SERVER
     end

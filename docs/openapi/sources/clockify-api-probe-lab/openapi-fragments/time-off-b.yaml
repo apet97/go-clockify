@@ -154,7 +154,7 @@ components:
             statusType: { type: string, enum: [PENDING, APPROVED, REJECTED, ALL] }
             changedByUserId:   { type: string, nullable: true }
             changedByUserName: { type: string }
-            changedForUserName:{ type: string }
+            changedForUserName: { type: string }
             changedAt:         { type: string, format: date-time, nullable: true }
             note:              { type: string, nullable: true }
         balance:     { type: number, format: double }
