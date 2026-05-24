@@ -63,13 +63,10 @@ var documentedWriteRoutes = map[string]bool{
 	"PUT /workspaces/{workspaceId}/member-profile/{userId}":   true,
 
 	// policies
-	"DELETE /workspaces/{workspaceId}/policies/{policyId}":                      true,
-	"DELETE /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}": true,
-	"PATCH /workspaces/{workspaceId}/policies/{policyId}/archive":               true,
-	"PATCH /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}":  true,
-	"POST /workspaces/{workspaceId}/policies":                                   true,
-	"POST /workspaces/{workspaceId}/policies/{policyId}/requests":               true,
-	"PUT /workspaces/{workspaceId}/policies/{policyId}":                         true,
+	"DELETE /workspaces/{workspaceId}/policies/{policyId}":        true,
+	"PATCH /workspaces/{workspaceId}/policies/{policyId}/archive": true,
+	"POST /workspaces/{workspaceId}/policies":                     true,
+	"PUT /workspaces/{workspaceId}/policies/{policyId}":           true,
 
 	// projects
 	"DELETE /workspaces/{workspaceId}/projects/{projectId}":                               true,

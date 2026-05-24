@@ -147,16 +147,29 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	contract := readOpenAPIContract(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 
-	if got, want := len(contract.paths), 125; got < want {
+	// Floor counts updated 2026-05-25 after quarantining 3 phantom
+	// time-off-request /policies/{policyId}/requests routes (POST +
+	// DELETE + PATCH) — see addons-me/fern/spec/evidence/discrepancies.md
+	// > timeoff.legacy-policies-requests.phantom-path-quarantined.
+	// The quarantined ops returned HTTP 404 + code 3000 ("No static
+	// resource") on the live API; they were spec ghosts from an
+	// older clockify-api-probe-lab source-bundle revision.
+	if got, want := len(contract.paths), 123; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
-	if got, want := contract.operationCount(), 192; got < want {
+	if got, want := contract.operationCount(), 188; got < want {
 		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
 	}
 
+	// The required-operations list omits anything that's in
+	// PHANTOM_PATHS (scripts/gen-clockify-openapi). The bare
+	// `/workspaces/{workspaceId}/balance` GET + PATCH pair previously
+	// lived here but was removed when the live-probed phantom-route
+	// quarantine landed (see addons-me/fern/spec/evidence/discrepancies.md
+	// > `deferred-list-endpoints.not-paginated-or-not-live`). The
+	// live-equivalent surface is the granular `/time-off/balance/policy/
+	// {policyId}` and `.../user/{userId}` routes (still asserted below).
 	requiredOperations := []openAPIOperation{
-		{method: "get", path: "/workspaces/{workspaceId}/balance"},
-		{method: "patch", path: "/workspaces/{workspaceId}/balance"},
 		{method: "get", path: "/workspaces/{workspaceId}/time-off/policies"},
 		{method: "post", path: "/workspaces/{workspaceId}/time-off/policies"},
 		{method: "post", path: "/workspaces/{workspaceId}/time-off/requests"},

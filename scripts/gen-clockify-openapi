@@ -456,7 +456,26 @@ PHANTOM_PATHS = [
   # Ledger: spec/evidence/discrepancies.md →
   # deferred-list-endpoints.not-paginated-or-not-live, open question 1.
   ["get", "/workspaces/{workspaceId}/balance"],
-  ["patch", "/workspaces/{workspaceId}/balance"]
+  ["patch", "/workspaces/{workspaceId}/balance"],
+  # /workspaces/{workspaceId}/policies/{policyId}/requests/* trio
+  # (POST + DELETE + PATCH) — three time-off-request action paths
+  # that appear in the canonical OpenAPI under the `Time Off` tag
+  # but do NOT exist on the live API. Live re-probe 2026-05-25
+  # against sandbox 65b382b606de527a7ee2b60e with policyId=
+  # 696fd7f25dd6c5510bafa772 returned HTTP 404 + Clockify error
+  # code 3000 on all three method variants:
+  # `{"message":"No static resource v1/workspaces/{ws}/policies/
+  # {pid}/requests[/{rid}].","code":3000}`. The live time-off
+  # request surface is at /workspaces/{ws}/time-off/policies/
+  # {pid}/requests/* (the scoped path that includes `time-off/`)
+  # — already stamped as `submit` / `withdraw` and friends. Probe
+  # fixtures: addons-me/fern/spec/evidence/probes/20260525-
+  # timeoff-legacy-{post,delete,patch}.{json,hdr}. Ledger entry:
+  # spec/evidence/discrepancies.md → `timeoff.legacy-policies-
+  # requests.phantom-path-quarantined`.
+  ["post",   "/workspaces/{workspaceId}/policies/{policyId}/requests"],
+  ["delete", "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"],
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"]
 ].freeze
 
 def phantom_path?(method, path)
@@ -763,6 +782,40 @@ PAGE_SIZE_PARAM_DEFAULT = {
   }
 }.freeze
 
+# Operations that emit a `Last-Page: true|false` response header.
+# Live-audited 2026-05-25 against sandbox workspace
+# 65b382b606de527a7ee2b60e — see
+# addons-me/fern/spec/evidence/discrepancies.md →
+# `pagination.last-page-header.live-audit-2026-05-25`. 15 of the 18
+# operations in PAGINATED_LIST_OPS emit the header consistently;
+# probed both with results-available (page=1, page-size=2) which
+# returned `last-page: false`, AND with results-exhausted (page=999,
+# page-size=2) which returned `last-page: true` and a 0-item array.
+# Three operations do NOT emit the header (custom-fields workspace
+# + project scopes, and holidays); they also ignore page-size on the
+# live server and return their full collection regardless of paging
+# query params. The wrapper layer in
+# addons-me/fern/wrapper/iter.ts uses this annotation (along with
+# the existing `Last-Page` header probe at runtime) to short-circuit
+# pagination when the server has acknowledged we've reached the end.
+LAST_PAGE_HEADER_OPS = Set.new([
+  ["get", "/workspaces/{workspaceId}/approval-requests"],
+  ["get", "/workspaces/{workspaceId}/clients"],
+  ["get", "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"],
+  ["get", "/workspaces/{workspaceId}/projects"],
+  ["get", "/workspaces/{workspaceId}/projects/{projectId}/tasks"],
+  ["get", "/workspaces/{workspaceId}/scheduling/assignments/all"],
+  ["get", "/workspaces/{workspaceId}/tags"],
+  ["get", "/workspaces/{workspaceId}/time-entries/status/in-progress"],
+  ["get", "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"],
+  ["get", "/workspaces/{workspaceId}/time-off/balance/user/{userId}"],
+  ["get", "/workspaces/{workspaceId}/time-off/policies"],
+  ["get", "/workspaces/{workspaceId}/user-groups"],
+  ["get", "/workspaces/{workspaceId}/user/{userId}/time-entries"],
+  ["get", "/workspaces/{workspaceId}/users"],
+  ["get", "/workspaces/{workspaceId}/users/{userId}/managers"]
+]).freeze
+
 def normalize_op_tags!(op)
   return unless op.is_a?(Hash) && op["tags"].is_a?(Array)
 
@@ -815,6 +868,21 @@ def ensure_pagination!(op, method, path)
   params << deep_copy(PAGE_SIZE_PARAM_DEFAULT) unless param_names.include?("page-size")
 end
 
+# Stamp the Clockify-specific `x-clockify-last-page-header` extension
+# on operations that emit a `Last-Page` response header (audit
+# evidence in addons-me/fern/spec/evidence/discrepancies.md → the
+# `pagination.last-page-header.live-audit-2026-05-25` entry). The
+# wrapper's iterAll / iterPages helpers read this annotation (and
+# inspect the raw response headers at runtime) to stop walking
+# pages as soon as the server signals it has none left — more
+# robust than the legacy "items.length < pageSize" heuristic that
+# fails when a final page coincidentally fills.
+def stamp_last_page_header!(op, method, path)
+  return unless LAST_PAGE_HEADER_OPS.include?([method.to_s, path.to_s])
+
+  op["x-clockify-last-page-header"] = true
+end
+
 # NOTE 2026-05-24: a `stamp_sdk_method_name!` heuristic was prototyped
 # here that derived CRUDL verbs (list / get / create / update / delete /
 # partialUpdate / archive) from each operation's method + URL shape and
@@ -836,6 +904,329 @@ end
 # fern.x-fern-sdk-method-name.drops-resource-modules. Re-enable only
 # after the Fern interaction is understood — until then, callers get
 # the upstream operationId-derived method names (long but stable).
+
+# Explicit, opt-in CRUDL method names. Each entry maps an
+# [http_method, canonical_path] pair to a `{group, name}` pair stamped
+# as `x-fern-sdk-group-name` + `x-fern-sdk-method-name`. Both keys are
+# required: stamping `method-name` alone hoists the method to the root
+# client (e.g. `client.list()` instead of `client.tags.list()`), which
+# also empties the resource module it was hoisted from — the same
+# silent-module-drop behaviour that derailed the 2026-05-24 attempt
+# (see addons-me/fern/spec/evidence/discrepancies.md →
+# fern.x-fern-sdk-method-name.drops-resource-modules). Bisect
+# strategy: add one entry at a time, run the full gate chain +
+# `fern generate --group ts --local --force`, and confirm the
+# generated TS SDK still emits all 31 resource modules
+# (`output/ts-sdk/api/resources/`) AND that the stamped method
+# appears under `client.<group>.<name>(...)`. Stop expanding the
+# moment something drops. The hash is intentionally not a heuristic —
+# each entry is a deliberate, reviewed call.
+SDK_METHOD_NAMES = {
+  # tags — full CRUDL
+  ["get",    "/workspaces/{workspaceId}/tags"]           => {group: "tags",    name: "list"},
+  ["post",   "/workspaces/{workspaceId}/tags"]           => {group: "tags",    name: "create"},
+  ["get",    "/workspaces/{workspaceId}/tags/{tagId}"]   => {group: "tags",    name: "get"},
+  ["put",    "/workspaces/{workspaceId}/tags/{tagId}"]   => {group: "tags",    name: "update"},
+  ["delete", "/workspaces/{workspaceId}/tags/{tagId}"]   => {group: "tags",    name: "delete"},
+  # clients — full CRUDL + archive (Clockify-specific action verb)
+  ["get",    "/workspaces/{workspaceId}/clients"]                       => {group: "clients", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/clients"]                       => {group: "clients", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "delete"},
+  ["put",    "/workspaces/{workspaceId}/clients/{clientId}/archive"]    => {group: "clients", name: "archive"},
+  # projects — pure CRUDL (rate/template/membership/archive verbs left
+  # on operationId-derived names; they're action verbs, not CRUDL)
+  ["get",    "/workspaces/{workspaceId}/projects"]                      => {group: "projects", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/projects"]                      => {group: "projects", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}"]          => {group: "projects", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}"]          => {group: "projects", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/projects/{projectId}"]          => {group: "projects", name: "delete"},
+  # tasks — pure CRUDL (rate verbs left on operationId-derived names)
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}/tasks"]            => {group: "tasks", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/projects/{projectId}/tasks"]            => {group: "tasks", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}"]   => {group: "tasks", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}"]   => {group: "tasks", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}"]   => {group: "tasks", name: "delete"},
+  # timeEntries — core CRUD on /time-entries/{teId} only. The per-user
+  # /user/{userId}/time-entries family (list/create/update/stop/duplicate)
+  # uses different shapes and naming conventions; left on operationId-
+  # derived names. No top-level workspace LIST exists on Clockify.
+  ["post",   "/workspaces/{workspaceId}/time-entries"]                       => {group: "timeEntries", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/time-entries/{timeEntryId}"]         => {group: "timeEntries", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/time-entries/{timeEntryId}"]         => {group: "timeEntries", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/time-entries/{timeEntryId}"]         => {group: "timeEntries", name: "delete"},
+  # holidays — list/create/update/delete (no GET-by-id exists on the API;
+  # the /holidays/in-period filtered route is left operationId-derived)
+  ["get",    "/workspaces/{workspaceId}/holidays"]                      => {group: "holidays", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/holidays"]                      => {group: "holidays", name: "create"},
+  ["put",    "/workspaces/{workspaceId}/holidays/{holidayId}"]          => {group: "holidays", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/holidays/{holidayId}"]          => {group: "holidays", name: "delete"},
+  # sharedReports — workspace-scoped CRUDL. The bare /shared-reports/{srid}
+  # public-view route is left operationId-derived (no auth on that one).
+  ["get",    "/workspaces/{workspaceId}/shared-reports"]                              => {group: "sharedReports", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/shared-reports"]                              => {group: "sharedReports", name: "create"},
+  ["put",    "/workspaces/{workspaceId}/shared-reports/{sharedReportId}"]             => {group: "sharedReports", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/shared-reports/{sharedReportId}"]             => {group: "sharedReports", name: "delete"},
+  # timeOffPolicies — full CRUDL. (changeTimeOffPolicyStatus left on
+  # operationId-derived name; status flips are an action, not CRUDL.)
+  ["get",    "/workspaces/{workspaceId}/time-off/policies"]             => {group: "timeOffPolicies", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/time-off/policies"]             => {group: "timeOffPolicies", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/time-off/policies/{policyId}"]  => {group: "timeOffPolicies", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/time-off/policies/{policyId}"]  => {group: "timeOffPolicies", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/time-off/policies/{policyId}"]  => {group: "timeOffPolicies", name: "delete"},
+  # userGroups — full CRUDL on the group resource. Membership operations
+  # (list users in group, add user, remove user) are sub-resource actions;
+  # left on operationId-derived names.
+  ["get",    "/workspaces/{workspaceId}/user-groups"]                   => {group: "userGroups", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/user-groups"]                   => {group: "userGroups", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/user-groups/{groupId}"]         => {group: "userGroups", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/user-groups/{groupId}"]         => {group: "userGroups", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/user-groups/{groupId}"]         => {group: "userGroups", name: "delete"},
+  # webhooks — full CRUDL. (token rotation, logs, addon-webhooks listing
+  # are special endpoints; left on operationId-derived names.)
+  ["get",    "/workspaces/{workspaceId}/webhooks"]                      => {group: "webhooks", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/webhooks"]                      => {group: "webhooks", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "delete"},
+  # customFields — scoped naming because both workspace + project surfaces
+  # share the same module. Bare `list` would collide; explicit suffixes
+  # disambiguate. Project scope lacks a create op (you create at workspace
+  # then attach to a project); the project DELETE is named `removeFromProject`
+  # to match its semantic (it unattaches, doesn't delete the field).
+  ["get",    "/workspaces/{workspaceId}/custom-fields"]                                       => {group: "customFields", name: "listForWorkspace"},
+  ["post",   "/workspaces/{workspaceId}/custom-fields"]                                       => {group: "customFields", name: "createForWorkspace"},
+  ["put",    "/workspaces/{workspaceId}/custom-fields/{customFieldId}"]                       => {group: "customFields", name: "updateForWorkspace"},
+  ["delete", "/workspaces/{workspaceId}/custom-fields/{customFieldId}"]                       => {group: "customFields", name: "deleteForWorkspace"},
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}/custom-fields"]                  => {group: "customFields", name: "listForProject"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}"]  => {group: "customFields", name: "updateForProject"},
+  ["delete", "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}"]  => {group: "customFields", name: "removeFromProject"},
+  # expenses — full CRUDL; downloadExpenseReceipt left on operationId-
+  # derived name (binary file action, not a CRUDL verb).
+  ["get",    "/workspaces/{workspaceId}/expenses"]                       => {group: "expenses", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/expenses"]                       => {group: "expenses", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/expenses/{expenseId}"]           => {group: "expenses", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/expenses/{expenseId}"]           => {group: "expenses", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/expenses/{expenseId}"]           => {group: "expenses", name: "delete"},
+  # expenseCategories — full CRUDL + archive (which is actually
+  # PATCH .../status under Clockify but semantically an archive flip).
+  ["get",    "/workspaces/{workspaceId}/expenses/categories"]                       => {group: "expenseCategories", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/expenses/categories"]                       => {group: "expenseCategories", name: "create"},
+  ["put",    "/workspaces/{workspaceId}/expenses/categories/{categoryId}"]          => {group: "expenseCategories", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/expenses/categories/{categoryId}"]          => {group: "expenseCategories", name: "delete"},
+  ["patch",  "/workspaces/{workspaceId}/expenses/categories/{categoryId}/status"]   => {group: "expenseCategories", name: "archive"},
+  # invoiceItems — Clockify has no LIST or GET-by-id; items live on the
+  # parent invoice. `import` is the bulk-add variant.
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/items"]                => {group: "invoiceItems", name: "create"},
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/items/import"]         => {group: "invoiceItems", name: "import"},
+  ["delete", "/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order}"]        => {group: "invoiceItems", name: "delete"},
+  # invoicePayments — list/create/delete; no GET-by-id, no update on the API.
+  ["get",    "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"]             => {group: "invoicePayments", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"]             => {group: "invoicePayments", name: "create"},
+  ["delete", "/workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}"] => {group: "invoicePayments", name: "delete"},
+  # policies — full CRUDL + archive (PATCH .../archive is the toggle).
+  ["get",    "/workspaces/{workspaceId}/policies"]                       => {group: "policies", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/policies"]                       => {group: "policies", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "delete"},
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/archive"]    => {group: "policies", name: "archive"},
+  # approvals — workflow verbs (submit / approve / reject is the
+  # state machine; `updateStatus` covers approve / reject / withdraw
+  # because Clockify's PATCH .../{id} accepts a `status` body). The
+  # `*ForUser` variants are admin endpoints that act on another user's
+  # entries; the un-suffixed verbs act on the caller's own.
+  ["get",    "/workspaces/{workspaceId}/approval-requests"]                                                  => {group: "approvals", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests"]                                                  => {group: "approvals", name: "submit"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval"]                    => {group: "approvals", name: "resubmit"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}"]                                   => {group: "approvals", name: "submitForUser"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval"]     => {group: "approvals", name: "resubmitForUser"},
+  ["patch",  "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}"]                              => {group: "approvals", name: "updateStatus"},
+  # timeOff — admin view on /time-off/requests + the user-submission
+  # endpoint scoped to a policy. The /time-off/requests POST is the
+  # documented POST-as-list quirk (GET returns 405). The duplicate
+  # /policies/{pid}/requests family (un-scoped, legacy paths) is
+  # left operationId-derived; those routes shadow the scoped variants.
+  # The "POST on /users/{userId}" admin-creates-for-user endpoint
+  # is left operationId-derived (different shape; needs design).
+  ["post",   "/workspaces/{workspaceId}/time-off/requests"]                                          => {group: "timeOff", name: "list"},
+  ["get",    "/workspaces/{workspaceId}/time-off/requests/{requestId}"]                              => {group: "timeOff", name: "get"},
+  ["delete", "/workspaces/{workspaceId}/time-off/requests/{requestId}"]                              => {group: "timeOff", name: "delete"},
+  ["patch",  "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"]                       => {group: "timeOff", name: "updateStatus"},
+  ["post",   "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests"]                      => {group: "timeOff", name: "submit"},
+  # scheduling — single-assignment CRUDL + publish + copy +
+  # recurring-assignment CRUD. No GET-by-id exists for assignments.
+  # The PUT variant on recurring/{aid} (replace-style) and the
+  # series/{aid} changeRecurringPeriod, and the capacity-totals
+  # endpoints, are left operationId-derived (specialised shapes).
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments"]                                  => {group: "scheduling", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/scheduling/assignments/all"]                              => {group: "scheduling", name: "list"},
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"]                   => {group: "scheduling", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"]                   => {group: "scheduling", name: "delete"},
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/publish"]                          => {group: "scheduling", name: "publish"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy"]              => {group: "scheduling", name: "copy"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/recurring"]                        => {group: "scheduling", name: "createRecurring"},
+  ["patch",  "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "updateRecurring"},
+  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "deleteRecurring"},
+  # invoices — full CRUDL + the workflow actions (duplicate, export,
+  # filter, updateStatus). `filter` is a POST-with-body filter route
+  # at /invoices/info (distinct from the bare GET /invoices list).
+  # `updateStatus` is PATCH .../status — same shape as the approvals
+  # / timeOff / policies updateStatus pattern. There is no `send`
+  # endpoint on the live API (the upstream tool returns "unsupported");
+  # nothing to stamp there.
+  ["get",    "/workspaces/{workspaceId}/invoices"]                          => {group: "invoices", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/invoices"]                          => {group: "invoices", name: "create"},
+  ["post",   "/workspaces/{workspaceId}/invoices/info"]                     => {group: "invoices", name: "filter"},
+  ["get",    "/workspaces/{workspaceId}/invoices/{invoiceId}"]              => {group: "invoices", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/invoices/{invoiceId}"]              => {group: "invoices", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/invoices/{invoiceId}"]              => {group: "invoices", name: "delete"},
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate"]    => {group: "invoices", name: "duplicate"},
+  ["get",    "/workspaces/{workspaceId}/invoices/{invoiceId}/export"]       => {group: "invoices", name: "export"},
+  ["patch",  "/workspaces/{workspaceId}/invoices/{invoiceId}/status"]       => {group: "invoices", name: "updateStatus"},
+  # reports — one per family. Each report is a POST-with-body call
+  # (filters in the body, not the URL). Naming uses the family name
+  # directly (e.g. `reports.summary({...})`) — short, idiomatic, and
+  # matches how Clockify users talk about the reports surface.
+  ["post",   "/workspaces/{workspaceId}/reports/attendance"]                => {group: "reports", name: "attendance"},
+  ["post",   "/workspaces/{workspaceId}/reports/detailed"]                  => {group: "reports", name: "detailed"},
+  ["post",   "/workspaces/{workspaceId}/reports/summary"]                   => {group: "reports", name: "summary"},
+  ["post",   "/workspaces/{workspaceId}/reports/weekly"]                    => {group: "reports", name: "weekly"},
+  # Action-verb cleanups inside stamped modules — each entry replaces a
+  # long operationId-derived name with the domain verb the upstream
+  # operationId already implies. Conservative: ambiguous cases stay
+  # operationId-derived; the rename only fires when the new name is
+  # unambiguous and matches Clockify's own terminology.
+
+  # projects — action verbs (CRUDL already stamped above).
+  ["post",   "/workspaces/{workspaceId}/projects/from-template"]                            => {group: "projects", name: "createFromTemplate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/archive"]                      => {group: "projects", name: "archive"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/cost-rate"]                    => {group: "projects", name: "updateCostRate"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/estimate"]                     => {group: "projects", name: "updateEstimate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate"]                  => {group: "projects", name: "updateHourlyRate"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/memberships"]                  => {group: "projects", name: "updateMemberships"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/template"]                     => {group: "projects", name: "updateTemplate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate"]     => {group: "projects", name: "updateUserCostRate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate"]   => {group: "projects", name: "updateUserHourlyRate"},
+  # tasks — rate verbs.
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate"]     => {group: "tasks", name: "updateCostRate"},
+  ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate"]   => {group: "tasks", name: "updateBillableRate"},
+  # timeEntries — the action-verb roster: timer flows, invoiced flags,
+  # per-user shape. `startTimer` is the PUT on /user/{userId}/time-entries
+  # (Clockify's "start a running entry" call); `stopTimer` is the PATCH
+  # on /stop. `duplicate` matches the explicit /duplicate sub-route.
+  ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced"]                                                 => {group: "timeEntries", name: "markInvoiced"},
+  ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced/bulk"]                                            => {group: "timeEntries", name: "markInvoicedBulk"},
+  ["get",    "/workspaces/{workspaceId}/time-entries/status/in-progress"]                                       => {group: "timeEntries", name: "listInProgress"},
+  ["get",    "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "listForUser"},
+  ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "createForUser"},
+  ["put",    "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "startTimer"},
+  ["patch",  "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "updateForUser"},
+  ["patch",  "/workspaces/{workspaceId}/user/{userId}/time-entries/stop"]                                       => {group: "timeEntries", name: "stopTimer"},
+  ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate"]                    => {group: "timeEntries", name: "duplicate"},
+  # holidays — the in-period filter route.
+  ["get",    "/workspaces/{workspaceId}/holidays/in-period"]                                => {group: "holidays", name: "listInPeriod"},
+  # sharedReports — the bare /shared-reports/{srid} public-view route
+  # (no workspace prefix; unauthenticated read). The verb `view` is
+  # short and avoids confusion with the workspace-scoped `get` we
+  # would have liked to stamp (but Clockify's API doesn't expose a
+  # workspace-scoped GET-by-id on shared-reports, hence `view` here).
+  ["get",    "/shared-reports/{sharedReportId}"]                                            => {group: "sharedReports", name: "view"},
+  # timeOffPolicies — status toggle (PATCH on the policy path; the PUT
+  # on the same path is `update`).
+  ["patch",  "/workspaces/{workspaceId}/time-off/policies/{policyId}"]                      => {group: "timeOffPolicies", name: "updateStatus"},
+  # userGroups — membership sub-resource actions.
+  ["get",    "/workspaces/{workspaceId}/user-groups/{groupId}/users"]                       => {group: "userGroups", name: "listMembers"},
+  ["post",   "/workspaces/{workspaceId}/user-groups/{groupId}/users"]                       => {group: "userGroups", name: "addMembers"},
+  ["delete", "/workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}"]              => {group: "userGroups", name: "removeMember"},
+  # webhooks — addon-scoped listing + token rotation + log read/search.
+  # The `/logs` route accepts both GET (read) and POST (filtered search)
+  # so we stamp them as listLogs vs searchLogs to disambiguate.
+  ["get",    "/workspaces/{workspaceId}/addons/{addonId}/webhooks"]                         => {group: "webhooks", name: "listForAddon"},
+  ["patch",  "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken"]             => {group: "webhooks", name: "rotateToken"},
+  ["get",    "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"]                         => {group: "webhooks", name: "listLogs"},
+  ["post",   "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"]                         => {group: "webhooks", name: "searchLogs"},
+  ["patch",  "/workspaces/{workspaceId}/webhooks/{webhookId}/token"]                        => {group: "webhooks", name: "updateToken"},
+  # expenses — receipt download (binary file).
+  ["get",    "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}"]               => {group: "expenses", name: "downloadReceipt"},
+  # scheduling — per-project + per-user capacity views, plus the PUT
+  # replace variant for recurring assignments.
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/projects/totals"]                  => {group: "scheduling", name: "listPerProject"},
+  ["get",    "/workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}"]      => {group: "scheduling", name: "listOnProject"},
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "replaceRecurring"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals"]               => {group: "scheduling", name: "getUsersCapacityFiltered"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/users/totals"]                     => {group: "scheduling", name: "calculateUsersTotals"},
+  ["get",    "/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals"]            => {group: "scheduling", name: "getUserCapacity"},
+  # timeOff — admin submits a TOR on behalf of a specific user.
+  ["post",   "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests"]    => {group: "timeOff", name: "submitForUser"},
+  # Remaining small / read-only / single-resource modules (G.1 final
+  # batch). Each stamp here uses the obvious domain verb so the SDK
+  # surface across all 21 stamped modules is uniformly idiomatic.
+  # Modules where the existing operationId is already a clean
+  # verb-noun (files.uploadImage, roles.giveUserManagerRole/
+  # removeUserManagerRole, expenseReport.generateDetailedReportV1)
+  # are intentionally left operationId-derived -- the rename would
+  # not improve clarity.
+
+  # auditLogReport — single search op (POST .../audit-log with body).
+  ["post",   "/workspaces/{workspaceId}/audit-log"]                                 => {group: "auditLogReport", name: "search"},
+  # balances — policy-scoped list + user-scoped get + policy-scoped
+  # update. The two paginated routes (GET .../policy/{pid} and
+  # GET .../user/{uid}) live here because the upstream tag is
+  # `Balances`; the PATCH-on-policy route is balance adjustment.
+  ["get",    "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"]        => {group: "balances", name: "listForPolicy"},
+  ["patch",  "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"]        => {group: "balances", name: "update"},
+  ["get",    "/workspaces/{workspaceId}/time-off/balance/user/{userId}"]            => {group: "balances", name: "getForUser"},
+  # entityChangesExperimental — three read ops for the change-event
+  # feed; one per event type (created / updated / deleted).
+  ["get",    "/workspaces/{workspaceId}/entities/created"]                          => {group: "entityChangesExperimental", name: "listCreated"},
+  ["get",    "/workspaces/{workspaceId}/entities/updated"]                          => {group: "entityChangesExperimental", name: "listUpdated"},
+  ["get",    "/workspaces/{workspaceId}/entities/deleted"]                          => {group: "entityChangesExperimental", name: "listDeleted"},
+  # invoiceSettings — single-resource get + update.
+  ["get",    "/workspaces/{workspaceId}/invoices/settings"]                         => {group: "invoiceSettings", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/invoices/settings"]                         => {group: "invoiceSettings", name: "update"},
+  # memberProfiles — per-user profile read + partial update.
+  ["get",    "/workspaces/{workspaceId}/member-profile/{userId}"]                   => {group: "memberProfiles", name: "get"},
+  ["patch",  "/workspaces/{workspaceId}/member-profile/{userId}"]                   => {group: "memberProfiles", name: "update"},
+  # workspaces — CRUDL on the workspace resource itself, plus the two
+  # workspace-level rate updates and the addUser action verb. Per-user
+  # status / cost-rate / hourly-rate are kept operationId-derived
+  # (already verb-noun shaped; `client.workspaces.updateUserStatus`
+  # etc. read fine as-is).
+  ["get",    "/workspaces"]                                                         => {group: "workspaces", name: "list"},
+  ["post",   "/workspaces"]                                                         => {group: "workspaces", name: "create"},
+  ["get",    "/workspaces/{workspaceId}"]                                           => {group: "workspaces", name: "get"},
+  ["put",    "/workspaces/{workspaceId}"]                                           => {group: "workspaces", name: "update"},
+  ["put",    "/workspaces/{workspaceId}/cost-rate"]                                 => {group: "workspaces", name: "updateCostRate"},
+  ["put",    "/workspaces/{workspaceId}/hourly-rate"]                               => {group: "workspaces", name: "updateBillableRate"},
+  ["post",   "/workspaces/{workspaceId}/users"]                                     => {group: "workspaces", name: "addUser"},
+  # Final domain edge-case fills (G.1 step 8). Each one is the result
+  # of a per-op naming review where the operationId verb did not have
+  # an obvious one-word equivalent until we looked at the HTTP-method
+  # contrast with a sibling op:
+  # - projects POST /memberships replaces the membership list (vs
+  #   the sibling PATCH which we stamped as `updateMemberships`).
+  #   Naming `setMembers` mirrors the userGroups membership family
+  #   (`listMembers`, `addMembers`, `removeMember`).
+  # - timeOff DELETE on the policy-scoped request path is the user-
+  #   side withdraw flow (admin DELETE on the workspace-level
+  #   `/time-off/requests/{rid}` was stamped as `delete`).
+  # - balances GET on the per-user `/users/{uid}/time-off/balances`
+  #   plural route returns a list of balances across policies; the
+  #   sibling singular `getForUser` returns a single balance object.
+  ["post",   "/workspaces/{workspaceId}/projects/{projectId}/memberships"]                        => {group: "projects", name: "setMembers"},
+  ["delete", "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"]       => {group: "timeOff", name: "withdraw"},
+  ["get",    "/workspaces/{workspaceId}/users/{userId}/time-off/balances"]                        => {group: "balances", name: "listForUser"}
+}.freeze
+
+def stamp_sdk_method_name!(op, method, path)
+  entry = SDK_METHOD_NAMES[[method.to_s, path.to_s]]
+  return unless entry
+
+  op["x-fern-sdk-group-name"] = entry[:group]
+  op["x-fern-sdk-method-name"] = entry[:name]
+end
 
 def ensure_path_parameters!(op, path)
   wanted = path.scan(/\{([^}]+)\}/).flatten
@@ -1018,6 +1409,8 @@ class Merger
       normalize_op_tags!(op)
       stamp_path_param_patterns!(op)
       ensure_pagination!(op, method, path)
+      stamp_last_page_header!(op, method, path)
+      stamp_sdk_method_name!(op, method, path)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
       op["servers"] = [{"url" => record[:host]}] if record[:host] != MAIN_SERVER
     end
@@ -1065,7 +1458,13 @@ class Merger
         "securityAliasesNormalized" => @aliases.to_a.uniq.sort - ["ApiKeyAuth", "AddonTokenAuth"],
         "securityHeaderAliasesNormalized" => security_header_aliases
       },
-      "x-clockify-source-quarantine" => @quarantine.sort_by { |entry| entry["source"] }
+      # Sort by both source and reason so multiple quarantines from the
+       # same source file (e.g. the 3 phantom /policies/{policyId}/requests
+       # routes all hitting time-off-b.yaml) land in a deterministic
+       # total order. Without the secondary key the filesystem readdir
+       # ordering bleeds through and the openapi-drift gate flips between
+       # macOS local + Linux CI (#137 CI repro 2026-05-25).
+      "x-clockify-source-quarantine" => @quarantine.sort_by { |entry| [entry["source"], entry["reason"]] }
     }
     doc
   end

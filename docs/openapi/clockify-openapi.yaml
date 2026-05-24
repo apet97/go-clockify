@@ -178,6 +178,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/findings/shared-reports.md
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: sharedReports
+      x-fern-sdk-method-name: view
   "/user":
     get:
       tags:
@@ -351,6 +353,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Workspaces
@@ -430,6 +434,8 @@ paths:
       - clockify-api-probe-lab/WORKSPACESDOC.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}":
     get:
       tags:
@@ -515,6 +521,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Workspaces
@@ -553,6 +561,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: update
   "/workspaces/{workspaceId}/addons/{addonId}/webhooks":
     get:
       tags:
@@ -591,6 +601,8 @@ paths:
       - clockify-api-probe-lab/WEBHOOKDOC.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: listForAddon
   "/workspaces/{workspaceId}/approval-requests":
     get:
       tags:
@@ -756,6 +768,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -767,6 +780,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Approvals
@@ -827,6 +842,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/APPROVALDOC.md
       - realOPENAPI/APPROVALOPENAPI.YAML
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: submit
   "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval":
     post:
       tags:
@@ -889,6 +906,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/APPROVALDOC.md
       - realOPENAPI/APPROVALOPENAPI.YAML
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: resubmit
   "/workspaces/{workspaceId}/approval-requests/users/{userId}":
     post:
       tags:
@@ -955,6 +974,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: submitForUser
   "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval":
     post:
       tags:
@@ -1022,6 +1043,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: resubmitForUser
   "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}":
     patch:
       tags:
@@ -1086,6 +1109,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: updateStatus
   "/workspaces/{workspaceId}/audit-log":
     post:
       tags:
@@ -1144,6 +1169,8 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi-fragments/audit-log.yaml
+      x-fern-sdk-group-name: auditLogReport
+      x-fern-sdk-method-name: search
   "/workspaces/{workspaceId}/clients":
     get:
       tags:
@@ -1224,6 +1251,7 @@ paths:
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -1234,6 +1262,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-a.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Clients
@@ -1277,6 +1307,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/clients/{clientId}":
     get:
       tags:
@@ -1320,6 +1352,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-a.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Clients
@@ -1368,6 +1402,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Clients
@@ -1408,6 +1444,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/clients/{clientId}/archive":
     put:
       tags:
@@ -1449,6 +1487,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/cost-rate":
     put:
       tags:
@@ -1545,6 +1585,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: updateCostRate
   "/workspaces/{workspaceId}/custom-fields":
     get:
       tags:
@@ -1629,6 +1671,8 @@ paths:
       - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: listForWorkspace
       x-openai-isConsequential: false
     post:
       tags:
@@ -1692,6 +1736,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: createForWorkspace
       x-openai-isConsequential: true
   "/workspaces/{workspaceId}/custom-fields/{customFieldId}":
     put:
@@ -1763,6 +1809,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: updateForWorkspace
       x-openai-isConsequential: true
     delete:
       tags:
@@ -1804,6 +1852,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: deleteForWorkspace
       x-openai-isConsequential: true
   "/workspaces/{workspaceId}/entities/created":
     get:
@@ -1924,6 +1974,8 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      x-fern-sdk-group-name: entityChangesExperimental
+      x-fern-sdk-method-name: listCreated
   "/workspaces/{workspaceId}/entities/deleted":
     get:
       tags:
@@ -2045,6 +2097,8 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      x-fern-sdk-group-name: entityChangesExperimental
+      x-fern-sdk-method-name: listDeleted
   "/workspaces/{workspaceId}/entities/updated":
     get:
       tags:
@@ -2166,6 +2220,8 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      x-fern-sdk-group-name: entityChangesExperimental
+      x-fern-sdk-method-name: listUpdated
   "/workspaces/{workspaceId}/expenses":
     get:
       tags:
@@ -2209,6 +2265,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Expenses
@@ -2253,6 +2311,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/expenses/categories":
     get:
       tags:
@@ -2301,6 +2361,8 @@ paths:
       - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Expense categories
@@ -2349,6 +2411,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/expenses/categories/{categoryId}":
     put:
       tags:
@@ -2401,6 +2465,8 @@ paths:
       - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Expense categories
@@ -2446,6 +2512,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/expenses/categories/{categoryId}/status":
     patch:
       tags:
@@ -2496,6 +2564,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/expenses/{expenseId}":
     get:
       tags:
@@ -2543,6 +2613,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Expenses
@@ -2593,6 +2665,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Expenses
@@ -2639,6 +2713,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}":
     get:
       tags:
@@ -2695,6 +2771,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: downloadReceipt
       x-inferred-method-path: true
   "/workspaces/{workspaceId}/holidays":
     get:
@@ -2801,6 +2879,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/holidays-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/HOLIDAYSOPEAPI.YAML
+      x-fern-sdk-group-name: holidays
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Holidays
@@ -2905,6 +2985,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/holidays-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/HOLIDAYSOPEAPI.YAML
+      x-fern-sdk-group-name: holidays
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/holidays/in-period":
     get:
       tags:
@@ -3008,6 +3090,8 @@ paths:
       - clockify-api-probe-lab/findings/holidays.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/HOLIDAYSOPEAPI.YAML
+      x-fern-sdk-group-name: holidays
+      x-fern-sdk-method-name: listInPeriod
   "/workspaces/{workspaceId}/holidays/{holidayId}":
     put:
       tags:
@@ -3113,6 +3197,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/holidays-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/HOLIDAYSOPEAPI.YAML
+      x-fern-sdk-group-name: holidays
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Holidays
@@ -3202,6 +3288,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/holidays-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/HOLIDAYSOPEAPI.YAML
+      x-fern-sdk-group-name: holidays
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/hourly-rate":
     put:
       tags:
@@ -3299,6 +3387,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: updateBillableRate
   "/workspaces/{workspaceId}/invoices":
     get:
       tags:
@@ -3339,6 +3429,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Invoices
@@ -3391,6 +3483,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/invoices/info":
     post:
       tags:
@@ -3465,6 +3559,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: filter
   "/workspaces/{workspaceId}/invoices/settings":
     get:
       tags:
@@ -3504,6 +3600,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceSettings
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Invoice settings
@@ -3567,6 +3665,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceSettings
+      x-fern-sdk-method-name: update
   "/workspaces/{workspaceId}/invoices/{invoiceId}":
     get:
       tags:
@@ -3619,6 +3719,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Invoices
@@ -3686,6 +3788,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Invoices
@@ -3732,6 +3836,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate":
     post:
       tags:
@@ -3775,6 +3881,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: duplicate
   "/workspaces/{workspaceId}/invoices/{invoiceId}/export":
     get:
       tags:
@@ -3831,6 +3939,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: export
   "/workspaces/{workspaceId}/invoices/{invoiceId}/items":
     post:
       tags:
@@ -3890,6 +4000,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceItems
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/invoices/{invoiceId}/items/import":
     post:
       tags:
@@ -3959,6 +4071,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceItems
+      x-fern-sdk-method-name: import
   "/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order}":
     delete:
       tags:
@@ -4007,6 +4121,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceItems
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/invoices/{invoiceId}/payments":
     get:
       tags:
@@ -4057,6 +4173,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
@@ -4071,6 +4188,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoicePayments
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Invoice payments
@@ -4127,6 +4246,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoicePayments
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}":
     delete:
       tags:
@@ -4175,6 +4296,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoicePayments
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/invoices/{invoiceId}/status":
     patch:
       tags:
@@ -4230,6 +4353,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoices
+      x-fern-sdk-method-name: updateStatus
   "/workspaces/{workspaceId}/member-profile/{userId}":
     get:
       tags:
@@ -4298,6 +4423,8 @@ paths:
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - realOPENAPI/USEROPENAPI.YAML
+      x-fern-sdk-group-name: memberProfiles
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Users
@@ -4417,6 +4544,8 @@ paths:
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - realOPENAPI/USEROPENAPI.YAML
+      x-fern-sdk-group-name: memberProfiles
+      x-fern-sdk-method-name: update
   "/workspaces/{workspaceId}/policies":
     get:
       tags:
@@ -4454,6 +4583,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Policies
@@ -4490,6 +4621,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/policies/{policyId}":
     get:
       tags:
@@ -4526,6 +4659,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Policies
@@ -4563,6 +4698,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: update
       x-clockify-notes:
       - Policy update payloads should preserve non-null automaticTimeEntryCreation
         values observed from GET before PUT.
@@ -4597,6 +4734,8 @@ paths:
       - destructive
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: delete
       x-clockify-notes:
       - Live Clockify requires archiving a time-off policy before deletion.
   "/workspaces/{workspaceId}/policies/{policyId}/archive":
@@ -4640,212 +4779,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
-  "/workspaces/{workspaceId}/policies/{policyId}/requests":
-    post:
-      tags:
-      - Time Off
-      summary: Create time-off request (operator-as-self)
-      operationId: postWorkspacesWorkspaceIdPoliciesPolicyIdRequests
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                note:
-                  type: string
-                timeOffPeriod:
-                  properties:
-                    halfDayPeriod:
-                      enum:
-                      - FIRST_HALF
-                      - SECOND_HALF
-                      - NOT_DEFINED
-                      type: string
-                    isHalfDay:
-                      default: false
-                      type: boolean
-                    period:
-                      properties:
-                        end:
-                          example: '2026-07-13T10:00:00Z'
-                          format: date-time
-                          type: string
-                        start:
-                          example: '2026-07-13T09:00:00Z'
-                          format: date-time
-                          type: string
-                      required:
-                      - start
-                      - end
-                      type: object
-                    timeZone:
-                      description: Optional; defaults to user's timeZone
-                      type: string
-                  required:
-                  - period
-                  type: object
-              required:
-              - timeOffPeriod
-              type: object
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TimeOffTimeOffRequest"
-          description: |
-            Request created. If policy.approve.requiresApproval=false the
-            status.statusType is APPROVED immediately; otherwise PENDING.
-        '400':
-          description: |
-            Observed failure messages (real upstream wording):
-              * "Please make sure that the datetime is in following format:
-                 yyyy-MM-ddThh:mm:ssZ%n Example: 2018-11-29T13:00:46Z."
-                 — emitted when start/end is not RFC3339 (date-only `YYYY-MM-DD` is rejected).
-              * "must not be null" (code 501 in body, HTTP 400)
-                 — emitted when `timeOffPeriod` is missing.
-              * "Insufficient time off balance"
-                 — policy with allowNegativeBalance:false and 0 balance.
-              * "Value for number of days is not allowed"
-                 — observed on every DAYS-time-unit policy in this workspace
-                   regardless of request duration (1d, halfDay) or
-                   allowNegativeBalance. HOURS policies accept identical shape.
-                   Suspected workspace-level "days-per-request" config blocking
-                   all DAYS-unit POSTs. Needs config-side confirmation.
-        '403':
-          description: '"Access Denied" when policyId does not belong to workspace/user.'
-      x-clockify-evidence:
-      - probe-fragment
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
-  "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}":
-    patch:
-      tags:
-      - Time Off
-      summary: Change time-off request status (approve/reject only)
-      description: |
-        This endpoint is NOT a general update. The only accepted payload
-        is a status change to APPROVED or REJECTED. PENDING is rejected.
-        There is no general "update fields" endpoint — PUT returns 405.
-      operationId: patchWorkspacesWorkspaceIdPoliciesPolicyIdRequestsRequestId
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                note:
-                  type: string
-                statusType:
-                  enum:
-                  - APPROVED
-                  - REJECTED
-                  type: string
-              required:
-              - statusType
-              type: object
-        required: true
-      responses:
-        '200':
-          description: Updated. Body mirrors TimeOffRequest with new status.
-        '400':
-          description: |
-            "You entered invalid value for field : 'You entered invalid
-            value for enum type.'. Value must be from the following set:
-            [APPROVED, REJECTED]" — for PENDING or any other enum value.
-            Also returned when target request is already in the target state.
-        '405':
-          description: PUT on this path returns 405 Method Not Allowed.
-      x-clockify-evidence:
-      - probe-fragment
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
-    delete:
-      tags:
-      - Time Off
-      summary: Withdraw a time-off request
-      operationId: deleteWorkspacesWorkspaceIdPoliciesPolicyIdRequestsRequestId
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Withdrawn. Body = trimmed TimeOffRequest with balanceDiff reversed.
-        '400':
-          description: |
-            "Approved time off requests cannot be withdrawn" — DELETE is
-            permitted only while statusType=PENDING. Auto-approved requests
-            (policies with requiresApproval=false) are NOT withdrawable via API.
-        '403':
-          description: '"Access Denied" for unknown requestId.'
-      x-clockify-evidence:
-      - probe-fragment
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - destructive
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/projects":
     get:
       tags:
@@ -5149,6 +5084,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -5173,6 +5109,8 @@ paths:
       - clockify-api-probe-lab/findings/project-memberships.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Projects
@@ -5310,6 +5248,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/projects/from-template":
     post:
       tags:
@@ -5421,6 +5361,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: createFromTemplate
   "/workspaces/{workspaceId}/projects/{projectId}":
     get:
       tags:
@@ -5563,6 +5505,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Projects
@@ -5690,6 +5634,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Projects
@@ -5799,6 +5745,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/projects/{projectId}/archive":
     put:
       tags:
@@ -5840,6 +5788,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/projects/{projectId}/cost-rate":
     put:
       tags:
@@ -5891,6 +5841,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateCostRate
   "/workspaces/{workspaceId}/projects/{projectId}/custom-fields":
     get:
       tags:
@@ -5977,6 +5929,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: listForProject
       x-openai-isConsequential: false
   "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}":
     patch:
@@ -6056,6 +6010,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: updateForProject
       x-openai-isConsequential: true
     delete:
       tags:
@@ -6127,6 +6083,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: removeFromProject
       x-openai-isConsequential: true
   "/workspaces/{workspaceId}/projects/{projectId}/estimate":
     patch:
@@ -6263,6 +6221,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateEstimate
   "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate":
     put:
       tags:
@@ -6314,6 +6274,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateHourlyRate
   "/workspaces/{workspaceId}/projects/{projectId}/memberships":
     post:
       tags:
@@ -6436,6 +6398,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: setMembers
     patch:
       tags:
       - Projects
@@ -6563,6 +6527,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateMemberships
   "/workspaces/{workspaceId}/projects/{projectId}/tasks":
     get:
       tags:
@@ -6638,6 +6604,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -6659,6 +6626,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Tasks
@@ -6728,6 +6697,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}":
     get:
       tags:
@@ -6784,6 +6755,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Tasks
@@ -6858,6 +6831,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Tasks
@@ -6916,6 +6891,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate":
     put:
       tags:
@@ -6983,6 +6960,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: updateCostRate
   "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate":
     put:
       tags:
@@ -7050,6 +7029,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
+      x-fern-sdk-group-name: tasks
+      x-fern-sdk-method-name: updateBillableRate
   "/workspaces/{workspaceId}/projects/{projectId}/template":
     patch:
       tags:
@@ -7166,6 +7147,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateTemplate
   "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate":
     put:
       tags:
@@ -7292,6 +7275,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateUserCostRate
   "/workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate":
     put:
       tags:
@@ -7418,6 +7403,8 @@ paths:
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: updateUserHourlyRate
   "/workspaces/{workspaceId}/reports/attendance":
     post:
       tags:
@@ -7550,6 +7537,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: attendance
   "/workspaces/{workspaceId}/reports/detailed":
     post:
       tags:
@@ -7689,6 +7678,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: detailed
   "/workspaces/{workspaceId}/reports/expenses/detailed":
     post:
       tags:
@@ -7874,6 +7865,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: summary
   "/workspaces/{workspaceId}/reports/weekly":
     post:
       tags:
@@ -7994,6 +7987,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
+      x-fern-sdk-group-name: reports
+      x-fern-sdk-method-name: weekly
   "/workspaces/{workspaceId}/scheduling/assignments":
     post:
       tags:
@@ -8070,6 +8065,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/scheduling/assignments/all":
     get:
       tags:
@@ -8159,6 +8156,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -8169,6 +8167,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: list
   "/workspaces/{workspaceId}/scheduling/assignments/projects/totals":
     post:
       tags:
@@ -8244,6 +8244,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: listPerProject
   "/workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}":
     get:
       tags:
@@ -8300,6 +8302,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: listOnProject
   "/workspaces/{workspaceId}/scheduling/assignments/publish":
     put:
       tags:
@@ -8339,6 +8343,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: publish
   "/workspaces/{workspaceId}/scheduling/assignments/recurring":
     post:
       tags:
@@ -8418,6 +8424,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: createRecurring
   "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}":
     put:
       tags:
@@ -8465,6 +8473,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: replaceRecurring
     patch:
       tags:
       - Scheduling
@@ -8538,6 +8548,8 @@ paths:
       - clockify-api-probe-lab/SCHEDULINGDOC.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: updateRecurring
     delete:
       tags:
       - Scheduling
@@ -8597,6 +8609,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: deleteRecurring
   "/workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}":
     put:
       tags:
@@ -8728,6 +8742,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: getUsersCapacityFiltered
   "/workspaces/{workspaceId}/scheduling/assignments/users/totals":
     post:
       tags:
@@ -8771,6 +8787,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: calculateUsersTotals
   "/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals":
     get:
       tags:
@@ -8823,6 +8841,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: getUserCapacity
   "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}":
     put:
       tags:
@@ -8862,6 +8882,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Scheduling
@@ -8894,6 +8916,8 @@ paths:
       - destructive
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy":
     post:
       tags:
@@ -8963,6 +8987,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
+      x-fern-sdk-group-name: scheduling
+      x-fern-sdk-method-name: copy
   "/workspaces/{workspaceId}/shared-reports":
     get:
       tags:
@@ -9016,6 +9042,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/findings/shared-reports.md
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: sharedReports
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Shared Reports
@@ -9064,6 +9092,8 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: sharedReports
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/shared-reports/{sharedReportId}":
     put:
       tags:
@@ -9118,6 +9148,8 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: sharedReports
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Shared Reports
@@ -9157,6 +9189,8 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: sharedReports
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/tags":
     get:
       tags:
@@ -9228,6 +9262,7 @@ paths:
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9238,6 +9273,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Tags
@@ -9282,6 +9319,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/tags/{tagId}":
     get:
       tags:
@@ -9326,6 +9365,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Tags
@@ -9380,6 +9421,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Tags
@@ -9419,6 +9462,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/time-entries":
     post:
       tags:
@@ -9460,6 +9505,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/time-entries/invoiced":
     patch:
       tags:
@@ -9507,6 +9554,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: markInvoiced
   "/workspaces/{workspaceId}/time-entries/invoiced/bulk":
     patch:
       tags:
@@ -9547,6 +9596,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: markInvoicedBulk
   "/workspaces/{workspaceId}/time-entries/status/in-progress":
     get:
       tags:
@@ -9586,6 +9637,7 @@ paths:
       - doc-md
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9594,6 +9646,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: listInProgress
   "/workspaces/{workspaceId}/time-entries/{timeEntryId}":
     get:
       tags:
@@ -9644,6 +9698,8 @@ paths:
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Time Entries
@@ -9691,6 +9747,8 @@ paths:
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Time Entries
@@ -9728,6 +9786,8 @@ paths:
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}":
     get:
       tags:
@@ -9816,6 +9876,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9826,6 +9887,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/balance-a.yaml
       - realOPENAPI/BALANCEOPEANI.yaml
+      x-fern-sdk-group-name: balances
+      x-fern-sdk-method-name: listForPolicy
     patch:
       tags:
       - Balances
@@ -9880,6 +9943,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/balance-b.yaml
       - realOPENAPI/BALANCEOPEANI.yaml
+      x-fern-sdk-group-name: balances
+      x-fern-sdk-method-name: update
   "/workspaces/{workspaceId}/time-off/balance/user/{userId}":
     get:
       tags:
@@ -9964,6 +10029,7 @@ paths:
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9972,6 +10038,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi-fragments/balance-a.yaml
       - realOPENAPI/BALANCEOPEANI.yaml
+      x-fern-sdk-group-name: balances
+      x-fern-sdk-method-name: getForUser
   "/workspaces/{workspaceId}/time-off/policies":
     get:
       tags:
@@ -10095,6 +10163,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -10119,6 +10188,8 @@ paths:
       - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-fern-sdk-group-name: timeOffPolicies
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Time Off Policies
@@ -10252,6 +10323,8 @@ paths:
       - clockify-api-probe-lab/POLICIESDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-fern-sdk-group-name: timeOffPolicies
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/time-off/policies/{policyId}":
     get:
       tags:
@@ -10344,6 +10417,8 @@ paths:
       - clockify-api-probe-lab/POLICIESDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-fern-sdk-group-name: timeOffPolicies
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Time Off Policies
@@ -10480,6 +10555,8 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-fern-sdk-group-name: timeOffPolicies
+      x-fern-sdk-method-name: update
       x-clockify-notes:
       - Policy update payloads should preserve non-null automaticTimeEntryCreation
         values observed from GET before PUT.
@@ -10582,6 +10659,8 @@ paths:
       - clockify-api-probe-lab/POLICIESDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-fern-sdk-group-name: timeOffPolicies
+      x-fern-sdk-method-name: updateStatus
     delete:
       tags:
       - Time Off Policies
@@ -10632,6 +10711,8 @@ paths:
       - clockify-api-probe-lab/POLICIESDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
+      x-fern-sdk-group-name: timeOffPolicies
+      x-fern-sdk-method-name: delete
       x-clockify-notes:
       - Live Clockify requires archiving a time-off policy before deletion.
   "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests":
@@ -10693,6 +10774,8 @@ paths:
       - clockify-api-probe-lab/TIMEOFFDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: submit
   "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":
     patch:
       tags:
@@ -10814,6 +10897,8 @@ paths:
       - clockify-api-probe-lab/TIMEOFFDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: withdraw
   "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests":
     post:
       tags:
@@ -10876,6 +10961,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEOFFDOC.md
       - realOPENAPI/TIMEOFFOPENAPI.YAML
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: submitForUser
   "/workspaces/{workspaceId}/time-off/requests":
     get:
       tags:
@@ -10977,6 +11064,8 @@ paths:
       - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: list
   "/workspaces/{workspaceId}/time-off/requests/users/{userId}":
     post:
       tags:
@@ -11055,6 +11144,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: get
     delete:
       tags:
       - Time Off
@@ -11086,6 +11177,8 @@ paths:
       - destructive
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/time-off/requests/{requestId}/status":
     patch:
       tags:
@@ -11137,6 +11230,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: updateStatus
   "/workspaces/{workspaceId}/user-groups":
     get:
       tags:
@@ -11198,6 +11293,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -11220,6 +11316,8 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
       - realOPENAPI/USERGROUPSOPEAPI.YAML
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: list
     post:
       tags:
       - User Groups
@@ -11289,6 +11387,8 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
       - realOPENAPI/USERGROUPSOPEAPI.YAML
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/user-groups/{groupId}":
     get:
       tags:
@@ -11333,6 +11433,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi-fragments/user-groups-a.yaml
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: get
     put:
       tags:
       - User Groups
@@ -11407,6 +11509,8 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
       - realOPENAPI/USERGROUPSOPEAPI.YAML
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - User Groups
@@ -11473,6 +11577,8 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
       - realOPENAPI/USERGROUPSOPEAPI.YAML
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/user-groups/{groupId}/users":
     get:
       tags:
@@ -11510,6 +11616,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi-fragments/user-groups-a.yaml
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: listMembers
     post:
       tags:
       - User Groups
@@ -11584,6 +11692,8 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
       - realOPENAPI/USERGROUPSOPEAPI.YAML
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: addMembers
   "/workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}":
     delete:
       tags:
@@ -11656,6 +11766,8 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
       - realOPENAPI/USERGROUPSOPEAPI.YAML
+      x-fern-sdk-group-name: userGroups
+      x-fern-sdk-method-name: removeMember
   "/workspaces/{workspaceId}/user/{userId}/time-entries":
     get:
       tags:
@@ -11759,6 +11871,7 @@ paths:
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -11768,6 +11881,8 @@ paths:
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: listForUser
     post:
       tags:
       - Time Entries
@@ -11815,6 +11930,8 @@ paths:
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: createForUser
     put:
       tags:
       - Time Entries
@@ -11864,6 +11981,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: startTimer
     patch:
       tags:
       - Time Entries
@@ -11915,6 +12034,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: updateForUser
     delete:
       tags:
       - Time Entries
@@ -12034,6 +12155,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: stopTimer
   "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate":
     post:
       tags:
@@ -12079,6 +12202,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
+      x-fern-sdk-group-name: timeEntries
+      x-fern-sdk-method-name: duplicate
   "/workspaces/{workspaceId}/users":
     get:
       tags:
@@ -12236,6 +12361,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -12361,6 +12487,8 @@ paths:
       - clockify-api-probe-lab/WORKSPACESDOC.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
+      x-fern-sdk-group-name: workspaces
+      x-fern-sdk-method-name: addUser
   "/workspaces/{workspaceId}/users/info":
     post:
       tags:
@@ -12932,6 +13060,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -13126,6 +13255,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
+      x-fern-sdk-group-name: balances
+      x-fern-sdk-method-name: listForUser
   "/workspaces/{workspaceId}/webhooks":
     get:
       tags:
@@ -13174,6 +13305,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Webhooks
@@ -13225,6 +13358,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/webhooks/{webhookId}":
     get:
       tags:
@@ -13268,6 +13403,8 @@ paths:
       - clockify-api-probe-lab/findings/webhooks.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Webhooks
@@ -13321,6 +13458,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Webhooks
@@ -13360,6 +13499,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken":
     patch:
       tags:
@@ -13396,6 +13537,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: rotateToken
   "/workspaces/{workspaceId}/webhooks/{webhookId}/logs":
     get:
       tags:
@@ -13445,6 +13588,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: listLogs
     post:
       tags:
       - Webhooks
@@ -13525,6 +13670,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WEBHOOKDOC.md
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: searchLogs
   "/workspaces/{workspaceId}/webhooks/{webhookId}/token":
     patch:
       tags:
@@ -13578,6 +13725,8 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
+      x-fern-sdk-group-name: webhooks
+      x-fern-sdk-method-name: updateToken
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -21393,101 +21542,6 @@ components:
           type: array
           x-clockify-default: "##default"
       type: object
-    TimeOffTimeOffRequest:
-      properties:
-        balance:
-          format: double
-          type: number
-        balanceDiff:
-          format: double
-          type: number
-        createdAt:
-          format: date-time
-          type: string
-        id:
-          type: string
-        note:
-          nullable: true
-          type: string
-        policyId:
-          type: string
-        policyName:
-          type: string
-        requesterUserId:
-          type: string
-        requesterUserName:
-          type: string
-        status:
-          properties:
-            changedAt:
-              format: date-time
-              nullable: true
-              type: string
-            changedByUserId:
-              nullable: true
-              type: string
-            changedByUserName:
-              type: string
-            changedForUserName:
-              type: string
-            note:
-              nullable: true
-              type: string
-            statusType:
-              enum:
-              - PENDING
-              - APPROVED
-              - REJECTED
-              - ALL
-              type: string
-          type: object
-        timeOffPeriod:
-          properties:
-            halfDay:
-              type: boolean
-            halfDayHours:
-              nullable: true
-              properties:
-                end:
-                  format: date-time
-                  type: string
-                start:
-                  format: date-time
-                  type: string
-              type: object
-            halfDayPeriod:
-              enum:
-              - FIRST_HALF
-              - SECOND_HALF
-              - NOT_DEFINED
-              type: string
-            period:
-              properties:
-                end:
-                  format: date-time
-                  type: string
-                start:
-                  format: date-time
-                  type: string
-              type: object
-          type: object
-        timeUnit:
-          enum:
-          - DAYS
-          - HOURS
-          type: string
-        userEmail:
-          type: string
-        userId:
-          type: string
-        userName:
-          type: string
-        userTimeZone:
-          nullable: true
-          type: string
-        workspaceId:
-          type: string
-      type: object
     TimeRangeRequestDtoV1:
       description: Represents a time range object for invoice issue dates.
       properties:
@@ -23736,14 +23790,23 @@ x-clockify-source-quarantine:
   reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/time-off-a.yaml
   reason: invalid YAML source quarantined
+- source: clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
+  reason: 'phantom path quarantined (DELETE /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
+  reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/policies/{policyId}/requests):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/balance): see PHANTOM_PATHS
+    in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
     PHANTOM_PATHS in scripts/gen-clockify-openapi'
-- source: clockify-api-probe-lab/openapi.yaml
-  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/balance): see PHANTOM_PATHS
-    in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
   reason: invalid YAML source quarantined
