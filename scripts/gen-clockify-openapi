@@ -963,7 +963,44 @@ SDK_METHOD_NAMES = {
   ["get",    "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "get"},
   ["put",    "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "update"},
   ["delete", "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "delete"},
-  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/archive"]    => {group: "policies", name: "archive"}
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/archive"]    => {group: "policies", name: "archive"},
+  # approvals — workflow verbs (submit / approve / reject is the
+  # state machine; `updateStatus` covers approve / reject / withdraw
+  # because Clockify's PATCH .../{id} accepts a `status` body). The
+  # `*ForUser` variants are admin endpoints that act on another user's
+  # entries; the un-suffixed verbs act on the caller's own.
+  ["get",    "/workspaces/{workspaceId}/approval-requests"]                                                  => {group: "approvals", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests"]                                                  => {group: "approvals", name: "submit"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval"]                    => {group: "approvals", name: "resubmit"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}"]                                   => {group: "approvals", name: "submitForUser"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval"]     => {group: "approvals", name: "resubmitForUser"},
+  ["patch",  "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}"]                              => {group: "approvals", name: "updateStatus"},
+  # timeOff — admin view on /time-off/requests + the user-submission
+  # endpoint scoped to a policy. The /time-off/requests POST is the
+  # documented POST-as-list quirk (GET returns 405). The duplicate
+  # /policies/{pid}/requests family (un-scoped, legacy paths) is
+  # left operationId-derived; those routes shadow the scoped variants.
+  # The "POST on /users/{userId}" admin-creates-for-user endpoint
+  # is left operationId-derived (different shape; needs design).
+  ["post",   "/workspaces/{workspaceId}/time-off/requests"]                                          => {group: "timeOff", name: "list"},
+  ["get",    "/workspaces/{workspaceId}/time-off/requests/{requestId}"]                              => {group: "timeOff", name: "get"},
+  ["delete", "/workspaces/{workspaceId}/time-off/requests/{requestId}"]                              => {group: "timeOff", name: "delete"},
+  ["patch",  "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"]                       => {group: "timeOff", name: "updateStatus"},
+  ["post",   "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests"]                      => {group: "timeOff", name: "submit"},
+  # scheduling — single-assignment CRUDL + publish + copy +
+  # recurring-assignment CRUD. No GET-by-id exists for assignments.
+  # The PUT variant on recurring/{aid} (replace-style) and the
+  # series/{aid} changeRecurringPeriod, and the capacity-totals
+  # endpoints, are left operationId-derived (specialised shapes).
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments"]                                  => {group: "scheduling", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/scheduling/assignments/all"]                              => {group: "scheduling", name: "list"},
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"]                   => {group: "scheduling", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"]                   => {group: "scheduling", name: "delete"},
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/publish"]                          => {group: "scheduling", name: "publish"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy"]              => {group: "scheduling", name: "copy"},
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/recurring"]                        => {group: "scheduling", name: "createRecurring"},
+  ["patch",  "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "updateRecurring"},
+  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"]         => {group: "scheduling", name: "deleteRecurring"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)
