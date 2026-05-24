@@ -252,15 +252,6 @@ func (s *Server) buildToolListLocked() []Tool {
 	return tools
 }
 
-func descriptorInTier(descriptor ToolDescriptor, tier string) bool {
-	for _, candidate := range descriptor.Tiers {
-		if candidate == tier {
-			return true
-		}
-	}
-	return false
-}
-
 func compactToolResultOutputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
