@@ -1234,6 +1234,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-a.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Clients
@@ -1277,6 +1279,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/clients/{clientId}":
     get:
       tags:
@@ -1320,6 +1324,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-a.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Clients
@@ -1368,6 +1374,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Clients
@@ -1408,6 +1416,8 @@ paths:
       - clockify-api-probe-lab/CLIENTSDOC.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/clients/{clientId}/archive":
     put:
       tags:
@@ -1449,6 +1459,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: clients
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/cost-rate":
     put:
       tags:
@@ -9238,6 +9250,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Tags
@@ -9282,6 +9296,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/tags/{tagId}":
     get:
       tags:
@@ -9326,6 +9342,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Tags
@@ -9380,6 +9398,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Tags
@@ -9419,6 +9439,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
+      x-fern-sdk-group-name: tags
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/time-entries":
     post:
       tags:

@@ -837,6 +837,46 @@ end
 # after the Fern interaction is understood — until then, callers get
 # the upstream operationId-derived method names (long but stable).
 
+# Explicit, opt-in CRUDL method names. Each entry maps an
+# [http_method, canonical_path] pair to a `{group, name}` pair stamped
+# as `x-fern-sdk-group-name` + `x-fern-sdk-method-name`. Both keys are
+# required: stamping `method-name` alone hoists the method to the root
+# client (e.g. `client.list()` instead of `client.tags.list()`), which
+# also empties the resource module it was hoisted from — the same
+# silent-module-drop behaviour that derailed the 2026-05-24 attempt
+# (see addons-me/fern/spec/evidence/discrepancies.md →
+# fern.x-fern-sdk-method-name.drops-resource-modules). Bisect
+# strategy: add one entry at a time, run the full gate chain +
+# `fern generate --group ts --local --force`, and confirm the
+# generated TS SDK still emits all 31 resource modules
+# (`output/ts-sdk/api/resources/`) AND that the stamped method
+# appears under `client.<group>.<name>(...)`. Stop expanding the
+# moment something drops. The hash is intentionally not a heuristic —
+# each entry is a deliberate, reviewed call.
+SDK_METHOD_NAMES = {
+  # tags — full CRUDL
+  ["get",    "/workspaces/{workspaceId}/tags"]           => {group: "tags",    name: "list"},
+  ["post",   "/workspaces/{workspaceId}/tags"]           => {group: "tags",    name: "create"},
+  ["get",    "/workspaces/{workspaceId}/tags/{tagId}"]   => {group: "tags",    name: "get"},
+  ["put",    "/workspaces/{workspaceId}/tags/{tagId}"]   => {group: "tags",    name: "update"},
+  ["delete", "/workspaces/{workspaceId}/tags/{tagId}"]   => {group: "tags",    name: "delete"},
+  # clients — full CRUDL + archive (Clockify-specific action verb)
+  ["get",    "/workspaces/{workspaceId}/clients"]                       => {group: "clients", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/clients"]                       => {group: "clients", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/clients/{clientId}"]            => {group: "clients", name: "delete"},
+  ["put",    "/workspaces/{workspaceId}/clients/{clientId}/archive"]    => {group: "clients", name: "archive"}
+}.freeze
+
+def stamp_sdk_method_name!(op, method, path)
+  entry = SDK_METHOD_NAMES[[method.to_s, path.to_s]]
+  return unless entry
+
+  op["x-fern-sdk-group-name"] = entry[:group]
+  op["x-fern-sdk-method-name"] = entry[:name]
+end
+
 def ensure_path_parameters!(op, path)
   wanted = path.scan(/\{([^}]+)\}/).flatten
   existing = Array(op["parameters"]).select do |param|
@@ -1018,6 +1058,7 @@ class Merger
       normalize_op_tags!(op)
       stamp_path_param_patterns!(op)
       ensure_pagination!(op, method, path)
+      stamp_sdk_method_name!(op, method, path)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
       op["servers"] = [{"url" => record[:host]}] if record[:host] != MAIN_SERVER
     end
