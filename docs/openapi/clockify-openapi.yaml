@@ -23794,19 +23794,19 @@ x-clockify-source-quarantine:
   reason: 'phantom path quarantined (DELETE /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
-  reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/policies/{policyId}/requests):
-    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
-- source: clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
-- source: clockify-api-probe-lab/openapi.yaml
-  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
-    PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi-fragments/time-off-b.yaml
+  reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/policies/{policyId}/requests):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/balance): see PHANTOM_PATHS
     in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
+    PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
   reason: invalid YAML source quarantined

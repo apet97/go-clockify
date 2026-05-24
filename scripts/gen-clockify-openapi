@@ -1458,7 +1458,13 @@ class Merger
         "securityAliasesNormalized" => @aliases.to_a.uniq.sort - ["ApiKeyAuth", "AddonTokenAuth"],
         "securityHeaderAliasesNormalized" => security_header_aliases
       },
-      "x-clockify-source-quarantine" => @quarantine.sort_by { |entry| entry["source"] }
+      # Sort by both source and reason so multiple quarantines from the
+       # same source file (e.g. the 3 phantom /policies/{policyId}/requests
+       # routes all hitting time-off-b.yaml) land in a deterministic
+       # total order. Without the secondary key the filesystem readdir
+       # ordering bleeds through and the openapi-drift gate flips between
+       # macOS local + Linux CI (#137 CI repro 2026-05-25).
+      "x-clockify-source-quarantine" => @quarantine.sort_by { |entry| [entry["source"], entry["reason"]] }
     }
     doc
   end
