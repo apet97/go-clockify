@@ -1181,7 +1181,24 @@ SDK_METHOD_NAMES = {
   ["put",    "/workspaces/{workspaceId}"]                                           => {group: "workspaces", name: "update"},
   ["put",    "/workspaces/{workspaceId}/cost-rate"]                                 => {group: "workspaces", name: "updateCostRate"},
   ["put",    "/workspaces/{workspaceId}/hourly-rate"]                               => {group: "workspaces", name: "updateBillableRate"},
-  ["post",   "/workspaces/{workspaceId}/users"]                                     => {group: "workspaces", name: "addUser"}
+  ["post",   "/workspaces/{workspaceId}/users"]                                     => {group: "workspaces", name: "addUser"},
+  # Final domain edge-case fills (G.1 step 8). Each one is the result
+  # of a per-op naming review where the operationId verb did not have
+  # an obvious one-word equivalent until we looked at the HTTP-method
+  # contrast with a sibling op:
+  # - projects POST /memberships replaces the membership list (vs
+  #   the sibling PATCH which we stamped as `updateMemberships`).
+  #   Naming `setMembers` mirrors the userGroups membership family
+  #   (`listMembers`, `addMembers`, `removeMember`).
+  # - timeOff DELETE on the policy-scoped request path is the user-
+  #   side withdraw flow (admin DELETE on the workspace-level
+  #   `/time-off/requests/{rid}` was stamped as `delete`).
+  # - balances GET on the per-user `/users/{uid}/time-off/balances`
+  #   plural route returns a list of balances across policies; the
+  #   sibling singular `getForUser` returns a single balance object.
+  ["post",   "/workspaces/{workspaceId}/projects/{projectId}/memberships"]                        => {group: "projects", name: "setMembers"},
+  ["delete", "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"]       => {group: "timeOff", name: "withdraw"},
+  ["get",    "/workspaces/{workspaceId}/users/{userId}/time-off/balances"]                        => {group: "balances", name: "listForUser"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)

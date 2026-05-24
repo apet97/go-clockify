@@ -6604,6 +6604,8 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
       - realOPENAPI/PROJECTSOPENAPI.YAML
+      x-fern-sdk-group-name: projects
+      x-fern-sdk-method-name: setMembers
     patch:
       tags:
       - Projects
@@ -11101,6 +11103,8 @@ paths:
       - clockify-api-probe-lab/TIMEOFFDOC.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
+      x-fern-sdk-group-name: timeOff
+      x-fern-sdk-method-name: withdraw
   "/workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests":
     post:
       tags:
@@ -13457,6 +13461,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
+      x-fern-sdk-group-name: balances
+      x-fern-sdk-method-name: listForUser
   "/workspaces/{workspaceId}/webhooks":
     get:
       tags:
