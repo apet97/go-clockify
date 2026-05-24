@@ -921,7 +921,49 @@ SDK_METHOD_NAMES = {
   ["post",   "/workspaces/{workspaceId}/webhooks"]                      => {group: "webhooks", name: "create"},
   ["get",    "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "get"},
   ["put",    "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "update"},
-  ["delete", "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "delete"}
+  ["delete", "/workspaces/{workspaceId}/webhooks/{webhookId}"]          => {group: "webhooks", name: "delete"},
+  # customFields — scoped naming because both workspace + project surfaces
+  # share the same module. Bare `list` would collide; explicit suffixes
+  # disambiguate. Project scope lacks a create op (you create at workspace
+  # then attach to a project); the project DELETE is named `removeFromProject`
+  # to match its semantic (it unattaches, doesn't delete the field).
+  ["get",    "/workspaces/{workspaceId}/custom-fields"]                                       => {group: "customFields", name: "listForWorkspace"},
+  ["post",   "/workspaces/{workspaceId}/custom-fields"]                                       => {group: "customFields", name: "createForWorkspace"},
+  ["put",    "/workspaces/{workspaceId}/custom-fields/{customFieldId}"]                       => {group: "customFields", name: "updateForWorkspace"},
+  ["delete", "/workspaces/{workspaceId}/custom-fields/{customFieldId}"]                       => {group: "customFields", name: "deleteForWorkspace"},
+  ["get",    "/workspaces/{workspaceId}/projects/{projectId}/custom-fields"]                  => {group: "customFields", name: "listForProject"},
+  ["patch",  "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}"]  => {group: "customFields", name: "updateForProject"},
+  ["delete", "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}"]  => {group: "customFields", name: "removeFromProject"},
+  # expenses — full CRUDL; downloadExpenseReceipt left on operationId-
+  # derived name (binary file action, not a CRUDL verb).
+  ["get",    "/workspaces/{workspaceId}/expenses"]                       => {group: "expenses", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/expenses"]                       => {group: "expenses", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/expenses/{expenseId}"]           => {group: "expenses", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/expenses/{expenseId}"]           => {group: "expenses", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/expenses/{expenseId}"]           => {group: "expenses", name: "delete"},
+  # expenseCategories — full CRUDL + archive (which is actually
+  # PATCH .../status under Clockify but semantically an archive flip).
+  ["get",    "/workspaces/{workspaceId}/expenses/categories"]                       => {group: "expenseCategories", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/expenses/categories"]                       => {group: "expenseCategories", name: "create"},
+  ["put",    "/workspaces/{workspaceId}/expenses/categories/{categoryId}"]          => {group: "expenseCategories", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/expenses/categories/{categoryId}"]          => {group: "expenseCategories", name: "delete"},
+  ["patch",  "/workspaces/{workspaceId}/expenses/categories/{categoryId}/status"]   => {group: "expenseCategories", name: "archive"},
+  # invoiceItems — Clockify has no LIST or GET-by-id; items live on the
+  # parent invoice. `import` is the bulk-add variant.
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/items"]                => {group: "invoiceItems", name: "create"},
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/items/import"]         => {group: "invoiceItems", name: "import"},
+  ["delete", "/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order}"]        => {group: "invoiceItems", name: "delete"},
+  # invoicePayments — list/create/delete; no GET-by-id, no update on the API.
+  ["get",    "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"]             => {group: "invoicePayments", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"]             => {group: "invoicePayments", name: "create"},
+  ["delete", "/workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}"] => {group: "invoicePayments", name: "delete"},
+  # policies — full CRUDL + archive (PATCH .../archive is the toggle).
+  ["get",    "/workspaces/{workspaceId}/policies"]                       => {group: "policies", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/policies"]                       => {group: "policies", name: "create"},
+  ["get",    "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "get"},
+  ["put",    "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "update"},
+  ["delete", "/workspaces/{workspaceId}/policies/{policyId}"]            => {group: "policies", name: "delete"},
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/archive"]    => {group: "policies", name: "archive"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)

@@ -1641,6 +1641,8 @@ paths:
       - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: listForWorkspace
       x-openai-isConsequential: false
     post:
       tags:
@@ -1704,6 +1706,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: createForWorkspace
       x-openai-isConsequential: true
   "/workspaces/{workspaceId}/custom-fields/{customFieldId}":
     put:
@@ -1775,6 +1779,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: updateForWorkspace
       x-openai-isConsequential: true
     delete:
       tags:
@@ -1816,6 +1822,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: deleteForWorkspace
       x-openai-isConsequential: true
   "/workspaces/{workspaceId}/entities/created":
     get:
@@ -2221,6 +2229,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Expenses
@@ -2265,6 +2275,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/expenses/categories":
     get:
       tags:
@@ -2313,6 +2325,8 @@ paths:
       - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Expense categories
@@ -2361,6 +2375,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/expenses/categories/{categoryId}":
     put:
       tags:
@@ -2413,6 +2429,8 @@ paths:
       - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Expense categories
@@ -2458,6 +2476,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/expenses/categories/{categoryId}/status":
     patch:
       tags:
@@ -2508,6 +2528,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenseCategories
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/expenses/{expenseId}":
     get:
       tags:
@@ -2555,6 +2577,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Expenses
@@ -2605,6 +2629,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: update
     delete:
       tags:
       - Expenses
@@ -2651,6 +2677,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
+      x-fern-sdk-group-name: expenses
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}":
     get:
       tags:
@@ -3910,6 +3938,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceItems
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/invoices/{invoiceId}/items/import":
     post:
       tags:
@@ -3979,6 +4009,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceItems
+      x-fern-sdk-method-name: import
   "/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order}":
     delete:
       tags:
@@ -4027,6 +4059,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoiceItems
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/invoices/{invoiceId}/payments":
     get:
       tags:
@@ -4091,6 +4125,8 @@ paths:
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoicePayments
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Invoice payments
@@ -4147,6 +4183,8 @@ paths:
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoicePayments
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}":
     delete:
       tags:
@@ -4195,6 +4233,8 @@ paths:
       - clockify-api-probe-lab/Invoiceopenapi.yaml
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
+      x-fern-sdk-group-name: invoicePayments
+      x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/invoices/{invoiceId}/status":
     patch:
       tags:
@@ -4474,6 +4514,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Policies
@@ -4510,6 +4552,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: create
   "/workspaces/{workspaceId}/policies/{policyId}":
     get:
       tags:
@@ -4546,6 +4590,8 @@ paths:
       - read
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: get
     put:
       tags:
       - Policies
@@ -4583,6 +4629,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: update
       x-clockify-notes:
       - Policy update payloads should preserve non-null automaticTimeEntryCreation
         values observed from GET before PUT.
@@ -4617,6 +4665,8 @@ paths:
       - destructive
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: delete
       x-clockify-notes:
       - Live Clockify requires archiving a time-off policy before deletion.
   "/workspaces/{workspaceId}/policies/{policyId}/archive":
@@ -4660,6 +4710,8 @@ paths:
       - write
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi.yaml
+      x-fern-sdk-group-name: policies
+      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/policies/{policyId}/requests":
     post:
       tags:
@@ -6007,6 +6059,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: listForProject
       x-openai-isConsequential: false
   "/workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}":
     patch:
@@ -6086,6 +6140,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: updateForProject
       x-openai-isConsequential: true
     delete:
       tags:
@@ -6157,6 +6213,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
+      x-fern-sdk-group-name: customFields
+      x-fern-sdk-method-name: removeFromProject
       x-openai-isConsequential: true
   "/workspaces/{workspaceId}/projects/{projectId}/estimate":
     patch:
