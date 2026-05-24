@@ -707,30 +707,58 @@ components:
 
     TimeOffRequest:
       type: object
+      # Live probes 2026-05-24 against the sacrificial workspace (POST
+      # /workspaces/{ws}/time-off/requests, 195 records across PENDING /
+      # APPROVED / REJECTED) confirmed every property below is present on
+      # 100% of records. Probe captures live at
+      # addons-me/fern/spec/evidence/probes/20260524-time-off-requests-*.json.
+      # The GET-by-id endpoint Clockify documents (
+      # /workspaces/{ws}/time-off/requests/{requestId}) returns 405; the
+      # only way to read a single request is the POST search above. The
+      # PATCH /status response is documented as sparse — see the
+      # endpoint description, not this schema.
       properties:
         id:          { type: string }
-        userId:      { type: string }
-        policyId:    { type: string }
         workspaceId: { type: string }
-        note:        { type: string, nullable: true }
+        policyId:    { type: string }
+        policyName:  { type: string }
         timeUnit:    { type: string, enum: [DAYS, HOURS] }
-        balanceDiff: { type: number }
-        requesterUserId: { type: string }
-        status:
-          type: object
-          properties:
-            statusType: { type: string, enum: [PENDING, APPROVED, REJECTED, WITHDRAWN] }
-            note:       { type: string, nullable: true }
-            createdAt:  { type: string, format: date-time }
-            createdBy:  { type: string }
-            changedAt:  { type: string, format: date-time, nullable: true }
-            changedBy:  { type: string, nullable: true }
+        userId:      { type: string }
+        userName:    { type: string }
+        userEmail:   { type: string, format: email }
+        userTimeZone: { type: string }
         timeOffPeriod:
           type: object
           properties:
             period:   { $ref: "#/components/schemas/DateTimeInterval" }
             halfDay:  { type: boolean }
-            halfDayHours: { type: object, nullable: true, additionalProperties: true }
+            halfDayPeriod:
+              type: string
+              enum: [NOT_DEFINED, FIRST_HALF, SECOND_HALF]
+            halfDayHours:
+              type: object
+              nullable: true
+              description: |-
+                Populated when `halfDay=true`. `null` otherwise. The window is
+                anchored in UTC even when the user's profile sets a different
+                time zone — clients should render in `userTimeZone`.
+              properties:
+                start: { type: string, format: date-time }
+                end:   { type: string, format: date-time }
+        note:        { type: string, nullable: true }
+        status:
+          # Live probe 2026-05-24 (workspace 65b382b6…, request 6a0a5471…):
+          # the real shape uses changedByUserId/changedByUserName/
+          # changedForUserName/changedAt/note/statusType. The earlier
+          # inline definition (createdBy/changedBy/createdAt at status
+          # level) does not exist on the wire. Use the named schema
+          # defined in realOPENAPI/TIMEOFFOPENAPI.YAML.
+          $ref: '#/components/schemas/TimeOffRequestStatus'
+        balanceDiff: { type: number, format: double }
+        balance:     { type: number, format: double }
+        createdAt:   { type: string, format: date-time }
+        requesterUserId:   { type: string }
+        requesterUserName: { type: string }
 
     TimeOffRequestCreate:
       type: object

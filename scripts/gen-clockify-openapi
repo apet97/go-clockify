@@ -646,6 +646,56 @@ def parameter_name(param)
   nil
 end
 
+# Tag normalization. Upstream sources spell the same domain several
+# ways ("Project" + "Projects", "Webhook" + "Webhooks", etc.) which
+# causes Fern (and any other tag-driven SDK generator) to emit
+# duplicate resource groups. This map collapses each singular /
+# casing variant into the canonical plural; all other tags pass
+# through unchanged.
+TAG_RENAMES = {
+  "Project" => "Projects",
+  "User" => "Users",
+  "Webhook" => "Webhooks",
+  "TimeEntry" => "Time Entries",
+  "Time entry" => "Time Entries",
+  "TimeOff" => "Time Off"
+}.freeze
+
+# Path parameters whose route shares a parent with a literal sibling
+# (e.g. /expenses/{expenseId} sits next to /expenses/categories).
+# OpenAPI 3.0 has no first-class "literal wins" precedence hint, so
+# generators flag the ambiguity. Real Clockify IDs are 24-char
+# Mongo ObjectIDs, which can never collide with the literal segment,
+# so stamping the canonical hex pattern unambiguously resolves the
+# overlap. Add new entries only when a literal sibling actually
+# exists; over-applying the pattern would falsely reject upstream
+# IDs that might one day move off Mongo.
+PATH_PARAM_PATTERNS = {
+  "expenseId" => "^[0-9a-fA-F]{24}$",
+  "invoiceId" => "^[0-9a-fA-F]{24}$",
+  "assignmentId" => "^[0-9a-fA-F]{24}$"
+}.freeze
+
+def normalize_op_tags!(op)
+  return unless op.is_a?(Hash) && op["tags"].is_a?(Array)
+
+  op["tags"] = op["tags"].map { |t| TAG_RENAMES.fetch(t.to_s, t) }.uniq
+end
+
+def stamp_path_param_patterns!(op)
+  return unless op.is_a?(Hash) && op["parameters"].is_a?(Array)
+
+  op["parameters"].each do |param|
+    next unless param.is_a?(Hash) && param["in"] == "path"
+
+    pattern = PATH_PARAM_PATTERNS[param["name"].to_s]
+    next unless pattern
+
+    schema = (param["schema"] ||= {"type" => "string"})
+    schema["pattern"] ||= pattern
+  end
+end
+
 def ensure_path_parameters!(op, path)
   wanted = path.scan(/\{([^}]+)\}/).flatten
   existing = Array(op["parameters"]).select do |param|
@@ -824,6 +874,8 @@ class Merger
       notes.concat(tools.flat_map { |tool| Array(tool_meta.dig(tool, "notes")) }) if tools.any?
       op["x-clockify-notes"] = notes.uniq.sort unless notes.empty?
       ensure_path_parameters!(op, path)
+      normalize_op_tags!(op)
+      stamp_path_param_patterns!(op)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
       op["servers"] = [{"url" => record[:host]}] if record[:host] != MAIN_SERVER
     end

@@ -33,7 +33,6 @@ tags:
 - name: Invoices
 - name: Member profiles
 - name: Policy
-- name: Project
 - name: Projects
 - name: Reports
 - name: Roles
@@ -44,13 +43,8 @@ tags:
 - name: Time Entries
 - name: Time Off
 - name: Time Off Policies
-- name: Time entry
-- name: TimeEntry
-- name: TimeOff
-- name: User
 - name: User Groups
 - name: Users
-- name: Webhook
 - name: Webhooks
 - name: Workspaces
 paths:
@@ -2620,6 +2614,7 @@ paths:
         name: expenseId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '200':
@@ -2665,6 +2660,7 @@ paths:
         name: expenseId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         "$ref": "#/components/requestBodies/UpdateExpenseMultipart"
@@ -2714,6 +2710,7 @@ paths:
         name: expenseId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '200':
@@ -2763,6 +2760,7 @@ paths:
         name: expenseId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       - in: path
         name: fileId
@@ -3676,6 +3674,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '200':
@@ -3726,6 +3725,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -3792,6 +3792,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '200':
@@ -3838,6 +3839,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '201':
@@ -3880,6 +3882,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       - in: query
         name: userLocale
@@ -3935,6 +3938,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -3993,6 +3997,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -4061,6 +4066,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       - in: path
         name: order
@@ -4108,6 +4114,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '200':
@@ -4151,6 +4158,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -4207,6 +4215,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       - in: path
         name: paymentId
@@ -4254,6 +4263,7 @@ paths:
         name: invoiceId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -4359,7 +4369,7 @@ paths:
       - realOPENAPI/USEROPENAPI.YAML
     put:
       tags:
-      - User
+      - Users
       summary: Update workspace-scoped member profile
       operationId: putWorkspacesWorkspaceIdMemberProfileUserId
       security:
@@ -6152,7 +6162,7 @@ paths:
   "/workspaces/{workspaceId}/projects/{projectId}/archive":
     put:
       tags:
-      - Project
+      - Projects
       summary: Archive / unarchive project
       operationId: putWorkspacesWorkspaceIdProjectsProjectIdArchive
       security:
@@ -6193,7 +6203,7 @@ paths:
   "/workspaces/{workspaceId}/projects/{projectId}/cost-rate":
     put:
       tags:
-      - Project
+      - Projects
       summary: Set project cost rate
       operationId: putWorkspacesWorkspaceIdProjectsProjectIdCostRate
       security:
@@ -6598,7 +6608,7 @@ paths:
   "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate":
     put:
       tags:
-      - Project
+      - Projects
       summary: Set project hourly rate
       operationId: putWorkspacesWorkspaceIdProjectsProjectIdHourlyRate
       security:
@@ -8757,6 +8767,7 @@ paths:
         name: assignmentId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -9161,6 +9172,7 @@ paths:
         name: assignmentId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       requestBody:
         content:
@@ -9198,6 +9210,7 @@ paths:
         name: assignmentId
         required: true
         schema:
+          pattern: "^[0-9a-fA-F]{24}$"
           type: string
       responses:
         '204':
@@ -9829,7 +9842,7 @@ paths:
   "/workspaces/{workspaceId}/time-entries/invoiced/bulk":
     patch:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: Mark time entries as invoiced (bulk)
       operationId: patchWorkspacesWorkspaceIdTimeEntriesInvoicedBulk
       security:
@@ -9916,7 +9929,7 @@ paths:
   "/workspaces/{workspaceId}/time-entries/{timeEntryId}":
     get:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: Get time entry
       operationId: getWorkspacesWorkspaceIdTimeEntriesTimeEntryId
       security:
@@ -9965,7 +9978,7 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
     put:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: Update time entry
       operationId: putWorkspacesWorkspaceIdTimeEntriesTimeEntryId
       security:
@@ -10020,7 +10033,7 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
     delete:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: Delete time entry
       operationId: deleteWorkspacesWorkspaceIdTimeEntriesTimeEntryId
       security:
@@ -11397,7 +11410,7 @@ paths:
   "/workspaces/{workspaceId}/time-off/requests/users/{userId}":
     post:
       tags:
-      - TimeOff
+      - Time Off
       summary: Create time-off request for user
       operationId: postWorkspacesWorkspaceIdTimeOffRequestsUsersUserId
       security:
@@ -11439,7 +11452,7 @@ paths:
   "/workspaces/{workspaceId}/time-off/requests/{requestId}":
     get:
       tags:
-      - TimeOff
+      - Time Off
       summary: Get a time-off request
       operationId: getWorkspacesWorkspaceIdTimeOffRequestsRequestId
       security:
@@ -11474,7 +11487,7 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
     delete:
       tags:
-      - TimeOff
+      - Time Off
       summary: Delete a time-off request
       operationId: deleteWorkspacesWorkspaceIdTimeOffRequestsRequestId
       security:
@@ -11506,7 +11519,7 @@ paths:
   "/workspaces/{workspaceId}/time-off/requests/{requestId}/status":
     patch:
       tags:
-      - TimeOff
+      - Time Off
       summary: Update request status (approve/reject/withdraw)
       operationId: patchWorkspacesWorkspaceIdTimeOffRequestsRequestIdStatus
       security:
@@ -12057,7 +12070,7 @@ paths:
   "/workspaces/{workspaceId}/user/{userId}/time-entries":
     get:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: List time entries for a user
       operationId: getWorkspacesWorkspaceIdUserUserIdTimeEntries
       security:
@@ -12149,7 +12162,7 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
     post:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: Create time entry for a user
       operationId: postWorkspacesWorkspaceIdUserUserIdTimeEntries
       security:
@@ -12365,7 +12378,7 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
     delete:
       tags:
-      - Time entry
+      - Time Entries
       summary: Delete all time entries for a user on a workspace
       operationId: deleteMany
       security:
@@ -12584,7 +12597,7 @@ paths:
   "/workspaces/{workspaceId}/user/{userId}/time-entries/stop":
     patch:
       tags:
-      - TimeEntry
+      - Time Entries
       summary: Stop currently running timer for user
       operationId: patchWorkspacesWorkspaceIdUserUserIdTimeEntriesStop
       security:
@@ -13965,7 +13978,7 @@ paths:
   "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken":
     patch:
       tags:
-      - Webhook
+      - Webhooks
       summary: Regenerate the per-webhook HMAC token
       operationId: patchWorkspacesWorkspaceIdWebhooksWebhookIdGenerateNewToken
       security:
@@ -21659,8 +21672,15 @@ components:
       type: object
     TimeOffRequest:
       properties:
-        balanceDiff:
+        balance:
+          format: double
           type: number
+        balanceDiff:
+          format: double
+          type: number
+        createdAt:
+          format: date-time
+          type: string
         id:
           type: string
         note:
@@ -21668,41 +21688,38 @@ components:
           type: string
         policyId:
           type: string
+        policyName:
+          type: string
         requesterUserId:
           type: string
+        requesterUserName:
+          type: string
         status:
-          properties:
-            changedAt:
-              format: date-time
-              nullable: true
-              type: string
-            changedBy:
-              nullable: true
-              type: string
-            createdAt:
-              format: date-time
-              type: string
-            createdBy:
-              type: string
-            note:
-              nullable: true
-              type: string
-            statusType:
-              enum:
-              - PENDING
-              - APPROVED
-              - REJECTED
-              - WITHDRAWN
-              type: string
-          type: object
+          "$ref": "#/components/schemas/TimeOffRequestStatus"
         timeOffPeriod:
           properties:
             halfDay:
               type: boolean
             halfDayHours:
-              additionalProperties: true
+              description: |-
+                Populated when `halfDay=true`. `null` otherwise. The window is
+                anchored in UTC even when the user's profile sets a different
+                time zone — clients should render in `userTimeZone`.
               nullable: true
+              properties:
+                end:
+                  format: date-time
+                  type: string
+                start:
+                  format: date-time
+                  type: string
               type: object
+            halfDayPeriod:
+              enum:
+              - NOT_DEFINED
+              - FIRST_HALF
+              - SECOND_HALF
+              type: string
             period:
               "$ref": "#/components/schemas/DateTimeInterval"
           type: object
@@ -21711,7 +21728,14 @@ components:
           - DAYS
           - HOURS
           type: string
+        userEmail:
+          format: email
+          type: string
         userId:
+          type: string
+        userName:
+          type: string
+        userTimeZone:
           type: string
         workspaceId:
           type: string
@@ -24305,7 +24329,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 7d09238303df64292c80e70d78a7f5853bbb7e03c9dcb2aa814c411e57b02f54
+    sha256: 8c2d15249cc19e449d25fb5ffa282191678d73c37d0517be9ad2d8b52a9510ca
     files: 86
   sourcePrecedence:
   - live/probe findings metadata
