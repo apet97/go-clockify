@@ -994,9 +994,18 @@ class Merger
   end
 
   def merge_parameters(path_params, op_params)
+    # NOTE: do NOT use `path_params.concat(op_params)` here — Array#concat
+    # mutates the receiver in place. `path_params` is captured once per
+    # path-item by the caller and reused across every operation under
+    # that path; mutating it leaked the previous method's query params
+    # onto the next method, producing duplicate-identifier interfaces
+    # in Fern's TS SDK output for POST/PATCH operations that shared a
+    # path with a GET (e.g. POST /tags inherited GET /tags's `name`
+    # query param even though probe-lab's POST defined no query params).
+    # The non-destructive `+` operator avoids the leak.
     merged = []
     seen = Set.new
-    path_params.concat(op_params).each do |param|
+    (path_params + op_params).each do |param|
       key = if param.is_a?(Hash) && param["$ref"]
               param["$ref"]
             elsif param.is_a?(Hash)
