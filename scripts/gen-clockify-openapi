@@ -456,7 +456,26 @@ PHANTOM_PATHS = [
   # Ledger: spec/evidence/discrepancies.md →
   # deferred-list-endpoints.not-paginated-or-not-live, open question 1.
   ["get", "/workspaces/{workspaceId}/balance"],
-  ["patch", "/workspaces/{workspaceId}/balance"]
+  ["patch", "/workspaces/{workspaceId}/balance"],
+  # /workspaces/{workspaceId}/policies/{policyId}/requests/* trio
+  # (POST + DELETE + PATCH) — three time-off-request action paths
+  # that appear in the canonical OpenAPI under the `Time Off` tag
+  # but do NOT exist on the live API. Live re-probe 2026-05-25
+  # against sandbox 65b382b606de527a7ee2b60e with policyId=
+  # 696fd7f25dd6c5510bafa772 returned HTTP 404 + Clockify error
+  # code 3000 on all three method variants:
+  # `{"message":"No static resource v1/workspaces/{ws}/policies/
+  # {pid}/requests[/{rid}].","code":3000}`. The live time-off
+  # request surface is at /workspaces/{ws}/time-off/policies/
+  # {pid}/requests/* (the scoped path that includes `time-off/`)
+  # — already stamped as `submit` / `withdraw` and friends. Probe
+  # fixtures: addons-me/fern/spec/evidence/probes/20260525-
+  # timeoff-legacy-{post,delete,patch}.{json,hdr}. Ledger entry:
+  # spec/evidence/discrepancies.md → `timeoff.legacy-policies-
+  # requests.phantom-path-quarantined`.
+  ["post",   "/workspaces/{workspaceId}/policies/{policyId}/requests"],
+  ["delete", "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"],
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"]
 ].freeze
 
 def phantom_path?(method, path)
