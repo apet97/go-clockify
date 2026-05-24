@@ -1144,88 +1144,6 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - clockify-api-probe-lab/openapi-fragments/audit-log.yaml
-  "/workspaces/{workspaceId}/balance":
-    get:
-      tags:
-      - Balances
-      summary: Get balances (admin)
-      operationId: getWorkspacesWorkspaceIdBalance
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: query
-        name: policyId
-        schema:
-          type: string
-      - in: query
-        name: userId
-        schema:
-          type: string
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                items:
-                  "$ref": "#/components/schemas/Balance"
-                type: array
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - read
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-    patch:
-      tags:
-      - Balances
-      summary: Adjust user balance
-      operationId: patchWorkspacesWorkspaceIdBalance
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                amount:
-                  type: number
-                note:
-                  type: string
-                policyId:
-                  type: string
-                userId:
-                  type: string
-              type: object
-        required: true
-      responses:
-        '200':
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
   "/workspaces/{workspaceId}/clients":
     get:
       tags:
@@ -14959,28 +14877,6 @@ components:
       required:
       - defaultEntities
       type: object
-    Balance:
-      properties:
-        balance:
-          type: number
-        carriedOver:
-          type: number
-        period:
-          properties:
-            end:
-              format: date
-              type: string
-            start:
-              format: date
-              type: string
-          type: object
-        policyId:
-          type: string
-        usedThisPeriod:
-          type: number
-        userId:
-          type: string
-      type: object
     BalanceBalance:
       properties:
         balance:
@@ -23843,5 +23739,11 @@ x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
+    PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/balance): see PHANTOM_PATHS
+    in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
   reason: invalid YAML source quarantined

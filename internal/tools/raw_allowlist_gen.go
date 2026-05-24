@@ -13,9 +13,6 @@ var documentedWriteRoutes = map[string]bool{
 	// audit-log
 	"POST /workspaces/{workspaceId}/audit-log": true,
 
-	// balance
-	"PATCH /workspaces/{workspaceId}/balance": true,
-
 	// clients
 	"DELETE /workspaces/{workspaceId}/clients/{clientId}":      true,
 	"POST /workspaces/{workspaceId}/clients":                   true,

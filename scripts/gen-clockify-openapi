@@ -441,7 +441,22 @@ PHANTOM_PATHS = [
   # adjacent probe fixture proves Clockify responds with
   # {"message":"No static resource v1/workspaces/{ws}/scheduling/capacity.","code":3000}.
   # The realOPENAPI/SCHEDULINGOPENAPI.YAML does not list it.
-  ["get", "/workspaces/{workspaceId}/scheduling/capacity"]
+  ["get", "/workspaces/{workspaceId}/scheduling/capacity"],
+  # /workspaces/{workspaceId}/balance (GET + PATCH) — present in
+  # clockify-api-probe-lab/openapi.yaml as a hand-written guess
+  # (lines 2306-2336) at a route that does not exist on the live API.
+  # Re-probe 2026-05-24 against sandbox 65b382b606de527a7ee2b60e with
+  # `policyId=<real>` returned HTTP 404 + Clockify error code 3000:
+  # `{"message":"No static resource v1/workspaces/{wsId}/balance.","code":3000}`.
+  # The published API surfaces balance through the granular routes
+  # /workspaces/{wsId}/time-off/balance/policy/{policyId} and
+  # .../user/{userId} (both modelled in realOPENAPI/BALANCEOPEANI.yaml
+  # and already stamped in PAGINATED_LIST_OPS). Probe fixture:
+  # addons-me/fern/spec/evidence/probes/20260524-deferred-balance-policy.{json,hdr}.
+  # Ledger: spec/evidence/discrepancies.md →
+  # deferred-list-endpoints.not-paginated-or-not-live, open question 1.
+  ["get", "/workspaces/{workspaceId}/balance"],
+  ["patch", "/workspaces/{workspaceId}/balance"]
 ].freeze
 
 def phantom_path?(method, path)
