@@ -763,6 +763,40 @@ PAGE_SIZE_PARAM_DEFAULT = {
   }
 }.freeze
 
+# Operations that emit a `Last-Page: true|false` response header.
+# Live-audited 2026-05-25 against sandbox workspace
+# 65b382b606de527a7ee2b60e — see
+# addons-me/fern/spec/evidence/discrepancies.md →
+# `pagination.last-page-header.live-audit-2026-05-25`. 15 of the 18
+# operations in PAGINATED_LIST_OPS emit the header consistently;
+# probed both with results-available (page=1, page-size=2) which
+# returned `last-page: false`, AND with results-exhausted (page=999,
+# page-size=2) which returned `last-page: true` and a 0-item array.
+# Three operations do NOT emit the header (custom-fields workspace
+# + project scopes, and holidays); they also ignore page-size on the
+# live server and return their full collection regardless of paging
+# query params. The wrapper layer in
+# addons-me/fern/wrapper/iter.ts uses this annotation (along with
+# the existing `Last-Page` header probe at runtime) to short-circuit
+# pagination when the server has acknowledged we've reached the end.
+LAST_PAGE_HEADER_OPS = Set.new([
+  ["get", "/workspaces/{workspaceId}/approval-requests"],
+  ["get", "/workspaces/{workspaceId}/clients"],
+  ["get", "/workspaces/{workspaceId}/invoices/{invoiceId}/payments"],
+  ["get", "/workspaces/{workspaceId}/projects"],
+  ["get", "/workspaces/{workspaceId}/projects/{projectId}/tasks"],
+  ["get", "/workspaces/{workspaceId}/scheduling/assignments/all"],
+  ["get", "/workspaces/{workspaceId}/tags"],
+  ["get", "/workspaces/{workspaceId}/time-entries/status/in-progress"],
+  ["get", "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"],
+  ["get", "/workspaces/{workspaceId}/time-off/balance/user/{userId}"],
+  ["get", "/workspaces/{workspaceId}/time-off/policies"],
+  ["get", "/workspaces/{workspaceId}/user-groups"],
+  ["get", "/workspaces/{workspaceId}/user/{userId}/time-entries"],
+  ["get", "/workspaces/{workspaceId}/users"],
+  ["get", "/workspaces/{workspaceId}/users/{userId}/managers"]
+]).freeze
+
 def normalize_op_tags!(op)
   return unless op.is_a?(Hash) && op["tags"].is_a?(Array)
 
@@ -813,6 +847,21 @@ def ensure_pagination!(op, method, path)
   param_names = params.map { |p| p.is_a?(Hash) ? p["name"].to_s : "" }
   params << deep_copy(PAGE_PARAM_DEFAULT) unless param_names.include?("page")
   params << deep_copy(PAGE_SIZE_PARAM_DEFAULT) unless param_names.include?("page-size")
+end
+
+# Stamp the Clockify-specific `x-clockify-last-page-header` extension
+# on operations that emit a `Last-Page` response header (audit
+# evidence in addons-me/fern/spec/evidence/discrepancies.md → the
+# `pagination.last-page-header.live-audit-2026-05-25` entry). The
+# wrapper's iterAll / iterPages helpers read this annotation (and
+# inspect the raw response headers at runtime) to stop walking
+# pages as soon as the server signals it has none left — more
+# robust than the legacy "items.length < pageSize" heuristic that
+# fails when a final page coincidentally fills.
+def stamp_last_page_header!(op, method, path)
+  return unless LAST_PAGE_HEADER_OPS.include?([method.to_s, path.to_s])
+
+  op["x-clockify-last-page-header"] = true
 end
 
 # NOTE 2026-05-24: a `stamp_sdk_method_name!` heuristic was prototyped
@@ -1216,6 +1265,7 @@ class Merger
       normalize_op_tags!(op)
       stamp_path_param_patterns!(op)
       ensure_pagination!(op, method, path)
+      stamp_last_page_header!(op, method, path)
       stamp_sdk_method_name!(op, method, path)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
       op["servers"] = [{"url" => record[:host]}] if record[:host] != MAIN_SERVER

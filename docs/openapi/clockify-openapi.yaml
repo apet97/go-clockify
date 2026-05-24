@@ -756,6 +756,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -1236,6 +1237,7 @@ paths:
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -4139,6 +4141,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-raw-unit-notes:
@@ -5251,6 +5254,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -6756,6 +6760,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -8297,6 +8302,7 @@ paths:
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9390,6 +9396,7 @@ paths:
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9760,6 +9767,7 @@ paths:
       - doc-md
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -9996,6 +10004,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -10144,6 +10153,7 @@ paths:
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -10275,6 +10285,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -11398,6 +11409,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -11969,6 +11981,7 @@ paths:
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -12446,6 +12459,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
@@ -13142,6 +13156,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: probe-documented
       x-clockify-mcp-tools: []
       x-clockify-risk:
