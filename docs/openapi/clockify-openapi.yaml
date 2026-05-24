@@ -10964,48 +10964,6 @@ paths:
       x-fern-sdk-group-name: timeOff
       x-fern-sdk-method-name: submitForUser
   "/workspaces/{workspaceId}/time-off/requests":
-    get:
-      tags:
-      - Balances
-      summary: Get all time off requests
-      operationId: getWorkspacesWorkspaceIdTimeOffRequests
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                properties:
-                  count:
-                    type: integer
-                  requests:
-                    items:
-                      "$ref": "#/components/schemas/BalanceTimeOffRequest"
-                    type: array
-                type: object
-          description: List of requests
-      x-clockify-evidence:
-      - probe-supplement
-      - unsupported
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: unsupported
-      x-clockify-mcp-tools: []
-      x-clockify-notes:
-      - "| GET | api.clockify.me | /api/v1/workspaces/{ws}/time-off/requests | 405
-        | fixtures/time-off/requests-get-broken.json |"
-      x-clockify-risk:
-      - read
-      x-clockify-source-files:
-      - clockify-api-probe-lab/findings/time-off.md
-      - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
     post:
       tags:
       - Time Off
@@ -11066,48 +11024,6 @@ paths:
       - realOPENAPI/TIMEOFFOPENAPI.YAML
       x-fern-sdk-group-name: timeOff
       x-fern-sdk-method-name: list
-  "/workspaces/{workspaceId}/time-off/requests/users/{userId}":
-    post:
-      tags:
-      - Time Off
-      summary: Create time-off request for user
-      operationId: postWorkspacesWorkspaceIdTimeOffRequestsUsersUserId
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              "$ref": "#/components/schemas/TimeOffRequestCreate"
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TimeOffRequest"
-          description: Created
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
   "/workspaces/{workspaceId}/time-off/requests/{requestId}":
     get:
       tags:
@@ -13212,51 +13128,6 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
-  "/workspaces/{workspaceId}/users/{userId}/time-off/balances":
-    get:
-      tags:
-      - Balances
-      summary: Get balance for a user
-      operationId: getWorkspacesWorkspaceIdUsersUserIdTimeOffBalances
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                properties:
-                  balances:
-                    items:
-                      "$ref": "#/components/schemas/BalanceBalance"
-                    type: array
-                  count:
-                    type: integer
-                type: object
-          description: User balances
-      x-clockify-evidence:
-      - probe-supplement
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - read
-      x-clockify-source-files:
-      - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
-      x-fern-sdk-group-name: balances
-      x-fern-sdk-method-name: listForUser
   "/workspaces/{workspaceId}/webhooks":
     get:
       tags:
@@ -15026,29 +14897,6 @@ components:
       required:
       - defaultEntities
       type: object
-    BalanceBalance:
-      properties:
-        balance:
-          type: number
-        id:
-          type: string
-        policyId:
-          type: string
-        policyName:
-          type: string
-        policyTimeUnit:
-          type: string
-        total:
-          type: number
-        used:
-          type: number
-        userId:
-          type: string
-        userName:
-          type: string
-        workspaceId:
-          type: string
-      type: object
     BalanceDtoV1:
       description: Balance data transfer object.
       properties:
@@ -15130,38 +14978,6 @@ components:
       - ASCENDING
       - DESCENDING
       type: string
-    BalanceTimeOffRequest:
-      properties:
-        balance:
-          type: number
-        balanceDiff:
-          type: number
-        createdAt:
-          type: string
-        id:
-          type: string
-        note:
-          type: string
-        policyId:
-          type: string
-        policyName:
-          type: string
-        status:
-          properties:
-            note:
-              type: string
-            statusType:
-              type: string
-          type: object
-        timeOffPeriod:
-          type: object
-        timeUnit:
-          type: string
-        userId:
-          type: string
-        workspaceId:
-          type: string
-      type: object
     BaseFilterRequest:
       description: Represents a base filter object.
       properties:
@@ -21252,25 +21068,6 @@ components:
         workspaceId:
           type: string
       type: object
-    TimeOffRequestCreate:
-      properties:
-        note:
-          type: string
-        policyId:
-          type: string
-        timeOffPeriod:
-          properties:
-            halfDay:
-              type: boolean
-            period:
-              "$ref": "#/components/schemas/DateTimeInterval"
-          required:
-          - period
-          type: object
-      required:
-      - policyId
-      - timeOffPeriod
-      type: object
     TimeOffRequestDto:
       description: Represents a time off request response.
       example:
@@ -23774,6 +23571,12 @@ x-clockify-generation:
     ReportAddonKeyAuth:
     - x-addon-token
 x-clockify-source-quarantine:
+- source: clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/time-off/requests):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/users/{userId}/time-off/balances):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi-fragments/expenses-a.yaml
   reason: invalid YAML source quarantined
 - source: clockify-api-probe-lab/openapi-fragments/policies-a.yaml
@@ -23808,5 +23611,8 @@ x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
     PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/time-off/requests/users/{userId}):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi_scheduling.yaml
   reason: invalid YAML source quarantined

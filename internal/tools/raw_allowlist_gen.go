@@ -141,7 +141,6 @@ var documentedWriteRoutes = map[string]bool{
 	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/requests":                true,
 	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests": true,
 	"POST /workspaces/{workspaceId}/time-off/requests":                                    true,
-	"POST /workspaces/{workspaceId}/time-off/requests/users/{userId}":                     true,
 	"PUT /workspaces/{workspaceId}/time-off/policies/{policyId}":                          true,
 
 	// user
