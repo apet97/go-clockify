@@ -28,7 +28,7 @@ func TestOneUserLiveWorkflow(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry())
+	server := mcp.NewServer("live", mustRegistry(t, svc))
 	initializeServer(t, server)
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
@@ -121,7 +121,7 @@ func TestOneUserLiveTimerHappyPaths(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry())
+	server := mcp.NewServer("live", mustRegistry(t, svc))
 	initializeServer(t, server)
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
@@ -198,7 +198,7 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry())
+	server := mcp.NewServer("live", mustRegistry(t, svc))
 	initializeServer(t, server)
 	runID := cleanDemoRunID(prefix)
 	if runID == "" {
@@ -234,7 +234,7 @@ func TestOneUserLiveOptionalDomainContracts(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("live", svc.FullAccessRegistry())
+	server := mcp.NewServer("live", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	runID := cleanDemoRunID(prefix)
@@ -378,7 +378,7 @@ func TestOneUserLiveRemainingCoverageProbes(t *testing.T) {
 	defer client.Close()
 	svc := New(client, workspaceID)
 	svc.DefaultTimezone = time.UTC
-	registry := svc.FullAccessRegistry()
+	registry := mustRegistry(t, svc)
 	server := mcp.NewServer("live-remaining", registry)
 	initializeServer(t, server)
 	descriptors := remainingLiveDescriptorMap(registry)
@@ -686,7 +686,7 @@ func remainingLiveArgs(t *testing.T, descriptors map[string]mcp.ToolDescriptor, 
 }
 
 func TestRemainingLiveArgsDerivesRequiredFieldsFromDescriptor(t *testing.T) {
-	descriptors := remainingLiveDescriptorMap((&Service{}).FullAccessRegistry())
+	descriptors := remainingLiveDescriptorMap(mustRegistry(t, &Service{}))
 	got := remainingLiveArgs(t, descriptors, "clockify_invoices_items_add",
 		"invoice_id", "invoice-live",
 		"description", "Live coverage item",

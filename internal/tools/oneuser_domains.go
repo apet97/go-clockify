@@ -6,16 +6,6 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
-// FullAccessRegistry is the one-user product registry: every supported tool is
-// visible from startup, with workflows first and raw API fallback last.
-func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
-	reg, err := s.FullAccessRegistryChecked()
-	if err != nil {
-		panic(err)
-	}
-	return reg
-}
-
 func (s *Service) FullAccessRegistryChecked() ([]mcp.ToolDescriptor, error) {
 	s.registry.once.Do(func() {
 		s.registry.descriptors, s.registry.err = s.buildFullAccessRegistry()
@@ -31,13 +21,16 @@ func (s *Service) FullAccessRegistryChecked() ([]mcp.ToolDescriptor, error) {
 
 // RegistryForToolset returns the one-user startup registry for a narrower
 // advertised surface. The "all" and empty paths are intentionally identical to
-// FullAccessRegistry so the canonical 156-tool product contract stays intact.
+// FullAccessRegistryChecked so the canonical 156-tool product contract stays intact.
 func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
 	toolset = strings.ToLower(strings.TrimSpace(toolset))
-	if toolset == "" || toolset == "all" {
-		return s.FullAccessRegistry()
+	full, err := s.FullAccessRegistryChecked()
+	if err != nil {
+		return nil
 	}
-	full := s.FullAccessRegistry()
+	if toolset == "" || toolset == "all" {
+		return full
+	}
 	out := make([]mcp.ToolDescriptor, 0, len(full))
 	raw := make([]mcp.ToolDescriptor, 0, 2)
 	for _, descriptor := range full {

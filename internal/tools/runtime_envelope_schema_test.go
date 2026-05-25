@@ -75,7 +75,7 @@ func runtimeEnvelopeShapes(toolName string) map[string]map[string]any {
 
 func TestRuntimeEnvelopesConformToEveryToolOutputSchema(t *testing.T) {
 	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	descriptors := svc.FullAccessRegistry()
+	descriptors := mustRegistry(t, svc)
 	if len(descriptors) != 156 {
 		t.Fatalf("FullAccessRegistry returned %d tools, want 156", len(descriptors))
 	}

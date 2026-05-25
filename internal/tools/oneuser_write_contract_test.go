@@ -16,7 +16,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	exceptions := map[string]string{
@@ -28,7 +28,7 @@ func TestOneUserWriteResultsIncludeIDsAndChanged(t *testing.T) {
 		"clockify_invoices_mark_paid": "clockify_invoices_payments_create",
 	}
 
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if descriptor.ReadOnlyHint {
 			continue
 		}

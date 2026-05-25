@@ -35,7 +35,7 @@ func TestDangerousToolsDryRunColumnMatchesCatalog(t *testing.T) {
 	rows := parseDangerousToolRows(t, readDangerousToolsDoc(t))
 	svc := &Service{}
 
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if !descriptor.RiskClass.IsHighRisk() {
 			continue
 		}

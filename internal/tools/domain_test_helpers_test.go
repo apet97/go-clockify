@@ -1,8 +1,22 @@
 package tools
 
 import (
+	"testing"
+
 	"github.com/apet97/go-clockify/internal/mcp"
 )
+
+// mustRegistry calls FullAccessRegistryChecked and fatals the test on error.
+// Use this everywhere a test previously called the removed FullAccessRegistry()
+// panic-wrapper so that registry build failures surface as clean test failures.
+func mustRegistry(t *testing.T, svc *Service) []mcp.ToolDescriptor {
+	t.Helper()
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		t.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	return reg
+}
 
 // domainGroupBuilders maps family names onto the handler builders
 // they grouped. The product binary now ships every tool in

@@ -103,7 +103,7 @@ func TestTimeEntryCreateSchemasExposeCustomFields(t *testing.T) {
 		"clockify_switch_work": switchWorkSchema(),
 		"clockify_demo_seed":   demoSeedSchema(),
 	}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		switch descriptor.Tool.Name {
 		case "clockify_entries_create", "clockify_entries_timer_start", "clockify_entries_timer_switch":
 			schemas[descriptor.Tool.Name] = descriptor.Tool.InputSchema

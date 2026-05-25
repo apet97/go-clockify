@@ -103,7 +103,11 @@ func collectToolsListPages(t *testing.T, toolset string) []listedToolForBudget {
 func dispatchToolsListWithCursor(t *testing.T, toolset, cursor string) []byte {
 	t.Helper()
 	svc := &tools.Service{}
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		t.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("test", reg)
 	server.SetAdvertisedTools(svc.RegistryForToolset(toolset))
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "test", "0")
 
@@ -124,7 +128,11 @@ func dispatchToolsListWithCursor(t *testing.T, toolset, cursor string) []byte {
 func dispatchToolsList(t *testing.T, toolset string) []byte {
 	t.Helper()
 	svc := &tools.Service{}
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		t.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("test", reg)
 	server.SetAdvertisedTools(svc.RegistryForToolset(toolset))
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "test", "0")
 

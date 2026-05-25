@@ -19,7 +19,7 @@ import (
 // (MCP axiom 29: the MCP boundary must be tested directly.)
 func TestRealRegistrySchemaRejectsMissingRequiredArgs(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	server := mcp.NewServer("test", reg)
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatalf("initialize: %v", err)
@@ -78,7 +78,7 @@ func TestRealRegistrySchemaRejectsMissingRequiredArgs(t *testing.T) {
 
 func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatalf("initialize: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestUsersInviteAcceptsDryRunAtSchemaGate(t *testing.T) {
 
 func TestUsersRoleRejectsMalformedRoleGrantAtSchemaGate(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatalf("initialize: %v", err)
 	}

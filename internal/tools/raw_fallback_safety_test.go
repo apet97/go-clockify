@@ -236,7 +236,7 @@ func TestRawAPIWriteRequiresConfirmationAtMCPBoundary(t *testing.T) {
 	svc.EnableRawTools = true
 	svc.EnableRawWrites = true
 	svc.RawWriteDocumentedOnly = true
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	server.ConfirmationStore = safety.NewTokenStore(safety.TokenStoreOptions{})
 	server.WorkspaceIDForSafety = "ws1"
 	initializeServer(t, server)
@@ -392,7 +392,7 @@ func TestRawFallbackRecoveryHintsPreferTypedTools(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	cases := []struct {

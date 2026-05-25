@@ -57,7 +57,7 @@ func TestApplyPropertyConstraintsSkipsNonStringFields(t *testing.T) {
 // reviewer cannot silently slacken one tool by hand.
 func TestRegistryFreeTextFieldsHaveMaxLength(t *testing.T) {
 	svc := &Service{}
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		if d.Tool.InputSchema == nil {
 			continue
 		}
@@ -175,7 +175,7 @@ func TestApplyPropertyConstraintsCurrencySkipsNonString(t *testing.T) {
 // three-letter bound after normalization.
 func TestRegistryCurrencyFieldsCarryThreeLetterPattern(t *testing.T) {
 	svc := &Service{}
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		if d.Tool.InputSchema == nil {
 			continue
 		}

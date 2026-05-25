@@ -8,14 +8,6 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
-func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
-	out, err := s.nativeHighValueDescriptorsChecked()
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
 func (s *Service) nativeHighValueDescriptorsChecked() ([]mcp.ToolDescriptor, error) {
 	sources := s.nativeDomainDescriptorMap()
 	return s.nativeHighValueDescriptorsFromSources(sources)

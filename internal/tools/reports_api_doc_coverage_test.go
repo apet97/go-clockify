@@ -5,7 +5,7 @@ import "testing"
 func TestReportRouteSchemasExposeCurrentOneUserFields(t *testing.T) {
 	svc := &Service{}
 	descriptors := map[string]map[string]any{}
-	for _, desc := range svc.FullAccessRegistry() {
+	for _, desc := range mustRegistry(t, svc) {
 		descriptors[desc.Tool.Name] = desc.Tool.InputSchema
 	}
 

@@ -50,7 +50,7 @@ var forbiddenSchemaKeywords = map[string]bool{
 
 func TestSchemaSupportedKeywords(t *testing.T) {
 	svc := &Service{}
-	for _, d := range allToolDescriptorsForSchemaKeywordTest(svc) {
+	for _, d := range allToolDescriptorsForSchemaKeywordTest(t, svc) {
 		for _, violation := range unsupportedSchemaKeywords(d.Tool.Name, d.Tool.InputSchema) {
 			t.Error(violation)
 		}
@@ -91,8 +91,9 @@ func TestSchemaSupportedKeywordsAcceptsSupportedSubset(t *testing.T) {
 	}
 }
 
-func allToolDescriptorsForSchemaKeywordTest(svc *Service) []mcp.ToolDescriptor {
-	return svc.FullAccessRegistry()
+func allToolDescriptorsForSchemaKeywordTest(t *testing.T, svc *Service) []mcp.ToolDescriptor {
+	t.Helper()
+	return mustRegistry(t, svc)
 }
 
 func schemaKeywordSet(fixtures map[string]any) map[string]bool {

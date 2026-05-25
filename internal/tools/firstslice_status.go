@@ -64,7 +64,10 @@ func (s *Service) statusOperationalLimits() map[string]any {
 		toolset = "all"
 	}
 	limits["toolset"] = toolset
-	full := s.FullAccessRegistry()
+	full, err := s.FullAccessRegistryChecked()
+	if err != nil {
+		return limits
+	}
 	advertised := s.RegistryForToolset(toolset)
 	limits["loadedTools"] = len(full)
 	limits["advertisedTools"] = len(advertised)

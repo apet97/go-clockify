@@ -45,7 +45,7 @@ func TestRegistrySchemaAcceptsNaturalLanguageDatetime(t *testing.T) {
 	}
 
 	svc := &Service{}
-	descriptors := svc.FullAccessRegistry()
+	descriptors := mustRegistry(t, svc)
 	descByName := make(map[string]map[string]any, len(descriptors))
 	for _, d := range descriptors {
 		if d.Tool.InputSchema == nil {
@@ -94,7 +94,7 @@ func TestRegistrySchemasAcceptHappyPathArgs(t *testing.T) {
 		}
 	}
 
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		check(d.Tool.Name, d)
 	}
 }

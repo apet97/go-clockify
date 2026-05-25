@@ -32,7 +32,7 @@ func registryToolsByName(t *testing.T) map[string]mcp.Tool {
 	t.Helper()
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	tools := map[string]mcp.Tool{}
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		tools[d.Tool.Name] = d.Tool
 	}
 	return tools
@@ -67,7 +67,7 @@ func TestToolRequiredArraysMatchHandlerContracts(t *testing.T) {
 
 func TestRequiredNameOrIDAliasesAreAgentVisible(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		required := requiredSet(descriptor.Tool.InputSchema)
 		props, _ := descriptor.Tool.InputSchema["properties"].(map[string]any)
 		for base := range required {
@@ -111,7 +111,7 @@ func TestSchedulingCapacityUserIDsOptional(t *testing.T) {
 
 func TestHighRiskToolsAcceptConfirmTokenWithoutOpeningSchema(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		hasConfirmToken := schemaHasProperty(d.Tool.InputSchema, "confirm_token")
 		if d.RiskClass.IsHighRisk() {
 			if !hasConfirmToken {
@@ -130,7 +130,7 @@ func TestHighRiskToolsAcceptConfirmTokenWithoutOpeningSchema(t *testing.T) {
 
 func TestHighRiskToolsSupportDryRunForConfirmationPreview(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		if !d.RiskClass.IsHighRisk() || strings.TrimSpace(d.SafetyExemption) != "" {
 			continue
 		}
@@ -187,7 +187,7 @@ func TestBusinessWorkflowRiskClassesMatchSideEffects(t *testing.T) {
 
 func TestEveryToolParameterHasADescription(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		schema := d.Tool.InputSchema
 		if schema == nil {
 			continue

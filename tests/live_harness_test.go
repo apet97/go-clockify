@@ -65,7 +65,11 @@ func setupLiveMCPHarness(t *testing.T, _ liveMCPOptions) *liveMCPHarness {
 		}
 	}
 
-	server := mcp.NewServer("livee2e", service.FullAccessRegistry())
+	reg, err := service.FullAccessRegistryChecked()
+	if err != nil {
+		t.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("livee2e", reg)
 	server.StaticToolList = true
 	server.ResourceProvider = service
 	service.EmitResourceUpdate = server.NotifyResourceUpdated

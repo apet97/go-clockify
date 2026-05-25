@@ -15,7 +15,7 @@ import (
 
 func TestFullAccessRegistryContainsCoreOneUserTools(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	if len(reg) == 0 {
 		t.Fatal("registry is empty")
 	}
@@ -61,7 +61,7 @@ func TestFullAccessRegistryContainsCoreOneUserTools(t *testing.T) {
 func TestFullAccessToolDescriptionsStayCompact(t *testing.T) {
 	const maxDescriptionLen = 240
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if got := len(descriptor.Tool.Description); got > maxDescriptionLen {
 			t.Fatalf("%s description length=%d, want <=%d: %q", descriptor.Tool.Name, got, maxDescriptionLen, descriptor.Tool.Description)
 		}

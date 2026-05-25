@@ -143,7 +143,7 @@ func TestReportsDetailedAcceptsSameDayRange(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 	result := callToolOK(t, server, "clockify_reports_detailed", map[string]any{
 		"start": "2026-05-17",

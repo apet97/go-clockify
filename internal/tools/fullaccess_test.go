@@ -38,7 +38,7 @@ var workflowTools = []string{
 
 func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	names := map[string]bool{}
 	for _, descriptor := range reg {
 		name := descriptor.Tool.Name
@@ -130,11 +130,15 @@ func TestFullAccessRegistryMigratesDomainsAtStartup(t *testing.T) {
 
 func TestTimerAndReportDescriptorsDoNotShadowEarlierSources(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	nativeHighValue, err := svc.nativeHighValueDescriptorsChecked()
+	if err != nil {
+		t.Fatalf("nativeHighValueDescriptorsChecked: %v", err)
+	}
 	earlierSources := map[string][]string{
 		"workflow":          descriptorNames(svc.workflowDescriptors()),
 		"first_slice":       descriptorNames(svc.FirstSliceRegistry()),
 		"native_core":       descriptorNames(svc.nativeCoreDescriptors()),
-		"native_high_value": descriptorNames(svc.nativeHighValueDescriptors()),
+		"native_high_value": descriptorNames(nativeHighValue),
 	}
 	seen := map[string]string{}
 	for source, names := range earlierSources {
@@ -195,7 +199,7 @@ func TestNativeHighValueDescriptorsDoNotWriteStderrWarnings(t *testing.T) {
 
 func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	for i, want := range workflowTools {
 		if i >= len(reg) {
 			t.Fatalf("registry too short, missing workflow %s", want)
@@ -236,7 +240,7 @@ func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 
 func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	first := svc.FullAccessRegistry()
+	first := mustRegistry(t, svc)
 	if len(first) != 156 {
 		t.Fatalf("registry size=%d, want 156", len(first))
 	}
@@ -246,7 +250,7 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	cachedFirstName := svc.registry.descriptors[0].Tool.Name
 	first[0].Tool.Name = "mutated-by-test"
 
-	second := svc.FullAccessRegistry()
+	second := mustRegistry(t, svc)
 	if second[0].Tool.Name != cachedFirstName {
 		t.Fatalf("cached registry was not defensively cloned: got %s want %s", second[0].Tool.Name, cachedFirstName)
 	}
@@ -257,7 +261,7 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 
 func TestCloneToolDescriptorsDeepCopy(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	first := svc.FullAccessRegistry()
+	first := mustRegistry(t, svc)
 	if len(first) == 0 {
 		t.Fatal("empty registry")
 	}
@@ -268,7 +272,7 @@ func TestCloneToolDescriptorsDeepCopy(t *testing.T) {
 	}
 	first[0].Tool.Annotations["x-mutated"] = true
 
-	second := svc.FullAccessRegistry()
+	second := mustRegistry(t, svc)
 	if _, ok := second[0].Tool.InputSchema["x-mutated"]; ok {
 		t.Fatal("input schema sentinel leaked into cached registry")
 	}
@@ -435,7 +439,7 @@ func TestRegistryForToolsetFiltersOwnerSurfaces(t *testing.T) {
 
 func TestUnsupportedOperationsAreGuidanceTools(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	registry := svc.FullAccessRegistry()
+	registry := mustRegistry(t, svc)
 	toolsByName := map[string]mcp.ToolDescriptor{}
 	for _, descriptor := range registry {
 		toolsByName[descriptor.Tool.Name] = descriptor
@@ -469,7 +473,11 @@ func BenchmarkFullAccessRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	b.ReportAllocs()
 	for b.Loop() {
-		if got := len(svc.FullAccessRegistry()); got != 156 {
+		reg, err := svc.FullAccessRegistryChecked()
+		if err != nil {
+			b.Fatalf("FullAccessRegistryChecked: %v", err)
+		}
+		if got := len(reg); got != 156 {
 			b.Fatalf("registry size=%d, want 156", got)
 		}
 	}
@@ -610,7 +618,11 @@ func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
 
 func BenchmarkOneUserToolsListRealRegistry(b *testing.B) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("bench", svc.FullAccessRegistry())
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		b.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("bench", reg)
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`)
 	ctx := context.Background()
@@ -633,7 +645,11 @@ func BenchmarkClockifyStatusDispatch(b *testing.B) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("bench", svc.FullAccessRegistry())
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		b.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("bench", reg)
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_status","arguments":{}}}`)
 	ctx := context.Background()
@@ -654,7 +670,11 @@ func BenchmarkClockifyReviewDayDispatch(b *testing.B) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("bench", svc.FullAccessRegistry())
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		b.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("bench", reg)
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_review_day","arguments":{"date":"2026-01-02"}}}`)
 	ctx := context.Background()
@@ -672,7 +692,11 @@ func BenchmarkReportNameResolution(b *testing.B) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("bench", svc.FullAccessRegistry())
+	reg, err := svc.FullAccessRegistryChecked()
+	if err != nil {
+		b.Fatalf("FullAccessRegistryChecked: %v", err)
+	}
+	server := mcp.NewServer("bench", reg)
 	server.MarkInitialized(mcp.SupportedProtocolVersions[0], "bench", "0")
 	msg := []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"clockify_reports_detailed","arguments":{"start":"2026-01-01","end":"2026-01-02","project":"Project One"}}}`)
 	ctx := context.Background()
@@ -861,7 +885,7 @@ func TestInvoiceClientWorkFeatureUnavailableEnvelope(t *testing.T) {
 	defer upstream.Close()
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), workspaceID)
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	if _, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -933,7 +957,7 @@ func TestPaidFeatureErrorEnvelopeCode(t *testing.T) {
 
 func TestSchedulingCapacityDoesNotRequireUserIds(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if descriptor.Tool.Name != "clockify_scheduling_capacity" {
 			continue
 		}
@@ -950,7 +974,7 @@ func TestSchedulingCapacityDoesNotRequireUserIds(t *testing.T) {
 
 func TestFullAccessInputSchemasAreValidAndTyped(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if err := assertSchemaRequiredAndPropertyTypes(descriptor.Tool.InputSchema, descriptor.Tool.Name, "$inputSchema"); err != nil {
 			t.Error(err)
 		}

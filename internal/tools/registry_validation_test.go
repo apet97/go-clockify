@@ -9,7 +9,7 @@ import (
 
 func TestValidateRegistryRejectsDuplicateNames(t *testing.T) {
 	svc := &Service{}
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	bad := append(cloneToolDescriptors(reg[:1]), reg[0])
 
 	err := ValidateRegistry(bad)
@@ -20,7 +20,7 @@ func TestValidateRegistryRejectsDuplicateNames(t *testing.T) {
 
 func TestValidateRegistryRejectsMissingOutputSchema(t *testing.T) {
 	svc := &Service{}
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	bad := cloneToolDescriptors(reg[:1])
 	bad[0].Tool.OutputSchema = nil
 
@@ -32,7 +32,7 @@ func TestValidateRegistryRejectsMissingOutputSchema(t *testing.T) {
 
 func TestValidateRegistryRejectsRawToolBeforeEnd(t *testing.T) {
 	svc := &Service{}
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 	if len(reg) < 3 {
 		t.Fatal("registry too small")
 	}
@@ -48,7 +48,7 @@ func TestValidateRegistryRejectsRawToolBeforeEnd(t *testing.T) {
 
 func TestFullAccessRegistryPassesValidation(t *testing.T) {
 	svc := &Service{}
-	if err := ValidateRegistry(svc.FullAccessRegistry()); err != nil {
+	if err := ValidateRegistry(mustRegistry(t, svc)); err != nil {
 		t.Fatalf("FullAccessRegistry validation failed: %v", err)
 	}
 }

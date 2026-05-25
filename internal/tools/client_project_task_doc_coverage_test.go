@@ -14,7 +14,7 @@ import (
 func TestClientProjectTaskDocSchemaProperties(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descriptors := map[string]map[string]any{}
-	for _, d := range svc.FullAccessRegistry() {
+	for _, d := range mustRegistry(t, svc) {
 		descriptors[d.Tool.Name] = d.Tool.InputSchema
 	}
 	requireProps := func(tool string, props ...string) {

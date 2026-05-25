@@ -33,7 +33,7 @@ func TestOneUserMCPTimeoutReleasesInFlightSlot(t *testing.T) {
 	defer upstream.Close()
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, 5*time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	server.MaxInFlightToolCalls = 1
 	server.ToolTimeout = 20 * time.Millisecond
 

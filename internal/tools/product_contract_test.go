@@ -25,7 +25,7 @@ const (
 // caught immediately.
 func TestProductContractDoesNotRegress(t *testing.T) {
 	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	reg := svc.FullAccessRegistry()
+	reg := mustRegistry(t, svc)
 
 	if len(reg) != productContractFullRegistryTools {
 		t.Fatalf("registry has %d tools, want exactly %d", len(reg), productContractFullRegistryTools)
@@ -155,7 +155,7 @@ func TestDefaultToolsetEnvAdvertises16WhileRegistryLoads156(t *testing.T) {
 	}
 
 	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), cfg.WorkspaceID)
-	if got := len(svc.FullAccessRegistry()); got != productContractFullRegistryTools {
+	if got := len(mustRegistry(t, svc)); got != productContractFullRegistryTools {
 		t.Fatalf("full registry loaded %d tools, want exactly %d", got, productContractFullRegistryTools)
 	}
 	if got := len(svc.RegistryForToolset(cfg.Toolset)); got != productContractDefaultAdvertisedTools {

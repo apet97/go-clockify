@@ -12,7 +12,7 @@ import (
 func TestOneUserToolDescriptionsCallOutOperationalSideEffects(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	tools := map[string]mcp.Tool{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		tools[descriptor.Tool.Name] = descriptor.Tool
 	}
 
@@ -53,7 +53,7 @@ func TestOneUserToolDescriptionsCallOutOperationalSideEffects(t *testing.T) {
 func TestOneUserBinaryExportToolDescriptionsNameSafeEnvelope(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	tools := map[string]mcp.Tool{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		tools[descriptor.Tool.Name] = descriptor.Tool
 	}
 
@@ -73,7 +73,7 @@ func TestOneUserBinaryExportToolDescriptionsNameSafeEnvelope(t *testing.T) {
 
 func TestOneUserWorkflowAnnotationsGiveActionableRoutingHints(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if descriptor.Tool.Annotations["category"] != "workflow" {
 			continue
 		}
@@ -89,7 +89,7 @@ func TestOneUserWorkflowAnnotationsGiveActionableRoutingHints(t *testing.T) {
 
 func TestOneUserInputParameterDescriptionsAreUseful(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		props, _ := descriptor.Tool.InputSchema["properties"].(map[string]any)
 		for name, raw := range props {
 			prop, _ := raw.(map[string]any)
@@ -103,7 +103,7 @@ func TestOneUserInputParameterDescriptionsAreUseful(t *testing.T) {
 
 func TestOneUserDestructiveLookingToolsAdvertiseDestructiveHint(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if !contractAuditDestructiveName(descriptor.Tool.Name) {
 			continue
 		}
@@ -145,7 +145,7 @@ func contractAuditDestructiveName(name string) bool {
 func TestOneUserSuggestedActionsReferenceRegisteredTools(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	registered := map[string]bool{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		registered[descriptor.Tool.Name] = true
 	}
 

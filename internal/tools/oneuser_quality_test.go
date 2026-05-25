@@ -157,7 +157,7 @@ func TestQualityGateNameResolutionStrictAndTimeParsing(t *testing.T) {
 
 func TestQualityGateGoldenInitializeToolsPromptsResources(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	server.StaticToolList = true
 	server.ToolsListPageSize = 1000
 	server.ResourceProvider = svc
@@ -265,7 +265,7 @@ func TestQualityGateFakeClockifyDomainWritesAndErrorEdges(t *testing.T) {
 	svc.EnableRawGet = true
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	clientResult := callToolOK(t, server, "clockify_clients_create", map[string]any{"name": "Quality Client"})
@@ -309,7 +309,7 @@ func TestQualityGateFakeClockifyFeatureUnavailableAndPagination(t *testing.T) {
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	fake.SetError("POST", "/workspaces/"+fake.WorkspaceID+"/invoices", 403, "feature is not supported on this plan")
@@ -344,7 +344,7 @@ func TestInvoiceClientWorkImportFailureReturnsRecoverableError(t *testing.T) {
 	defer fake.Close()
 	client := clockify.NewClient("test-key", fake.URL, time.Second, 0)
 	svc := New(client, fake.WorkspaceID)
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	clientResult := callToolOK(t, server, "clockify_clients_create", map[string]any{"name": "Import Failure Client"})
@@ -536,7 +536,7 @@ func TestOneUserOutputSchemasAreActionPinnedToolResultEnvelopes(t *testing.T) {
 		"clockify_demo_seed":           {"runId", "prefix"},
 		"clockify_demo_cleanup":        {"runId", "prefix"},
 	}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		t.Run(descriptor.Tool.Name, func(t *testing.T) {
 			schema := descriptor.Tool.OutputSchema
 			if schema == nil {
@@ -582,11 +582,11 @@ func TestOneUserWorkflowSchemasCoverActualFakeOutputs(t *testing.T) {
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	descriptors := map[string]mcp.ToolDescriptor{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		descriptors[descriptor.Tool.Name] = descriptor
 	}
 	callAndValidate := func(name string, args map[string]any) ToolResult {
@@ -745,7 +745,7 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_users_profile":                  true,
 		"clockify_workspace_settings":             true,
 	}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if !wantNative[descriptor.Tool.Name] {
 			continue
 		}
@@ -777,7 +777,7 @@ func TestOneUserNativeDiscoveryToolsAreNotAliasWrappers(t *testing.T) {
 		"clockify_holidays_update":               true,
 		"clockify_holidays_list_for_user_period": true,
 	}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if !explicitOnly[descriptor.Tool.Name] {
 			continue
 		}
@@ -1074,7 +1074,7 @@ func TestOneUserDomainCRUDOutputSchemasAreTyped(t *testing.T) {
 		"clockify_entries_mark_invoiced":          {"updated"},
 	}
 	descriptors := map[string]mcp.ToolDescriptor{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		descriptors[descriptor.Tool.Name] = descriptor
 	}
 	for name, fields := range wantFields {
@@ -1130,7 +1130,7 @@ func TestOneUserCoverageLedgerClassifiesKnownGapsHonestly(t *testing.T) {
 }
 
 func TestEveryToolHasTitle(t *testing.T) {
-	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, &Service{}) {
 		if strings.TrimSpace(descriptor.Tool.Title) == "" {
 			t.Fatalf("%s missing title", descriptor.Tool.Name)
 		}
@@ -1144,7 +1144,7 @@ func TestEveryToolHasTitle(t *testing.T) {
 }
 
 func TestEveryToolHasOutputSchema(t *testing.T) {
-	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, &Service{}) {
 		if len(descriptor.Tool.OutputSchema) == 0 {
 			t.Fatalf("%s missing output schema", descriptor.Tool.Name)
 		}
@@ -1153,7 +1153,7 @@ func TestEveryToolHasOutputSchema(t *testing.T) {
 
 func TestToolDescriptionsAreNotVague(t *testing.T) {
 	vagueOpenings := []string{"get data", "manage", "handle", "do"}
-	for _, descriptor := range (&Service{}).FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, &Service{}) {
 		name := descriptor.Tool.Name
 		desc := strings.TrimSpace(descriptor.Tool.Description)
 		lower := strings.ToLower(desc)
@@ -1182,11 +1182,11 @@ func TestRecoveryEnvelopeConformsToOutputSchema(t *testing.T) {
 	upstream := newOneUserCoverageUpstream()
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	descriptors := map[string]mcp.ToolDescriptor{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		descriptors[descriptor.Tool.Name] = descriptor
 	}
 	for _, name := range []string{
@@ -1722,7 +1722,7 @@ func TestMCPStartupListingsMakeNoClockifyRequests(t *testing.T) {
 	defer upstream.Close()
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	server.StaticToolList = true
 	server.ResourceProvider = svc
 
@@ -1741,7 +1741,7 @@ func TestMCPStartupListingsMakeNoClockifyRequests(t *testing.T) {
 
 func TestToolsResourceMatchesServerToolsList(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	server.StaticToolList = true
 	server.ToolsListPageSize = 1000
 	server.ResourceProvider = svc
@@ -1787,11 +1787,11 @@ func TestToolsResourceMatchesServerToolsList(t *testing.T) {
 func TestPromptAndWorkflowGuidanceToolNamesExist(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	knownTools := map[string]bool{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		knownTools[descriptor.Tool.Name] = true
 	}
 
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	promptsRaw, err := server.DispatchMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":1,"method":"prompts/list"}`))
@@ -1879,7 +1879,7 @@ func TestHighRiskWorkflowAndRawFallbackFakeServerCoverage(t *testing.T) {
 	svc.EnableRawGet = true
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	const (
@@ -1956,10 +1956,10 @@ func TestOneUserAdvertisedDomainToolsFakeServerSmoke(t *testing.T) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		category, _ := descriptor.Tool.Annotations["category"].(string)
 		if category == "workflow" || descriptor.Tool.Name == "clockify_api_get" || descriptor.Tool.Name == "clockify_api_request" {
 			continue
@@ -1997,10 +1997,10 @@ func TestOneUserEveryExposedToolStructuredContentMatchesOutputSchema(t *testing.
 	svc.EnableRawGet = true
 	svc.EnableRawWrites = true
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
-	descriptors := svc.FullAccessRegistry()
+	descriptors := mustRegistry(t, svc)
 	if len(descriptors) != 156 {
 		t.Fatalf("FullAccessRegistry returned %d tools, want 156", len(descriptors))
 	}
@@ -2021,11 +2021,11 @@ func TestOneUserTargetedFakeSmokeEvidenceForCurrentBacklog(t *testing.T) {
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	descriptors := map[string]mcp.ToolDescriptor{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		descriptors[descriptor.Tool.Name] = descriptor
 	}
 	smoke := []struct {
@@ -2176,7 +2176,7 @@ func TestOneUserProjectMembershipsUpdateKeepsUserIDsCompatibility(t *testing.T) 
 	defer upstream.Close()
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), "000000000000000000000001")
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	result := callToolOK(t, server, "clockify_projects_memberships_update", map[string]any{
@@ -2215,7 +2215,7 @@ func TestOneUserStopWorkNoRunningTimerReturnsNoop(t *testing.T) {
 
 	svc := New(clockify.NewClient("test-key", upstream.URL, time.Second, 0), workspaceID)
 	svc.DefaultTimezone = time.UTC
-	server := mcp.NewServer("test", svc.FullAccessRegistry())
+	server := mcp.NewServer("test", mustRegistry(t, svc))
 	initializeServer(t, server)
 
 	result := callToolOK(t, server, "clockify_stop_work", nil)
@@ -3434,7 +3434,7 @@ func blockedTerm(parts ...string) string {
 
 func TestStartWorkDescriptionIsDocumented(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "ws1")
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		if descriptor.Tool.Name != "clockify_start_work" {
 			continue
 		}

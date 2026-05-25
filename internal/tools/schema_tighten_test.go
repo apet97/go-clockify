@@ -170,7 +170,7 @@ func TestRegistryFlexibleTimeFieldsHaveNoFormat(t *testing.T) {
 	}
 
 	svc := &Service{}
-	descriptors := svc.FullAccessRegistry()
+	descriptors := mustRegistry(t, svc)
 	descByName := make(map[string]map[string]any, len(descriptors))
 	for _, d := range descriptors {
 		if d.Tool.InputSchema == nil {
@@ -219,7 +219,7 @@ func TestTightenInputSchemaColorPattern(t *testing.T) {
 // object.
 func TestRegistrySchemasAllHaveAdditionalPropertiesFalse(t *testing.T) {
 	svc := &Service{}
-	descriptors := svc.FullAccessRegistry()
+	descriptors := mustRegistry(t, svc)
 	if len(descriptors) == 0 {
 		t.Fatal("FullAccessRegistry returned zero tools")
 	}
@@ -238,7 +238,7 @@ func TestRegistrySchemasAllHaveAdditionalPropertiesFalse(t *testing.T) {
 // within the keyword subset internal/jsonschema actually enforces.
 func TestRegistrySchemasUseOnlySupportedValidatorKeywords(t *testing.T) {
 	svc := &Service{}
-	descriptors := svc.FullAccessRegistry()
+	descriptors := mustRegistry(t, svc)
 	if len(descriptors) == 0 {
 		t.Fatal("FullAccessRegistry is empty; schema keyword guard is vacuous")
 	}
@@ -296,7 +296,7 @@ func newSchemaError(tool, path, msg string) error { return &schemaError{tool, pa
 // pass on an empty input.
 func TestFullAccessRegistryNonEmpty(t *testing.T) {
 	svc := &Service{}
-	if len(svc.FullAccessRegistry()) == 0 {
+	if len(mustRegistry(t, svc)) == 0 {
 		t.Fatal("FullAccessRegistry returned zero tools")
 	}
 }

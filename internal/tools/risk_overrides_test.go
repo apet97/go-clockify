@@ -273,7 +273,7 @@ func riskTestRegistry(t *testing.T) map[string]mcp.ToolDescriptor {
 	t.Helper()
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	out := map[string]mcp.ToolDescriptor{}
-	for _, descriptor := range svc.FullAccessRegistry() {
+	for _, descriptor := range mustRegistry(t, svc) {
 		out[descriptor.Tool.Name] = descriptor
 	}
 	return out
