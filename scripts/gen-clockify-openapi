@@ -475,7 +475,39 @@ PHANTOM_PATHS = [
   # requests.phantom-path-quarantined`.
   ["post",   "/workspaces/{workspaceId}/policies/{policyId}/requests"],
   ["delete", "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"],
-  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"]
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/requests/{requestId}"],
+  # Three additional phantoms surfaced during the G.1 domain
+  # edge-case sweep (2026-05-25 re-probe, sandbox 65b382b606de527a7ee2b60e):
+  #
+  # - POST /workspaces/{wsId}/time-off/requests/users/{userId} ->
+  #   HTTP 404 + code 3000 "No static resource". Looked like an
+  #   admin "create TOR for a specific user via the workspace-level
+  #   path" but doesn't exist; the live equivalent is the policy-
+  #   scoped `submitForUser` at /time-off/policies/{pid}/users/
+  #   {uid}/requests.
+  # - GET /workspaces/{wsId}/time-off/requests -> HTTP 405 + code
+  #   3000 "Request method 'GET' is not supported". The path
+  #   exists for POST (that's `list`, the documented POST-as-list
+  #   quirk) but GET is not allowed. The canonical's own
+  #   x-clockify-notes block on this op already documents the 405
+  #   from a prior probe-supplement -- the quarantine just stops
+  #   us from generating an SDK method that immediately 405s.
+  # - GET /workspaces/{wsId}/users/{userId}/time-off/balances ->
+  #   HTTP 404 + code 3000 "No static resource". Looked like a
+  #   per-user time-off balances list across all policies, but
+  #   doesn't exist; the live per-user balance read is the
+  #   singular /time-off/balance/user/{userId} (already stamped
+  #   as balances.getForUser).
+  #
+  # Probe fixtures (gitignored):
+  # - addons-me/fern/spec/evidence/probes/20260525-edge-post-tor-users-userid.{json,hdr}
+  # - addons-me/fern/spec/evidence/probes/20260525-edge-get-tor.{json,hdr}
+  # - addons-me/fern/spec/evidence/probes/20260525-edge-get-user-balances.{json,hdr}
+  # Ledger update lives under
+  # discrepancies.md > timeoff.legacy-policies-requests.phantom-path-quarantined.
+  ["post", "/workspaces/{workspaceId}/time-off/requests/users/{userId}"],
+  ["get",  "/workspaces/{workspaceId}/time-off/requests"],
+  ["get",  "/workspaces/{workspaceId}/users/{userId}/time-off/balances"]
 ].freeze
 
 def phantom_path?(method, path)
@@ -1212,12 +1244,15 @@ SDK_METHOD_NAMES = {
   # - timeOff DELETE on the policy-scoped request path is the user-
   #   side withdraw flow (admin DELETE on the workspace-level
   #   `/time-off/requests/{rid}` was stamped as `delete`).
-  # - balances GET on the per-user `/users/{uid}/time-off/balances`
-  #   plural route returns a list of balances across policies; the
-  #   sibling singular `getForUser` returns a single balance object.
+  # - The third v0.5.0 edge-case stamp (`balances.listForUser` on GET
+  #   /users/{userId}/time-off/balances) was removed in the
+  #   2026-05-25 follow-up after the route was confirmed phantom on
+  #   the live API (HTTP 404 + code 3000). That path now lives in
+  #   PHANTOM_PATHS; the live per-user balance read is the singular
+  #   `/time-off/balance/user/{userId}` (already stamped as
+  #   `balances.getForUser`).
   ["post",   "/workspaces/{workspaceId}/projects/{projectId}/memberships"]                        => {group: "projects", name: "setMembers"},
-  ["delete", "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"]       => {group: "timeOff", name: "withdraw"},
-  ["get",    "/workspaces/{workspaceId}/users/{userId}/time-off/balances"]                        => {group: "balances", name: "listForUser"}
+  ["delete", "/workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}"]       => {group: "timeOff", name: "withdraw"}
 }.freeze
 
 def stamp_sdk_method_name!(op, method, path)

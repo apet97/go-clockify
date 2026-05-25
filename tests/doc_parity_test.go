@@ -147,17 +147,21 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	contract := readOpenAPIContract(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 
-	// Floor counts updated 2026-05-25 after quarantining 3 phantom
-	// time-off-request /policies/{policyId}/requests routes (POST +
-	// DELETE + PATCH) — see addons-me/fern/spec/evidence/discrepancies.md
-	// > timeoff.legacy-policies-requests.phantom-path-quarantined.
-	// The quarantined ops returned HTTP 404 + code 3000 ("No static
-	// resource") on the live API; they were spec ghosts from an
-	// older clockify-api-probe-lab source-bundle revision.
-	if got, want := len(contract.paths), 123; got < want {
+	// Floor counts updated 2026-05-25 after quarantining 6 phantom
+	// routes total. Round 1 (3 ops, 2 paths): legacy time-off-request
+	// /policies/{policyId}/requests trio (POST + DELETE + PATCH).
+	// Round 2 (3 ops, 2 paths): G.1 edge-case sweep — POST
+	// /time-off/requests/users/{userId} (404 live), GET /time-off/
+	// requests (405 live; POST remains as the documented POST-as-list),
+	// GET /users/{userId}/time-off/balances (404 live). All probed
+	// against sandbox 65b382b606de527a7ee2b60e on 2026-05-25; all
+	// returned Clockify error code 3000. See addons-me/fern/spec/
+	// evidence/discrepancies.md > timeoff.legacy-policies-requests.
+	// phantom-path-quarantined for the full audit.
+	if got, want := len(contract.paths), 121; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
-	if got, want := contract.operationCount(), 188; got < want {
+	if got, want := contract.operationCount(), 185; got < want {
 		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
 	}
 
@@ -176,7 +180,13 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 		{method: "patch", path: "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"},
 		{method: "get", path: "/workspaces/{workspaceId}/time-off/balance/user/{userId}"},
 		{method: "patch", path: "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"},
-		{method: "get", path: "/workspaces/{workspaceId}/users/{userId}/time-off/balances"},
+		// `GET /workspaces/{workspaceId}/users/{userId}/time-off/balances`
+		// was removed from this required list when the G.1 edge-case
+		// re-probe (2026-05-25) confirmed the route returns HTTP 404
+		// + Clockify error code 3000 on the live API. It is now in
+		// PHANTOM_PATHS. The live per-user balance read is the
+		// singular `/time-off/balance/user/{userId}` -- still asserted
+		// above.
 		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments"},
 		{method: "get", path: "/workspaces/{workspaceId}/scheduling/assignments/all"},
 		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/projects/totals"},
