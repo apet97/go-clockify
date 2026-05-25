@@ -7,7 +7,6 @@ import (
 	"math"
 	"net/netip"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -126,20 +125,12 @@ type Service struct {
 	// opt in explicitly so unrelated fake handlers do not receive surprise
 	// reports-api requests.
 	EntryFinancialReports bool
-	mu                    sync.RWMutex
-	cachedUser            *clockify.User
-	cachedWSID            string
-	resolveMu             sync.RWMutex
-	resolveCache          map[resolveKey]resolveEntry
-	// resourceCache stores the last-emitted state per subscribed URI so the
+	identity              identityCacheState
+	resolver              resolverCacheState
+	// resources stores the last-emitted state per subscribed URI so the
 	// delta-sync emit helper can diff before publishing. See W3-03c and ADR 013.
-	resourceCache      *resourceStateCache
-	demoResources      map[string]demoResourceState
-	registryOnce       sync.Once
-	registry           []mcp.ToolDescriptor
-	registryErr        error
-	toolsResourceOnce  sync.Once
-	toolsResourceCache map[string]any
+	resources resourceEmitterState
+	registry  registryState
 }
 
 // EmitProgress publishes a notifications/progress if a progressToken was
@@ -329,8 +320,10 @@ func New(client *clockify.Client, workspaceID string) *Service {
 		Client:             client,
 		WorkspaceID:        workspaceID,
 		WebhookValidateDNS: true,
-		resourceCache:      newResourceStateCache(1024),
-		demoResources:      map[string]demoResourceState{},
+		resources: resourceEmitterState{
+			cache:         newResourceStateCache(1024),
+			demoResources: map[string]demoResourceState{},
+		},
 	}
 }
 

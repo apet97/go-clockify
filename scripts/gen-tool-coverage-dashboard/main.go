@@ -1,0 +1,249 @@
+// gen-tool-coverage-dashboard summarizes the conservative one-user coverage
+// ledger into a shorter release-readiness dashboard.
+package main
+
+import (
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+type catalogFile struct {
+	Tools []struct {
+		Name     string `json:"name"`
+		Category string `json:"category"`
+	} `json:"tools"`
+}
+
+type coverageRow struct {
+	Tool         string
+	Class        string
+	Endpoint     string
+	FakeSmoke    string
+	LiveProtocol string
+	LiveHappy    string
+	Status       string
+	NextAction   string
+}
+
+func main() {
+	repoRoot := flag.String("repo-root", ".", "repository root")
+	write := flag.Bool("write", false, "write docs/tool-coverage-dashboard.md instead of checking drift")
+	flag.Parse()
+
+	root := filepath.Clean(*repoRoot)
+	catalogPath := filepath.Join(root, "docs", "tool-catalog.json")
+	coveragePath := filepath.Join(root, "docs", "goals", "oneuser-tool-coverage.md")
+	dashboardPath := filepath.Join(root, "docs", "tool-coverage-dashboard.md")
+
+	cat, err := readCatalog(catalogPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rows, notes, err := readCoverage(coveragePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dashboard := strings.TrimRight(renderDashboard(cat, rows, notes), "\n") + "\n"
+	if *write {
+		if err := os.WriteFile(dashboardPath, []byte(dashboard), 0o644); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("wrote docs/tool-coverage-dashboard.md (%d tools)\n", len(rows))
+		return
+	}
+	existing, err := os.ReadFile(dashboardPath)
+	if err != nil {
+		log.Fatalf("[fail] docs/tool-coverage-dashboard.md missing; run 'make gen-coverage-dashboard': %v", err)
+	}
+	if string(existing) != dashboard {
+		log.Fatalf("[fail] coverage dashboard drift; run 'make gen-coverage-dashboard'")
+	}
+	fmt.Printf("coverage-dashboard: OK (%d tools)\n", len(rows))
+}
+
+func readCatalog(path string) (catalogFile, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return catalogFile{}, err
+	}
+	var cat catalogFile
+	if err := json.Unmarshal(raw, &cat); err != nil {
+		return catalogFile{}, err
+	}
+	return cat, nil
+}
+
+func readCoverage(path string) ([]coverageRow, []string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	var rows []coverageRow
+	var notes []string
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "- ") {
+			lower := strings.ToLower(line)
+			if strings.Contains(lower, "paid-feature") || strings.Contains(lower, "unavailable-paid-feature") || strings.Contains(lower, "raw-fallback-only") {
+				notes = append(notes, strings.TrimSpace(strings.TrimPrefix(line, "- ")))
+			}
+		}
+		if !strings.HasPrefix(line, "| `clockify_") {
+			continue
+		}
+		cols := splitMarkdownRow(line)
+		if len(cols) < 10 {
+			return nil, nil, fmt.Errorf("coverage row has %d columns, want 10: %s", len(cols), line)
+		}
+		rows = append(rows, coverageRow{
+			Tool:         stripCode(cols[0]),
+			Class:        cols[1],
+			Endpoint:     cols[3],
+			FakeSmoke:    cols[4],
+			LiveProtocol: cols[5],
+			LiveHappy:    cols[6],
+			Status:       cols[8],
+			NextAction:   cols[9],
+		})
+	}
+	if len(rows) == 0 {
+		return nil, nil, fmt.Errorf("no coverage rows found in %s", path)
+	}
+	return rows, notes, nil
+}
+
+func splitMarkdownRow(line string) []string {
+	line = strings.Trim(line, "|")
+	parts := strings.Split(line, "|")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		out = append(out, strings.TrimSpace(strings.ReplaceAll(part, `\|`, "|")))
+	}
+	return out
+}
+
+func stripCode(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "`")
+	s = strings.TrimSuffix(s, "`")
+	return s
+}
+
+func renderDashboard(cat catalogFile, rows []coverageRow, notes []string) string {
+	byTool := make(map[string]coverageRow, len(rows))
+	for _, row := range rows {
+		byTool[row.Tool] = row
+	}
+	missing := make([]string, 0)
+	categoryCounts := map[string]int{}
+	for _, tool := range cat.Tools {
+		categoryCounts[tool.Category]++
+		if _, ok := byTool[tool.Name]; !ok {
+			missing = append(missing, tool.Name)
+		}
+	}
+	sort.Strings(missing)
+
+	ready := filterRows(rows, func(r coverageRow) bool { return r.Status == "ready" })
+	recoveryOnly := filterRows(rows, func(r coverageRow) bool {
+		return r.LiveProtocol == "yes" && r.LiveHappy != "yes"
+	})
+	paidFeature := filterRows(rows, func(r coverageRow) bool {
+		text := strings.ToLower(r.Status + " " + r.NextAction + " " + r.Endpoint)
+		return strings.Contains(text, "paid-feature") || strings.Contains(text, "feature_unavailable")
+	})
+	rawFallbackOnly := filterRows(rows, func(r coverageRow) bool {
+		text := strings.ToLower(r.Status + " " + r.NextAction + " " + r.Endpoint)
+		return strings.Contains(text, "raw-fallback-only")
+	})
+
+	var b strings.Builder
+	b.WriteString("# Tool coverage dashboard\n\n")
+	b.WriteString("Autogenerated by `scripts/gen-tool-coverage-dashboard`. Do not edit by hand;\n")
+	b.WriteString("run `make gen-coverage-dashboard` after changing the catalog or coverage ledger.\n\n")
+	b.WriteString("Buckets are intentionally non-exclusive: a tool can be ready and still be counted in a paid-feature-sensitive or raw-fallback note when the ledger says so.\n\n")
+	b.WriteString("## Summary\n\n")
+	fmt.Fprintf(&b, "- Catalog tools: **%d**\n", len(cat.Tools))
+	fmt.Fprintf(&b, "- Ledger rows: **%d**\n", len(rows))
+	fmt.Fprintf(&b, "- Workflow tools: **%d**\n", categoryCounts["workflow"])
+	fmt.Fprintf(&b, "- Domain tools: **%d**\n", categoryCounts["domain"])
+	fmt.Fprintf(&b, "- Raw fallback tools: **%d**\n", categoryCounts["raw"])
+	fmt.Fprintf(&b, "- Ready: **%d**\n", len(ready))
+	fmt.Fprintf(&b, "- Recovery-only live posture: **%d**\n", len(recoveryOnly))
+	fmt.Fprintf(&b, "- Paid-feature-sensitive rows: **%d**\n", len(paidFeature))
+	fmt.Fprintf(&b, "- Raw-fallback-only rows: **%d**\n", len(rawFallbackOnly))
+	fmt.Fprintf(&b, "- Ledger classification notes: **%d**\n\n", len(notes))
+	if len(missing) == 0 {
+		b.WriteString("Catalog/ledger parity: **ok**.\n\n")
+	} else {
+		b.WriteString("Catalog/ledger parity: **missing ledger rows**.\n\n")
+		writeNameList(&b, missing)
+	}
+	writeBucket(&b, "Recovery-only Live Posture", recoveryOnly)
+	writeBucket(&b, "Paid-feature-sensitive", paidFeature)
+	writeBucket(&b, "Raw-fallback-only", rawFallbackOnly)
+	writeNotes(&b, "Ledger Classification Notes", notes)
+	return b.String()
+}
+
+func filterRows(rows []coverageRow, keep func(coverageRow) bool) []coverageRow {
+	out := make([]coverageRow, 0)
+	for _, row := range rows {
+		if keep(row) {
+			out = append(out, row)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Tool < out[j].Tool })
+	return out
+}
+
+func writeBucket(b *strings.Builder, title string, rows []coverageRow) {
+	fmt.Fprintf(b, "## %s\n\n", title)
+	if len(rows) == 0 {
+		b.WriteString("None.\n\n")
+		return
+	}
+	b.WriteString("| Tool | Class | Status | Live Protocol | Live Happy | Next action |\n")
+	b.WriteString("|------|-------|--------|---------------|------------|-------------|\n")
+	for _, row := range rows {
+		fmt.Fprintf(b, "| `%s` | %s | %s | %s | %s | %s |\n",
+			row.Tool,
+			escapeCell(row.Class),
+			escapeCell(row.Status),
+			escapeCell(row.LiveProtocol),
+			escapeCell(row.LiveHappy),
+			escapeCell(row.NextAction),
+		)
+	}
+	b.WriteString("\n")
+}
+
+func writeNameList(b *strings.Builder, names []string) {
+	for _, name := range names {
+		fmt.Fprintf(b, "- `%s`\n", name)
+	}
+	b.WriteString("\n")
+}
+
+func writeNotes(b *strings.Builder, title string, notes []string) {
+	fmt.Fprintf(b, "## %s\n\n", title)
+	if len(notes) == 0 {
+		b.WriteString("None.\n\n")
+		return
+	}
+	for _, note := range notes {
+		fmt.Fprintf(b, "- %s\n", note)
+	}
+	b.WriteString("\n")
+}
+
+func escapeCell(s string) string {
+	s = strings.ReplaceAll(s, "|", "\\|")
+	return strings.ReplaceAll(s, "\n", " ")
+}

@@ -26,9 +26,12 @@ func (s *Service) ClockifyToolsGuide(_ context.Context, _ map[string]any) (any, 
 		"domainTools": workflowDomainGroups(),
 		"rawFallback": []string{"clockify_api_get", "clockify_api_request"},
 		"rulesOfThumb": []string{
+			"Keep CLOCKIFY_TOOLSET=default for first contact; it advertises the everyday workflow and orientation tools.",
 			"Use workflow tools first.",
 			"Use IDs returned by previous calls when available.",
-			"Use domain tools for precise CRUD and raw API tools only when no workflow or domain tool fits.",
+			"Use domain tools for precise CRUD only after a workflow result points there or the task clearly needs a specific resource.",
+			"Use raw API tools last, only when no workflow or typed domain tool fits.",
+			"CLOCKIFY_TOOLSET=all is for expert/debug sessions, not first-run onboarding.",
 		},
 	}, ChangeSet{}, nil, []NextAction{
 		{Tool: "clockify_status", Reason: "Verify the pinned workspace and current timer before making changes."},

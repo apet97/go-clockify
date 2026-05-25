@@ -27,15 +27,15 @@ func (s *Service) workflowDescriptors() []mcp.ToolDescriptor {
 		defaultTier(advertiseOutputSchema(workflowDescriptor(9, "work_tracking", "entry", []string{"Find and fix one time entry without hand-chaining get/update calls."}, []string{"clockify_entries_get", "clockify_entries_update", oneUserToolFixEntry},
 			toolRWIdem("clockify_fix_entry", "Find one entry by ID or strict filters, then update selected fields.", fixEntrySchema()), s.ClockifyFixEntry))),
 		advertiseOutputSchema(workflowDescriptor(10, "billing", "invoice", []string{"Create an invoice shell for a client and optionally import time entries."}, []string{"clockify_invoices_create", "clockify_invoices_import_time"},
-			toolRW("clockify_invoice_client_work", "Create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable.", invoiceClientWorkSchema()), s.ClockifyInvoiceClientWork)),
+			toolRW("clockify_invoice_client_work", "Billing workflow: create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable. Supports dry_run preview.", invoiceClientWorkSchema()), s.ClockifyInvoiceClientWork)),
 		advertiseOutputSchema(workflowDescriptor(11, "expenses", "expense", []string{"Record an expense with category/project names or IDs."}, []string{"clockify_expenses_create"},
-			toolRW("clockify_record_expense", "Record an expense with category, project, task, and user names or IDs.", recordExpenseSchema()), s.ClockifyRecordExpense)),
+			toolRW("clockify_record_expense", "Billing workflow: record an expense with category, project, task, and user names or IDs. Supports dry_run preview.", recordExpenseSchema()), s.ClockifyRecordExpense)),
 		advertiseOutputSchema(workflowDescriptor(12, "time_off", "time_off_request", []string{"Request time off with a policy name or ID."}, []string{"clockify_time_off_requests_create"},
-			toolRW("clockify_request_time_off", "Create a time-off request with a policy name or ID.", requestTimeOffSchema()), s.ClockifyRequestTimeOff)),
+			toolRW("clockify_request_time_off", "Admin workflow: create a time-off request with a policy name or ID; this can enter approval workflows and affect PTO balances. Supports dry_run preview.", requestTimeOffSchema()), s.ClockifyRequestTimeOff)),
 		advertiseOutputSchema(workflowDescriptor(13, "scheduling", "assignment", []string{"Schedule a user on a project with names or IDs."}, []string{"clockify_scheduling_assignments_create"},
-			toolRW("clockify_schedule_work", "Create a scheduling assignment with user/project names or IDs.", scheduleWorkSchema()), s.ClockifyScheduleWork)),
+			toolRW("clockify_schedule_work", "Admin scheduling workflow: create an assignment with user/project names or IDs. Supports dry_run preview.", scheduleWorkSchema()), s.ClockifyScheduleWork)),
 		advertiseOutputSchema(workflowDescriptor(14, "webhooks", "webhook", []string{"Create a webhook from a simple name, URL, and event."}, []string{"clockify_webhooks_create"},
-			toolRW("clockify_setup_webhook", "Create a webhook subscription for this workspace.", setupWebhookSchema()), s.ClockifySetupWebhook)),
+			toolRW("clockify_setup_webhook", "External-side-effect workflow: create a webhook subscription for this workspace and future outbound deliveries. Supports dry_run preview.", setupWebhookSchema()), s.ClockifySetupWebhook)),
 		workflowDescriptor(15, "demo", "demo", []string{"Create a deterministic full fixture for smoke testing."}, []string{"clockify_clients_create", "clockify_projects_create", "clockify_tasks_create", "clockify_tags_create", "clockify_entries_create"},
 			toolRWIdem("clockify_demo_seed", "Create or reuse deterministic demo client/project/task/tag/time-entry objects.", demoSeedSchema()), s.ClockifyDemoSeed),
 		workflowDescriptor(16, "demo", "demo", []string{"Clean deterministic demo objects repeatedly."}, []string{"clockify_clients_delete", "clockify_projects_delete", "clockify_tasks_delete", "clockify_tags_delete", "clockify_entries_delete"},
@@ -194,6 +194,7 @@ func recordExpenseSchema() map[string]any {
 		"user_id":     map[string]any{"type": "string"},
 		"notes":       map[string]any{"type": "string"},
 		"billable":    map[string]any{"type": "boolean"},
+		"dry_run":     map[string]any{"type": "boolean", "description": "Preview the resolved expense payload without creating the expense."},
 	}})
 }
 
@@ -205,6 +206,7 @@ func requestTimeOffSchema() map[string]any {
 		"end":       map[string]any{"type": "string"},
 		"note":      map[string]any{"type": "string"},
 		"half_day":  map[string]any{"type": "boolean"},
+		"dry_run":   map[string]any{"type": "boolean", "description": "Preview the resolved time-off request payload without creating it."},
 	}})
 }
 
@@ -224,15 +226,16 @@ func scheduleWorkSchema() map[string]any {
 		"note":                     map[string]any{"type": "string"},
 		"repeat":                   map[string]any{"type": "boolean"},
 		"weeks":                    map[string]any{"type": "integer", "minimum": 1, "maximum": 99, "description": "Repeat interval in weeks when repeat is true. Default: 1."},
+		"dry_run":                  map[string]any{"type": "boolean", "description": "Preview the resolved scheduling assignment payload without creating it."},
 	}})
 }
 
 func setupWebhookSchema() map[string]any {
-	return objectSchema(map[string]any{"required": []string{"name", "url", "webhook_event"}, "properties": map[string]any{
+	return objectSchema(map[string]any{"required": []string{"name", "url"}, "properties": map[string]any{
 		"name":                map[string]any{"type": "string"},
-		"url":                 map[string]any{"type": "string"},
-		"event":               map[string]any{"type": "string", "description": "Optional alias for webhook_event."},
-		"webhook_event":       map[string]any{"type": "string", "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Required."},
+		"url":                 map[string]any{"type": "string", "format": "uri", "description": "HTTPS webhook destination URL. Private, loopback, localhost, and credential-bearing URLs are rejected before upstream calls."},
+		"event":               map[string]any{"type": "string", "enum": append([]string(nil), webhookEventEnum...), "description": "Optional alias for webhook_event."},
+		"webhook_event":       map[string]any{"type": "string", "enum": append([]string(nil), webhookEventEnum...), "description": "Webhook event type, e.g. NEW_TIME_ENTRY. Required."},
 		"trigger_source_type": map[string]any{"type": "string"},
 		"trigger_source":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 		"dry_run":             map[string]any{"type": "boolean"},

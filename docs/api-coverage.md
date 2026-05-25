@@ -3,7 +3,8 @@
 This document summarizes the current one-user Clockify MCP coverage. The
 authoritative tool list is generated in `docs/tool-catalog.md` and
 `docs/tool-catalog.json`; the conservative test ledger is
-`docs/goals/oneuser-tool-coverage.md`.
+`docs/goals/oneuser-tool-coverage.md`; the short release-readiness view is
+`docs/tool-coverage-dashboard.md`.
 
 ## Summary
 
@@ -79,7 +80,10 @@ go test -count=1 ./...
 git diff --check
 go list ./...
 make gen-tool-catalog
+make gen-coverage-dashboard
 ```
 
 After `make gen-tool-catalog`, inspect `docs/tool-catalog.md` and
-`docs/tool-catalog.json` for intentional descriptor changes.
+`docs/tool-catalog.json` for intentional descriptor changes. After
+`make gen-coverage-dashboard`, inspect `docs/tool-coverage-dashboard.md` for
+intentional ready/recovery-only/paid-feature/raw-fallback bucket changes.

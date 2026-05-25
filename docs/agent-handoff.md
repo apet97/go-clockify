@@ -34,15 +34,18 @@ tool fits.
 
 1. `README.md`
 2. `docs/agent-cookbook.md`
-3. `docs/tool-catalog.md`
-4. `docs/goals/oneuser-tool-coverage.md`
-5. `cmd/clockify-mcp/main.go`
-6. `internal/tools/firstslice.go`
-7. `internal/tools/oneuser_workflows.go`
-8. `internal/tools/oneuser_domains.go`
-9. `internal/tools/oneuser_resources.go`
-10. `internal/mcp/server.go`
-11. `internal/testclockify/fake_server.go`
+3. `docs/default-toolset.md`
+4. `docs/tool-catalog.md`
+5. `docs/goals/oneuser-tool-coverage.md`
+6. `docs/tool-coverage-dashboard.md`
+7. `cmd/clockify-mcp/main.go`
+8. `internal/tools/firstslice.go`
+9. `internal/tools/oneuser_workflows.go`
+10. `internal/tools/oneuser_domains.go`
+11. `internal/tools/oneuser_resources.go`
+12. `internal/tools/service_state.go`
+13. `internal/mcp/server.go`
+14. `internal/testclockify/fake_server.go`
 
 ## Verification Baseline
 
@@ -97,6 +100,6 @@ go test -count=1 ./internal/tools -run TestOneUserLiveOptionalDomainContracts
 
 ## Optional Future Work
 
-No required follow-up work remains from the finalization plan. Treat release
-tagging, additional live evidence, or future Clockify API drift as new work, not
-leftover finalization.
+No required follow-up work remains from the adversarial-review implementation
+pass. Treat release tagging, rolling nightly-live issue closure/waiver, broader
+optional live campaigns, or future Clockify API drift as new work.

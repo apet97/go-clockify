@@ -30,8 +30,11 @@ func TestResourcesListCurrentWorkspaceAndUser(t *testing.T) {
 		"clockify://features",
 		"clockify://tools",
 		"clockify://mcp/tool-catalog",
+		"clockify://mcp/default-toolset",
 		"clockify://mcp/api-parity",
+		"clockify://mcp/coverage-dashboard",
 		"clockify://mcp/live-evidence",
+		"clockify://mcp/doctor",
 		"clockify://workflows",
 		"clockify://demo/phase1",
 		"clockify://recent/entries",
@@ -55,6 +58,8 @@ func TestOneUserResourcesReadStatusWorkspaceToolsWorkflows(t *testing.T) {
 		"clockify://status",
 		"clockify://workspace",
 		"clockify://tools",
+		"clockify://mcp/default-toolset",
+		"clockify://mcp/doctor",
 		"clockify://workflows",
 	} {
 		t.Run(uri, func(t *testing.T) {
@@ -85,7 +90,21 @@ func TestSelfInspectionResources(t *testing.T) {
 	if len(catalog) != 1 || catalog[0].MimeType != "application/json" || !strings.Contains(catalog[0].Text, `"count":156`) {
 		t.Fatalf("tool catalog content: %+v", catalog)
 	}
-	for _, uri := range []string{"clockify://mcp/api-parity", "clockify://mcp/live-evidence"} {
+	defaultToolset, err := svc.ReadResource(context.Background(), "clockify://mcp/default-toolset")
+	if err != nil {
+		t.Fatalf("read default toolset: %v", err)
+	}
+	if len(defaultToolset) != 1 || defaultToolset[0].MimeType != "application/json" || !strings.Contains(defaultToolset[0].Text, `"count":16`) {
+		t.Fatalf("default toolset content: %+v", defaultToolset)
+	}
+	doctor, err := svc.ReadResource(context.Background(), "clockify://mcp/doctor")
+	if err != nil {
+		t.Fatalf("read doctor: %v", err)
+	}
+	if len(doctor) != 1 || doctor[0].MimeType != "application/json" || !strings.Contains(doctor[0].Text, `"loaded_tools":156`) || strings.Contains(doctor[0].Text, fake.WorkspaceID) {
+		t.Fatalf("doctor content leaked or missed diagnostics: %+v", doctor)
+	}
+	for _, uri := range []string{"clockify://mcp/api-parity", "clockify://mcp/coverage-dashboard", "clockify://mcp/live-evidence"} {
 		contents, err := svc.ReadResource(context.Background(), uri)
 		if err != nil {
 			t.Fatalf("read %s: %v", uri, err)

@@ -72,10 +72,24 @@ func oneUserResources() []mcp.Resource {
 			MimeType:    "application/json",
 		},
 		{
+			URI:         "clockify://mcp/default-toolset",
+			Name:        "MCP default toolset",
+			Title:       "Default Toolset",
+			Description: "The 16 everyday tools advertised by CLOCKIFY_TOOLSET=default.",
+			MimeType:    "application/json",
+		},
+		{
 			URI:         "clockify://mcp/api-parity",
 			Name:        "MCP API parity matrix",
 			Title:       "API Parity Matrix",
 			Description: "Committed API parity matrix for the current MCP surface.",
+			MimeType:    "text/markdown",
+		},
+		{
+			URI:         "clockify://mcp/coverage-dashboard",
+			Name:        "MCP coverage dashboard",
+			Title:       "Coverage Dashboard",
+			Description: "Committed coverage dashboard split by ready, recovery-only, paid-feature, and raw-fallback buckets.",
 			MimeType:    "text/markdown",
 		},
 		{
@@ -84,6 +98,13 @@ func oneUserResources() []mcp.Resource {
 			Title:       "Live Test Evidence",
 			Description: "Committed live-test evidence and gates for the current MCP surface.",
 			MimeType:    "text/markdown",
+		},
+		{
+			URI:         "clockify://mcp/doctor",
+			Name:        "MCP doctor",
+			Title:       "Doctor",
+			Description: "Local diagnostic receipt for config posture, registry counts, toolset, raw gates, and audit state. Secrets are not exposed.",
+			MimeType:    "application/json",
 		},
 		{
 			URI:         "clockify://mcp/audit-tail",
@@ -132,12 +153,12 @@ func (s *Service) demoResourcesList() []mcp.Resource {
 	if s == nil {
 		return nil
 	}
-	s.mu.RLock()
-	states := make([]demoResourceState, 0, len(s.demoResources))
-	for _, state := range s.demoResources {
+	s.resources.mu.RLock()
+	states := make([]demoResourceState, 0, len(s.resources.demoResources))
+	for _, state := range s.resources.demoResources {
 		states = append(states, state)
 	}
-	s.mu.RUnlock()
+	s.resources.mu.RUnlock()
 	sort.Slice(states, func(i, j int) bool { return states[i].RunID < states[j].RunID })
 	out := make([]mcp.Resource, 0, len(states))
 	for _, state := range states {
@@ -220,8 +241,13 @@ func (s *Service) readOneUserResource(ctx context.Context, uri string) ([]mcp.Re
 	case uri == "clockify://mcp/tool-catalog":
 		contents, err := encodeResource(uri, s.toolsResourceData())
 		return contents, true, err
+	case uri == "clockify://mcp/default-toolset":
+		contents, err := encodeResource(uri, s.defaultToolsetResourceData())
+		return contents, true, err
 	case uri == "clockify://mcp/api-parity":
 		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectAPIParityMatrix}}, true, nil
+	case uri == "clockify://mcp/coverage-dashboard":
+		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectCoverageDashboard}}, true, nil
 	case uri == "clockify://mcp/live-evidence":
 		return []mcp.ResourceContents{{URI: uri, MimeType: "text/markdown", Text: selfInspectLiveTests}}, true, nil
 	case uri == "clockify://mcp/audit-tail":
@@ -230,6 +256,9 @@ func (s *Service) readOneUserResource(ctx context.Context, uri string) ([]mcp.Re
 			return nil, true, err
 		}
 		return []mcp.ResourceContents{{URI: uri, MimeType: "application/jsonl", Text: text}}, true, nil
+	case uri == "clockify://mcp/doctor":
+		contents, err := encodeResource(uri, s.doctorResourceData())
+		return contents, true, err
 	case uri == "clockify://workflows":
 		out, err := s.ClockifyToolsGuide(ctx, nil)
 		if err != nil {
@@ -294,6 +323,124 @@ func (s *Service) auditTailText() (string, error) {
 	return string(raw), nil
 }
 
+func (s *Service) doctorResourceData() map[string]any {
+	if s == nil {
+		return map[string]any{
+			"ok": false,
+			"issues": []map[string]any{{
+				"code":    "service_unconfigured",
+				"message": "Clockify service is nil.",
+			}},
+		}
+	}
+	toolset := strings.ToLower(strings.TrimSpace(s.Toolset))
+	if toolset == "" {
+		toolset = "all"
+	}
+	confirmationMode := strings.TrimSpace(s.ConfirmationMode)
+	if confirmationMode == "" {
+		confirmationMode = "required"
+	}
+	full, err := s.FullAccessRegistryChecked()
+	if err != nil {
+		return map[string]any{
+			"ok": false,
+			"configuration": map[string]any{
+				"client_configured": s.Client != nil,
+				"workspace_id":      redactResourceIdentifier(s.WorkspaceID),
+				"toolset":           toolset,
+			},
+			"issues": []map[string]any{{
+				"code":    "registry_invalid",
+				"message": err.Error(),
+			}},
+		}
+	}
+	advertised := s.RegistryForToolset(toolset)
+	issues := make([]map[string]any, 0, 2)
+	if s.Client == nil {
+		issues = append(issues, map[string]any{
+			"code":    "client_missing",
+			"message": "Clockify client is not configured.",
+		})
+	}
+	if strings.TrimSpace(s.WorkspaceID) == "" {
+		issues = append(issues, map[string]any{
+			"code":    "workspace_missing",
+			"message": "CLOCKIFY_WORKSPACE_ID is required for the one-user runtime.",
+		})
+	}
+	return map[string]any{
+		"ok": len(issues) == 0,
+		"configuration": map[string]any{
+			"client_configured":         s.Client != nil,
+			"workspace_id":              redactResourceIdentifier(s.WorkspaceID),
+			"toolset":                   toolset,
+			"confirmation_mode":         confirmationMode,
+			"raw_tools_enabled":         s.EnableRawTools,
+			"raw_get_enabled":           s.EnableRawGet,
+			"raw_writes_enabled":        s.EnableRawWrites,
+			"raw_documented_only":       s.RawWriteDocumentedOnly,
+			"audit_log_configured":      strings.TrimSpace(s.AuditLogPath) != "",
+			"rate_limits":               s.ToolRateLimits,
+			"rate_limit_explicitly_off": s.ToolRateLimitDisabled,
+			"default_timezone":          timezoneName(s.DefaultTimezone),
+		},
+		"registry": map[string]any{
+			"loaded_tools":               len(full),
+			"advertised_tools":           len(advertised),
+			"default_advertised_tools":   len(s.RegistryForToolset("default")),
+			"raw_tools_last":             rawToolsLast(full),
+			"high_risk_advertised_tools": countHighRiskTools(advertised),
+		},
+		"resources": map[string]any{
+			"doctor_uri":          "clockify://mcp/doctor",
+			"default_toolset_uri": "clockify://mcp/default-toolset",
+			"coverage_uri":        "clockify://mcp/coverage-dashboard",
+			"audit_tail_uri":      "clockify://mcp/audit-tail",
+		},
+		"issues": issues,
+		"next": []string{
+			"Call clockify_status first for live workspace/user/timer state.",
+			"Use clockify://mcp/default-toolset for the everyday advertised surface.",
+			"Use clockify://mcp/coverage-dashboard before release-readiness claims.",
+		},
+	}
+}
+
+func redactResourceIdentifier(id string) string {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ""
+	}
+	if len(id) <= 6 {
+		return "[redacted]"
+	}
+	return "[redacted]..." + id[len(id)-6:]
+}
+
+func timezoneName(loc *time.Location) string {
+	if loc == nil {
+		return ""
+	}
+	return loc.String()
+}
+
+func rawToolsLast(reg []mcp.ToolDescriptor) bool {
+	firstRaw := -1
+	for i, descriptor := range reg {
+		name := descriptor.Tool.Name
+		isRaw := name == "clockify_api_get" || name == "clockify_api_request"
+		if isRaw && firstRaw == -1 {
+			firstRaw = i
+		}
+		if !isRaw && firstRaw != -1 {
+			return false
+		}
+	}
+	return firstRaw != -1
+}
+
 func (s *Service) requireClockifyClient() error {
 	if s == nil || s.Client == nil {
 		return fmt.Errorf("clockify client is not configured")
@@ -302,10 +449,31 @@ func (s *Service) requireClockifyClient() error {
 }
 
 func (s *Service) toolsResourceData() map[string]any {
-	s.toolsResourceOnce.Do(func() {
-		s.toolsResourceCache = s.buildToolsResourceData()
+	s.registry.toolsResourceOnce.Do(func() {
+		s.registry.toolsResourceCache = s.buildToolsResourceData()
 	})
-	return cloneToolsResourceData(s.toolsResourceCache)
+	return cloneToolsResourceData(s.registry.toolsResourceCache)
+}
+
+func (s *Service) defaultToolsetResourceData() map[string]any {
+	descriptors := s.RegistryForToolset("default")
+	sortDescriptorsForToolsList(descriptors)
+	tools := make([]mcp.Tool, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		tools = append(tools, descriptor.Tool)
+	}
+	return map[string]any{
+		"toolset":       "default",
+		"count":         len(tools),
+		"tools":         tools,
+		"rawFallback":   []string{},
+		"loadedAtStart": true,
+		"guidance": []string{
+			"Start with clockify_status and clockify_tools_guide.",
+			"Use workflow tools for common actions, domain tools when workflow output points there, and raw fallback only as an explicit escape hatch.",
+			"CLOCKIFY_TOOLSET=all advertises every loaded tool for expert/debug sessions.",
+		},
+	}
 }
 
 func (s *Service) buildToolsResourceData() map[string]any {
@@ -450,13 +618,13 @@ func (s *Service) updateDemoResource(runID, prefix, status string, out ToolResul
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 		Data:      out.Data,
 	}
-	s.mu.Lock()
-	if s.demoResources == nil {
-		s.demoResources = map[string]demoResourceState{}
+	s.resources.mu.Lock()
+	if s.resources.demoResources == nil {
+		s.resources.demoResources = map[string]demoResourceState{}
 	}
-	_, existed := s.demoResources[runID]
-	s.demoResources[runID] = state
-	s.mu.Unlock()
+	_, existed := s.resources.demoResources[runID]
+	s.resources.demoResources[runID] = state
+	s.resources.mu.Unlock()
 	s.emitResourceUpdateWithState(state.URI, state)
 	// A previously-unseen non-default run id is a new entry in
 	// ListResources()/demoResourcesList(), so the resource list changed.
@@ -470,9 +638,9 @@ func (s *Service) demoResourceState(runID string) demoResourceState {
 	if runID == "" {
 		runID = defaultDemoResourceRunID
 	}
-	s.mu.RLock()
-	state, ok := s.demoResources[runID]
-	s.mu.RUnlock()
+	s.resources.mu.RLock()
+	state, ok := s.resources.demoResources[runID]
+	s.resources.mu.RUnlock()
 	if ok {
 		return state
 	}

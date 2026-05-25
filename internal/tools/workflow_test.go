@@ -28,6 +28,106 @@ func TestScheduleWorkRequiresUserUpfront(t *testing.T) {
 	}
 }
 
+func TestScheduleWorkDryRunSkipsAssignmentCreate(t *testing.T) {
+	client, cleanup := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("schedule_work dry_run must not create upstream assignments: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.ClockifyScheduleWork(context.Background(), map[string]any{
+		"user_id":       "000000000000000000000001",
+		"project_id":    "65b382b606de527a7ee2b60d",
+		"start":         "2026-01-05T09:00:00Z",
+		"end":           "2026-01-09T17:00:00Z",
+		"hours_per_day": float64(6),
+		"dry_run":       true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyScheduleWork dry_run: %v", err)
+	}
+	result, ok := out.(ToolResult)
+	if !ok {
+		t.Fatalf("dry_run result type = %T, want ToolResult", out)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("schedule_work dry_run data = %#v, want dry_run preview", result.Data)
+	}
+	payload, ok := data["payload"].(map[string]any)
+	if !ok || payload["userId"] != "000000000000000000000001" || payload["projectId"] != "65b382b606de527a7ee2b60d" {
+		t.Fatalf("schedule_work dry_run payload did not preserve resolved IDs: %#v", data["payload"])
+	}
+}
+
+func TestScheduleWorkResolvesUserAndProjectNamesDryRun(t *testing.T) {
+	const (
+		userID    = "000000000000000000000001"
+		projectID = "65b382b606de527a7ee2b60d"
+	)
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/users":
+			respondJSON(t, w, []map[string]any{{"id": userID, "name": "Ada Lovelace", "email": "ada@example.test"}})
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/projects":
+			respondJSON(t, w, []map[string]any{{"id": projectID, "name": "Engine Room"}})
+		default:
+			t.Fatalf("unexpected schedule_work name dry_run request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.ClockifyScheduleWork(context.Background(), map[string]any{
+		"user":          "Ada Lovelace",
+		"project":       "Engine Room",
+		"start":         "2026-01-05T09:00:00Z",
+		"end":           "2026-01-09T17:00:00Z",
+		"hours_per_day": float64(6),
+		"dry_run":       true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyScheduleWork name dry_run: %v", err)
+	}
+	result := out.(ToolResult)
+	data := result.Data.(map[string]any)
+	payload := data["payload"].(map[string]any)
+	if payload["userId"] != userID || payload["projectId"] != projectID {
+		t.Fatalf("schedule_work dry-run did not resolve names: %#v", payload)
+	}
+}
+
+func TestSetupWebhookWorkflowAcceptsEventAliasDryRun(t *testing.T) {
+	client, cleanup := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
+		t.Fatalf("setup_webhook dry_run must not create upstream webhooks: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	svc.WebhookValidateDNS = false
+	out, err := svc.ClockifySetupWebhook(context.Background(), map[string]any{
+		"name":    "Alias webhook",
+		"url":     "https://example.com/clockify",
+		"event":   "NEW_TIME_ENTRY",
+		"dry_run": true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifySetupWebhook event alias dry_run: %v", err)
+	}
+	result, ok := out.(ToolResult)
+	if !ok {
+		t.Fatalf("result type = %T, want ToolResult", out)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("setup_webhook dry_run data = %#v", result.Data)
+	}
+	payload := data["payload"].(map[string]any)
+	if payload["webhookEvent"] != "NEW_TIME_ENTRY" {
+		t.Fatalf("event alias did not flow to webhookEvent: %#v", payload)
+	}
+}
+
 // TestApprovalHandlersCount verifies that the approvals group produces the
 // documented list/create/resubmit/PATCH approval surface.
 func TestApprovalHandlersCount(t *testing.T) {

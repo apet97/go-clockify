@@ -33,17 +33,19 @@ product definition.
 2. `CONTEXT.md` - compact glossary of repo-specific domain terms.
 3. `docs/agent-cookbook.md` - workflow-first agent examples.
 4. `docs/tool-catalog.md` - generated runtime tool list and order.
-5. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
-6. `docs/live-tests.md` - live-test gates and sacrificial workspace rules.
-7. `docs/permissions.md` - role, plan, and feature requirements by tool family.
-8. `docs/dangerous-tools.md` - destructive, billing, admin, permission-change,
+5. `docs/default-toolset.md` - generated 16-tool default advertised surface.
+6. `docs/goals/oneuser-tool-coverage.md` - conservative coverage ledger.
+7. `docs/tool-coverage-dashboard.md` - short release-readiness coverage view.
+8. `docs/live-tests.md` - live-test gates and sacrificial workspace rules.
+9. `docs/permissions.md` - role, plan, and feature requirements by tool family.
+10. `docs/dangerous-tools.md` - destructive, billing, admin, permission-change,
    and external-side-effect tools plus dry-run coverage.
-9. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
-10. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
-11. `docs/protocol-notes.md` - pagination, progress, resources, and rate-control
+11. `docs/raw-fallback.md` - raw API path fence and raw-write environment gates.
+12. `docs/error-recovery.md` - common `ok:false` codes and operator recovery.
+13. `docs/protocol-notes.md` - pagination, progress, resources, and rate-control
     posture.
-12. `docs/release-checklist.md` - deterministic and live release gate sequence.
-13. `docs/branch-protection-required-checks.md` - required `main` CI checks.
+14. `docs/release-checklist.md` - deterministic and live release gate sequence.
+15. `docs/branch-protection-required-checks.md` - required `main` CI checks.
 
 Historical docs explain prior decisions and are preserved off-main; see
 `docs/archive/README.md` for the archive branch pointer. Current work starts
@@ -52,18 +54,21 @@ as setup instructions.
 
 ## Current State
 
-- `main` is at or beyond `830cc12` from PR #132 (MCP guardrails and live-cleanup
-  rework): the stdio surface audit, single-marshal hot path, schema bounds, the
-  `warn` stdio log default, timer-tool live coverage, and the reworked
-  `live-clean-prefix` sweeper.
+- `main` is at or beyond the adversarial-review hardening stack after
+  `54d62d0`: fail-fast registry construction, workflow business-write
+  dry-runs/risk metadata, clearer error semantics docs, generated default
+  toolset and coverage dashboard artifacts, and a modest `tools.Service` state
+  split.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
-- `make perfect`, `make perfect-local`, and `make perfect-live` were green for
-  the finalization stack; the latest live run is recorded in `docs/live-tests.md`
-  with a commit column and prefix-object `Leftovers: 0`.
+- `make perfect` and `make perfect-live` were green on 2026-05-25 for the
+  review-hardening stack. The latest live run is recorded in
+  `docs/live-tests.md`; the optional-domain/high-risk/happy-path gates were not
+  enabled for that run, and prefix cleanup reported `Leftovers: 0`.
 - Claude's local binary was rebuilt to `/Users/15x/.local/bin/clockify-mcp`.
-- There is no required follow-up work from the finalization plan. Treat release
-  tagging or new Clockify API drift as new work, not leftover finalization.
+- The rolling nightly-live issue was still open and classified as env/config
+  drift at the time of this refresh. Treat release tagging, issue closure/waiver,
+  optional live campaigns, or new Clockify API drift as new work.
 
 ## Safety Rules
 
@@ -92,6 +97,7 @@ as setup instructions.
 | Diff hygiene | `git diff --check` |
 | Local lint | `golangci-lint run` |
 | Catalog drift / regenerate | `make catalog-drift` · `make gen-tool-catalog` |
+| Coverage dashboard drift / regenerate | `make coverage-dashboard-drift` · `make gen-coverage-dashboard` |
 | OpenAPI drift / regenerate | `make openapi-drift` · `make gen-openapi` |
 | Raw allowlist drift / regenerate | `make raw-allowlist-drift` · `make gen-raw-allowlist` |
 | Self-inspection drift / sync | `make selfinspect-drift` · `make sync-selfinspect-assets` |
@@ -135,10 +141,11 @@ real entity; a useful recovery envelope is protocol/recovery evidence only.
 | Domain registry | `internal/tools/oneuser_domains.go` |
 | Native domain logic | `internal/tools/*_view.go`, domain files in `internal/tools/*.go` |
 | Resources / prompts | `internal/tools/oneuser_resources.go`, `oneuser_prompts.go` |
+| Service runtime state | `internal/tools/service_state.go`, `common.go` |
 | Clockify client | `internal/clockify/client.go` |
 | Fake server | `internal/testclockify/fake_server.go` |
 | Live tests | `internal/tools/oneuser_live_test.go`, `tests/e2e_live*.go` |
-| Generated catalog / ledger | `docs/tool-catalog.{md,json}`, `docs/goals/oneuser-tool-coverage.md` |
+| Generated catalog / ledger | `docs/tool-catalog.{md,json}`, `docs/default-toolset.{md,json}`, `docs/goals/oneuser-tool-coverage.md`, `docs/tool-coverage-dashboard.md` |
 
 ## Registry Shape
 
@@ -147,9 +154,14 @@ real entity; a useful recovery envelope is protocol/recovery evidence only.
 `nativeHighValueDescriptors` → `nativeDomainExtras` → `timerAndReportDescriptors`
 → `rawAPIDescriptors`. The registry is fully native.
 
-`docs/tool-catalog.{md,json}` are generated from the registry. After any
-descriptor, schema, or order change, run `make gen-tool-catalog` then
-`make catalog-drift`. The catalog stays at 156 tools, workflow-first, raw-last.
+`docs/tool-catalog.{md,json}` and `docs/default-toolset.{md,json}` are
+generated from the registry. After any descriptor, schema, or order change, run
+`make gen-tool-catalog` then `make catalog-drift`. The full catalog stays at
+156 tools, workflow-first, raw-last; the default catalog stays at 16 tools.
+
+`docs/tool-coverage-dashboard.md` is generated from the full catalog plus
+`docs/goals/oneuser-tool-coverage.md`. After catalog or ledger changes, run
+`make gen-coverage-dashboard` then `make coverage-dashboard-drift`.
 
 `docs/openapi/clockify-openapi.yaml` is generated by
 `scripts/gen-clockify-openapi`. Keep that generator deterministic across macOS
@@ -166,9 +178,9 @@ instead of depending on Psych's exact parser wording.
 - Preserve recovery probes for destructive, noisy, or permission-sensitive paths.
 - Update ledger validation evidence when coverage changes: a flipped cell needs
   the row and the summary count in the ledger, the `oneUserNamedLive*Evidence`
-  map in `internal/tools/oneuser_quality_test.go`, and a regenerated API parity
-  matrix plus synced self-inspection assets. The drift gates fail until all of
-  it agrees.
+  map in `internal/tools/oneuser_quality_test.go`, a regenerated API parity
+  matrix, regenerated coverage dashboard, and synced self-inspection assets.
+  The drift gates fail until all of it agrees.
 
 ## Known Clockify API Gotchas
 
@@ -269,6 +281,8 @@ instead of depending on Psych's exact parser wording.
 - Add or update tests before changing behavior.
 - Registry/schema edits: `go test -count=1 ./internal/tools` plus catalog drift.
   MCP protocol edits: `go test -count=1 ./internal/mcp`.
+- Coverage ledger edits also require `make gen-coverage-dashboard` and
+  `make sync-selfinspect-assets`.
 - For narrow docs edits, run the focused doc tests covering the touched surface.
 - Before claiming completion, run fresh verification and report exactly what
   passed and what was not run.

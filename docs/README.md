@@ -9,8 +9,12 @@ one API key, one workspace id, stdio transport, full tool access at startup.
 - [agent-cookbook.md](agent-cookbook.md) - workflow-first examples for agents.
 - [tool-catalog.md](tool-catalog.md) / [tool-catalog.json](tool-catalog.json) -
   generated list of the 156 startup-loaded tools.
+- [default-toolset.md](default-toolset.md) / [default-toolset.json](default-toolset.json) -
+  generated list of the 16 tools advertised by the default toolset.
 - [goals/oneuser-tool-coverage.md](goals/oneuser-tool-coverage.md) -
   conservative coverage ledger for native handlers, fake smoke, and live probes.
+- [tool-coverage-dashboard.md](tool-coverage-dashboard.md) -
+  short coverage dashboard split by ready, recovery-only, paid-feature, and raw-fallback buckets.
 - [live-tests.md](live-tests.md) - sacrificial-workspace live test instructions.
 
 ## Contributor Docs
@@ -30,11 +34,18 @@ one API key, one workspace id, stdio transport, full tool access at startup.
 
 ## Generated Artifacts
 
-Regenerate the tool catalog after descriptor changes:
+Regenerate the tool catalog and default-toolset catalog after descriptor changes:
 
 ```sh
 make gen-tool-catalog
 make catalog-drift
+```
+
+Regenerate the coverage dashboard after catalog or ledger changes:
+
+```sh
+make gen-coverage-dashboard
+make coverage-dashboard-drift
 ```
 
 Regenerate the OpenAPI artifact only when the documented fallback contract

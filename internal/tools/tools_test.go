@@ -1705,7 +1705,7 @@ func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
 	// test's intent is that the entry_id branch must not paginate
 	// /workspaces/{ws}/user/{userID}/time-entries — the bare /user
 	// lookup is orthogonal.
-	svc.cachedUser = &clockify.User{ID: "u-self"}
+	svc.identity.cachedUser = &clockify.User{ID: "u-self"}
 	result, err := svc.FindAndUpdateEntry(context.Background(), map[string]any{
 		"entry_id":        entryID,
 		"new_description": "direct update",

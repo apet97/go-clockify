@@ -16,21 +16,21 @@ func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 		}
 		return s.WorkspaceID, nil
 	}
-	s.mu.RLock()
-	if s.cachedWSID != "" {
-		wsID := s.cachedWSID
-		s.mu.RUnlock()
+	s.identity.mu.RLock()
+	if s.identity.cachedWSID != "" {
+		wsID := s.identity.cachedWSID
+		s.identity.mu.RUnlock()
 		return wsID, nil
 	}
-	s.mu.RUnlock()
+	s.identity.mu.RUnlock()
 	var workspaces []clockify.Workspace
 	if err := s.Client.Get(ctx, "/workspaces", nil, &workspaces); err != nil {
 		return "", err
 	}
 	if len(workspaces) == 1 {
-		s.mu.Lock()
-		s.cachedWSID = workspaces[0].ID
-		s.mu.Unlock()
+		s.identity.mu.Lock()
+		s.identity.cachedWSID = workspaces[0].ID
+		s.identity.mu.Unlock()
 		return workspaces[0].ID, nil
 	}
 	if len(workspaces) == 0 {

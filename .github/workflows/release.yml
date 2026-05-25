@@ -78,7 +78,19 @@ jobs:
           npm test
           npm run build
           node bin/clockify-mcp.js --version
-          npm pack --pack-destination "$GITHUB_WORKSPACE/dist"
+          node -e "const p=require('./package.json'); if (p.version === '0.0.0') { console.error('release package version was not rewritten'); process.exit(1); }"
+          pack_json="$GITHUB_WORKSPACE/dist/npm-pack.json"
+          npm pack --pack-destination "$GITHUB_WORKSPACE/dist" --json > "$pack_json"
+          tarball="$(node -e "const fs=require('fs'); const pack=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(pack[0].filename)" "$pack_json")"
+          for binary in \
+            clockify-mcp_darwin_arm64 \
+            clockify-mcp_darwin_amd64 \
+            clockify-mcp_linux_amd64 \
+            clockify-mcp_linux_arm64 \
+            clockify-mcp_windows_amd64.exe
+          do
+            tar -tzf "$GITHUB_WORKSPACE/dist/$tarball" | grep -qx "package/vendor/$binary"
+          done
       - name: Generate release checksums
         run: |
           (cd dist && sha256sum clockify-mcp_* apet97-clockify-mcp-*.tgz > SHA256SUMS)

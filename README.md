@@ -16,15 +16,40 @@ This README is the setup entry point. The complete tracked doc set lives
 under `docs/`. Pre-one-user platform-era designs are preserved off-main,
 outside the current setup path.
 
+Use the short path first:
+
+- **Installing or configuring:** read this README.
+- **Choosing tools as an agent:** start with `clockify_tools_guide`, then
+  [docs/agent-cookbook.md](docs/agent-cookbook.md).
+- **Checking every available tool:** use the generated
+  [docs/tool-catalog.md](docs/tool-catalog.md).
+- **Checking the everyday default surface:** use
+  [docs/default-toolset.md](docs/default-toolset.md).
+- **Checking release-readiness coverage buckets:** use
+  [docs/tool-coverage-dashboard.md](docs/tool-coverage-dashboard.md).
+- **Before risky writes:** read
+  [docs/dangerous-tools.md](docs/dangerous-tools.md).
+- **When a call returns `ok:false`:** read
+  [docs/error-recovery.md](docs/error-recovery.md).
+
 - Setup, build, doctor, Claude config, and first calls: this README
 - Compact domain-language glossary: [CONTEXT.md](CONTEXT.md)
 - Workflow examples: [docs/agent-cookbook.md](docs/agent-cookbook.md)
 - Full generated tool list: [docs/tool-catalog.md](docs/tool-catalog.md)
+- Default advertised tool list: [docs/default-toolset.md](docs/default-toolset.md)
+- Coverage dashboard: [docs/tool-coverage-dashboard.md](docs/tool-coverage-dashboard.md)
 - Permissions and plan requirements: [docs/permissions.md](docs/permissions.md)
 - Destructive, billing, admin, and external-side-effect tools:
   [docs/dangerous-tools.md](docs/dangerous-tools.md)
 - Raw API fallback: [docs/raw-fallback.md](docs/raw-fallback.md)
 - Live tests and sacrificial workspace gates: [docs/live-tests.md](docs/live-tests.md)
+
+## Non-goals for now
+
+This project is intentionally local and single-user. Network-service
+deployment, browser sign-in flows, non-stdio transports, remote administration,
+per-person secret stores, database-backed account separation, and team-wide
+policy management are future products, not part of the default stdio binary.
 
 ## Start from zero
 
@@ -111,8 +136,18 @@ Point your MCP client at the binary. For a Claude `.mcp.json`:
 ```
 
 The client launches `clockify-mcp` as a stdio subprocess. That is the whole
-setup. Start with `clockify_status`, then use workflow tools before raw or
-low-level domain tools:
+setup. For the first five calls, keep the default toolset and use workflows:
+
+1. `clockify_status` - confirm the pinned workspace, user, feature plan, and
+   current timer
+2. `clockify_tools_guide` - choose the workflow before dropping to domain tools
+3. `clockify_create_work_package` - create or reuse client/project/task/tag IDs
+4. `clockify_log_work`, `clockify_start_work`, or `clockify_stop_work` - do the
+   everyday time-tracking action
+5. `clockify_review_day` or `clockify_review_week` - inspect totals, gaps, and
+   suggested follow-up calls
+
+Workflow tools should come before raw or low-level domain tools:
 
 An npm launcher is also available as an alternative install path for clients
 that prefer `npx`. It remains a thin stdio launcher around the same Go binary;
@@ -147,8 +182,19 @@ export CLOCKIFY_WORKSPACE_ID="your-workspace-id"
    scheduling, and more.
 3. **Raw API fallback** — for the rare endpoint with no dedicated tool.
 
-The complete generated list is in
-[docs/tool-catalog.md](docs/tool-catalog.md), and
+Tool surface selection:
+
+1. Keep `CLOCKIFY_TOOLSET=default` for normal agent use; it advertises the 16
+   everyday workflow/orientation tools.
+2. Use `core`, `business`, or `admin` only when a client needs that narrower
+   domain family.
+3. Use `all` for expert debugging or catalog inspection, not first contact.
+4. Use raw fallback only after `clockify_tools_guide` and the domain tools do
+   not fit.
+
+The default surface is listed in
+[docs/default-toolset.md](docs/default-toolset.md). The complete generated
+list is in [docs/tool-catalog.md](docs/tool-catalog.md), and
 [docs/agent-cookbook.md](docs/agent-cookbook.md) shows worked examples.
 Operator references:
 [permissions](docs/permissions.md),

@@ -168,6 +168,31 @@ func TestRemainingHelperDescriptorBucketHasClearName(t *testing.T) {
 	}
 }
 
+func TestNativeHighValueDescriptorMissFailsCheckedBuild(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	_, err := svc.nativeHighValueDescriptorsFromSources(map[string]mcp.ToolDescriptor{})
+	if err == nil {
+		t.Fatal("missing native descriptor sources must fail registry construction")
+	}
+	for _, want := range []string{"clockify_list_invoices", "clockify_invoices_list"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("missing-source error %q does not mention %q", err.Error(), want)
+		}
+	}
+}
+
+func TestNativeHighValueDescriptorsDoNotWriteStderrWarnings(t *testing.T) {
+	raw, err := os.ReadFile("oneuser_native_descriptors.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"os.Stderr", "WARNING:"} {
+		if strings.Contains(string(raw), forbidden) {
+			t.Fatalf("native descriptor construction must fail fast, not write %s warnings", forbidden)
+		}
+	}
+}
+
 func TestFullAccessToolsListWorkflowToolsFirstAndAnnotated(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	reg := svc.FullAccessRegistry()
@@ -215,18 +240,18 @@ func TestFullAccessRegistryIsCachedAndDefensivelyCloned(t *testing.T) {
 	if len(first) != 156 {
 		t.Fatalf("registry size=%d, want 156", len(first))
 	}
-	if len(svc.registry) != 156 {
-		t.Fatalf("cached registry size=%d, want 156", len(svc.registry))
+	if len(svc.registry.descriptors) != 156 {
+		t.Fatalf("cached registry size=%d, want 156", len(svc.registry.descriptors))
 	}
-	cachedFirstName := svc.registry[0].Tool.Name
+	cachedFirstName := svc.registry.descriptors[0].Tool.Name
 	first[0].Tool.Name = "mutated-by-test"
 
 	second := svc.FullAccessRegistry()
 	if second[0].Tool.Name != cachedFirstName {
 		t.Fatalf("cached registry was not defensively cloned: got %s want %s", second[0].Tool.Name, cachedFirstName)
 	}
-	if len(svc.registry) != 156 || svc.registry[0].Tool.Name != cachedFirstName {
-		t.Fatalf("cached registry changed across calls: len=%d first=%s", len(svc.registry), svc.registry[0].Tool.Name)
+	if len(svc.registry.descriptors) != 156 || svc.registry.descriptors[0].Tool.Name != cachedFirstName {
+		t.Fatalf("cached registry changed across calls: len=%d first=%s", len(svc.registry.descriptors), svc.registry.descriptors[0].Tool.Name)
 	}
 }
 
@@ -560,7 +585,7 @@ func BenchmarkOneUserToolsResourceData(b *testing.B) {
 func TestOneUserToolsResourceDataIsCachedAndDefensivelyCloned(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
 	first := svc.toolsResourceData()
-	if svc.toolsResourceCache == nil {
+	if svc.registry.toolsResourceCache == nil {
 		t.Fatal("tools resource cache was not populated")
 	}
 	first["count"] = 0

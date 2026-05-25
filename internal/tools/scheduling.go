@@ -460,6 +460,14 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	if note := stringArg(args, "note"); note != "" {
 		payload["note"] = note
 	}
+	if dryrun.Enabled(args) {
+		return ok("clockify_create_assignment", dryrunPreviewPayload("clockify_create_assignment", payload), map[string]any{
+			"workspaceId":  wsID,
+			"userId":       userID,
+			"projectId":    projectID,
+			"weeksApplied": weeksApplied,
+		}), nil
+	}
 
 	var result []map[string]any
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring")

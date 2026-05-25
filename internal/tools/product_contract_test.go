@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -91,6 +93,44 @@ func TestProductContractDoesNotRegress(t *testing.T) {
 	for _, d := range reg {
 		if !catalogNames[d.Tool.Name] {
 			t.Errorf("registry tool %q is missing from docs/tool-catalog.json (run make gen-tool-catalog)", d.Tool.Name)
+		}
+	}
+}
+
+func TestDefaultToolsetCatalogMatchesRuntimeDefaultSurface(t *testing.T) {
+	raw, err := os.ReadFile("../../docs/default-toolset.json")
+	if err != nil {
+		t.Fatalf("read docs/default-toolset.json: %v", err)
+	}
+	var catalog struct {
+		Toolset string `json:"toolset"`
+		Tools   []struct {
+			Name        string `json:"name"`
+			Category    string `json:"category"`
+			Description string `json:"description"`
+		} `json:"tools"`
+	}
+	if err := json.Unmarshal(raw, &catalog); err != nil {
+		t.Fatalf("parse default toolset catalog: %v", err)
+	}
+	if catalog.Toolset != "default" {
+		t.Fatalf("default catalog toolset = %q, want default", catalog.Toolset)
+	}
+	if len(catalog.Tools) != productContractDefaultAdvertisedTools {
+		t.Fatalf("default catalog lists %d tools, want %d", len(catalog.Tools), productContractDefaultAdvertisedTools)
+	}
+	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	runtime := svc.RegistryForToolset("default")
+	if len(runtime) != len(catalog.Tools) {
+		t.Fatalf("runtime default surface has %d tools, catalog has %d", len(runtime), len(catalog.Tools))
+	}
+	for i, descriptor := range runtime {
+		got := catalog.Tools[i]
+		if got.Name != descriptor.Tool.Name {
+			t.Fatalf("default catalog[%d] = %q, runtime = %q", i, got.Name, descriptor.Tool.Name)
+		}
+		if got.Name == "clockify_api_get" || got.Name == "clockify_api_request" {
+			t.Fatalf("default catalog must not include raw fallback tool %s", got.Name)
 		}
 	}
 }

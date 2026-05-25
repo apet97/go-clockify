@@ -65,6 +65,64 @@ func TestRecordExpenseRequiresCategoryOrCategoryIDBeforeUpstream(t *testing.T) {
 	}
 }
 
+func TestRecordExpenseAcceptsCategoryIDDryRunBeforeUpstream(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("record_expense category_id dry_run reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.ClockifyRecordExpense(context.Background(), map[string]any{
+		"amount":      12.34,
+		"date":        "2026-05-23T00:00:00Z",
+		"category_id": "65b382b606de527a7ee2b622",
+		"user_id":     "000000000000000000000001",
+		"dry_run":     true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyRecordExpense category_id dry_run: %v", err)
+	}
+	result, ok := out.(ToolResult)
+	if !ok {
+		t.Fatalf("result type = %T, want ToolResult", out)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("record_expense dry_run data = %#v", result.Data)
+	}
+}
+
+func TestRecordExpenseResolvesCategoryNameDryRun(t *testing.T) {
+	categoryID := "65b382b606de527a7ee2b622"
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1/expenses/categories":
+			respondJSON(t, w, map[string]any{"categories": []map[string]any{{"id": categoryID, "name": "Travel"}}})
+		default:
+			t.Fatalf("unexpected record_expense category-name dry_run request: %s %s", r.Method, r.URL.Path)
+		}
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.ClockifyRecordExpense(context.Background(), map[string]any{
+		"amount":   12.34,
+		"date":     "2026-05-23T00:00:00Z",
+		"category": "Travel",
+		"user_id":  "000000000000000000000001",
+		"dry_run":  true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyRecordExpense category dry_run: %v", err)
+	}
+	result := out.(ToolResult)
+	data := result.Data.(map[string]any)
+	payload := data["payload"].(map[string]any)
+	if payload["categoryId"] != categoryID {
+		t.Fatalf("category name did not resolve in dry-run payload: %#v", payload)
+	}
+}
+
 func TestExpenseHandlersCount(t *testing.T) {
 	svc := New(clockify.NewClient("k", "https://api.clockify.me/api/v1", 5*time.Second, 0), "ws1")
 	descs, ok := domainHandlers(svc, "expenses")

@@ -3,22 +3,31 @@ package tools
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
 func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
+	out, err := s.nativeHighValueDescriptorsChecked()
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
+func (s *Service) nativeHighValueDescriptorsChecked() ([]mcp.ToolDescriptor, error) {
 	sources := s.nativeDomainDescriptorMap()
+	return s.nativeHighValueDescriptorsFromSources(sources)
+}
+
+func (s *Service) nativeHighValueDescriptorsFromSources(sources map[string]mcp.ToolDescriptor) ([]mcp.ToolDescriptor, error) {
 	out := make([]mcp.ToolDescriptor, 0, 96)
+	missing := make([]string, 0)
 	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) {
 		old, ok := sources[oldName]
 		if !ok {
-			// A missing source key means a typo or partial merge dropped a
-			// high-value tool. Surface it loudly instead of vanishing the
-			// tool silently; the registry count test is the hard gate.
-			fmt.Fprintf(os.Stderr, "WARNING: descriptor source %q missing for tool %q — skipping\n", oldName, name)
+			missing = append(missing, fmt.Sprintf("%s<-source:%s", name, oldName))
 			return
 		}
 		out = append(out, nativeDirectDescriptor(priority, name, old, entity, change, handler))
@@ -26,7 +35,7 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 	addGuidance := func(priority int, name, oldName string, handler mcp.ToolHandler) {
 		old, ok := sources[oldName]
 		if !ok {
-			fmt.Fprintf(os.Stderr, "WARNING: descriptor source %q missing for tool %q — skipping\n", oldName, name)
+			missing = append(missing, fmt.Sprintf("%s<-source:%s", name, oldName))
 			return
 		}
 		out = append(out, nativeGuidanceDescriptor(priority, name, old, handler))
@@ -121,7 +130,10 @@ func (s *Service) nativeHighValueDescriptors() []mcp.ToolDescriptor {
 			"send_email": map[string]any{"type": "boolean", "description": "Whether Clockify should send invitation email. Defaults to true."},
 		}})), "user", "created", s.UsersInvite),
 	)
-	return out
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing native descriptor sources: %s", strings.Join(missing, "; "))
+	}
+	return out, nil
 }
 
 func (s *Service) nativeRouteDescriptors() []mcp.ToolDescriptor {

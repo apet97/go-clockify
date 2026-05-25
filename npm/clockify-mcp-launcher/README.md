@@ -8,6 +8,10 @@ That is the install path. The package includes the Go server binary for supporte
 
 All MCP tools and Clockify logic live in the Go binary. This npm package is only the launcher: it picks the right bundled binary, forwards stdio, and exits with the server's exit code.
 
+The source checkout keeps `package.json` at version `0.0.0` on purpose. The
+tagged release workflow rewrites it to the tag version before `npm pack` and
+verifies that the packed tarball contains every vendored platform binary.
+
 ## MCP Client Config
 
 Use `npx` as the command and pass your Clockify credentials through the client environment:

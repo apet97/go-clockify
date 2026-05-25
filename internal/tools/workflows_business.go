@@ -334,8 +334,11 @@ func (s *Service) ClockifyScheduleWork(ctx context.Context, args map[string]any)
 		return nil, err
 	}
 	standard := standardizeDomainResult("clockify_schedule_work", "assignment", "created", out, scheduleArgs)
-	standard.Data = map[string]any{"assignment": singleAssignmentData(standard.Data)}
 	standard.Next = []NextAction{{Tool: "clockify_scheduling_assignments_list", Args: map[string]any{"start": stringArg(scheduleArgs, "start"), "end": stringArg(scheduleArgs, "end")}, Reason: "Verify the scheduled assignment."}}
+	if dryRunResult(scheduleArgs, standard.Data) {
+		return standard, nil
+	}
+	standard.Data = map[string]any{"assignment": singleAssignmentData(standard.Data)}
 	return standard, nil
 }
 

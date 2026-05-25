@@ -44,7 +44,7 @@ func TestToolRequiredArraysMatchHandlerContracts(t *testing.T) {
 	// `required` array must advertise the same contract.
 	cases := map[string][]string{
 		"clockify_schedule_work":       {"start", "end", "hours_per_day", "user", "project"},
-		"clockify_setup_webhook":       {"name", "url", "webhook_event"},
+		"clockify_setup_webhook":       {"name", "url"},
 		"clockify_invoice_client_work": {"currency", "client"},
 		"clockify_tasks_create":        {"name", "project"},
 		"clockify_tasks_list":          {"project"},
@@ -63,6 +63,39 @@ func TestToolRequiredArraysMatchHandlerContracts(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestRequiredNameOrIDAliasesAreAgentVisible(t *testing.T) {
+	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", time.Second, 0), "000000000000000000000001")
+	for _, descriptor := range svc.FullAccessRegistry() {
+		required := requiredSet(descriptor.Tool.InputSchema)
+		props, _ := descriptor.Tool.InputSchema["properties"].(map[string]any)
+		for base := range required {
+			if strings.HasSuffix(base, "_id") {
+				continue
+			}
+			alias := base + "_id"
+			if _, ok := props[alias]; !ok {
+				continue
+			}
+			baseDesc := strings.ToLower(schemaPropertyDescription(props[base]))
+			aliasDesc := strings.ToLower(schemaPropertyDescription(props[alias]))
+			if !strings.Contains(baseDesc, "id") {
+				t.Errorf("%s.%s is required but has %s alias; base description should mention ID input, got %q",
+					descriptor.Tool.Name, base, alias, schemaPropertyDescription(props[base]))
+			}
+			if !strings.Contains(aliasDesc, "alias") && !strings.Contains(aliasDesc, "accepted in place") {
+				t.Errorf("%s.%s description should tell agents it is accepted in place of %s, got %q",
+					descriptor.Tool.Name, alias, base, schemaPropertyDescription(props[alias]))
+			}
+		}
+	}
+}
+
+func schemaPropertyDescription(prop any) string {
+	m, _ := prop.(map[string]any)
+	desc, _ := m["description"].(string)
+	return desc
 }
 
 func TestSchedulingCapacityUserIDsOptional(t *testing.T) {
@@ -104,6 +137,51 @@ func TestHighRiskToolsSupportDryRunForConfirmationPreview(t *testing.T) {
 		if !schemaHasProperty(d.Tool.InputSchema, "dry_run") {
 			t.Fatalf("%s is high-risk but lacks dry_run for confirmation preview", d.Tool.Name)
 		}
+	}
+}
+
+func TestBusinessWorkflowSchemasExposeDryRunAndWebhookConstraints(t *testing.T) {
+	tools := registryToolsByName(t)
+	for _, name := range []string{
+		"clockify_invoice_client_work",
+		"clockify_record_expense",
+		"clockify_request_time_off",
+		"clockify_schedule_work",
+		"clockify_setup_webhook",
+	} {
+		tool, ok := tools[name]
+		if !ok {
+			t.Fatalf("tool %q not in registry", name)
+		}
+		if !schemaHasProperty(tool.InputSchema, "dry_run") {
+			t.Fatalf("%s must expose dry_run for business-impact preview", name)
+		}
+	}
+
+	webhook := tools["clockify_setup_webhook"]
+	props := webhook.InputSchema["properties"].(map[string]any)
+	urlProp := props["url"].(map[string]any)
+	if urlProp["format"] != "uri" {
+		t.Fatalf("clockify_setup_webhook.url format = %v, want uri", urlProp["format"])
+	}
+	eventProp := props["webhook_event"].(map[string]any)
+	enum, ok := eventProp["enum"].([]string)
+	if !ok || len(enum) == 0 {
+		t.Fatalf("clockify_setup_webhook.webhook_event must expose the webhook event enum, got %#v", eventProp["enum"])
+	}
+}
+
+func TestBusinessWorkflowRiskClassesMatchSideEffects(t *testing.T) {
+	registry := riskTestRegistry(t)
+	cases := map[string]mcp.RiskClass{
+		"clockify_invoice_client_work": mcp.RiskWrite | mcp.RiskBilling,
+		"clockify_record_expense":      mcp.RiskWrite | mcp.RiskBilling,
+		"clockify_request_time_off":    mcp.RiskWrite | mcp.RiskAdmin,
+		"clockify_schedule_work":       mcp.RiskWrite | mcp.RiskAdmin,
+		"clockify_setup_webhook":       mcp.RiskWrite | mcp.RiskExternalSideEffect,
+	}
+	for name, want := range cases {
+		assertToolRiskClass(t, registry, name, want)
 	}
 }
 

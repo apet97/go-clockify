@@ -10,6 +10,11 @@ custom preview body.
 
 | Tool | Risk | Changes | Dry run |
 | --- | --- | --- | --- |
+| `clockify_invoice_client_work` | billing | Workflow wrapper that creates an invoice shell and may import billable time. | yes |
+| `clockify_record_expense` | billing | Workflow wrapper that creates an expense from category/project/task/user names or IDs. | yes |
+| `clockify_request_time_off` | admin | Workflow wrapper that creates a time-off request and may affect approval state or PTO balances. | yes |
+| `clockify_schedule_work` | admin | Workflow wrapper that creates a scheduling assignment for a user on a project. | yes |
+| `clockify_setup_webhook` | external side effect | Workflow wrapper that creates a webhook subscription and future outbound deliveries. | yes |
 | `clockify_clients_delete` | destructive | Deletes a client after the handler checks active projects. | yes |
 | `clockify_projects_delete` | destructive | Deletes a project by ID or name. | yes |
 | `clockify_projects_archive` | destructive | Archives a project and removes it from active work. | yes |

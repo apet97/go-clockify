@@ -1759,6 +1759,32 @@ func TestRequestTimeOffWorkflowResolvesPolicyNameAndAllowsMissingNote(t *testing
 	}
 }
 
+func TestRequestTimeOffAcceptsPolicyIDDryRunBeforeUpstream(t *testing.T) {
+	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("request_time_off policy_id dry_run reached upstream: %s %s", r.Method, r.URL.Path)
+	})
+	defer cleanup()
+
+	svc := New(client, "ws1")
+	out, err := svc.ClockifyRequestTimeOff(context.Background(), map[string]any{
+		"policy_id": "abc123def456789012345678",
+		"start":     "2026-06-01",
+		"end":       "2026-06-02",
+		"dry_run":   true,
+	})
+	if err != nil {
+		t.Fatalf("ClockifyRequestTimeOff policy_id dry_run: %v", err)
+	}
+	result, ok := out.(ToolResult)
+	if !ok {
+		t.Fatalf("result type = %T, want ToolResult", out)
+	}
+	data, ok := result.Data.(map[string]any)
+	if !ok || data["dry_run"] != true {
+		t.Fatalf("request_time_off dry_run data = %#v", result.Data)
+	}
+}
+
 func TestRequestTimeOffRequiresPolicyOrPolicyIDBeforeUpstream(t *testing.T) {
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("request_time_off missing policy reached upstream: %s %s", r.Method, r.URL.Path)

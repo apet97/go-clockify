@@ -160,7 +160,7 @@ func TestUpdateEntryEmitsMergePatchOnCachedURI(t *testing.T) {
 	svc.EmitResourceUpdate = emit.hook()
 	// Pre-prime the current-user cache so UpdateEntry's ownership
 	// guard does not HTTP-fetch /user.
-	svc.cachedUser = &clockify.User{ID: "u-self"}
+	svc.identity.cachedUser = &clockify.User{ID: "u-self"}
 
 	// Seed the cache with a "before" snapshot — this is what a prior
 	// subscription would have captured.
@@ -172,7 +172,7 @@ func TestUpdateEntryEmitsMergePatchOnCachedURI(t *testing.T) {
 	}
 	priorBytes, _ := json.Marshal(prior)
 	uri := "clockify://workspace/" + wsID + "/entry/" + entryID
-	svc.resourceCache.put(uri, priorBytes)
+	svc.resources.cache.put(uri, priorBytes)
 
 	_, err := svc.UpdateEntry(context.Background(), map[string]any{
 		"entry_id":    entryID,
@@ -245,10 +245,10 @@ func TestDeleteEntryEmitsFormatDeleted(t *testing.T) {
 	svc.EmitResourceUpdate = emit.hook()
 	// Pre-prime the current-user cache so DeleteEntry's ownership
 	// guard does not HTTP-fetch /user.
-	svc.cachedUser = &clockify.User{ID: "u-self"}
+	svc.identity.cachedUser = &clockify.User{ID: "u-self"}
 
 	uri := "clockify://workspace/" + wsID + "/entry/" + entryID
-	svc.resourceCache.put(uri, []byte(`{"id":"e3"}`))
+	svc.resources.cache.put(uri, []byte(`{"id":"e3"}`))
 
 	_, err := svc.DeleteEntry(context.Background(), map[string]any{
 		"entry_id": entryID,
@@ -265,7 +265,7 @@ func TestDeleteEntryEmitsFormatDeleted(t *testing.T) {
 	if calls[0].Delta.Format != "deleted" {
 		t.Fatalf("format = %q, want deleted", calls[0].Delta.Format)
 	}
-	if _, stillCached := svc.resourceCache.get(uri); stillCached {
+	if _, stillCached := svc.resources.cache.get(uri); stillCached {
 		t.Fatalf("cache should be empty for deleted URI")
 	}
 }

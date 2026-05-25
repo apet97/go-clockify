@@ -1,4 +1,4 @@
-.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench lint-test-fragility gen-tool-catalog catalog-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift mod-tidy-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
+.PHONY: build test fmt vet check clean bench bench-baseline-check verify-bench lint-test-fragility gen-tool-catalog catalog-drift gen-coverage-dashboard coverage-dashboard-drift gen-openapi openapi-drift gen-raw-allowlist raw-allowlist-drift sync-selfinspect-assets selfinspect-drift mod-tidy-drift api-parity-matrix-drift live-contract-local live-clean-prefix perfect perfect-local perfect-live
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BENCH_COUNT ?= 10
@@ -37,8 +37,9 @@ verify-bench: bench-baseline-check
 lint-test-fragility:
 	bash scripts/lint-test-fragility.sh
 
-# gen-tool-catalog regenerates docs/tool-catalog.{json,md} from the
-# one-user runtime registry. Run it after changing any tool descriptor.
+# gen-tool-catalog regenerates docs/tool-catalog.{json,md} and
+# docs/default-toolset.{json,md} from the one-user runtime registry.
+# Run it after changing any tool descriptor.
 gen-tool-catalog:
 	go run ./scripts/gen-tool-catalog -out docs
 
@@ -49,11 +50,21 @@ catalog-drift:
 	 trap 'rm -rf "$$tmpdir"' EXIT; \
 	 cp docs/tool-catalog.json "$$tmpdir/tool-catalog.json.before"; \
 	 cp docs/tool-catalog.md "$$tmpdir/tool-catalog.md.before"; \
+	 cp docs/default-toolset.json "$$tmpdir/default-toolset.json.before"; \
+	 cp docs/default-toolset.md "$$tmpdir/default-toolset.md.before"; \
 	 $(MAKE) --no-print-directory gen-tool-catalog >/dev/null; \
 	 diff -q docs/tool-catalog.json "$$tmpdir/tool-catalog.json.before" >/dev/null \
 	  && diff -q docs/tool-catalog.md "$$tmpdir/tool-catalog.md.before" >/dev/null \
-	  || { echo "[catalog-drift] docs/tool-catalog.{json,md} are stale; run make gen-tool-catalog"; \
+	  && diff -q docs/default-toolset.json "$$tmpdir/default-toolset.json.before" >/dev/null \
+	  && diff -q docs/default-toolset.md "$$tmpdir/default-toolset.md.before" >/dev/null \
+	  || { echo "[catalog-drift] docs/tool-catalog/default-toolset files are stale; run make gen-tool-catalog"; \
 	       diff -u "$$tmpdir/tool-catalog.md.before" docs/tool-catalog.md | head -80; exit 1; }
+
+gen-coverage-dashboard:
+	go run ./scripts/gen-tool-coverage-dashboard --write
+
+coverage-dashboard-drift:
+	go run ./scripts/gen-tool-coverage-dashboard
 
 # The raw documented-API fallback is generated from the canonical OpenAPI
 # artifact, so keep the artifact easy to refresh and validate.
@@ -85,11 +96,14 @@ raw-allowlist-drift:
 
 sync-selfinspect-assets:
 	cp docs/api-parity-matrix.md internal/tools/selfinspect_assets/api-parity-matrix.md
+	cp docs/tool-coverage-dashboard.md internal/tools/selfinspect_assets/tool-coverage-dashboard.md
 	cp docs/live-tests.md internal/tools/selfinspect_assets/live-tests.md
 
 selfinspect-drift:
 	@diff -q docs/api-parity-matrix.md internal/tools/selfinspect_assets/api-parity-matrix.md >/dev/null \
 	  || { echo "[selfinspect-drift] api parity asset is stale; run make sync-selfinspect-assets"; exit 1; }
+	@diff -q docs/tool-coverage-dashboard.md internal/tools/selfinspect_assets/tool-coverage-dashboard.md >/dev/null \
+	  || { echo "[selfinspect-drift] coverage dashboard asset is stale; run make sync-selfinspect-assets"; exit 1; }
 	@diff -q docs/live-tests.md internal/tools/selfinspect_assets/live-tests.md >/dev/null \
 	  || { echo "[selfinspect-drift] live tests asset is stale; run make sync-selfinspect-assets"; exit 1; }
 
@@ -158,6 +172,7 @@ perfect:
 	go test -race -count=1 -timeout 120s ./...
 	$(MAKE) catalog-drift
 	$(MAKE) api-parity-matrix-drift
+	$(MAKE) coverage-dashboard-drift
 	$(MAKE) openapi-drift
 	$(MAKE) raw-allowlist-drift
 	$(MAKE) selfinspect-drift

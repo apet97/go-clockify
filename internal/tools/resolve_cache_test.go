@@ -180,27 +180,27 @@ func TestResolveCacheSkipsClockifyIDs(t *testing.T) {
 	if id != "5e1b2c3d4e5f6a7b8c9d0e1f" {
 		t.Fatalf("resolve ID = %q", id)
 	}
-	if len(svc.resolveCache) != 0 {
-		t.Fatalf("ID path should not populate resolve cache: %+v", svc.resolveCache)
+	if len(svc.resolver.entries) != 0 {
+		t.Fatalf("ID path should not populate resolve cache: %+v", svc.resolver.entries)
 	}
 }
 
 func TestResolveCacheReclaimsExpiredEntries(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", 0, 0), "ws1")
-	svc.resolveCache = map[resolveKey]resolveEntry{}
+	svc.resolver.entries = map[resolveKey]resolveEntry{}
 	expired := time.Now().Add(-time.Minute)
 	for i := 0; i < 1_100; i++ {
-		svc.resolveCache[resolveKey{kind: "project", scope: "ws1", ref: fmt.Sprintf("old-%d", i)}] = resolveEntry{
+		svc.resolver.entries[resolveKey{kind: "project", scope: "ws1", ref: fmt.Sprintf("old-%d", i)}] = resolveEntry{
 			id:        fmt.Sprintf("p-%d", i),
 			expiresAt: expired,
 		}
 	}
 	svc.resolveCacheSet(resolveKey{kind: "project", scope: "ws1", ref: "fresh"}, "fresh-id", time.Now().Add(time.Minute))
-	if got := len(svc.resolveCache); got != 1 {
+	if got := len(svc.resolver.entries); got != 1 {
 		t.Fatalf("resolve cache retained expired entries: len=%d want 1", got)
 	}
-	if _, ok := svc.resolveCache[resolveKey{kind: "project", scope: "ws1", ref: "fresh"}]; !ok {
-		t.Fatalf("fresh cache entry missing after sweep: %+v", svc.resolveCache)
+	if _, ok := svc.resolver.entries[resolveKey{kind: "project", scope: "ws1", ref: "fresh"}]; !ok {
+		t.Fatalf("fresh cache entry missing after sweep: %+v", svc.resolver.entries)
 	}
 }
 

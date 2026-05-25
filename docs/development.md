@@ -33,6 +33,7 @@ surfaces through the repo commands, not by hand:
 ```sh
 make gen-tool-catalog
 bash scripts/check-api-parity-matrix.sh --write
+make gen-coverage-dashboard
 make gen-raw-allowlist
 make sync-selfinspect-assets
 ```
@@ -42,6 +43,7 @@ Then run the matching drift checks:
 ```sh
 make catalog-drift
 make api-parity-matrix-drift
+make coverage-dashboard-drift
 make raw-allowlist-drift
 make selfinspect-drift
 ```

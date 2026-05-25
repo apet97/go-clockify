@@ -47,6 +47,22 @@ var riskOverrides = map[string]riskOverride{
 	"clockify_approvals_get":                  sensitiveRead("approval_id"),
 	"clockify_workspace_settings":             sensitiveRead("workspace_id"),
 
+	// Workflow wrappers with business, admin, or external side effects.
+	"clockify_invoice_client_work": billingWrite("client_id", "client", "number", "currency", "from", "to"),
+	"clockify_record_expense":      billingWrite("category_id", "category", "project_id", "amount", "date"),
+	"clockify_request_time_off": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"policy_id", "policy", "start", "end"},
+	},
+	"clockify_schedule_work": {
+		class:     mcp.RiskWrite | mcp.RiskAdmin,
+		auditKeys: []string{"user_id", "user", "project_id", "project", "start", "end"},
+	},
+	"clockify_setup_webhook": {
+		class:     mcp.RiskWrite | mcp.RiskExternalSideEffect,
+		auditKeys: []string{"name", "url", "webhook_event", "event", "trigger_source_type", "trigger_source"},
+	},
+
 	// Billing.
 	"clockify_invoices_create":            billingWrite("client_id", "number", "issued_date", "currency", "due_date"),
 	"clockify_invoices_update":            billingWrite("invoice_id", "status", "client_id"),

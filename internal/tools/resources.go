@@ -172,7 +172,7 @@ func (s *Service) emitWeeklyReportDeltaFromCache(uri string, before, after *cloc
 	if !weeklyReportDeltaEligible(uri, before, after, loc) {
 		return false
 	}
-	prevState, ok := s.resourceCache.get(uri)
+	prevState, ok := s.resources.cache.get(uri)
 	if !ok {
 		return false
 	}
@@ -367,8 +367,8 @@ func (s *Service) emitResourceUpdateWithState(uri string, payload any) {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
 	}
-	prevState, hadPrev := s.resourceCache.get(uri)
-	s.resourceCache.put(uri, newState)
+	prevState, hadPrev := s.resources.cache.get(uri)
+	s.resources.cache.put(uri, newState)
 	if !hadPrev {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
@@ -632,7 +632,7 @@ func (s *Service) emitResourceUpdate(ctx context.Context, uri string) {
 	}
 	contents, err := s.ReadResource(ctx, uri)
 	if err != nil {
-		s.resourceCache.drop(uri)
+		s.resources.cache.drop(uri)
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
 	}
@@ -641,8 +641,8 @@ func (s *Service) emitResourceUpdate(ctx context.Context, uri string) {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
 	}
-	prevState, hadPrev := s.resourceCache.get(uri)
-	s.resourceCache.put(uri, newState)
+	prevState, hadPrev := s.resources.cache.get(uri)
+	s.resources.cache.put(uri, newState)
 	if !hadPrev {
 		s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "none"})
 		return
@@ -668,7 +668,7 @@ func (s *Service) emitResourceDeleted(uri string) {
 	if s == nil || s.EmitResourceUpdate == nil || uri == "" {
 		return
 	}
-	s.resourceCache.drop(uri)
+	s.resources.cache.drop(uri)
 	s.EmitResourceUpdate(uri, mcp.ResourceUpdateDelta{Format: "deleted"})
 }
 

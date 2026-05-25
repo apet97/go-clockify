@@ -5,7 +5,8 @@ Run these in order before tagging a release.
 ## Deterministic gates
 
 - [ ] `make perfect` - tests (race) and all drift checks (catalog, API parity,
-      OpenAPI, raw allowlist, self-inspection, module tidy), plus a clean diff
+      coverage dashboard, OpenAPI, raw allowlist, self-inspection, module tidy),
+      plus a clean diff
 - [ ] `make perfect-local` - adds `golangci-lint run` and the benchmark
       baseline check
 - [ ] `make mod-tidy-drift` produces no diff - `go mod tidy` would not change
@@ -13,6 +14,9 @@ Run these in order before tagging a release.
 
 ## Live verification (sacrificial workspace only)
 
+- [ ] Check the rolling GitHub Issue titled "Nightly live drift". It must be
+      closed, or classified as env/config, Clockify API, or code regression
+      with an explicit maintainer waiver before tagging.
 - [ ] Export the live env vars from `docs/live-tests.md`
 - [ ] `make perfect-live` - runs `live-contract-local` then `live-clean-prefix`
 - [ ] Confirm `make live-clean-prefix` reported `Leftovers: 0` for
@@ -26,6 +30,8 @@ Run these in order before tagging a release.
 - [ ] Update `docs/live-tests.md` "Recorded Runs" with the new live run,
       including the tested commit SHA, then run `make sync-selfinspect-assets`
       so `internal/tools/selfinspect_assets/live-tests.md` stays in sync
+- [ ] If tool coverage changed, run `make gen-coverage-dashboard` and inspect
+      `docs/tool-coverage-dashboard.md` before syncing self-inspection assets
 - [ ] Move the `## [Unreleased]` section of `CHANGELOG.md` under the new
       version number
 
@@ -58,6 +64,8 @@ preflight before upload:
 - `npm ci`, `npm test`, and `npm run build` in `npm/clockify-mcp-launcher`
 - packaged launcher smoke via `node bin/clockify-mcp.js --version` after the
   vendored Linux binary is copied into `vendor/`
+- npm pack verification that the source placeholder version was rewritten and
+  every vendored platform binary is present in the `.tgz`
 
 If any of these fail, fix the release commit and retag; do not upload artifacts
 from a failed release run.

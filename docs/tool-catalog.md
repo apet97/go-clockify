@@ -60,11 +60,11 @@ prefer the documented format on each tool descriptor.
 | `clockify_review_day` | `workflow` | yes | no | yes | no | `read` | Review one day of work and return totals, issues, and next actions. |
 | `clockify_review_week` | `workflow` | yes | no | yes | no | `read` | Review one week of work and return totals, issues, and next actions. |
 | `clockify_fix_entry` | `workflow` | no | no | yes | no | `write` | Find one entry by ID or strict filters, then update selected fields. |
-| `clockify_invoice_client_work` | `workflow` | no | no | no | yes | `write` | Create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable. |
-| `clockify_record_expense` | `workflow` | no | no | no | no | `write` | Record an expense with category, project, task, and user names or IDs. |
-| `clockify_request_time_off` | `workflow` | no | no | no | no | `write` | Create a time-off request with a policy name or ID. |
-| `clockify_schedule_work` | `workflow` | no | no | no | no | `write` | Create a scheduling assignment with user/project names or IDs. |
-| `clockify_setup_webhook` | `workflow` | no | no | no | yes | `write` | Create a webhook subscription for this workspace. |
+| `clockify_invoice_client_work` | `workflow` | no | no | no | yes | `write`, `billing` | Billing workflow: create an invoice for a client from a name or ID, degrading gracefully when invoicing is unavailable. Supports dry_run preview. |
+| `clockify_record_expense` | `workflow` | no | no | no | yes | `write`, `billing` | Billing workflow: record an expense with category, project, task, and user names or IDs. Supports dry_run preview. |
+| `clockify_request_time_off` | `workflow` | no | no | no | yes | `write`, `admin` | Admin workflow: create a time-off request with a policy name or ID; this can enter approval workflows and affect PTO balances. Supports dry_run preview. |
+| `clockify_schedule_work` | `workflow` | no | no | no | yes | `write`, `admin` | Admin scheduling workflow: create an assignment with user/project names or IDs. Supports dry_run preview. |
+| `clockify_setup_webhook` | `workflow` | no | no | no | yes | `write`, `external_side_effect` | External-side-effect workflow: create a webhook subscription for this workspace and future outbound deliveries. Supports dry_run preview. |
 | `clockify_demo_seed` | `workflow` | no | no | yes | no | `write` | Create or reuse deterministic demo client/project/task/tag/time-entry objects. |
 | `clockify_demo_cleanup` | `workflow` | no | no | yes | no | `write` | Delete deterministic demo objects by prefix, continuing through partial failures. |
 | `clockify_clients_list` | `domain` | yes | no | yes | no | `read` | List clients in the pinned workspace, paginated via page and page_size. |
@@ -243,6 +243,7 @@ list also surfaces in `docs/tool-catalog.json`.
 | `clockify_groups_list` | `workspace_id` |
 | `clockify_groups_remove_user` | `group_id`, `user_id` |
 | `clockify_groups_update` | `group_id`, `name` |
+| `clockify_invoice_client_work` | `client_id`, `client`, `number`, `currency`, `from`, `to` |
 | `clockify_invoices_create` | `client_id`, `number`, `issued_date`, `currency`, `due_date` |
 | `clockify_invoices_delete` | `invoice_id` |
 | `clockify_invoices_export` | `invoice_id` |
@@ -263,11 +264,15 @@ list also surfaces in `docs/tool-catalog.json`.
 | `clockify_projects_memberships_list` | `project_id` |
 | `clockify_projects_memberships_update` | `project_id`, `user_ids`, `memberships`, `remove` |
 | `clockify_projects_rates_update` | `project_id`, `user_id`, `rate_kind`, `amount` |
+| `clockify_record_expense` | `category_id`, `category`, `project_id`, `amount`, `date` |
+| `clockify_request_time_off` | `policy_id`, `policy`, `start`, `end` |
+| `clockify_schedule_work` | `user_id`, `user`, `project_id`, `project`, `start`, `end` |
 | `clockify_scheduling_assignments_get` | `assignment_id` |
 | `clockify_scheduling_assignments_list` | `project_id`, `user_id` |
 | `clockify_scheduling_capacity` | `user_ids` |
 | `clockify_scheduling_project_totals` | `project_id` |
 | `clockify_scheduling_user_totals` | `user_id` |
+| `clockify_setup_webhook` | `name`, `url`, `webhook_event`, `event`, `trigger_source_type`, `trigger_source` |
 | `clockify_tasks_rates_update` | `project_id`, `task_id`, `rate_kind`, `amount` |
 | `clockify_time_off_approve` | `request_id` |
 | `clockify_time_off_archive` | `policy_id`, `archived` |

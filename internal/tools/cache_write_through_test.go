@@ -165,7 +165,7 @@ func TestCacheWriteThrough_PrimesCacheForMergePatch(t *testing.T) {
 	// Pre-prime the current-user cache so UpdateEntry's ownership
 	// guard does not HTTP-fetch /user. The test focuses on the
 	// merge-patch cache-priming behaviour, not auth resolution.
-	svc.cachedUser = &clockify.User{ID: "u-self"}
+	svc.identity.cachedUser = &clockify.User{ID: "u-self"}
 	if _, err := svc.EntriesCreate(context.Background(), map[string]any{
 		"start":       "2026-04-11T10:00:00Z",
 		"end":         "2026-04-11T11:00:00Z",
@@ -266,7 +266,7 @@ func TestWeeklyReportDeltaFromCachedState(t *testing.T) {
 			emit := &recordingEmit{}
 			svc.EmitResourceUpdate = emit.hook()
 			svc.SubscriptionGate = func(_ string) bool { return true }
-			svc.resourceCache.put(weeklyURI, mustMarshalWeeklyData(t, cachedWeeklyReportFixture()))
+			svc.resources.cache.put(weeklyURI, mustMarshalWeeklyData(t, cachedWeeklyReportFixture()))
 
 			svc.emitWeeklyReportsForEntryChange(context.Background(), wsID, tt.before, tt.after)
 
@@ -311,7 +311,7 @@ func BenchmarkEntryMutationWeeklyEmit_CachedDelta500Entries(b *testing.B) {
 
 	b.ReportAllocs()
 	for b.Loop() {
-		svc.resourceCache.put(weeklyURI, raw)
+		svc.resources.cache.put(weeklyURI, raw)
 		svc.emitWeeklyReportsForEntryChange(context.Background(), wsID, nil, &after)
 	}
 }
@@ -413,7 +413,7 @@ func mustMarshalWeeklyData(t *testing.T, data WeeklySummaryData) []byte {
 
 func mustCachedWeeklyData(t *testing.T, svc *Service, uri string) WeeklySummaryData {
 	t.Helper()
-	raw, ok := svc.resourceCache.get(uri)
+	raw, ok := svc.resources.cache.get(uri)
 	if !ok {
 		t.Fatalf("missing cached weekly state for %s", uri)
 	}

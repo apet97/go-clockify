@@ -17,14 +17,16 @@ func (s *Service) FullAccessRegistry() []mcp.ToolDescriptor {
 }
 
 func (s *Service) FullAccessRegistryChecked() ([]mcp.ToolDescriptor, error) {
-	s.registryOnce.Do(func() {
-		s.registry = s.buildFullAccessRegistry()
-		s.registryErr = ValidateRegistry(s.registry)
+	s.registry.once.Do(func() {
+		s.registry.descriptors, s.registry.err = s.buildFullAccessRegistry()
+		if s.registry.err == nil {
+			s.registry.err = ValidateRegistry(s.registry.descriptors)
+		}
 	})
-	if s.registryErr != nil {
-		return nil, s.registryErr
+	if s.registry.err != nil {
+		return nil, s.registry.err
 	}
-	return cloneToolDescriptors(s.registry), nil
+	return cloneToolDescriptors(s.registry.descriptors), nil
 }
 
 // RegistryForToolset returns the one-user startup registry for a narrower
@@ -58,16 +60,20 @@ func (s *Service) RegistryForToolset(toolset string) []mcp.ToolDescriptor {
 	return out
 }
 
-func (s *Service) buildFullAccessRegistry() []mcp.ToolDescriptor {
+func (s *Service) buildFullAccessRegistry() ([]mcp.ToolDescriptor, error) {
 	out := make([]mcp.ToolDescriptor, 0, 160)
 	out = append(out, s.workflowDescriptors()...)
 	out = append(out, s.FirstSliceRegistry()...)
 	out = append(out, s.nativeCoreDescriptors()...)
-	out = append(out, s.nativeHighValueDescriptors()...)
+	highValue, err := s.nativeHighValueDescriptorsChecked()
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, highValue...)
 	out = append(out, s.nativeDomainExtras()...)
 	out = append(out, s.timerAndReportDescriptors()...)
 	out = append(out, s.rawAPIDescriptors()...)
-	return normalizeDescriptors(out)
+	return normalizeDescriptors(out), nil
 }
 
 // cloneToolDescriptors returns an independent copy of the descriptor slice.

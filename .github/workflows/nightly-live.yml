@@ -71,14 +71,36 @@ jobs:
             const fs = require('fs');
             const title = 'Nightly live drift';
             const label = 'drift';
+            const classificationLabels = {
+              'env/config drift': {
+                name: 'drift:env-config',
+                color: 'fbca04',
+                description: 'Nightly live failed before Clockify calls because env, secrets, or gates are missing',
+              },
+              'Clockify API drift': {
+                name: 'drift:clockify-api',
+                color: 'd93f0b',
+                description: 'Nightly live reached Clockify and observed API or plan behavior drift',
+              },
+              'code regression': {
+                name: 'drift:code-regression',
+                color: 'b60205',
+                description: 'Nightly live points at a repository code regression',
+              },
+              'untriaged': {
+                name: 'drift:untriaged',
+                color: '5319e7',
+                description: 'Nightly live drift needs human triage',
+              },
+            };
             const runUrl = process.env.RUN_URL;
 
-            async function ensureLabel() {
+            async function ensureLabel(name, color, description) {
               try {
                 await github.rest.issues.getLabel({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  name: label,
+                  name,
                 });
               } catch (error) {
                 if (error.status !== 404) {
@@ -87,9 +109,9 @@ jobs:
                 await github.rest.issues.createLabel({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  name: label,
-                  color: 'b60205',
-                  description: 'Nightly live Clockify drift signal',
+                  name,
+                  color,
+                  description,
                 });
               }
             }
@@ -108,12 +130,40 @@ jobs:
               return '(no captured log)';
             }
 
-            await ensureLabel();
-            let tail = capturedTail();
-            tail = tail.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]');
+            function classify(log) {
+              if (/live-contract-local: set|live-clean-prefix: set|required environment|CLOCKIFY_RUN_LIVE_E2E/.test(log)) {
+                return {
+                  key: 'env/config drift',
+                  why: 'The run stopped at a local environment or gate check before live Clockify assertions.',
+                };
+              }
+              if (/panic:|DATA RACE|FAIL:|--- FAIL:|compile|build failed|undefined:|no required module/.test(log)) {
+                return {
+                  key: 'code regression',
+                  why: 'The failure shape points at local code, build, or test behavior.',
+                };
+              }
+              if (/feature_unavailable|subscription|plan|Clockify API|HTTP status|status code|429|401|403|404|405|5\d\d/.test(log)) {
+                return {
+                  key: 'Clockify API drift',
+                  why: 'The run reached Clockify-facing behavior or an upstream/plan/permission boundary.',
+                };
+              }
+              return {
+                key: 'untriaged',
+                why: 'The workflow could not classify the captured tail automatically.',
+              };
+            }
+
+            await ensureLabel(label, 'b60205', 'Nightly live Clockify drift signal');
+            let rawTail = capturedTail();
+            const classification = classify(rawTail);
+            const classLabel = classificationLabels[classification.key];
+            await ensureLabel(classLabel.name, classLabel.color, classLabel.description);
+            let tail = rawTail.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]');
             tail = tail.slice(-12000);
 
-            const body = `Nightly live run failed.\n\nRun: ${runUrl}\n\nTail (last 80 lines, redacted):\n\n\`\`\`text\n${tail}\n\`\`\``;
+            const body = `Nightly live run failed.\n\nClassification: ${classification.key}\nReason: ${classification.why}\n\nRun: ${runUrl}\n\nTail (last 80 lines, redacted):\n\n\`\`\`text\n${tail}\n\`\`\``;
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -129,13 +179,19 @@ jobs:
                 issue_number: open.number,
                 body,
               });
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.number,
+                labels: [label, classLabel.name],
+              });
             } else {
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title,
                 body,
-                labels: [label],
+                labels: [label, classLabel.name],
               });
             }
 
