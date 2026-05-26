@@ -182,7 +182,7 @@ func (s *Service) nativeCoreDescriptors() []mcp.ToolDescriptor {
 			"dry_run":  map[string]any{"type": "boolean"},
 		}})), "entry", "deleted", s.DeleteEntry)),
 
-		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace, paginated via page and page_size.", userListSchema()), "user", "", s.ListUsers),
+		nativeDomainTool(1100, toolRO("clockify_users_list", "List users in the pinned workspace, paginated via page and page_size.", userListSchema()), "user", "", autoPaginated(s.ListUsers)),
 		nativeDomainTool(1101, toolRO("clockify_users_profile", "Get the current Clockify user.", objectSchema(nil)), "user", "", func(ctx context.Context, _ map[string]any) (ToolResult, error) {
 			return s.CurrentUser(ctx)
 		}),

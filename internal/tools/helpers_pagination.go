@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"maps"
+	"reflect"
 )
 
 // defaultAutoPaginateMaxRows bounds an auto-paginated scan when the
@@ -172,6 +173,132 @@ func addAutoPaginateMeta(meta map[string]any, autoPaginated, truncated bool, max
 // listAllSafetyStopPages mirrors the safety stop used by the clockify
 // client package's ListAll. Defined locally to avoid an import cycle.
 const listAllSafetyStopPages = 1000
+
+// toolResultListHandler is the shape native list handlers in
+// oneuser_native_descriptors.go expose: they take args, hit Clockify
+// once, and return a populated ToolResult whose Data is a slice (e.g.
+// []CompactInvoiceView, []map[string]any). runAutoPaginatedToolResult
+// drives the loop for any handler matching this shape without
+// requiring each handler to grow a per-page helper.
+type toolResultListHandler func(ctx context.Context, args map[string]any) (ToolResult, error)
+
+// runAutoPaginatedToolResult executes a ToolResult-returning list
+// handler. When auto_paginate is not set, returns the handler's result
+// untouched. When set, walks pages by repeatedly invoking the handler
+// with page=1,2,3..., concatenating Data slices via reflection, and
+// stops when (a) the page comes back short of autoPaginatePageSize, (b)
+// max_rows is reached, or (c) the safety-stop ceiling is hit. The
+// caller is responsible for stamping addAutoPaginateMeta on the
+// returned ToolResult's Meta map.
+//
+// Slice merging uses reflection because handlers return concrete typed
+// slices (e.g. []CompactInvoiceView) inside an `any`-typed Data field.
+// When Data is not a slice (e.g. handler returned a map or error
+// envelope), the first page is returned unchanged and the loop exits.
+func runAutoPaginatedToolResult(
+	ctx context.Context,
+	args map[string]any,
+	handler toolResultListHandler,
+) (result ToolResult, autoPaginated bool, truncated bool, err error) {
+	if !autoPaginateArg(args) {
+		result, err = handler(ctx, args)
+		return result, false, false, err
+	}
+	maxRows := maxRowsArg(args)
+	scanArgs := copyArgs(args)
+	scanArgs["page_size"] = float64(autoPaginatePageSize)
+	delete(scanArgs, "auto_paginate")
+	delete(scanArgs, "max_rows")
+
+	var merged ToolResult
+	var mergedData reflect.Value
+	for pageNumber := 1; pageNumber <= listAllSafetyStopPages; pageNumber++ {
+		scanArgs["page"] = float64(pageNumber)
+		partial, perr := handler(ctx, scanArgs)
+		if perr != nil {
+			return ToolResult{}, true, false, perr
+		}
+		batch := reflect.ValueOf(partial.Data)
+		if pageNumber == 1 {
+			merged = partial
+			if !batch.IsValid() || batch.Kind() != reflect.Slice {
+				return partial, true, false, nil
+			}
+			mergedData = batch
+		} else if batch.IsValid() && batch.Kind() == reflect.Slice {
+			mergedData = reflect.AppendSlice(mergedData, batch)
+		}
+		if mergedData.Len() >= maxRows {
+			if mergedData.Len() > maxRows {
+				mergedData = mergedData.Slice(0, maxRows)
+			}
+			merged.Data = mergedData.Interface()
+			return merged, true, true, nil
+		}
+		if !batch.IsValid() || batch.Kind() != reflect.Slice || batch.Len() < autoPaginatePageSize {
+			merged.Data = mergedData.Interface()
+			return merged, true, false, nil
+		}
+	}
+	merged.Data = mergedData.Interface()
+	return merged, true, true, nil
+}
+
+// autoPaginated wraps a ToolResult-returning list handler with the
+// auto_paginate loop and stamps the resulting meta knobs. Used at
+// descriptor-registration time so per-handler bodies stay focused on
+// the single-page case. When auto_paginate is not requested, the
+// wrapped handler is invoked exactly once and its output passes
+// through untouched.
+func autoPaginated(handler toolResultListHandler) toolResultListHandler {
+	return func(ctx context.Context, args map[string]any) (ToolResult, error) {
+		merged, auto, truncated, err := runAutoPaginatedToolResult(ctx, args, handler)
+		if err != nil {
+			return ToolResult{}, err
+		}
+		if !auto {
+			return merged, nil
+		}
+		merged.Meta = addAutoPaginateMeta(merged.Meta, true, truncated, maxRowsArg(args))
+		if data := reflect.ValueOf(merged.Data); data.IsValid() && data.Kind() == reflect.Slice {
+			if merged.Meta == nil {
+				merged.Meta = map[string]any{}
+			}
+			merged.Meta["count"] = data.Len()
+		}
+		return merged, nil
+	}
+}
+
+// injectAutoPaginateSchemaProps adds the auto_paginate + max_rows
+// properties to any list-tool input schema that already declares
+// `page`. Idempotent; existing entries are preserved. Used to bring
+// hand-written native list schemas into line with paginationSchema()
+// without rewriting every literal.
+func injectAutoPaginateSchemaProps(schema map[string]any) {
+	if schema == nil {
+		return
+	}
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return
+	}
+	if _, hasPage := props["page"]; !hasPage {
+		return
+	}
+	if _, hasAuto := props["auto_paginate"]; !hasAuto {
+		props["auto_paginate"] = map[string]any{
+			"type":        "boolean",
+			"description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+		}
+	}
+	if _, hasMax := props["max_rows"]; !hasMax {
+		props["max_rows"] = map[string]any{
+			"type":        "integer",
+			"description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+		}
+	}
+}
 
 func addPaginationMeta(meta map[string]any, args map[string]any, page, pageSize int) map[string]any {
 	if meta == nil {

@@ -80,19 +80,26 @@ as setup instructions.
   `standardizeDomainResult` lifting pass; nothing further is needed
   beyond the type unification itself. Regression tests in
   `internal/tools/result_envelope_alias_test.go`.
-- **Audit T2.2 phase 1 landed** (2026-05-26, commit `2a4fa43`). The
-  `auto_paginate: true` + `max_rows` (default 5000, hard cap 50000)
-  knobs are on every list tool's input schema via the shared
-  `paginationSchema()`. Five first-slice handlers (`clockify_clients_list`,
-  `_projects_list`, `_tasks_list`, `_tags_list`, `_entries_list`)
-  service the loop via the generic `runListWithAutoPaginate[T]` helper
-  in `internal/tools/helpers_pagination.go`. The other ~16 list
-  handlers (invoices, expenses, custom_fields, time_off, scheduling,
-  webhooks, approvals, audit_log, holidays, groups, users, project
-  memberships, invoice items/payments/reports) **still service single
-  page upstream** — phase 2 wires them per-handler using the same
-  helper. See `docs/architecture.md §5a` for the wired-handler list
-  and the pattern.
+- **Audit T2.2 phase 1 + phase 2 landed** (2026-05-26). Phase 1
+  (commit `2a4fa43`) added `auto_paginate: true` + `max_rows` (default
+  5000, hard cap 50000) to the five first-slice handlers
+  (`clockify_clients_list`, `_projects_list`, `_tasks_list`,
+  `_tags_list`, `_entries_list`) via the generic
+  `runListWithAutoPaginate[T]` helper in
+  `internal/tools/helpers_pagination.go`. Phase 2 wires the remaining
+  13 native list handlers — `clockify_{invoices,invoices_payments,
+  projects_templates,expenses,expenses_categories,custom_fields,
+  time_off_requests,time_off_policies,scheduling_assignments,approvals,
+  webhooks,groups,users}_list` — via the new
+  `autoPaginated(handler)` wrapper which loops at the `ToolResult`
+  level (merging Data slices via reflection) so each per-handler body
+  stays focused on the single-page case. Six list tools remain
+  intentionally unwrapped because their upstream has no
+  pagination to walk (`holidays_list`, `holidays_list_for_user_period`,
+  `webhooks_events`, `projects_memberships_list`,
+  `invoices_items_list`, `entity_changes_list`). See
+  `docs/architecture.md §5a` for the full wired-handler list, the
+  out-of-scope list, and the pattern.
 - **Audit T2.3 landed** (2026-05-26, commit `4ee1d2a`).
   `docs/architecture.md` (~300 lines) documents the five tool layers,
   the `buildFullAccessRegistry()` call graph, the toolset filter, the

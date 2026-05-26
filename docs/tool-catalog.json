@@ -24161,6 +24161,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -28780,9 +28788,17 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
           "end": {
             "description": "End date (YYYY-MM-DD or RFC3339)",
             "type": "string"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
           },
           "page": {
             "description": "Page number (default 1)",
@@ -30333,6 +30349,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -31485,6 +31509,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -33290,6 +33322,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number, starting at 1.",
             "minimum": 1,
@@ -35312,6 +35352,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number, starting at 1.",
             "minimum": 1,
@@ -36494,6 +36542,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number when policy_id is omitted (default 1).",
             "minimum": 1,
@@ -37078,9 +37134,17 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
           "end": {
             "description": "Range end. Datetime (RFC3339, YYYY-MM-DD, 'today HH:MM', 'yesterday HH:MM', or 'now')",
             "type": "string"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
           },
           "page": {
             "description": "Page number (default 1)",
@@ -38873,6 +38937,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,
@@ -40628,6 +40700,14 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
+          },
           "page": {
             "description": "Page number (default 1)",
             "minimum": 1,

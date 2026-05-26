@@ -32,7 +32,7 @@ func (s *Service) nativeHighValueDescriptorsFromSources(sources map[string]mcp.T
 		}
 		out = append(out, nativeGuidanceDescriptor(priority, name, old, handler))
 	}
-	add(200, "clockify_invoices_list", "clockify_list_invoices", "invoice", "", s.listInvoices)
+	add(200, "clockify_invoices_list", "clockify_list_invoices", "invoice", "", autoPaginated(s.listInvoices))
 	add(201, "clockify_invoices_get", "clockify_get_invoice", "invoice", "", s.getInvoice)
 	add(202, "clockify_invoices_create", "clockify_create_invoice", "invoice", "created", s.createInvoice)
 	add(203, "clockify_invoices_update", "clockify_update_invoice", "invoice", "updated", s.updateInvoice)
@@ -43,58 +43,58 @@ func (s *Service) nativeHighValueDescriptorsFromSources(sources map[string]mcp.T
 	add(208, "clockify_invoices_items_add", "clockify_add_invoice_item", "invoice_item", "created", s.addInvoiceItem)
 	addGuidance(209, "clockify_invoices_items_update_guidance", "clockify_update_invoice_item", s.updateInvoiceItemGuidance)
 	add(216, "clockify_invoices_items_delete", "clockify_delete_invoice_item", "invoice_item", "deleted", s.deleteInvoiceItem)
-	add(36, "clockify_projects_templates_list", "clockify_list_project_templates", "project_template", "", s.ListProjectTemplates)
+	add(36, "clockify_projects_templates_list", "clockify_list_project_templates", "project_template", "", autoPaginated(s.ListProjectTemplates))
 	add(37, "clockify_projects_templates_create", "clockify_create_project_template", "project_template", "created", s.CreateProjectTemplate)
 	add(38, "clockify_projects_estimates_update", "clockify_update_project_estimate", "project", "updated", s.UpdateProjectEstimate)
 	add(40, "clockify_projects_memberships_update", "clockify_update_project_memberships", "membership", "updated", s.updateProjectMembershipsOneUser)
-	add(300, "clockify_expenses_list", "clockify_list_expenses", "expense", "", s.listExpenses)
+	add(300, "clockify_expenses_list", "clockify_list_expenses", "expense", "", autoPaginated(s.listExpenses))
 	add(301, "clockify_expenses_get", "clockify_get_expense", "expense", "", s.getExpense)
 	add(302, "clockify_expenses_create", "clockify_create_expense", "expense", "created", s.createExpense)
 	add(303, "clockify_expenses_update", "clockify_update_expense", "expense", "updated", s.updateExpense)
 	add(304, "clockify_expenses_delete", "clockify_delete_expense", "expense", "deleted", s.deleteExpense)
-	add(305, "clockify_expenses_categories_list", "clockify_list_expense_categories", "expense_category", "", s.listExpenseCategories)
+	add(305, "clockify_expenses_categories_list", "clockify_list_expense_categories", "expense_category", "", autoPaginated(s.listExpenseCategories))
 	add(306, "clockify_expenses_categories_create", "clockify_create_expense_category", "expense_category", "created", s.createExpenseCategory)
 	add(307, "clockify_expenses_categories_update", "clockify_update_expense_category", "expense_category", "updated", s.updateExpenseCategory)
 	add(308, "clockify_expenses_categories_delete", "clockify_delete_expense_category", "expense_category", "deleted", s.deleteExpenseCategory)
-	add(400, "clockify_custom_fields_list", "clockify_list_custom_fields", "custom_field", "", s.ListCustomFields)
+	add(400, "clockify_custom_fields_list", "clockify_list_custom_fields", "custom_field", "", autoPaginated(s.ListCustomFields))
 	add(401, "clockify_custom_fields_get", "clockify_get_custom_field", "custom_field", "", s.GetCustomField)
 	add(402, "clockify_custom_fields_create", "clockify_create_custom_field", "custom_field", "created", s.CreateCustomField)
 	add(403, "clockify_custom_fields_update", "clockify_update_custom_field", "custom_field", "updated", s.UpdateCustomField)
 	add(404, "clockify_custom_fields_delete", "clockify_delete_custom_field", "custom_field", "deleted", s.DeleteCustomField)
 	add(405, "clockify_custom_fields_set_value", "clockify_set_custom_field_value", "custom_field_value", "updated", s.SetCustomFieldValue)
-	add(500, "clockify_time_off_requests_list", "clockify_list_time_off_requests", "time_off_request", "", s.listTimeOffRequests)
+	add(500, "clockify_time_off_requests_list", "clockify_list_time_off_requests", "time_off_request", "", autoPaginated(s.listTimeOffRequests))
 	add(501, "clockify_time_off_requests_get", "clockify_get_time_off_request", "time_off_request", "", s.getTimeOffRequest)
 	add(502, "clockify_time_off_requests_create", "clockify_create_time_off_request", "time_off_request", "created", s.createTimeOffRequest)
 	add(503, "clockify_time_off_requests_update", "clockify_update_time_off_request", "time_off_request", "updated", s.updateTimeOffRequest)
 	add(504, "clockify_time_off_requests_delete", "clockify_delete_time_off_request", "time_off_request", "deleted", s.deleteTimeOffRequest)
 	add(505, "clockify_time_off_approve", "clockify_approve_time_off", "time_off_request", "updated", s.approveTimeOff)
 	add(506, "clockify_time_off_deny", "clockify_deny_time_off", "time_off_request", "updated", s.denyTimeOff)
-	add(507, "clockify_time_off_policies_list", "clockify_list_time_off_policies", "time_off_policy", "", s.listTimeOffPolicies)
+	add(507, "clockify_time_off_policies_list", "clockify_list_time_off_policies", "time_off_policy", "", autoPaginated(s.listTimeOffPolicies))
 	add(508, "clockify_time_off_policies_get", "clockify_get_time_off_policy", "time_off_policy", "", s.getTimeOffPolicy)
 	add(509, "clockify_time_off_policies_create", "clockify_create_time_off_policy", "time_off_policy", "created", s.createTimeOffPolicy)
 	add(510, "clockify_time_off_policies_update", "clockify_update_time_off_policy", "time_off_policy", "updated", s.updateTimeOffPolicy)
 	add(511, "clockify_time_off_balances", "clockify_time_off_balance", "time_off_balance", "", s.timeOffBalance)
 	add(512, "clockify_time_off_balances_update", "clockify_time_off_balance_update", "time_off_balance", "updated", s.updateTimeOffBalance)
-	add(600, "clockify_scheduling_assignments_list", "clockify_list_assignments", "assignment", "", s.listAssignments)
+	add(600, "clockify_scheduling_assignments_list", "clockify_list_assignments", "assignment", "", autoPaginated(s.listAssignments))
 	add(601, "clockify_scheduling_assignments_get", "clockify_get_assignment", "assignment", "", s.getAssignment)
 	add(602, "clockify_scheduling_assignments_create", "clockify_create_assignment", "assignment", "created", s.createAssignment)
 	add(603, "clockify_scheduling_assignments_update", "clockify_update_assignment", "assignment", "updated", s.updateAssignment)
 	add(604, "clockify_scheduling_assignments_delete", "clockify_delete_assignment", "assignment", "deleted", s.deleteAssignment)
 	add(605, "clockify_scheduling_project_totals", "clockify_get_project_schedule_totals", "scheduling", "", s.getProjectScheduleTotals)
-	add(700, "clockify_approvals_list", "clockify_list_approval_requests", "approval", "", s.listApprovalRequests)
+	add(700, "clockify_approvals_list", "clockify_list_approval_requests", "approval", "", autoPaginated(s.listApprovalRequests))
 	add(701, "clockify_approvals_get", "clockify_get_approval_request", "approval", "", s.getApprovalRequest)
 	add(702, "clockify_approvals_submit", "clockify_submit_for_approval", "approval", "created", s.submitForApproval)
 	add(703, "clockify_approvals_approve", "clockify_approve_timesheet", "approval", "updated", s.approveTimesheet)
 	add(704, "clockify_approvals_reject", "clockify_reject_timesheet", "approval", "updated", s.rejectTimesheet)
 	add(705, "clockify_approvals_withdraw", "clockify_withdraw_approval", "approval", "updated", s.withdrawApproval)
-	add(800, "clockify_webhooks_list", "clockify_list_webhooks", "webhook", "", s.ListWebhooks)
+	add(800, "clockify_webhooks_list", "clockify_list_webhooks", "webhook", "", autoPaginated(s.ListWebhooks))
 	add(801, "clockify_webhooks_get", "clockify_get_webhook", "webhook", "", s.GetWebhook)
 	add(802, "clockify_webhooks_create", "clockify_create_webhook", "webhook", "created", s.CreateWebhook)
 	add(803, "clockify_webhooks_update", "clockify_update_webhook", "webhook", "updated", s.UpdateWebhook)
 	add(804, "clockify_webhooks_delete", "clockify_delete_webhook", "webhook", "deleted", s.DeleteWebhook)
 	addGuidance(805, "clockify_webhooks_test_guidance", "clockify_test_webhook", s.testWebhookGuidance)
 	add(806, "clockify_webhooks_events", "clockify_list_webhook_events", "webhook_event", "", s.ListWebhookEvents)
-	add(900, "clockify_groups_list", "clockify_list_user_groups_admin", "group", "", s.ListUserGroupsAdmin)
+	add(900, "clockify_groups_list", "clockify_list_user_groups_admin", "group", "", autoPaginated(s.ListUserGroupsAdmin))
 	add(901, "clockify_groups_get", "clockify_get_user_group", "group", "", s.GetUserGroup)
 	add(902, "clockify_groups_create", "clockify_create_user_group_admin", "group", "created", s.CreateUserGroupAdmin)
 	add(903, "clockify_groups_update", "clockify_update_user_group_admin", "group", "updated", s.UpdateUserGroupAdmin)
@@ -192,7 +192,7 @@ func (s *Service) explicitInvoiceNativeDescriptors() []mcp.ToolDescriptor {
 				"page":       map[string]any{"type": "integer"},
 				"page_size":  map[string]any{"type": "integer"},
 			},
-		})), "payment", "", s.listInvoicePayments),
+		})), "payment", "", autoPaginated(s.listInvoicePayments)),
 		nativeDomainTool(214, toolRW("clockify_invoices_payments_create", "Create an invoice payment. amount defaults to minor units (cents), matching the live AddInvoicePaymentRequest body; pass amount_unit:\"major\" to enter the value in major currency units instead.", objectSchema(map[string]any{
 			"required": []string{"invoice_id", "amount", "date"},
 			"properties": map[string]any{
@@ -275,6 +275,7 @@ func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, e
 	tool := old.Tool
 	tool.Name = name
 	adjustOneUserNativeSchema(name, tool.InputSchema)
+	injectAutoPaginateSchemaProps(tool.InputSchema)
 	if tool.Annotations == nil {
 		tool.Annotations = map[string]any{}
 	}

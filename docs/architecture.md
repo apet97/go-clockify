@@ -210,29 +210,61 @@ on **every** list tool that uses it:
 
 ### Wired handlers (post-T2.2)
 
+**Phase 1 — first-slice handlers** use `runListWithAutoPaginate`
+directly, walking pages via per-page `listX(ctx, args) ([]T, int, int,
+error)` helpers:
+
 - `clockify_clients_list`
 - `clockify_projects_list`
 - `clockify_tasks_list`
 - `clockify_tags_list`
 - `clockify_entries_list`
 
-All five use `runListWithAutoPaginate` directly. Integration tests in
-`auto_paginate_integration_test.go` cover walk-every-page,
-`max_rows` truncation, and "no flag → single page" semantics against
-a fake Clockify backend.
+**Phase 2 — native list handlers** wrap their existing single-page
+`ToolResult`-returning handler with `autoPaginated(handler)` at
+descriptor-registration time in `oneuser_native_descriptors.go`. The
+wrapper uses `runAutoPaginatedToolResult`, which loops by re-invoking
+the handler with `page=1,2,3...`, merges per-page `Data` slices via
+reflection, and stamps `addAutoPaginateMeta` on the final `Meta` map.
+Each native list tool's input schema also gets `auto_paginate` +
+`max_rows` injected via `injectAutoPaginateSchemaProps` (called from
+`nativeDirectDescriptor`), so MCP clients can discover the knob without
+each schema literal having to opt in:
 
-### Rollout TODO
+- `clockify_invoices_list`
+- `clockify_invoices_payments_list`
+- `clockify_projects_templates_list`
+- `clockify_expenses_list`
+- `clockify_expenses_categories_list`
+- `clockify_custom_fields_list`
+- `clockify_time_off_requests_list`
+- `clockify_time_off_policies_list`
+- `clockify_scheduling_assignments_list`
+- `clockify_approvals_list`
+- `clockify_webhooks_list`
+- `clockify_groups_list`
+- `clockify_users_list`
 
-Other list handlers (invoices, expenses, custom_fields, time_off,
-scheduling, webhooks, approvals, audit_log, holidays, groups, users,
-project memberships, invoice items/payments/reports) still service
-the `auto_paginate` knob in their **input schema** (because they share
-`paginationSchema()`) but currently return a single page regardless.
-Wiring is per-handler because each owns a bespoke query builder and
-response envelope; migrate by introducing a `listXAuto` companion
-method that loops using the existing single-page helper and stamps
-`addAutoPaginateMeta`. The helper test suite is the regression net for
-the shared loop; integration tests should be added per migrated tool.
+Integration tests live in `auto_paginate_integration_test.go` (phase 1)
+and `auto_paginate_native_test.go` (phase 2) and cover walk-every-page,
+`max_rows` truncation, and "no flag → single page" semantics against a
+fake Clockify backend, including the doubly-nested upstream envelope
+shape used by `clockify_expenses_list`.
+
+### Out-of-scope handlers
+
+These list tools are intentionally **not** wrapped because they have
+no upstream pagination to walk:
+
+- `clockify_holidays_list` — workspace-wide single GET.
+- `clockify_holidays_list_for_user_period` — period-bounded single GET.
+- `clockify_webhooks_events` — static list of subscribable events.
+- `clockify_projects_memberships_list` — read from the hydrated project
+  record; full membership set returned on one page by design.
+- `clockify_invoices_items_list` — items are embedded in the
+  single-invoice GET; no `/items` list route exists upstream.
+- `clockify_entity_changes_list` — bespoke POST body pagination
+  (separate from the page/page_size shape).
 
 ---
 
