@@ -164,7 +164,7 @@ func invoiceItemIndexArg(args map[string]any) (string, error) {
 // invoice line items. The live API rejects PUT on the items path with code
 // 3000 ("Request method 'PUT' is not supported"); there is no PATCH route
 // either. Callers replace a line by deleting and re-adding it.
-func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (ToolResult, error) {
+func (s *Service) updateInvoiceItem(_ context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
 		return ToolResult{}, err

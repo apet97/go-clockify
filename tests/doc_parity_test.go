@@ -253,7 +253,7 @@ func TestApiCoverageDocCountsMatchRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read api-coverage.md: %v", err)
 	}
-	counts := scanApiCoverageCounts(string(raw))
+	counts := scanAPICoverageCounts(string(raw))
 	for _, key := range []string{"Workflow tools", "Domain tools", "Total"} {
 		if _, ok := counts[key]; !ok {
 			t.Fatalf("api-coverage.md missing %q count in summary table: %#v", key, counts)
@@ -355,7 +355,7 @@ func scanReadmeStartupCount(readme string) (int, bool) {
 	return 0, false
 }
 
-func scanApiCoverageCounts(markdown string) map[string]int {
+func scanAPICoverageCounts(markdown string) map[string]int {
 	counts := map[string]int{}
 	lineRE := regexp.MustCompile(`^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|`)
 	scanner := bufio.NewScanner(strings.NewReader(markdown))

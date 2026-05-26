@@ -116,6 +116,16 @@ as setup instructions.
   probe fixture. Failures bubble through the existing `abort` so the
   failure surfaces at `make gen-openapi` time, before drift fixtures
   regenerate.
+- **Audit T3.2 phase 1 landed** (2026-05-26). `revive` is enabled in
+  `.golangci.yml` with the three audit-specified rules (`exported`,
+  `var-naming`, `unused-parameter`) under `enable-all-rules: false`.
+  Production `unused-parameter` (5) and `var-naming` (1) violations
+  are fixed. The 813 pre-existing `exported` violations across
+  `internal/` are silenced via a single repo-wide exclusion pointing
+  back to the audit; phase 2 is the godoc-coverage campaign that
+  removes that exclusion package by package. CI's existing `lint` job
+  picks the new rules up automatically because it runs
+  `golangci-lint run` against the same config.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the

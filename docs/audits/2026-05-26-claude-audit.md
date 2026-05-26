@@ -266,11 +266,12 @@ The `ci.yml` workflow has 14 named jobs, all running on `ubuntu-latest` with pin
 - **HOW:** `paginated_ops_live_evidence_errors(doc)` runs inside `validate_document` after the merge pipeline; it walks every entry in `PAGINATED_LIST_OPS`, asserts the emitted operation exists, and asserts `x-clockify-live-status ∈ {live-success, probe-documented}`. Mismatches bubble up through the existing `abort(errors.join("\n"))` so a contributor sees the failure at `make gen-openapi` time. `PAGINATED_LIVE_EVIDENCE_OK` (Set) is the single source of truth for accepted bucket names. `make perfect` green on commit; manual probe with `documented`/missing entries confirms the gate fires loudly.
 - **EFFORT:** 4 hours actual — Ruby helper + comment.
 
-**T3.2: Expand golangci-lint to cover `revive` style rules**
+**T3.2: Expand golangci-lint to cover `revive` style rules** — _phase 1 landed 2026-05-26._
 
 - **WHY:** The code is generally idiomatic but some unexported helpers in large files (`common.go`, `schema_helpers.go`) lack comments and have inconsistent short-variable names (e.g., `p`, `s` reused as both pagination page and service receiver in different scopes).
-- **HOW:** Add `revive` to `.golangci.yml` with a light rule set (`exported`, `var-naming`, `unused-parameter`). Fix violations incrementally.
-- **EFFORT:** 4–8 hours.
+- **HOW (phase 1, landed):** `revive` enabled in `.golangci.yml` with the three audit-specified rules (`exported`, `var-naming`, `unused-parameter`) and `enable-all-rules: false` so noisier defaults (e.g. `package-comments`) stay quiet. Five `unused-parameter` violations renamed to `_`; one `var-naming` violation (`scanApiCoverageCounts` → `scanAPICoverageCounts`) renamed. The 813 pre-existing `exported` violations across `internal/` are silenced via a single `text: ^exported: ` exclusion with a load-bearing comment pointing back to T3.2 — they need a godoc-coverage campaign before the exclusion can come off.
+- **HOW (phase 2, deferred):** Godoc-coverage campaign across `internal/{clockify,mcp,safety,resolve,testclockify,tools}`. Each package gets a one-line doc comment per exported symbol; once a package is clean, remove its files from the exclusion or migrate the exclusion to a more granular `path:` rule. Tracking suggestion: pick one package per follow-up PR so the diff stays reviewable.
+- **EFFORT:** Phase 1 ≈ 1 h actual. Phase 2 ≈ 3–6 h spread across multiple PRs.
 
 ---
 

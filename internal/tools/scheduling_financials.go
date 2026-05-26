@@ -14,7 +14,7 @@ func (s *Service) reportFinancialsForAssignmentReport(ctx context.Context, wsID 
 	return s.reportFinancialsForAssignmentGroups(ctx, wsID, groups, start, end, args)
 }
 
-func (s *Service) reportFinancialsForAssignmentViews(ctx context.Context, wsID string, views []AssignmentView, groups []string, start, end time.Time, args map[string]any) (map[string]assignmentReportAccumulator, error) {
+func (s *Service) reportFinancialsForAssignmentViews(ctx context.Context, wsID string, _ []AssignmentView, groups []string, start, end time.Time, args map[string]any) (map[string]assignmentReportAccumulator, error) {
 	return s.reportFinancialsForAssignmentGroups(ctx, wsID, groups, start, end, args)
 }
 

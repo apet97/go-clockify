@@ -922,7 +922,7 @@ func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (Tool
 }
 
 // TestWebhook reports the absence of a Clockify webhook test-send endpoint.
-func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ToolResult, error) {
+func (s *Service) TestWebhook(_ context.Context, args map[string]any) (ToolResult, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
 		return ToolResult{}, err

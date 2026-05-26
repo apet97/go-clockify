@@ -252,7 +252,7 @@ func assignmentGroupValue(raw map[string]any, group string, fallback time.Time, 
 	}
 }
 
-func assignmentBucketTime(raw map[string]any, fallback time.Time, defaultTZ *time.Location) time.Time {
+func assignmentBucketTime(raw map[string]any, fallback time.Time, _ *time.Location) time.Time {
 	for _, key := range []string{"date", "start", "time", "week", "month"} {
 		if t, ok := parseAssignmentTime(firstPresent(raw, key)); ok {
 			return t

@@ -590,7 +590,7 @@ func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (ToolR
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) sendInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
+func (s *Service) sendInvoice(_ context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
 		return ToolResult{}, err
