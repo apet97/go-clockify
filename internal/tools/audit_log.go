@@ -121,47 +121,47 @@ func entityChangesListSchema() map[string]any {
 // live API returns a bare JSON array of audit-log entries, not the
 // PageableV1ListAuditLogDtoV1 envelope the OpenAPI document describes; a live
 // probe against the sacrificial workspace confirmed the bare-array shape.
-func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (ToolResult, error) {
 	actions, _, err := strictStringSliceArg(args, "actions")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if len(actions) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("actions is required (at least one audit-log action type)")
+		return ToolResult{}, fmt.Errorf("actions is required (at least one audit-log action type)")
 	}
 	authorIDs, _, err := strictStringSliceArg(args, "author_ids")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if len(authorIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf(`author_ids is required (user IDs, or "SYSTEM" for system entries)`)
+		return ToolResult{}, fmt.Errorf(`author_ids is required (user IDs, or "SYSTEM" for system entries)`)
 	}
 	contains := strings.ToUpper(strings.TrimSpace(stringArg(args, "authors_contains")))
 	if contains == "" {
 		contains = "CONTAINS"
 	}
 	if contains != "CONTAINS" && contains != "DOES_NOT_CONTAIN" {
-		return ResultEnvelope{}, fmt.Errorf("authors_contains must be CONTAINS or DOES_NOT_CONTAIN")
+		return ToolResult{}, fmt.Errorf("authors_contains must be CONTAINS or DOES_NOT_CONTAIN")
 	}
 	startTime, endTime, err := parseRangeInLocation(args, s.location())
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// The Clockify audit-log API rejects windows wider than 31 days with an
 	// opaque 400. Catch it here with a recovery instruction instead.
 	const auditLogMaxRangeDays = 31
 	if endTime.Sub(startTime) > auditLogMaxRangeDays*24*time.Hour {
-		return ResultEnvelope{}, fmt.Errorf(
+		return ToolResult{}, fmt.Errorf(
 			"audit log date range of %.0f days exceeds the Clockify maximum of %d days; split the request into %d-day windows",
 			endTime.Sub(startTime).Hours()/24, auditLogMaxRangeDays, auditLogMaxRangeDays)
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "audit-log")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	pageSize := intArg(args, "page_size", 50)
 	body := map[string]any{
@@ -176,7 +176,7 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 	}
 	var entries []map[string]any
 	if err := s.Client.PostAuditLog(ctx, path, body, &entries); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page := intArg(args, "page", 1)
 	return ok("clockify_audit_logs_search", entries, map[string]any{
@@ -195,33 +195,33 @@ func (s *Service) AuditLogsSearch(ctx context.Context, args map[string]any) (Res
 // The live API returns a bare array of change documents; the OpenAPI
 // envelope shape was never observed in practice, so the handler decodes a
 // plain array and surfaces a recovery envelope if Clockify ever changes it.
-func (s *Service) EntityChangesList(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) EntityChangesList(ctx context.Context, args map[string]any) (ToolResult, error) {
 	changeType := strings.ToLower(strings.TrimSpace(stringArg(args, "change_type")))
 	switch changeType {
 	case "created", "updated", "deleted":
 	default:
-		return ResultEnvelope{}, fmt.Errorf("change_type must be created, updated, or deleted")
+		return ToolResult{}, fmt.Errorf("change_type must be created, updated, or deleted")
 	}
 	entityTypes, _, err := strictStringSliceArg(args, "entity_types")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if len(entityTypes) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("entity_types is required (at least one entity type)")
+		return ToolResult{}, fmt.Errorf("entity_types is required (at least one entity type)")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "entities", changeType)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// start/end are required (Axiom 14: the resolved date range must be
 	// explicit). parseRangeInLocation also enforces end > start.
 	startTime, endTime, err := parseRangeInLocation(args, s.location())
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query := url.Values{}
 	for _, entityType := range entityTypes {
@@ -239,7 +239,7 @@ func (s *Service) EntityChangesList(ctx context.Context, args map[string]any) (R
 	}
 	var changes []map[string]any
 	if err := s.Client.GetValues(ctx, path, query, &changes); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := map[string]any{
 		"workspaceId":          wsID,

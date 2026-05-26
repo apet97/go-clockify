@@ -2,6 +2,16 @@ package tools
 
 import "github.com/apet97/go-clockify/internal/clockify"
 
+// ToolResult is the single success envelope every tool handler
+// returns. Post-T2.1 the legacy ResultEnvelope name was retired and
+// ToolResult is now the only success type. OK is the boolean success
+// flag; Action mirrors the tool name for client-side dispatch; Data
+// carries the typed payload; Meta carries cross-cutting metadata
+// (pagination cursors, fingerprint hashes). Entity / IDs / Changed /
+// Warnings / Next are optional — every field uses omitempty (and
+// Changed uses omitzero for value-type omission), so a narrow handler
+// that fills only {OK, Action, Data, Meta} emits the historical
+// four-key wire shape unchanged.
 type ToolResult struct {
 	OK       bool              `json:"ok"`
 	Action   string            `json:"action"`
@@ -9,7 +19,7 @@ type ToolResult struct {
 	IDs      map[string]string `json:"ids,omitempty"`
 	Data     any               `json:"data,omitempty"`
 	Meta     map[string]any    `json:"meta,omitempty"`
-	Changed  ChangeSet         `json:"changed"`
+	Changed  ChangeSet         `json:"changed,omitzero"`
 	Warnings []Warning         `json:"warnings,omitempty"`
 	Next     []NextAction      `json:"next,omitempty"`
 }

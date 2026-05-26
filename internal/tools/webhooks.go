@@ -466,10 +466,10 @@ func webhookStringSliceFromPayload(payload map[string]any, key string) []string 
 }
 
 // ListWebhooks returns webhooks for the workspace.
-func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	page, pageSize := paginationFromArgs(args)
@@ -481,7 +481,7 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 
 	path, err := paths.Workspace(wsID, "webhooks")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// Upstream returns {workspaceWebhookCount: N, webhooks: [...]}.
 	// Probe evidence: clockify-api-probe-lab/findings/webhooks.md
@@ -491,7 +491,7 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 		Webhooks              []map[string]any `json:"webhooks"`
 	}
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	all := envelope.Webhooks
 	if all == nil {
@@ -522,24 +522,24 @@ func (s *Service) ListWebhooks(ctx context.Context, args map[string]any) (Result
 }
 
 // GetWebhook retrieves a single webhook by ID.
-func (s *Service) GetWebhook(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetWebhook(ctx context.Context, args map[string]any) (ToolResult, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "webhooks", webhookID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var webhook map[string]any
 	if err := s.Client.Get(ctx, path, nil, &webhook); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	maskWebhookAuthToken(webhook)
 
@@ -609,37 +609,37 @@ func webhookLogViewsFromRaw(items []map[string]any) []WebhookLogView {
 }
 
 // CreateWebhook creates a new webhook with URL validation.
-func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (ToolResult, error) {
 	url := stringArg(args, "url")
 	if url == "" {
-		return ResultEnvelope{}, fmt.Errorf("url is required")
+		return ToolResult{}, fmt.Errorf("url is required")
 	}
 	if err := s.validateWebhookURLForService(ctx, url); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	name := stringArg(args, "name")
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 
 	webhookEvent, err := webhookEventArg(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if webhookEvent == "" {
-		return ResultEnvelope{}, fmt.Errorf("webhook_event is required (the webhook event type, e.g. NEW_TIME_ENTRY)")
+		return ToolResult{}, fmt.Errorf("webhook_event is required (the webhook event type, e.g. NEW_TIME_ENTRY)")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	triggerSourceType, triggerSource, err := webhookTriggerSourceArgs(args, wsID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := validateWebhookUserEventTriggerSource(webhookEvent, triggerSourceType, triggerSource); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	payload := map[string]any{
@@ -658,11 +658,11 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 
 	path, err := paths.Workspace(wsID, "webhooks")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result map[string]any
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	maskWebhookAuthToken(result)
 
@@ -670,25 +670,25 @@ func (s *Service) CreateWebhook(ctx context.Context, args map[string]any) (Resul
 }
 
 // UpdateWebhook updates an existing webhook.
-func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (ToolResult, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "webhooks", webhookID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing map[string]any
 	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	payload := map[string]any{}
@@ -700,14 +700,14 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 	changed := false
 	if url := stringArg(args, "url"); url != "" {
 		if err := s.validateWebhookURLForService(ctx, url); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		payload["url"] = url
 		changed = true
 	}
 	event, err := webhookEventArg(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if event != "" {
 		payload["webhookEvent"] = event
@@ -719,7 +719,7 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 	}
 	source, _, err := strictStringSliceArg(args, "trigger_source")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if len(source) > 0 {
 		payload["triggerSource"] = source
@@ -735,14 +735,14 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 	}
 
 	if !changed {
-		return ResultEnvelope{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name, auth_token) must be provided for update")
+		return ToolResult{}, fmt.Errorf("at least one field (url, webhook_event, trigger_source_type, trigger_source, name, auth_token) must be provided for update")
 	}
 	if err := validateWebhookUserEventTriggerSource(
 		webhookStringFromPayload(payload, "webhookEvent"),
 		webhookStringFromPayload(payload, "triggerSourceType"),
 		webhookStringSliceFromPayload(payload, "triggerSource"),
 	); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		current := maps.Clone(existing)
@@ -757,7 +757,7 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 	}
 	var result map[string]any
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	maskWebhookAuthToken(result)
 
@@ -765,28 +765,28 @@ func (s *Service) UpdateWebhook(ctx context.Context, args map[string]any) (Resul
 }
 
 // DeleteWebhook deletes a webhook. Supports dry-run (preview via GET).
-func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (ToolResult, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	webhookPath, err := paths.Workspace(wsID, "webhooks", webhookID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		var webhook map[string]any
 		if err := s.Client.Get(ctx, webhookPath, nil, &webhook); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		maskWebhookAuthToken(webhook)
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_webhook",
 			Data:   dryrun.WrapResult(webhook, "clockify_delete_webhook"),
@@ -795,7 +795,7 @@ func (s *Service) DeleteWebhook(ctx context.Context, args map[string]any) (Resul
 	}
 
 	if err := s.Client.Delete(ctx, webhookPath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_delete_webhook", map[string]any{"deleted": true, "webhookId": webhookID}, map[string]any{"workspaceId": wsID}), nil
@@ -863,14 +863,14 @@ var webhookEventEnum = []string{
 
 // ListWebhookLogs returns delivery attempts for a webhook via the documented
 // POST logs search route.
-func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (ToolResult, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
 	body := map[string]any{}
@@ -882,7 +882,7 @@ func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (Res
 	}
 	if v := strings.ToUpper(strings.TrimSpace(stringArg(args, "status"))); v != "" {
 		if v != "ALL" && v != "SUCCEEDED" && v != "FAILED" {
-			return ResultEnvelope{}, fmt.Errorf("status must be ALL, SUCCEEDED, or FAILED")
+			return ToolResult{}, fmt.Errorf("status must be ALL, SUCCEEDED, or FAILED")
 		}
 		body["status"] = v
 	}
@@ -891,7 +891,7 @@ func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (Res
 	}
 	path, err := paths.Workspace(wsID, "webhooks", webhookID, "logs")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query := map[string]string{
 		"page": strconv.Itoa(page),
@@ -899,7 +899,7 @@ func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (Res
 	}
 	var logs []map[string]any
 	if err := s.Client.PostWithQuery(ctx, path, query, body, &logs); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := addPaginationMeta(map[string]any{"workspaceId": wsID, "webhookId": webhookID, "count": len(logs)}, args, page, pageSize)
 	return ok("clockify_list_webhook_logs", webhookLogViewsFromRaw(logs), meta), nil
@@ -908,10 +908,10 @@ func (s *Service) ListWebhookLogs(ctx context.Context, args map[string]any) (Res
 // ListWebhookEvents returns the static enum of webhook event types
 // the Clockify webhooks API accepts. The upstream exposes no
 // listing endpoint — see findings/webhooks.md (#15).
-func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// Return a fresh copy so callers can't mutate the package-level slice.
 	events := append([]string(nil), webhookEventEnum...)
@@ -922,11 +922,11 @@ func (s *Service) ListWebhookEvents(ctx context.Context, _ map[string]any) (Resu
 }
 
 // TestWebhook reports the absence of a Clockify webhook test-send endpoint.
-func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) TestWebhook(ctx context.Context, args map[string]any) (ToolResult, error) {
 	webhookID := stringArg(args, "webhook_id")
 	if err := resolve.ValidateID(webhookID, "webhook_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
-	return ResultEnvelope{}, fmt.Errorf("unsupported: Clockify does not expose a webhook test-send endpoint; trigger a real event or inspect delivery in the Clockify UI")
+	return ToolResult{}, fmt.Errorf("unsupported: Clockify does not expose a webhook test-send endpoint; trigger a real event or inspect delivery in the Clockify UI")
 }

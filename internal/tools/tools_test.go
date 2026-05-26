@@ -272,7 +272,7 @@ func TestFindAndUpdateEntryDryRunIncludesMatchedIdentityAndProposedChanges(t *te
 	if putCount != 0 {
 		t.Fatalf("PUT must not run for dry-run, got %d calls", putCount)
 	}
-	env, ok := result.(ResultEnvelope)
+	env, ok := result.(ToolResult)
 	if !ok {
 		t.Fatalf("unexpected result type: %T", result)
 	}
@@ -1226,7 +1226,7 @@ func TestFindAndUpdateEntryHappyPath(t *testing.T) {
 		t.Fatal("expected PUT to be called")
 	}
 
-	env, ok := result.(ResultEnvelope)
+	env, ok := result.(ToolResult)
 	if !ok {
 		t.Fatalf("unexpected result type: %T", result)
 	}
@@ -1324,9 +1324,9 @@ func TestHandlerDryRunsUseResultEnvelope(t *testing.T) {
 			if err != nil {
 				t.Fatalf("dry-run: %v", err)
 			}
-			env, ok := got.(ResultEnvelope)
+			env, ok := got.(ToolResult)
 			if !ok {
-				t.Fatalf("dry-run result type = %T, want ResultEnvelope", got)
+				t.Fatalf("dry-run result type = %T, want ToolResult", got)
 			}
 			if !env.OK || env.Action != tc.name {
 				t.Fatalf("dry-run envelope = %+v, want OK action %s", env, tc.name)
@@ -1599,7 +1599,7 @@ func TestFindAndUpdateEntryFindsMatchBeyondFirstPage(t *testing.T) {
 	if !putCalled {
 		t.Fatal("expected PUT to be called")
 	}
-	env := result.(ResultEnvelope)
+	env := result.(ToolResult)
 	data := env.Data.(FindAndUpdateEntryData)
 	if data.MatchedBy["pagesFetched"] != 2 || data.MatchedBy["entriesScanned"] != 201 {
 		t.Fatalf("unexpected paginated match metadata: %+v", data.MatchedBy)
@@ -1716,7 +1716,7 @@ func TestFindAndUpdateEntryWithEntryIDFetchesDirectly(t *testing.T) {
 	if !gotDirectGet || !gotPut {
 		t.Fatalf("expected direct GET and PUT, got get=%v put=%v", gotDirectGet, gotPut)
 	}
-	env := result.(ResultEnvelope)
+	env := result.(ToolResult)
 	data := env.Data.(FindAndUpdateEntryData)
 	if data.MatchedBy["entryId"] != entryID {
 		t.Fatalf("expected matched entryId, got %+v", data.MatchedBy)

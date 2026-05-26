@@ -1127,7 +1127,7 @@ func TestInvoicePaymentCreateAcceptsMajorUnit(t *testing.T) {
 	}
 }
 
-// mustOK is a small assertion helper for ResultEnvelope happy-paths.
+// mustOK is a small assertion helper for ToolResult happy-paths.
 // TestDeleteInvoicePaymentDryRun proves the dry_run path previews the deletion
 // without issuing the upstream DELETE.
 func TestDeleteInvoicePaymentDryRun(t *testing.T) {
@@ -1144,7 +1144,7 @@ func TestDeleteInvoicePaymentDryRun(t *testing.T) {
 	mustOK(t, res, err, "clockify_invoices_payments_delete")
 }
 
-func mustOK(t *testing.T, res ResultEnvelope, err error, wantAction string) {
+func mustOK(t *testing.T, res ToolResult, err error, wantAction string) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("%s failed: %v", wantAction, err)

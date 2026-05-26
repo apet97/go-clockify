@@ -46,6 +46,7 @@
     "docs/agent-cookbook.md",
     "docs/agent-handoff.md",
     "docs/api-coverage.md",
+    "docs/architecture.md",
     "docs/coverage-policy.md",
     "docs/goals/oneuser-tool-coverage.md",
     "docs/goals/perfect-one-user-full-mcp.md",
@@ -56,6 +57,7 @@
   ],
   "skippedDirs": [
     "docs/archive",
+    "docs/audits",
     "docs/openapi/sources"
   ],
   "historicalBannerMarkers": [

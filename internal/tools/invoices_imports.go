@@ -9,26 +9,26 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
-func (s *Service) importInvoiceTimeOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) importInvoiceTimeOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID, err := requiredIDArg(args, "invoice_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body, err := buildInvoiceImportBody(s, args, false)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", "import")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var imported map[string]any
 	if err := s.Client.Post(ctx, path, body, &imported); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_invoices_import_time", invoiceItemViewFromRaw(imported, ""), map[string]any{
 		"workspaceId": wsID,
@@ -95,26 +95,26 @@ func buildInvoiceImportBody(s *Service, args map[string]any, importExpenses bool
 	return body, nil
 }
 
-func (s *Service) importInvoiceExpensesOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) importInvoiceExpensesOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID, err := requiredIDArg(args, "invoice_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body, err := buildInvoiceImportBody(s, args, true)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", "import")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var imported map[string]any
 	if err := s.Client.Post(ctx, path, body, &imported); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_invoices_import_expenses", invoiceItemViewFromRaw(imported, ""), map[string]any{
 		"workspaceId": wsID,

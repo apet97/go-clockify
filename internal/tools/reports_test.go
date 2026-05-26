@@ -619,7 +619,7 @@ func TestSummaryAndMoneyReportsRejectReversedDateRangeLocally(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	for name, handler := range map[string]func(context.Context, map[string]any) (ResultEnvelope, error){
+	for name, handler := range map[string]func(context.Context, map[string]any) (ToolResult, error){
 		"summary": svc.SummaryReport,
 		"money":   svc.MoneyReport,
 	} {
@@ -992,7 +992,7 @@ func TestRichReportTools_AcceptPlainDatesAndLabelMoney(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	tools := map[string]func(context.Context, map[string]any) (ResultEnvelope, error){
+	tools := map[string]func(context.Context, map[string]any) (ToolResult, error){
 		"clockify_reports_money":      svc.MoneyReport,
 		"clockify_reports_attendance": svc.AttendanceReport,
 		"clockify_reports_expense":    svc.ExpenseReport,

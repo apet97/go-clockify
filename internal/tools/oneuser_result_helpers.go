@@ -33,7 +33,7 @@ func aliasArgs(args map[string]any, aliases map[string]string) map[string]any {
 	return out
 }
 
-func aliasHandler(action, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolHandler {
+func aliasHandler(action, entity, change string, handler func(context.Context, map[string]any) (ToolResult, error)) mcp.ToolHandler {
 	return func(ctx context.Context, args map[string]any) (any, error) {
 		out, err := handler(ctx, args)
 		if err != nil {
@@ -43,30 +43,30 @@ func aliasHandler(action, entity, change string, handler func(context.Context, m
 	}
 }
 
-func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) (ToolResult, error) {
 	entryIDs, found, err := strictStringSliceArg(args, "time_entry_ids")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if !found || len(entryIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("time_entry_ids is required")
+		return ToolResult{}, fmt.Errorf("time_entry_ids is required")
 	}
 	invoiced, found := optionalBoolArg(args, "invoiced")
 	if !found {
-		return ResultEnvelope{}, fmt.Errorf("invoiced is required")
+		return ToolResult{}, fmt.Errorf("invoiced is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "time-entries", "invoiced")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := map[string]any{"timeEntryIds": entryIDs, "invoiced": invoiced}
 	var upstream map[string]any
 	if err := s.Client.Patch(ctx, path, body, &upstream); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_entries_mark_invoiced", map[string]any{
 		"updated":       true,
@@ -76,10 +76,10 @@ func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) 
 	}, map[string]any{"workspaceId": wsID, "entryId": entryIDs[0]}), nil
 }
 
-func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ToolResult, error) {
 	emails, found, err := strictStringSliceArg(args, "emails")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if !found {
 		if email := strings.TrimSpace(stringArg(args, "email")); email != "" {
@@ -87,7 +87,7 @@ func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultE
 		}
 	}
 	if len(emails) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("email or emails is required")
+		return ToolResult{}, fmt.Errorf("email or emails is required")
 	}
 	baseArgs := map[string]any{}
 	if sendEmail, ok := optionalBoolArg(args, "send_email"); ok {
@@ -97,7 +97,7 @@ func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultE
 		baseArgs["email"] = emails[0]
 		out, err := s.InviteUser(ctx, baseArgs)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		out.Action = "clockify_users_invite"
 		return out, nil
@@ -112,7 +112,7 @@ func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ResultE
 		nextArgs["email"] = email
 		out, err := s.InviteUser(ctx, nextArgs)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		if id, _ := out.Meta["workspaceId"].(string); id != "" {
 			wsID = id
@@ -171,7 +171,13 @@ func nativeBodyFromArgs(args map[string]any, keys ...string) map[string]any {
 }
 
 func standardizeDomainResult(action, entity, change string, out any, args map[string]any) ToolResult {
-	if current, ok := out.(ToolResult); ok {
+	// Post-T2.1: ToolResult is an alias for ToolResult, so the
+	// type switch can no longer distinguish "narrow envelope from ok()"
+	// vs "rich envelope from result()". Use Entity as the value-level
+	// signal: result() always sets it, ok() never does. A rich result
+	// gets re-stamped with action and sanitised; a narrow one falls
+	// through to the lifting logic below.
+	if current, ok := out.(ToolResult); ok && current.Entity != "" {
 		current.Action = action
 		current.Data = sanitizeResultValue(current.Data)
 		current.Meta = sanitizeResultMeta(current.Meta)
@@ -184,7 +190,7 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 	data := out
 	var meta map[string]any
 	var warnings []Warning
-	if env, ok := out.(ResultEnvelope); ok {
+	if env, ok := out.(ToolResult); ok {
 		data = env.Data
 		if len(env.Meta) > 0 {
 			meta = env.Meta

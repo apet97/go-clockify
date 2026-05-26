@@ -15,10 +15,10 @@ import (
 // Time-off handler implementations
 // ---------------------------------------------------------------------------
 
-func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	page, pageSize := paginationFromArgs(args)
@@ -36,21 +36,21 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 	if uid := stringArg(args, "user_id"); uid != "" {
 		resolved, err := s.resolveUserID(ctx, wsID, uid)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		body["users"] = []string{resolved}
 	}
 
 	path, err := paths.Workspace(wsID, "time-off", "requests")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var envelope struct {
 		Count    int              `json:"count"`
 		Requests []map[string]any `json:"requests"`
 	}
 	if err := s.Client.Post(ctx, path, body, &envelope); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	meta := addPaginationMeta(map[string]any{
@@ -66,24 +66,24 @@ func (s *Service) listTimeOffRequests(ctx context.Context, args map[string]any) 
 	return ok("clockify_list_time_off_requests", timeOffRequestViewsFromRaw(envelope.Requests), emptyListMeta(meta, "clockify_request_time_off")), nil
 }
 
-func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	requestID := stringArg(args, "request_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := resolve.ValidateID(requestID, "request_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	request, err := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_get_time_off_request", timeOffRequestViewFromRaw(request), map[string]any{
@@ -92,33 +92,33 @@ func (s *Service) getTimeOffRequest(ctx context.Context, args map[string]any) (R
 	}), nil
 }
 
-func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	startRaw := stringArg(args, "start")
 	endRaw := stringArg(args, "end")
 	if startRaw == "" || endRaw == "" {
-		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+		return ToolResult{}, fmt.Errorf("start and end are required")
 	}
 	note := stringArg(args, "note")
 	if note == "" && !boolFromAny(args["__allow_empty_note"]) {
-		return ResultEnvelope{}, fmt.Errorf("note is required")
+		return ToolResult{}, fmt.Errorf("note is required")
 	}
 	loc, err := s.locationFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, fmt.Errorf("invalid timezone: %w", err)
+		return ToolResult{}, fmt.Errorf("invalid timezone: %w", err)
 	}
 	days, err := timeOffRequestDays(startRaw, endRaw, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	halfDay, _ := args["half_day"].(bool)
@@ -141,7 +141,7 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 	var result map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_create_time_off_request", dryrunPreviewPayload("clockify_create_time_off_request", payload), map[string]any{
@@ -150,7 +150,7 @@ func (s *Service) createTimeOffRequest(ctx context.Context, args map[string]any)
 		}), nil
 	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_create_time_off_request", timeOffRequestViewFromRaw(result), map[string]any{
@@ -184,37 +184,37 @@ func timeOffRequestDays(startRaw, endRaw string, loc *time.Location) (int, error
 	return int(endDay.Sub(startDay).Hours()/24) + 1, nil
 }
 
-func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	requestID := stringArg(args, "request_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := resolve.ValidateID(requestID, "request_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{}
 	changed := make([]string, 0, 1)
 	if status := stringArg(args, "status"); status != "" {
 		if status != "APPROVED" && status != "REJECTED" {
-			return ResultEnvelope{}, fmt.Errorf("status must be APPROVED or REJECTED; got %q", status)
+			return ToolResult{}, fmt.Errorf("status must be APPROVED or REJECTED; got %q", status)
 		}
 		body = timeOffRequestStatusBody(status, "")
 		changed = append(changed, "status")
 	}
 	if _, ok := body["status"]; !ok {
-		return ResultEnvelope{}, fmt.Errorf("status is required for time off request update; use APPROVED or REJECTED")
+		return ToolResult{}, fmt.Errorf("status is required for time off request update; use APPROVED or REJECTED")
 	}
 
 	if dryrun.Enabled(args) {
@@ -227,7 +227,7 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 
 	var result map[string]any
 	if err := s.Client.Patch(ctx, path, body, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Clockify's PATCH response is sparse (no policy/user names). Mirror
@@ -247,32 +247,32 @@ func (s *Service) updateTimeOffRequest(ctx context.Context, args map[string]any)
 	return ok("clockify_update_time_off_request", timeOffRequestViewFromRaw(result), meta), nil
 }
 
-func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	requestID := stringArg(args, "request_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := resolve.ValidateID(requestID, "request_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID, "requests", requestID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		request, err := s.fetchTimeOffRequest(ctx, wsID, policyID, requestID)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_time_off_request",
 			Data:   dryrun.WrapResult(request, "clockify_delete_time_off_request"),
@@ -281,7 +281,7 @@ func (s *Service) deleteTimeOffRequest(ctx context.Context, args map[string]any)
 	}
 
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_delete_time_off_request", map[string]any{

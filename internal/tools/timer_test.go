@@ -203,9 +203,9 @@ func TestStopTimerRetriesTransientEmptyRunningList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stop timer: %v", err)
 	}
-	env, ok := out.(ResultEnvelope)
+	env, ok := out.(ToolResult)
 	if !ok {
-		t.Fatalf("result type = %T, want ResultEnvelope", out)
+		t.Fatalf("result type = %T, want ToolResult", out)
 	}
 	entry, ok := env.Data.(EntryView)
 	if !ok || entry.ID != "running1" {

@@ -207,20 +207,20 @@ func userGroupListQuery(args map[string]any) (map[string]string, int, int) {
 	return query, page, pageSize
 }
 
-func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query, page, pageSize := userGroupListQuery(args)
 
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out []map[string]any
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,
@@ -229,40 +229,40 @@ func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) 
 	return ok("clockify_list_user_groups_admin", out, meta), nil
 }
 
-func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var groups []map[string]any
 	if err := s.Client.Get(ctx, path, nil, &groups); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	for _, out := range groups {
 		if id, _ := out["id"].(string); id == groupID {
 			return ok("clockify_get_user_group", out, map[string]any{"workspaceId": wsID}), nil
 		}
 	}
-	return ResultEnvelope{}, fmt.Errorf("user group %s not found", groupID)
+	return ToolResult{}, fmt.Errorf("user group %s not found", groupID)
 }
 
-func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	requestedUserIDs := createGroupUserIDs(args)
@@ -274,11 +274,11 @@ func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any)
 
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Clockify's group-create endpoint does not reliably attach members, so
@@ -343,14 +343,14 @@ func createGroupUserIDs(args map[string]any) []string {
 	return out
 }
 
-func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{}
@@ -363,27 +363,27 @@ func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any)
 
 	path, err := paths.Workspace(wsID, "user-groups", groupID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Put(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_update_user_group_admin", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_user_group_admin",
 			Data:   dryrun.MinimalResult("clockify_delete_user_group_admin", map[string]any{"group_id": groupID}),
@@ -393,10 +393,10 @@ func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any)
 
 	path, err := paths.Workspace(wsID, "user-groups", groupID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_user_group_admin", map[string]any{
 		"deleted": true,
@@ -408,19 +408,19 @@ func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any)
 // Holiday Handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) ListHolidays(ctx context.Context) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "holidays")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out []map[string]any
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	for _, h := range out {
 		delete(h, "userGroupIds")
@@ -435,18 +435,18 @@ func (s *Service) ListHolidays(ctx context.Context) (ResultEnvelope, error) {
 	}, "clockify_holidays_create")), nil
 }
 
-func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	holidayID, err := requiredIDArg(args, "holiday_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	out, scanned, err := s.findHolidayByID(ctx, wsID, holidayID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_holidays_get", out, map[string]any{
 		"workspaceId": wsID,
@@ -455,23 +455,23 @@ func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ResultEn
 	}), nil
 }
 
-func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any) (ToolResult, error) {
 	assignedTo := firstNonEmptyString(strings.TrimSpace(stringArg(args, "assigned_to")), strings.TrimSpace(stringArg(args, "user_id")))
 	if assignedTo == "" {
-		return ResultEnvelope{}, fmt.Errorf("assigned_to is required")
+		return ToolResult{}, fmt.Errorf("assigned_to is required")
 	}
 	start := normalizeHolidayPeriodStart(strings.TrimSpace(stringArg(args, "start")))
 	end := normalizeHolidayPeriodEnd(strings.TrimSpace(stringArg(args, "end")))
 	if start == "" || end == "" {
-		return ResultEnvelope{}, fmt.Errorf("start and end are required")
+		return ToolResult{}, fmt.Errorf("start and end are required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "holidays", "in-period")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query := map[string]string{
 		"assigned-to": assignedTo,
@@ -480,7 +480,7 @@ func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any)
 	}
 	var out []map[string]any
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_list_holidays_in_period", out, emptyListMeta(map[string]any{
 		"workspaceId": wsID,
@@ -490,14 +490,14 @@ func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any)
 	}, "")), nil
 }
 
-func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 	startDate := strings.TrimSpace(stringArg(args, "start_date"))
 	if startDate == "" {
-		return ResultEnvelope{}, fmt.Errorf("start_date is required")
+		return ToolResult{}, fmt.Errorf("start_date is required")
 	}
 	endDate := strings.TrimSpace(stringArg(args, "end_date"))
 	if endDate == "" {
@@ -505,27 +505,27 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 		endDate = startDate
 	}
 	if _, err := time.Parse("2006-01-02", startDate); err != nil {
-		return ResultEnvelope{}, fmt.Errorf("could not parse start_date %q - use YYYY-MM-DD", startDate)
+		return ToolResult{}, fmt.Errorf("could not parse start_date %q - use YYYY-MM-DD", startDate)
 	}
 	if _, err := time.Parse("2006-01-02", endDate); err != nil {
-		return ResultEnvelope{}, fmt.Errorf("could not parse end_date %q - use YYYY-MM-DD", endDate)
+		return ToolResult{}, fmt.Errorf("could not parse end_date %q - use YYYY-MM-DD", endDate)
 	}
 
 	userIDs, _, err := strictStringSliceArg(args, "user_ids")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	groupIDs, _, err := strictStringSliceArg(args, "user_group_ids")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if len(userIDs) == 0 && len(groupIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("at least one of user_ids or user_group_ids is required")
+		return ToolResult{}, fmt.Errorf("at least one of user_ids or user_group_ids is required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{
@@ -555,30 +555,30 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (Resul
 
 	path, err := paths.Workspace(wsID, "holidays")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	out["date_period"] = holidayDatePeriodSnake(out, startDate, endDate)
 	delete(out, "datePeriod")
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	holidayID, err := requiredIDArg(args, "holiday_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	existing, _, err := s.findHolidayByID(ctx, wsID, holidayID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := holidayUpdateBodyFromExisting(existing)
 	name := strings.TrimSpace(stringArg(args, "name"))
@@ -604,7 +604,7 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 		body["occursAnnually"] = occurs
 	}
 	if userIDs, found, err := strictStringSliceArg(args, "user_ids"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if found && len(userIDs) > 0 {
 		body["users"] = map[string]any{
 			"contains": "CONTAINS",
@@ -613,7 +613,7 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 		}
 	}
 	if groupIDs, found, err := strictStringSliceArg(args, "user_group_ids"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if found && len(groupIDs) > 0 {
 		body["userGroups"] = map[string]any{
 			"contains": "CONTAINS",
@@ -624,11 +624,11 @@ func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (Resul
 
 	path, err := paths.Workspace(wsID, "holidays", holidayID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Put(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	fallbackPeriod, _ := body["datePeriod"].(map[string]any)
 	out["date_period"] = holidayDatePeriodSnake(out, firstReportString(fallbackPeriod, "startDate"), firstReportString(fallbackPeriod, "endDate"))
@@ -719,18 +719,18 @@ func holidayDatePeriodSnake(out map[string]any, fallbackStart, fallbackEnd strin
 	return map[string]any{"start_date": start, "end_date": end}
 }
 
-func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	holidayID := stringArg(args, "holiday_id")
 	if err := resolve.ValidateID(holidayID, "holiday_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_holiday",
 			Data:   dryrun.MinimalResult("clockify_delete_holiday", map[string]any{"holiday_id": holidayID}),
@@ -740,10 +740,10 @@ func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (Resul
 
 	path, err := paths.Workspace(wsID, "holidays", holidayID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_holiday", map[string]any{
 		"deleted":   true,

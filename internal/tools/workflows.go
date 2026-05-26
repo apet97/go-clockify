@@ -145,26 +145,26 @@ func proposedEntryChanges(entry clockify.TimeEntry, fields []string) map[string]
 	return out
 }
 
-func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
 		projectRef = projectID
 	}
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project or project_id is required")
+		return ToolResult{}, fmt.Errorf("project or project_id is required")
 	}
 	description := stringArg(args, "description")
 	if dryrun.Enabled(args) {
 		wsID, err := s.ResolveWorkspaceID(ctx)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		resolvedProjectID := projectID
 		if resolvedProjectID == "" {
 			resolvedProjectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 			if err != nil {
-				return ResultEnvelope{}, err
+				return ToolResult{}, err
 			}
 		}
 		payload := map[string]any{
@@ -172,7 +172,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 			"projectId":   resolvedProjectID,
 		}
 		if customFields, ok, err := entryCustomFieldsFromArgs(args); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		} else if ok {
 			payload["customFields"] = customFields
 		}
@@ -189,7 +189,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 			// No timer was running — proceed with start.
 			stopOutcome = "no_running_timer"
 		} else {
-			return ResultEnvelope{}, fmt.Errorf("stop timer: %w", stopErr)
+			return ToolResult{}, fmt.Errorf("stop timer: %w", stopErr)
 		}
 	} else {
 		stoppedEntry = stopResult
@@ -205,7 +205,7 @@ func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (Resul
 	}
 	startResult, startErr := s.StartTimerArgs(ctx, startArgs)
 	if startErr != nil {
-		return ResultEnvelope{}, fmt.Errorf("start timer: %w", startErr)
+		return ToolResult{}, fmt.Errorf("start timer: %w", startErr)
 	}
 	startedEntryID := entryIDFromResultData(startResult.Data)
 

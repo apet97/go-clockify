@@ -25,19 +25,19 @@ func invoicesInfoSchema() map[string]any {
 // total (filtered by the status filter) so a caller can compute has_more;
 // unlike clockify_invoice_report it returns raw invoice rows, not money
 // aggregates.
-func (s *Service) InvoicesInfo(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) InvoicesInfo(ctx context.Context, args map[string]any) (ToolResult, error) {
 	page, pageSize := paginationFromArgs(args)
 	statuses, _, err := strictStringSliceArg(args, "statuses")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", "info")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := map[string]any{"page": page, "pageSize": pageSize}
 	if len(statuses) > 0 {
@@ -48,7 +48,7 @@ func (s *Service) InvoicesInfo(ctx context.Context, args map[string]any) (Result
 		Invoices []map[string]any `json:"invoices"`
 	}
 	if err := s.Client.Post(ctx, path, body, &envelope); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := map[string]any{
 		"workspaceId": wsID,
@@ -61,10 +61,10 @@ func (s *Service) InvoicesInfo(ctx context.Context, args map[string]any) (Result
 	return ok("clockify_invoices_info", compactInvoiceViewsFromRaw(envelope.Invoices), emptyListMeta(meta, "clockify_invoice_client_work")), nil
 }
 
-func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
@@ -80,21 +80,21 @@ func (s *Service) invoiceReport(ctx context.Context, args map[string]any) (Resul
 	if v := stringArg(args, "status"); v != "" {
 		status, err := normalizeInvoiceStatus(v)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		body["statuses"] = []string{status}
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", "info")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var envelope struct {
 		Total    int              `json:"total"`
 		Invoices []map[string]any `json:"invoices"`
 	}
 	if err := s.Client.Post(ctx, path, body, &envelope); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Aggregates are page-scoped because the upstream endpoint returns a

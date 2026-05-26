@@ -95,7 +95,7 @@ func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (an
 		return nil, err
 	}
 	resultOut := standardizeDomainResult("clockify_stop_work", "entry", "updated", out, args)
-	if env, ok := out.(ResultEnvelope); ok {
+	if env, ok := out.(ToolResult); ok {
 		if data, ok := env.Data.(map[string]any); ok && !boolFromAny(data["stopped"]) && strings.TrimSpace(reportValueString(data["reason"])) == "no timer running" {
 			resultOut.Changed = ChangeSet{}
 			resultOut.IDs = cleanIDs(map[string]string{
@@ -259,7 +259,7 @@ func (s *Service) ClockifyFixEntry(ctx context.Context, args map[string]any) (an
 		return nil, err
 	}
 	standard := standardizeDomainResult("clockify_fix_entry", "entry", "updated", out, fixArgs)
-	if env, ok := out.(ResultEnvelope); ok {
+	if env, ok := out.(ToolResult); ok {
 		if data, ok := env.Data.(FindAndUpdateEntryData); ok {
 			standard.IDs = cleanIDs(map[string]string{"workspaceId": stringFromAny(env.Meta["workspaceId"]), "entryId": data.Entry.ID, "projectId": data.Entry.ProjectID})
 			ref := EntityRef{Type: "entry", ID: data.Entry.ID, Name: data.Entry.Description}

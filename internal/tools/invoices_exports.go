@@ -10,18 +10,18 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "export")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userLocale := strings.TrimSpace(stringArg(args, "user_locale"))
 	if userLocale == "" {
@@ -31,7 +31,7 @@ func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (Resul
 	query.Set("userLocale", userLocale)
 	raw, err := s.Client.RequestRawValues(ctx, false, "GET", path, query, nil)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_export_invoice", documentedRawResponse(raw.Header, raw.Body), map[string]any{
 		"workspaceId": wsID,
@@ -41,18 +41,18 @@ func (s *Service) exportInvoice(ctx context.Context, args map[string]any) (Resul
 	}), nil
 }
 
-func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID, err := requiredIDArg(args, "invoice_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "export")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query := url.Values{}
 	if format := strings.TrimSpace(stringArg(args, "format")); format != "" {
@@ -60,14 +60,14 @@ func (s *Service) exportInvoiceOneUser(ctx context.Context, args map[string]any)
 		case "PDF":
 			query.Set("format", strings.ToUpper(format))
 		default:
-			return ResultEnvelope{}, fmt.Errorf("format must be PDF; Clockify's invoice export endpoint does not produce CSV/XLSX (got %q)", format)
+			return ToolResult{}, fmt.Errorf("format must be PDF; Clockify's invoice export endpoint does not produce CSV/XLSX (got %q)", format)
 		}
 	}
 	userLocale := firstNonEmpty([]string{stringArg(args, "user_locale"), "en-US"})
 	query.Set("userLocale", userLocale)
 	raw, err := s.Client.RequestRawValues(ctx, false, "GET", path, query, nil)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	data := documentedRawResponse(raw.Header, raw.Body)
 	if body, ok := data["body"]; ok {

@@ -19,7 +19,7 @@ import (
 
 // ListEntries returns recent time entries with optional filtering by date range,
 // project, and pagination.
-func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ToolResult, error) {
 	page, pageSize := paginationFromArgs(args)
 
 	baseQuery := map[string]string{}
@@ -28,19 +28,19 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 	endRaw := stringArg(args, "end")
 	loc, err := s.locationFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if startRaw != "" {
 		t, err := timeparse.ParseDatetime(startRaw, loc)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("invalid start: %w", err)
+			return ToolResult{}, fmt.Errorf("invalid start: %w", err)
 		}
 		baseQuery["start"] = timeparse.FormatISO(t)
 	}
 	if endRaw != "" {
 		t, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("invalid end: %w", err)
+			return ToolResult{}, fmt.Errorf("invalid end: %w", err)
 		}
 		// A bare YYYY-MM-DD end means "through the end of that day"; without
 		// this a same-day start==end range is a zero-width window that
@@ -57,7 +57,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 	if projectFilter != "" {
 		entries, wsID, userID, filteredCount, pagesFetched, entriesScanned, resolvedProjectID, err := s.listEntriesWithProjectFilter(ctx, baseQuery, args, projectFilter, page, pageSize)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 
 		meta := addPaginationMeta(map[string]any{
@@ -88,11 +88,11 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ResultE
 
 	values, err := valuesFromEntryListQuery(query, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	entries, wsID, userID, err := s.listEntriesWithQueryValues(ctx, values)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	meta := addPaginationMeta(map[string]any{
@@ -128,29 +128,29 @@ func compactEntryListViews(views []EntryView) {
 }
 
 // GetEntry retrieves a single time entry by ID.
-func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetEntry(ctx context.Context, args map[string]any) (ToolResult, error) {
 	entryID := stringArg(args, "entry_id")
 	if err := resolve.ValidateID(entryID, "entry_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if !looksLikeClockifyEntryID(entryID) {
-		return ResultEnvelope{}, entryNotFoundError(entryID)
+		return ToolResult{}, entryNotFoundError(entryID)
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "time-entries", entryID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query := entryDetailQuery(args)
 	var entry clockify.TimeEntry
 	if err := s.Client.Get(ctx, path, query, &entry); err != nil {
 		if entryLookupMiss(err) {
-			return ResultEnvelope{}, entryNotFoundError(entryID)
+			return ToolResult{}, entryNotFoundError(entryID)
 		}
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
 	return ok("clockify_entries_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID}, financialMeta)), nil
@@ -210,19 +210,19 @@ func isHexByte(c byte) bool {
 
 // UpdateEntry performs a fetch-then-update of a time entry, merging caller fields
 // over the existing values.
-func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ToolResult, error) {
 	entryID := stringArg(args, "entry_id")
 	if err := resolve.ValidateID(entryID, "entry_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	entryPath, err := paths.Workspace(wsID, "time-entries", entryID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	query := entryDetailQuery(args)
@@ -230,7 +230,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	// Fetch existing entry
 	var existing clockify.TimeEntry
 	if err := s.Client.Get(ctx, entryPath, query, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Ownership guard. clockify_entries_update is constrained to the API
@@ -239,7 +239,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	// key mutate another user's entry. Fail-closed when userId is
 	// missing; see requireCurrentUserEntry in users.go.
 	if err := s.requireCurrentUserEntry(ctx, existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	previous := existing
 
@@ -258,7 +258,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if projectID == "" && projectRef != "" {
 		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("%w; use clockify_tools_guide and returned IDs to disambiguate project names before retrying", err)
+			return ToolResult{}, fmt.Errorf("%w; use clockify_tools_guide and returned IDs to disambiguate project names before retrying", err)
 		}
 	}
 	if projectID != "" && projectID != existing.ProjectID {
@@ -272,7 +272,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if _, ok := args["tag_ids"]; ok {
 		tagIDs, _, err := strictStringSliceArg(args, "tag_ids")
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		if !stringSlicesEqual(tagIDs, existing.TagIDs) {
 			existing.TagIDs = tagIDs
@@ -283,12 +283,12 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	// Merge start
 	loc, err := s.locationFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if startRaw := stringArg(args, "start"); startRaw != "" {
 		t, err := timeparse.ParseDatetime(startRaw, loc)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", startRaw)
+			return ToolResult{}, fmt.Errorf("could not parse date %q for start — use YYYY-MM-DD or RFC3339", startRaw)
 		}
 		formatted := timeparse.FormatISO(t)
 		if formatted != existing.TimeInterval.Start {
@@ -301,7 +301,7 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 	if endRaw := stringArg(args, "end"); endRaw != "" {
 		t, err := timeparse.ParseDatetime(endRaw, loc)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
+			return ToolResult{}, fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
 		}
 		formatted := timeparse.FormatISO(t)
 		if formatted != existing.TimeInterval.End {
@@ -336,14 +336,14 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 		preview["args"] = args
 		preview["current"] = timeEntryUpdatePreview(previous)
 		preview["proposed_changes"] = proposedEntryChanges(existing, changedFields)
-		return ResultEnvelope{OK: true, Action: "clockify_entries_update", Data: preview, Meta: meta}, nil
+		return ToolResult{OK: true, Action: "clockify_entries_update", Data: preview, Meta: meta}, nil
 	}
 
 	putPayload := timeEntryPutPayload(existing)
 
 	var updated clockify.TimeEntry
 	if err := s.Client.PutWithQuery(ctx, entryPath, query, putPayload, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceUpdateWithState(entryResourceURI(wsID, updated.ID), updated)
@@ -353,24 +353,24 @@ func (s *Service) UpdateEntry(ctx context.Context, args map[string]any) (ResultE
 }
 
 // DeleteEntry deletes a time entry by ID.
-func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ToolResult, error) {
 	entryID := stringArg(args, "entry_id")
 	if err := resolve.ValidateID(entryID, "entry_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	entryPath, err := paths.Workspace(wsID, "time-entries", entryID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var entry clockify.TimeEntry
 	if err := s.Client.Get(ctx, entryPath, nil, &entry); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Ownership guard — see the matching comment in UpdateEntry.
@@ -378,12 +378,12 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	// previews to avoid leaking another user's entry payload into a
 	// "what would happen if I deleted X" response.
 	if err := s.requireCurrentUserEntry(ctx, entry); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		view, financialMeta := s.enrichEntryView(ctx, wsID, entry)
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_entries_delete",
 			Data:   dryrun.WrapResult(view, "clockify_entries_delete"),
@@ -392,7 +392,7 @@ func (s *Service) DeleteEntry(ctx context.Context, args map[string]any) (ResultE
 	}
 
 	if err := s.Client.Delete(ctx, entryPath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceDeleted(entryResourceURI(wsID, entryID))

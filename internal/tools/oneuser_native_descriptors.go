@@ -16,7 +16,7 @@ func (s *Service) nativeHighValueDescriptorsChecked() ([]mcp.ToolDescriptor, err
 func (s *Service) nativeHighValueDescriptorsFromSources(sources map[string]mcp.ToolDescriptor) ([]mcp.ToolDescriptor, error) {
 	out := make([]mcp.ToolDescriptor, 0, 96)
 	missing := make([]string, 0)
-	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) {
+	add := func(priority int, name, oldName, entity, change string, handler func(context.Context, map[string]any) (ToolResult, error)) {
 		old, ok := sources[oldName]
 		if !ok {
 			missing = append(missing, fmt.Sprintf("%s<-source:%s", name, oldName))
@@ -101,7 +101,7 @@ func (s *Service) nativeHighValueDescriptorsFromSources(sources map[string]mcp.T
 	add(904, "clockify_groups_delete", "clockify_delete_user_group_admin", "group", "deleted", s.DeleteUserGroupAdmin)
 	add(905, "clockify_groups_add_user", "clockify_add_user_to_group", "group_member", "created", s.AddUserToGroup)
 	add(906, "clockify_groups_remove_user", "clockify_remove_user_from_group", "group_member", "deleted", s.RemoveUserFromGroup)
-	add(1000, "clockify_holidays_list", "clockify_list_holidays", "holiday", "", func(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+	add(1000, "clockify_holidays_list", "clockify_list_holidays", "holiday", "", func(ctx context.Context, _ map[string]any) (ToolResult, error) {
 		return s.ListHolidays(ctx)
 	})
 	add(1003, "clockify_holidays_list_for_user_period", "clockify_list_holidays_in_period", "holiday", "", s.ListHolidaysInPeriod)
@@ -261,7 +261,7 @@ func (s *Service) explicitPostTimeOffNativeDescriptors() []mcp.ToolDescriptor {
 	}
 }
 
-func (s *Service) updateProjectMembershipsOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateProjectMembershipsOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	if _, ok := args["memberships"]; ok {
 		return s.UpdateProjectMemberships(ctx, args)
 	}
@@ -271,7 +271,7 @@ func (s *Service) updateProjectMembershipsOneUser(ctx context.Context, args map[
 	return s.UpdateProjectMemberships(ctx, args)
 }
 
-func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+func nativeDirectDescriptor(priority int, name string, old mcp.ToolDescriptor, entity, change string, handler func(context.Context, map[string]any) (ToolResult, error)) mcp.ToolDescriptor {
 	tool := old.Tool
 	tool.Name = name
 	adjustOneUserNativeSchema(name, tool.InputSchema)
@@ -357,7 +357,7 @@ func (s *Service) nativeDomainDescriptorMap() map[string]mcp.ToolDescriptor {
 	return out
 }
 
-func nativeDomainTool(priority int, tool mcp.Tool, entity, change string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+func nativeDomainTool(priority int, tool mcp.Tool, entity, change string, handler func(context.Context, map[string]any) (ToolResult, error)) mcp.ToolDescriptor {
 	if tool.Annotations == nil {
 		tool.Annotations = map[string]any{}
 	}

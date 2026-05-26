@@ -43,10 +43,10 @@ func (s *Service) requireCurrentUserEntry(ctx context.Context, entry clockify.Ti
 	return nil
 }
 
-func (s *Service) CurrentUser(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) CurrentUser(ctx context.Context) (ToolResult, error) {
 	user, err := s.getCurrentUser(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_users_profile", userViewFromUser(user), nil), nil
 }
@@ -69,14 +69,14 @@ func (s *Service) getCurrentUser(ctx context.Context) (clockify.User, error) {
 	return user, nil
 }
 
-func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "users")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
 	query := map[string]string{
@@ -94,7 +94,7 @@ func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ResultEnv
 	addBoolQuery(query, args, "include_roles", "include-roles")
 	var users []clockify.User
 	if err := s.Client.Get(ctx, path, query, &users); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := addPaginationMeta(map[string]any{
 		"workspaceId": wsID,

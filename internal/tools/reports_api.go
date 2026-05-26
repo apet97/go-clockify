@@ -17,7 +17,7 @@ type reportEndpoint struct {
 	filterKey string
 }
 
-func (s *Service) AttendanceReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) AttendanceReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_attendance",
 		pathName:  "attendance",
@@ -25,32 +25,32 @@ func (s *Service) AttendanceReport(ctx context.Context, args map[string]any) (Re
 	})
 }
 
-func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, endpoint reportEndpoint) (ResultEnvelope, error) {
+func (s *Service) reportsAPIReport(ctx context.Context, args map[string]any, endpoint reportEndpoint) (ToolResult, error) {
 	if err := validateReportArgsDateRange(args); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID := strings.TrimSpace(stringArg(args, "workspace_id"))
 	if wsID == "" {
 		var err error
 		wsID, err = s.ResolveWorkspaceID(ctx)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	args, defaultsMeta := s.argsWithUserReportDefaults(ctx, args)
 	body, err := buildReportsAPIBody(args, endpoint.filterKey, endpoint.pathName == "weekly", s.DefaultTimezone)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	applyReportsAPIMoneyDefaults(body, endpoint)
 	pathParts := append([]string{"reports"}, strings.Split(endpoint.pathName, "/")...)
 	path, err := paths.Workspace(wsID, pathParts...)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	data, binary, err := s.postReportsAPI(ctx, path, body)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := map[string]any{
 		"workspaceId": wsID,

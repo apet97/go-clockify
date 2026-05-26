@@ -168,10 +168,10 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 // Handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	page, pageSize := paginationFromArgs(args)
@@ -183,11 +183,11 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 
 	path, err := paths.Workspace(wsID, "custom-fields")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out []map[string]any
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	all := out
 	if all == nil {
@@ -212,19 +212,19 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (Re
 	}, "clockify_custom_fields_create")), nil
 }
 
-func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	field, scanned, err := s.findCustomFieldByID(ctx, wsID, fieldID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_get_custom_field", field, map[string]any{
 		"workspaceId": wsID,
@@ -389,26 +389,26 @@ func customFieldStatusArg(args map[string]any, fallback string) (string, error) 
 	return status, nil
 }
 
-func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 	fieldType := strings.ToUpper(strings.TrimSpace(stringArg(args, "field_type")))
 	if fieldType == "" {
-		return ResultEnvelope{}, fmt.Errorf("field_type is required")
+		return ToolResult{}, fmt.Errorf("field_type is required")
 	}
 	if !validCustomFieldTypes[fieldType] {
-		return ResultEnvelope{}, fmt.Errorf("field_type %q is not one of TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK", fieldType)
+		return ToolResult{}, fmt.Errorf("field_type %q is not one of TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK", fieldType)
 	}
 	allowedVals, _ := args["allowed_values"].([]any)
 	if (fieldType == "DROPDOWN_SINGLE" || fieldType == "DROPDOWN_MULTIPLE") && len(allowedVals) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("allowed_values is required for %s", fieldType)
+		return ToolResult{}, fmt.Errorf("allowed_values is required for %s", fieldType)
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{
@@ -417,7 +417,7 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 		"status": "VISIBLE",
 	}
 	if status, err := customFieldStatusArg(args, "VISIBLE"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if status != "" {
 		body["status"] = status
 	}
@@ -430,35 +430,35 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (R
 	if rawDefault, present := args["workspace_default_value"]; present {
 		validated, err := validateCustomFieldDefaultValue(fieldType, rawDefault, allowedValuesAsStrings(allowedVals))
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		body["workspaceDefaultValue"] = validated
 	}
 
 	path, err := paths.Workspace(wsID, "custom-fields")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_create_custom_field", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	existing, _, err := s.findCustomFieldByID(ctx, wsID, fieldID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{}
@@ -471,10 +471,10 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 		fieldType = strings.ToUpper(strings.TrimSpace(fieldType))
 	}
 	if fieldType == "" {
-		return ResultEnvelope{}, fmt.Errorf("field_type is required because Clockify requires type on custom-field update and the current field type could not be resolved")
+		return ToolResult{}, fmt.Errorf("field_type is required because Clockify requires type on custom-field update and the current field type could not be resolved")
 	}
 	if !validCustomFieldTypes[fieldType] {
-		return ResultEnvelope{}, fmt.Errorf("field_type %q is not one of TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK", fieldType)
+		return ToolResult{}, fmt.Errorf("field_type %q is not one of TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE, CHECKBOX, LINK", fieldType)
 	}
 	body["type"] = fieldType
 	if vals, ok := existing["allowedValues"].([]any); ok {
@@ -484,7 +484,7 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 		body["required"] = req
 	}
 	if status, err := customFieldStatusArg(args, firstReportString(existing, "status")); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if status != "" {
 		body["status"] = status
 	}
@@ -501,42 +501,42 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (R
 		allowedVals, _ := body["allowedValues"].([]any)
 		validated, err := validateCustomFieldDefaultValue(fieldType, rawDefault, allowedValuesAsStrings(allowedVals))
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		body["workspaceDefaultValue"] = validated
 	}
 
 	path, err := paths.Workspace(wsID, "custom-fields", fieldID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Put(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_update_custom_field", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	fieldPath, err := paths.Workspace(wsID, "custom-fields", fieldID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		field, _, err := s.findCustomFieldByID(ctx, wsID, fieldID)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_custom_field",
 			Data:   dryrun.WrapResult(field, "clockify_delete_custom_field"),
@@ -545,7 +545,7 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (R
 	}
 
 	if err := s.Client.Delete(ctx, fieldPath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_custom_field", map[string]any{
 		"deleted": true,
@@ -553,83 +553,83 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (R
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	value := args["value"]
 	if value == nil {
-		return ResultEnvelope{}, fmt.Errorf("value is required")
+		return ToolResult{}, fmt.Errorf("value is required")
 	}
 
 	projectID := stringArg(args, "project_id")
 	entryID := stringArg(args, "entry_id")
 	if projectID == "" && entryID == "" {
-		return ResultEnvelope{}, fmt.Errorf("either project_id or entry_id is required")
+		return ToolResult{}, fmt.Errorf("either project_id or entry_id is required")
 	}
 	if projectID != "" {
 		if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	if entryID != "" {
 		if err := resolve.ValidateID(entryID, "entry_id"); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	field, _, err := s.findCustomFieldByID(ctx, wsID, fieldID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if status := strings.ToUpper(firstReportString(field, "status")); status != "" && status != "VISIBLE" {
-		return ResultEnvelope{}, fmt.Errorf("custom field %s has status %s; make it VISIBLE before setting values", fieldID, status)
+		return ToolResult{}, fmt.Errorf("custom field %s has status %s; make it VISIBLE before setting values", fieldID, status)
 	}
 	if err := validateCustomFieldTargetScope(field, projectID != "", entryID != ""); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := validateCustomFieldSetValue(field, value); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if projectID != "" {
 		path, err := paths.Workspace(wsID, "projects", projectID, "custom-fields", fieldID)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		body := map[string]any{"defaultValue": value}
 		var out map[string]any
 		if err := s.Client.Patch(ctx, path, body, &out); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		return ok("clockify_set_custom_field_value", out, map[string]any{"workspaceId": wsID}), nil
 	}
 
 	entryPath, err := paths.Workspace(wsID, "time-entries", entryID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var existing clockify.TimeEntry
 	if err := s.Client.Get(ctx, entryPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.requireCurrentUserEntry(ctx, existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	previous := existing
 	customFields, err := mergeCustomFieldValue(existing.CustomFieldValues, fieldID, value)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	existing.CustomFieldValues = customFields
 	var updated clockify.TimeEntry
 	if err := s.Client.Put(ctx, entryPath, timeEntryPutPayload(existing), &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(entryResourceURI(wsID, updated.ID), updated)
 	s.emitWeeklyReportsForEntryChange(ctx, wsID, &previous, &updated)

@@ -48,14 +48,14 @@ type TimeEntryRef struct {
 	End         string `json:"end,omitempty"`
 }
 
-func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (ToolResult, error) {
 	loc, err := loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	start, end, mode, err := timesheetReviewRange(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	workdayStart := stringArg(args, "workday_start")
 	if strings.TrimSpace(workdayStart) == "" {
@@ -66,25 +66,25 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		workdayEnd = "17:00"
 	}
 	if _, _, err := parseHHMM(workdayStart, "workday_start"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if _, _, err := parseHHMM(workdayEnd, "workday_end"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	minGapMinutes := intArg(args, "min_gap_minutes", 30)
 	if minGapMinutes < 0 {
-		return ResultEnvelope{}, fmt.Errorf("min_gap_minutes must be >= 0")
+		return ToolResult{}, fmt.Errorf("min_gap_minutes must be >= 0")
 	}
 	maxSuggestions := intArg(args, "max_suggestions", 10)
 	if maxSuggestions < 0 {
-		return ResultEnvelope{}, fmt.Errorf("max_suggestions must be >= 0")
+		return ToolResult{}, fmt.Errorf("max_suggestions must be >= 0")
 	}
 	if maxSuggestions > 50 {
 		maxSuggestions = 50
 	}
 	maxRows := intArg(args, "max_rows", defaultTimesheetReviewMaxRows)
 	if maxRows < 0 {
-		return ResultEnvelope{}, fmt.Errorf("max_rows must be >= 0")
+		return ToolResult{}, fmt.Errorf("max_rows must be >= 0")
 	}
 
 	limits := s.reportLimitsForArgs(args)
@@ -95,7 +95,7 @@ func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (Res
 		ResolveProjectNames: true,
 	})
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	entries := sortedEntriesByStart(agg.Entries)
 	issues, suggestions := buildTimesheetReview(entries, start, end, loc, workdayStart, workdayEnd, minGapMinutes, maxSuggestions)

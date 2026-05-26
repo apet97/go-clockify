@@ -180,7 +180,7 @@ func jsonFieldName(field reflect.StructField) (name string, optional, skip bool)
 }
 
 // envelopeSchemaFor produces an outputSchema for a tool whose Data field
-// is a typed struct T. The shape mirrors ResultEnvelope verbatim so MCP
+// is a typed struct T. The shape mirrors ToolResult verbatim so MCP
 // clients can validate every tool result against a strongly-typed schema.
 //
 // `action` is bound as a JSON Schema `const` so the schema doubles as a

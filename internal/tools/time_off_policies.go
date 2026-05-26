@@ -8,15 +8,15 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listTimeOffPolicies(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	policies, page, pageSize, err := s.fetchTimeOffPolicies(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	meta := addPaginationMeta(map[string]any{
@@ -47,24 +47,24 @@ func (s *Service) fetchTimeOffPolicies(ctx context.Context, wsID string, args ma
 	return policies, page, pageSize, nil
 }
 
-func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var policy map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Get(ctx, path, nil, &policy); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_get_time_off_policy", timeOffPolicyViewFromRaw(policy), map[string]any{
@@ -73,20 +73,20 @@ func (s *Service) getTimeOffPolicy(ctx context.Context, args map[string]any) (Re
 	}), nil
 }
 
-func (s *Service) createTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createTimeOffPolicy(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := stringArg(args, "name")
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	currentUser, err := s.getCurrentUser(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	unit := timeOffPolicyTimeUnit(args, nil)
 	payload := map[string]any{
@@ -106,34 +106,34 @@ func (s *Service) createTimeOffPolicy(ctx context.Context, args map[string]any) 
 	var result map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_create_time_off_policy", timeOffPolicyViewFromRaw(result), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) updateTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateTimeOffPolicy(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Fetch existing for merge
 	var existing map[string]any
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	changed := make([]string, 0, 8)
@@ -163,7 +163,7 @@ func (s *Service) updateTimeOffPolicy(ctx context.Context, args map[string]any) 
 
 	var result map[string]any
 	if err := s.Client.Put(ctx, path, existing, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_update_time_off_policy", timeOffPolicyViewFromRaw(result), map[string]any{
@@ -259,10 +259,10 @@ func timeOffPolicyFilter(ids []string) map[string]any {
 	return map[string]any{"contains": "CONTAINS", "ids": out, "status": "ACTIVE"}
 }
 
-func (s *Service) archiveTimeOffPolicy(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) archiveTimeOffPolicy(ctx context.Context, args map[string]any) (ToolResult, error) {
 	policyID := stringArg(args, "policy_id")
 	if err := resolve.ValidateID(policyID, "policy_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	archived := true
 	if value, ok := optionalBoolArg(args, "archived"); ok {
@@ -275,15 +275,15 @@ func (s *Service) archiveTimeOffPolicy(ctx context.Context, args map[string]any)
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "time-off", "policies", policyID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var upstream map[string]any
 	if err := s.Client.Patch(ctx, path, map[string]any{"status": status}, &upstream); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_time_off_archive", map[string]any{
 		"policyId": policyID,

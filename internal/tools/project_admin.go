@@ -176,17 +176,17 @@ func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 			},
 		},
 		// 9. Project user rates
-		projectUserRateDescriptor("clockify_update_project_user_cost_rate", "Update a project user's cost rate", "cost-rate", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+		projectUserRateDescriptor("clockify_update_project_user_cost_rate", "Update a project user's cost rate", "cost-rate", func(ctx context.Context, args map[string]any) (ToolResult, error) {
 			return s.UpdateProjectUserRate(ctx, args, "cost-rate")
 		}),
-		projectUserRateDescriptor("clockify_update_project_user_hourly_rate", "Update a project user's billable hourly rate", "hourly-rate", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+		projectUserRateDescriptor("clockify_update_project_user_hourly_rate", "Update a project user's billable hourly rate", "hourly-rate", func(ctx context.Context, args map[string]any) (ToolResult, error) {
 			return s.UpdateProjectUserRate(ctx, args, "hourly-rate")
 		}),
 		// 10. Task rates
-		taskRateDescriptor("clockify_update_task_cost_rate", "Update a task cost rate", "cost-rate", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+		taskRateDescriptor("clockify_update_task_cost_rate", "Update a task cost rate", "cost-rate", func(ctx context.Context, args map[string]any) (ToolResult, error) {
 			return s.UpdateTaskRate(ctx, args, "cost-rate")
 		}),
-		taskRateDescriptor("clockify_update_task_hourly_rate", "Update a task billable hourly rate", "hourly-rate", func(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+		taskRateDescriptor("clockify_update_task_hourly_rate", "Update a task billable hourly rate", "hourly-rate", func(ctx context.Context, args map[string]any) (ToolResult, error) {
 			return s.UpdateTaskRate(ctx, args, "hourly-rate")
 		}),
 		// 11. Archive projects
@@ -208,7 +208,7 @@ func projectAdminHandlers(s *Service) []mcp.ToolDescriptor {
 	}
 }
 
-func projectUserRateDescriptor(name, desc, endpoint string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+func projectUserRateDescriptor(name, desc, endpoint string, handler func(context.Context, map[string]any) (ToolResult, error)) mcp.ToolDescriptor {
 	return mcp.ToolDescriptor{
 		Tool: toolRWIdem(name, desc, map[string]any{
 			"type":     "object",
@@ -229,7 +229,7 @@ func projectUserRateDescriptor(name, desc, endpoint string, handler func(context
 	}
 }
 
-func taskRateDescriptor(name, desc, endpoint string, handler func(context.Context, map[string]any) (ResultEnvelope, error)) mcp.ToolDescriptor {
+func taskRateDescriptor(name, desc, endpoint string, handler func(context.Context, map[string]any) (ToolResult, error)) mcp.ToolDescriptor {
 	return mcp.ToolDescriptor{
 		Tool: toolRWIdem(name, desc, map[string]any{
 			"type":     "object",
@@ -256,10 +256,10 @@ func taskRateDescriptor(name, desc, endpoint string, handler func(context.Contex
 // Handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	page, pageSize := paginationFromArgs(args)
@@ -270,11 +270,11 @@ func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any)
 	}
 	path, err := paths.Workspace(wsID, "projects")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out []map[string]any
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	out = compactProjectTemplateListNotes(out)
 	meta := addPaginationMeta(map[string]any{
@@ -314,35 +314,35 @@ func truncateProjectTemplateListNote(note string) (string, bool) {
 	return string(runes[:keep]) + projectTemplateListNoteSuffix, true
 }
 
-func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "projects", projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_get_project_template", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := stringArg(args, "name")
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{
@@ -360,34 +360,34 @@ func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any
 	}
 	if clientID := stringArg(args, "client_id"); clientID != "" {
 		if err := resolve.ValidateID(clientID, "client_id"); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		body["clientId"] = clientID
 	}
 
 	path, err := paths.Workspace(wsID, "projects")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_create_project_template", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) CreateProjectFromTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateProjectFromTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 	templateID := strings.TrimSpace(stringArg(args, "template_project_id"))
 	if err := resolve.ValidateID(templateID, "template_project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := map[string]any{
 		"name":              name,
@@ -401,11 +401,11 @@ func (s *Service) CreateProjectFromTemplate(ctx context.Context, args map[string
 	}
 	path, err := paths.Workspace(wsID, "projects", "from-template")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if id, _ := out["id"].(string); id != "" {
 		s.emitResourceUpdate(ctx, projectResourceURI(wsID, id))
@@ -413,36 +413,36 @@ func (s *Service) CreateProjectFromTemplate(ctx context.Context, args map[string
 	return ok("clockify_create_project_from_template", out, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{}
 	if budgetEstimate, ok, err := mapArg(args, "budget_estimate"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		body["budgetEstimate"] = normalizeEstimateWithOptionsRequest(budgetEstimate)
 	}
 	if estimateReset, ok, err := mapArg(args, "estimate_reset"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		body["estimateReset"] = normalizeEstimateResetRequest(estimateReset)
 	}
 	if timeEstimate, ok, err := mapArg(args, "time_estimate"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		body["timeEstimate"] = normalizeTimeEstimateRequest(timeEstimate)
 	}
 	if estType := strings.ToUpper(strings.TrimSpace(stringArg(args, "estimate_type"))); estType != "" {
 		estValue, estOK := numberArg(args, "estimate_value")
 		if !estOK {
-			return ResultEnvelope{}, fmt.Errorf("estimate_value is required when estimate_type is supplied")
+			return ToolResult{}, fmt.Errorf("estimate_value is required when estimate_type is supplied")
 		}
 		switch estType {
 		case "TIME":
@@ -458,11 +458,11 @@ func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any
 				"type":     "MANUAL",
 			}
 		default:
-			return ResultEnvelope{}, fmt.Errorf("estimate_type must be TIME or BUDGET")
+			return ToolResult{}, fmt.Errorf("estimate_type must be TIME or BUDGET")
 		}
 	}
 	if len(body) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("at least one estimate field is required")
+		return ToolResult{}, fmt.Errorf("at least one estimate field is required")
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_update_project_estimate", dryrun.Preview("clockify_update_project_estimate", body), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
@@ -470,11 +470,11 @@ func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any
 
 	path, err := paths.Workspace(wsID, "projects", projectID, "estimate")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Patch(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok("clockify_update_project_estimate", out, map[string]any{"workspaceId": wsID}), nil
@@ -500,22 +500,22 @@ func isoDurationFromSeconds(seconds int64) string {
 	return out
 }
 
-func (s *Service) UpdateProjectMemberships(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := map[string]any{}
 	memberships, hasMemberships, err := mapSliceArg(args, "memberships")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if !hasMemberships || len(memberships) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("memberships is required and must be a non-empty array")
+		return ToolResult{}, fmt.Errorf("memberships is required and must be a non-empty array")
 	}
 	outMemberships := make([]map[string]any, 0, len(memberships))
 	for _, item := range memberships {
@@ -523,7 +523,7 @@ func (s *Service) UpdateProjectMemberships(ctx context.Context, args map[string]
 	}
 	body["memberships"] = outMemberships
 	if userGroups, hasUserGroups, err := mapArg(args, "user_groups"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if hasUserGroups {
 		body["userGroups"] = normalizeUserGroupsRequest(userGroups)
 	}
@@ -532,35 +532,35 @@ func (s *Service) UpdateProjectMemberships(ctx context.Context, args map[string]
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID, "memberships")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Patch(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok("clockify_update_project_memberships", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }
 
-func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	rawIDs, rawOk := args["user_ids"].([]any)
 	if !rawOk || len(rawIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("user_ids is required and must be a non-empty array")
+		return ToolResult{}, fmt.Errorf("user_ids is required and must be a non-empty array")
 	}
 
 	memberships := make([]map[string]any, 0, len(rawIDs))
 	for _, raw := range rawIDs {
 		uid, isStr := raw.(string)
 		if !isStr {
-			return ResultEnvelope{}, fmt.Errorf("user_ids must contain only strings")
+			return ToolResult{}, fmt.Errorf("user_ids must contain only strings")
 		}
 		if err := resolve.ValidateID(uid, "user_id"); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		m := map[string]any{"userId": uid}
 		if rate, rateOk := numberArg(args, "hourly_rate"); rateOk {
@@ -578,7 +578,7 @@ func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any
 	}
 	result, err := s.UpdateProjectMemberships(ctx, aliasArgs)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	data := result.Data
 	if out, ok := result.Data.(map[string]any); ok {
@@ -600,55 +600,55 @@ func mapsFromAny(items []map[string]any) []any {
 	return out
 }
 
-func (s *Service) AssignProjectMemberships(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) AssignProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := map[string]any{}
 	setIfBool(body, args, "remove", "remove")
 	if err := setIfStringSlice(body, args, "user_ids", "userIds"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if userGroups, ok, err := mapArg(args, "user_groups"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		body["userGroups"] = normalizeUserGroupsRequest(userGroups)
 	}
 	if len(body) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("user_ids or user_groups is required")
+		return ToolResult{}, fmt.Errorf("user_ids or user_groups is required")
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_assign_project_memberships", dryrun.Preview("clockify_assign_project_memberships", body), map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID, "memberships")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Post(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok("clockify_assign_project_memberships", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }
 
-func (s *Service) UpdateProjectTemplate(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateProjectTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	isTemplate, hasTemplate := optionalBoolArg(args, "is_template")
 	if !hasTemplate {
-		return ResultEnvelope{}, fmt.Errorf("is_template is required")
+		return ToolResult{}, fmt.Errorf("is_template is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := map[string]any{"isTemplate": isTemplate}
 	if dryrun.Enabled(args) {
@@ -656,32 +656,32 @@ func (s *Service) UpdateProjectTemplate(ctx context.Context, args map[string]any
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID, "template")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Patch(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok("clockify_update_project_template", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }
 
-func (s *Service) UpdateProjectUserRate(ctx context.Context, args map[string]any, endpoint string) (ResultEnvelope, error) {
+func (s *Service) UpdateProjectUserRate(ctx context.Context, args map[string]any, endpoint string) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body, err := rateBodyFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	action := "clockify_update_project_user_" + strings.ReplaceAll(endpoint, "-", "_")
 	if dryrun.Enabled(args) {
@@ -689,46 +689,46 @@ func (s *Service) UpdateProjectUserRate(ctx context.Context, args map[string]any
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID, "users", userID, endpoint)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Put(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(projectResourceURI(wsID, projectID), out)
 	return ok(action, out, map[string]any{"workspaceId": wsID, "projectId": projectID, "userId": userID}), nil
 }
 
-func (s *Service) UpdateTaskRate(ctx context.Context, args map[string]any, endpoint string) (ResultEnvelope, error) {
+func (s *Service) UpdateTaskRate(ctx context.Context, args map[string]any, endpoint string) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	if projectID == "" {
 		projectRef := strings.TrimSpace(stringArg(args, "project"))
 		if projectRef == "" {
-			return ResultEnvelope{}, fmt.Errorf("project_id or project is required")
+			return ToolResult{}, fmt.Errorf("project_id or project is required")
 		}
 		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	taskID := strings.TrimSpace(stringArg(args, "task_id"))
 	if taskID == "" {
 		taskRef := strings.TrimSpace(stringArg(args, "task"))
 		if taskRef == "" {
-			return ResultEnvelope{}, fmt.Errorf("task_id or task is required")
+			return ToolResult{}, fmt.Errorf("task_id or task is required")
 		}
 		taskID, err = s.resolveTaskID(ctx, wsID, projectID, taskRef)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	body, err := rateBodyFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	action := "clockify_update_task_" + strings.ReplaceAll(endpoint, "-", "_")
 	if dryrun.Enabled(args) {
@@ -736,11 +736,11 @@ func (s *Service) UpdateTaskRate(ctx context.Context, args map[string]any, endpo
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID, "tasks", taskID, endpoint)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Put(ctx, path, body, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok(action, out, map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}), nil
 }
@@ -755,25 +755,25 @@ func rateBodyFromArgs(args map[string]any) (map[string]any, error) {
 	return body, nil
 }
 
-func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (ToolResult, error) {
 	rawIDs, rawOk := args["project_ids"].([]any)
 	if !rawOk || len(rawIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("project_ids is required and must be a non-empty array")
+		return ToolResult{}, fmt.Errorf("project_ids is required and must be a non-empty array")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	results := make([]map[string]any, 0, len(rawIDs))
 	for _, raw := range rawIDs {
 		pid, isStr := raw.(string)
 		if !isStr {
-			return ResultEnvelope{}, fmt.Errorf("project_ids must contain only strings")
+			return ToolResult{}, fmt.Errorf("project_ids must contain only strings")
 		}
 		if err := resolve.ValidateID(pid, "project_id"); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 
 		body := map[string]any{"archived": true}

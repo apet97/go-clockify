@@ -280,21 +280,21 @@ func normalizeMemberProfileDays(raw []string, field string) ([]string, error) {
 }
 
 // ListUserGroups returns user groups for the workspace.
-func (s *Service) ListUserGroups(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListUserGroups(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	query, page, pageSize := userGroupListQuery(args)
 
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var groups []map[string]any
 	if err := s.Client.Get(ctx, path, query, &groups); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_list_user_groups", groups, emptyListMeta(map[string]any{
@@ -306,15 +306,15 @@ func (s *Service) ListUserGroups(ctx context.Context, args map[string]any) (Resu
 }
 
 // CreateUserGroup creates a new user group.
-func (s *Service) CreateUserGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) CreateUserGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := stringArg(args, "name")
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	payload := map[string]any{"name": name}
@@ -323,11 +323,11 @@ func (s *Service) CreateUserGroup(ctx context.Context, args map[string]any) (Res
 	}
 	path, err := paths.Workspace(wsID, "user-groups")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result map[string]any
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if gid, _ := result["id"].(string); gid != "" {
@@ -337,29 +337,29 @@ func (s *Service) CreateUserGroup(ctx context.Context, args map[string]any) (Res
 }
 
 // UpdateUserGroup updates a user group's name.
-func (s *Service) UpdateUserGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateUserGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	name := stringArg(args, "name")
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	payload := map[string]any{"name": name}
 	path, err := paths.Workspace(wsID, "user-groups", groupID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result any
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceUpdateWithState(groupResourceURI(wsID, groupID), result)
@@ -367,19 +367,19 @@ func (s *Service) UpdateUserGroup(ctx context.Context, args map[string]any) (Res
 }
 
 // DeleteUserGroup deletes a user group. Supports dry-run (minimal fallback).
-func (s *Service) DeleteUserGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteUserGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_user_group",
 			Data:   dryrun.MinimalResult("clockify_delete_user_group", map[string]any{"group_id": groupID}),
@@ -389,20 +389,20 @@ func (s *Service) DeleteUserGroup(ctx context.Context, args map[string]any) (Res
 
 	path, err := paths.Workspace(wsID, "user-groups", groupID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceDeleted(groupResourceURI(wsID, groupID))
 	return ok("clockify_delete_user_group", map[string]any{"deleted": true, "groupId": groupID}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	email := strings.TrimSpace(stringArg(args, "email"))
 	if email == "" {
-		return ResultEnvelope{}, fmt.Errorf("email is required")
+		return ToolResult{}, fmt.Errorf("email is required")
 	}
 	sendEmail := true
 	if v, ok := args["send_email"].(bool); ok {
@@ -411,7 +411,7 @@ func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ResultEn
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	payload := map[string]any{"email": email}
 	if dryrun.Enabled(args) {
@@ -421,35 +421,35 @@ func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ResultEn
 	}
 	path, err := paths.Workspace(wsID, "users")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result any
 	if err := s.Client.PostWithQuery(ctx, path, map[string]string{"send-email": strconv.FormatBool(sendEmail)}, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_invite_user", result, map[string]any{"workspaceId": wsID, "sendEmail": sendEmail}), nil
 }
 
 // AddUserToGroup adds a user to a user group.
-func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	payload := map[string]any{"userId": userID}
 	path, err := paths.Workspace(wsID, "user-groups", groupID, "users")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_add_user_to_group", dryrunPreviewPayload("clockify_add_user_to_group", payload), map[string]any{
@@ -460,7 +460,7 @@ func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (Resu
 	}
 	var result map[string]any
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceUpdate(ctx, groupResourceURI(wsID, groupID))
@@ -472,23 +472,23 @@ func (s *Service) AddUserToGroup(ctx context.Context, args map[string]any) (Resu
 }
 
 // RemoveUserFromGroup removes a user from a user group. Supports dry-run (minimal fallback).
-func (s *Service) RemoveUserFromGroup(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) RemoveUserFromGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_remove_user_from_group",
 			Data:   dryrun.MinimalResult("clockify_remove_user_from_group", map[string]any{"group_id": groupID, "user_id": userID}),
@@ -498,10 +498,10 @@ func (s *Service) RemoveUserFromGroup(ctx context.Context, args map[string]any) 
 
 	path, err := paths.Workspace(wsID, "user-groups", groupID, "users", userID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceUpdate(ctx, groupResourceURI(wsID, groupID))
@@ -509,10 +509,10 @@ func (s *Service) RemoveUserFromGroup(ctx context.Context, args map[string]any) 
 }
 
 // UpdateUserRole updates a user's workspace role.
-func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (ToolResult, error) {
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	role := strings.ToUpper(strings.TrimSpace(stringArg(args, "role")))
 	validRoles := map[string]bool{
@@ -522,12 +522,12 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 		"REGULAR":         true,
 	}
 	if !validRoles[role] {
-		return ResultEnvelope{}, fmt.Errorf("role must be one of WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, REGULAR; got %q", role)
+		return ToolResult{}, fmt.Errorf("role must be one of WORKSPACE_ADMIN, PROJECT_MANAGER, TEAM_MANAGER, REGULAR; got %q", role)
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if role == "REGULAR" {
@@ -536,7 +536,7 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 
 	entityID, err := roleEntityID(role, args, wsID, userID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	payload := map[string]any{"entityId": entityID, "role": role}
 	if sourceType := strings.TrimSpace(stringArg(args, "source_type")); sourceType != "" {
@@ -558,7 +558,7 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	// real-action path so dry-run previews stay HTTP-free; the audit
 	// trail records the reject before any role POST issues.
 	if self, lookupErr := s.getCurrentUser(ctx); lookupErr == nil && self.ID != "" && self.ID == userID {
-		return ResultEnvelope{}, fmt.Errorf(
+		return ToolResult{}, fmt.Errorf(
 			"refusing to change the API key owner's own workspace role at " +
 				"the MCP layer; use the Clockify web UI if this is intentional " +
 				"(self-modification can strip the operator's ability to undo)",
@@ -566,11 +566,11 @@ func (s *Service) UpdateUserRole(ctx context.Context, args map[string]any) (Resu
 	}
 	path, err := paths.Workspace(wsID, "users", userID, "roles")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result any
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
@@ -606,11 +606,11 @@ func roleEntityID(role string, args map[string]any, wsID, userID string) (string
 	}
 }
 
-func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID, userID string) (ResultEnvelope, error) {
+func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID, userID string) (ToolResult, error) {
 	if dryrun.Enabled(args) {
 		grants, _, err := roleStripGrantsFromArgs(args, wsID, userID)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		preview := map[string]any{
 			"user_id": userID,
@@ -628,7 +628,7 @@ func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID,
 		}), nil
 	}
 	if self, lookupErr := s.getCurrentUser(ctx); lookupErr == nil && self.ID != "" && self.ID == userID {
-		return ResultEnvelope{}, fmt.Errorf(
+		return ToolResult{}, fmt.Errorf(
 			"refusing to change the API key owner's own workspace role at " +
 				"the MCP layer; use the Clockify web UI if this is intentional " +
 				"(self-modification can strip the operator's ability to undo)",
@@ -637,12 +637,12 @@ func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID,
 
 	grants, explicit, err := roleStripGrantsFromArgs(args, wsID, userID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if !explicit {
 		grants, err = s.currentUserRoleGrants(ctx, wsID, userID)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	if len(grants) == 0 {
@@ -657,7 +657,7 @@ func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID,
 
 	path, err := paths.Workspace(wsID, "users", userID, "roles")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	for _, grant := range grants {
 		body := map[string]any{"entityId": grant.EntityID, "role": grant.Role}
@@ -665,7 +665,7 @@ func (s *Service) stripUserRoles(ctx context.Context, args map[string]any, wsID,
 			body["sourceType"] = grant.SourceType
 		}
 		if err := s.Client.DeleteWithBody(ctx, path, body, nil); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	result := map[string]any{
@@ -792,19 +792,19 @@ func normalizeManagerRoleName(raw string) string {
 }
 
 // DeactivateUser deactivates a user. Supports dry-run (confirm pattern).
-func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_deactivate_user",
 			Data: map[string]any{
@@ -824,7 +824,7 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 	// HTTP-free; the real action path always checks before issuing
 	// the PUT.
 	if self, lookupErr := s.getCurrentUser(ctx); lookupErr == nil && self.ID != "" && self.ID == userID {
-		return ResultEnvelope{}, fmt.Errorf(
+		return ToolResult{}, fmt.Errorf(
 			"refusing to deactivate the API key owner at the MCP layer; " +
 				"use the Clockify web UI if this is intentional " +
 				"(self-deactivation can lock the operator out of the workspace)",
@@ -834,11 +834,11 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 	payload := map[string]any{"status": "INACTIVE"}
 	path, err := paths.Workspace(wsID, "users", userID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result map[string]any
 	if err := s.Client.Put(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
@@ -849,14 +849,14 @@ func (s *Service) DeactivateUser(ctx context.Context, args map[string]any) (Resu
 }
 
 // ListUserManagers returns managers assigned to a workspace user.
-func (s *Service) ListUserManagers(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListUserManagers(ctx context.Context, args map[string]any) (ToolResult, error) {
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
 	query := map[string]string{
@@ -871,54 +871,54 @@ func (s *Service) ListUserManagers(ctx context.Context, args map[string]any) (Re
 	}
 	path, err := paths.Workspace(wsID, "users", userID, "managers")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result []map[string]any
 	if err := s.Client.Get(ctx, path, query, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := addPaginationMeta(map[string]any{"workspaceId": wsID, "userId": userID, "count": len(result)}, args, page, pageSize)
 	return ok("clockify_list_user_managers", userManagerViewsFromRaw(result), meta), nil
 }
 
 // GetMemberProfile returns a workspace-scoped member profile for a user.
-func (s *Service) GetMemberProfile(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetMemberProfile(ctx context.Context, args map[string]any) (ToolResult, error) {
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "member-profile", userID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result map[string]any
 	if err := s.Client.Get(ctx, path, nil, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_get_member_profile", memberProfileViewFromRaw(result), map[string]any{"workspaceId": wsID, "userId": userID}), nil
 }
 
 // UpdateMemberProfile updates live-supported workspace member profile fields.
-func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) (ToolResult, error) {
 	userID := stringArg(args, "user_id")
 	if err := resolve.ValidateID(userID, "user_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// image_url and remove_profile_image are mutually exclusive — sending
 	// both leaves the upstream's resulting image undefined.
 	if strings.TrimSpace(stringArg(args, "image_url")) != "" && boolArg(args, "remove_profile_image") {
-		return ResultEnvelope{}, fmt.Errorf("image_url and remove_profile_image are mutually exclusive: set one or the other, not both")
+		return ToolResult{}, fmt.Errorf("image_url and remove_profile_image are mutually exclusive: set one or the other, not both")
 	}
 
 	payload := map[string]any{}
@@ -929,26 +929,26 @@ func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) 
 	if weekStart := stringArg(args, "week_start"); strings.TrimSpace(weekStart) != "" {
 		day, err := normalizeMemberProfileDay(weekStart, "week_start")
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		payload["weekStart"] = day
 	}
 	if workingDays, ok, err := strictStringSliceArg(args, "working_days"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		days, err := normalizeMemberProfileDays(workingDays, "working_days")
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		payload["workingDays"] = days
 	}
 	if customFields, ok, err := mapSliceArg(args, "user_custom_fields"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		payload["userCustomFields"] = customFields
 	}
 	if len(payload) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("at least one member profile field must be provided")
+		return ToolResult{}, fmt.Errorf("at least one member profile field must be provided")
 	}
 
 	if dryrun.Enabled(args) {
@@ -960,11 +960,11 @@ func (s *Service) UpdateMemberProfile(ctx context.Context, args map[string]any) 
 
 	path, err := paths.Workspace(wsID, "member-profile", userID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result map[string]any
 	if err := s.Client.Patch(ctx, path, payload, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdateWithState(userResourceURI(wsID, userID), result)
 	return ok("clockify_update_member_profile", memberProfileViewFromRaw(result), map[string]any{

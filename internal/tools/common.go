@@ -170,20 +170,6 @@ func (s *Service) EmitProgress(ctx context.Context, progress, total float64, mes
 	}
 }
 
-// ResultEnvelope is the canonical shape every tool handler returns.
-// OK is the boolean success flag, Action mirrors the tool name for
-// client-side dispatch, Data carries the typed payload (struct or map)
-// and Meta is reserved for cross-cutting metadata (pagination cursors,
-// fingerprint hashes, etc.). Wire-locked by the per-tool outputSchemas
-// in output_schemas.go; mutate this struct and every schemaFor[T]
-// surface has to be reviewed for drift.
-type ResultEnvelope struct {
-	OK     bool           `json:"ok"`
-	Action string         `json:"action"`
-	Data   any            `json:"data,omitempty"`
-	Meta   map[string]any `json:"meta,omitempty"`
-}
-
 // WeeklySummaryData is the structured payload for clockify_weekly_
 // summary: a date range, total counts, per-day and per-project rollups,
 // suggested follow-up actions for the agent, and (optionally) the raw
@@ -412,8 +398,8 @@ func intArg(args map[string]any, key string, fallback int) int {
 	return int(f)
 }
 
-func ok(action string, data any, meta map[string]any) ResultEnvelope {
-	return ResultEnvelope{OK: true, Action: action, Data: sanitizeResultValue(data), Meta: sanitizeResultMeta(meta)}
+func ok(action string, data any, meta map[string]any) ToolResult {
+	return ToolResult{OK: true, Action: action, Data: sanitizeResultValue(data), Meta: sanitizeResultMeta(meta)}
 }
 
 func sanitizeResultMeta(meta map[string]any) map[string]any {

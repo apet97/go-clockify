@@ -7,20 +7,20 @@ import (
 	"strings"
 )
 
-func (s *Service) ResolveName(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ResolveName(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.resolveName(ctx, args, oneUserToolGuide)
 }
 
-func (s *Service) resolveName(ctx context.Context, args map[string]any, action string) (ResultEnvelope, error) {
+func (s *Service) resolveName(ctx context.Context, args map[string]any, action string) (ToolResult, error) {
 	entityType := stringArg(args, "entity_type")
 	nameOrID := stringArg(args, "name_or_id")
 	if entityType == "" || nameOrID == "" {
-		return ResultEnvelope{}, fmt.Errorf("entity_type and name_or_id are required")
+		return ToolResult{}, fmt.Errorf("entity_type and name_or_id are required")
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var resolvedID string
@@ -40,7 +40,7 @@ func (s *Service) resolveName(ctx context.Context, args map[string]any, action s
 		if projectID == "" {
 			projectRef := stringArg(args, "project")
 			if projectRef == "" {
-				return ResultEnvelope{}, fmt.Errorf("project or project_id is required when entity_type is task")
+				return ToolResult{}, fmt.Errorf("project or project_id is required when entity_type is task")
 			}
 			projectID, resolveErr = s.resolveProjectID(ctx, wsID, projectRef)
 		}
@@ -48,7 +48,7 @@ func (s *Service) resolveName(ctx context.Context, args map[string]any, action s
 			resolvedID, resolveErr = s.resolveTaskID(ctx, wsID, projectID, nameOrID)
 		}
 	default:
-		return ResultEnvelope{}, fmt.Errorf("entity_type must be project, client, tag, user, or task; got %q", entityType)
+		return ToolResult{}, fmt.Errorf("entity_type must be project, client, tag, user, or task; got %q", entityType)
 	}
 
 	status := "exact_match"

@@ -120,32 +120,11 @@ catalog drift fixture in one commit.
 
 ---
 
-## 5. Result envelopes: current state (and what changes with T2.1)
+## 5. Result envelope: single `ToolResult` type (post-T2.1)
 
-There are **two** success-envelope types in `internal/tools/`. The
-audit (`docs/audits/2026-05-26-claude-audit.md` § T2.1) calls for
-convergence onto a single type. The current state:
-
-### `ResultEnvelope` (the older, narrower type)
-
-Defined in `internal/tools/common.go` (~line 180):
-
-```go
-type ResultEnvelope struct {
-    OK     bool           `json:"ok"`
-    Action string         `json:"action"`
-    Data   any            `json:"data,omitempty"`
-    Meta   map[string]any `json:"meta,omitempty"`
-}
-```
-
-Used by ~824 return sites. Constructed via the `ok(action, data, meta)`
-helper. Wire-locked by the per-tool `outputSchemas` in
-`firstslice_output_schemas.go`.
-
-### `ToolResult` (the richer, newer type)
-
-Defined in `internal/tools/firstslice_types.go`:
+Audit § T2.1 has landed: `ResultEnvelope` is gone. The single success
+envelope every handler returns is `ToolResult`, defined in
+`internal/tools/firstslice_types.go`:
 
 ```go
 type ToolResult struct {
@@ -155,47 +134,52 @@ type ToolResult struct {
     IDs      map[string]string `json:"ids,omitempty"`
     Data     any               `json:"data,omitempty"`
     Meta     map[string]any    `json:"meta,omitempty"`
-    Changed  ChangeSet         `json:"changed"`
+    Changed  ChangeSet         `json:"changed,omitzero"`
     Warnings []Warning         `json:"warnings,omitempty"`
     Next     []NextAction      `json:"next,omitempty"`
 }
 ```
 
-Strict superset of `ResultEnvelope` at the wire level: the extra
-fields (`Entity`, `IDs`, `Changed`, `Warnings`, `Next`) all serialise
-as zero-values when unset. `omitempty` on the optional fields keeps
-existing clients pattern-matching `{ok, action, data, meta}` happy.
+### Two construction helpers, two intents
 
-### The bridge today
+- **`ok(action, data, meta) ToolResult`** in `common.go` — the
+  ~824 narrow return sites. Fills only `{OK, Action, Data, Meta}`.
+  Entity / IDs / Changed / Warnings / Next stay zero and are omitted
+  from the wire by `omitempty` / `omitzero`. Wire shape is the
+  historical four-key envelope, unchanged.
+- **`result(action, entity, ids, data, changed, warnings, next, meta...) ToolResult`**
+  in `firstslice_recovery.go` — the rich path used by workflow + first-
+  slice handlers. Populates the entity / ids / changed / warnings / next
+  fields so the MCP client gets a structured mutation audit trail.
 
-`firstslice.go:firstSliceHandler` wraps handlers that return
-`(ResultEnvelope, error)` and translates errors into `ToolError`. The
-result side is *not* translated — a handler that returns
-`ResultEnvelope` produces the narrow envelope on the wire; a handler
-that returns `ToolResult` produces the rich one. The MCP client sees
-two different shapes depending on which layer answered.
+### Wire-compat guarantee
 
-### Convergence direction (T2.1)
+`Changed ChangeSet` carries the `,omitzero` tag (Go 1.24+), so a zero
+`ChangeSet{}` is omitted from JSON output entirely — narrow envelopes
+do not start emitting `"changed":{}`. Verified by the regression tests
+in `result_envelope_alias_test.go`:
 
-Replace `ResultEnvelope` with `ToolResult` as the **single** success
-type. Steps (tracked separately):
+- `TestOkHelperReturnsToolResult` — `ok()` returns a `ToolResult`
+  with all rich fields zero.
+- `TestOkHelperEmitsNarrowWireShape` — `ok()` wire keys are exactly
+  `{ok, action, data, meta}`.
+- `TestRichEnvelopeIncludesChangedWhenSet` — `result()` with a
+  non-empty `ChangeSet` emits `"changed"`; with an empty one it does
+  not.
+- `TestNarrowEnvelopeOmitsZeroEntityAndIDs` — none of
+  `entity, ids, changed, warnings, next` leak from a zero envelope.
 
-1. Add `ChangeSet`, `Warnings`, `Next` as **optional** zero-value
-   fields to the new unified type.
-2. Migrate `ok(action, data, meta)` → `toolResult(action, data, meta)`
-   that returns a `ToolResult` with the extra fields zero.
-3. Sweep return sites mechanically: `ResultEnvelope` → `ToolResult`.
-   `go vet` + test suite catches missed sites.
-4. Delete `ResultEnvelope` from `common.go`.
+### The bridge
 
-Wire-compatibility for the migration:
-- New handlers can set `IDs`, `Changed`, `Warnings`, `Next` freely.
-- Old handlers continue to leave them empty → wire shape unchanged.
-- The per-tool `outputSchemas` need to allow the new optional fields
-  (additive, never required).
-
-Until T2.1 lands, **new handlers should return `ToolResult` directly**
-and use the `Changed` field to record what was created/updated/deleted.
+`firstslice.go:firstSliceHandler` still wraps every handler to
+translate errors into `ToolError`. The result side no longer needs
+type translation (everything is `ToolResult`), but
+`oneuser_result_helpers.go:standardizeDomainResult` still lifts IDs
+from meta + args + data and stamps the `ChangeSet` based on the
+descriptor's `change` keyword. The bridge distinguishes "narrow
+result wanting enrichment" from "rich result already prepared" by
+checking `Entity == ""` (narrow) vs `Entity != ""` (rich) — `result()`
+always sets Entity; `ok()` never does.
 
 ---
 
@@ -205,9 +189,10 @@ and use the `Changed` field to record what was created/updated/deleted.
    layer 1 (workflow). Mirror of an existing Clockify endpoint → layer
    4 (native high-value) is the default.
 2. **Implement the handler** as a method on `*Service`. Return
-   `ToolResult` (preferred) or `ResultEnvelope` (pre-T2.1). Validate
-   args locally (alias pairs, required fields) before calling the
-   Clockify client.
+   `ToolResult` — for narrow read responses, use `ok(action, data, meta)`;
+   for rich mutation responses, use `result(action, entity, ids, data, changed, warnings, next, meta...)`.
+   Validate args locally (alias pairs, required fields) before calling
+   the Clockify client.
 3. **Register the descriptor** in the matching layer file (e.g.
    `oneuser_native_descriptors.go` for layer 4). Use
    `nativeDomainTool` / `firstSliceDescriptor` / `workflowDescriptor`

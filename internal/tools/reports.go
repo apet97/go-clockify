@@ -332,7 +332,7 @@ func mergeMeta(base, extra map[string]any) map[string]any {
 // sizes bounded.
 const reportPageSize = 200
 
-func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_summary",
 		pathName:  "summary",
@@ -340,11 +340,11 @@ func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (Resul
 	})
 }
 
-func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.weeklySummary(ctx, args, "")
 }
 
-func (s *Service) weeklySummary(ctx context.Context, args map[string]any, workspaceID string) (ResultEnvelope, error) {
+func (s *Service) weeklySummary(ctx context.Context, args map[string]any, workspaceID string) (ToolResult, error) {
 	if workspaceID != "" {
 		withWorkspace := maps.Clone(args)
 		if withWorkspace == nil {
@@ -360,14 +360,14 @@ func (s *Service) weeklySummary(ctx context.Context, args map[string]any, worksp
 	})
 }
 
-func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	days := intArg(args, "days", 7)
 	if days < 1 || days > quickReportMaxDays {
-		return ResultEnvelope{}, fmt.Errorf("days must be between 1 and %d", quickReportMaxDays)
+		return ToolResult{}, fmt.Errorf("days must be between 1 and %d", quickReportMaxDays)
 	}
 	loc, err := s.locationFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	end := time.Now().In(loc)
 	start := end.AddDate(0, 0, -days)
@@ -377,7 +377,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	limits := s.reportLimitsForArgs(args)
 	wsID, projectID, err := s.reportProjectFilterID(ctx, args, "")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	agg, wsID, userID, err := s.aggregateEntriesRangeForWorkspace(ctx, wsID, startUTC, endUTC, loc, aggregateOptions{
 		PageSize:              reportPageSize,
@@ -389,7 +389,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 		ResolveProjectNames:   true,
 	})
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projects := projectSummariesFromAgg(agg)
 	totals := totalsFromAgg(agg)
@@ -424,7 +424,7 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ResultE
 	return ok("clockify_reports_summary", data, meta), nil
 }
 
-func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_money",
 		pathName:  "summary",
@@ -432,7 +432,7 @@ func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ResultE
 	})
 }
 
-func (s *Service) ExpenseReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ExpenseReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_expense",
 		pathName:  "expenses/detailed",
@@ -440,7 +440,7 @@ func (s *Service) ExpenseReport(ctx context.Context, args map[string]any) (Resul
 	})
 }
 
-func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_detailed",
 		pathName:  "detailed",

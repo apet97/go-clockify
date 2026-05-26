@@ -192,15 +192,15 @@ func schedulingHandlers(s *Service) []mcp.ToolDescriptor {
 // Scheduling handler implementations
 // ---------------------------------------------------------------------------
 
-func (s *Service) listAssignments(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listAssignments(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	assignments, page, pageSize, err := s.listAssignmentsRaw(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	views, enrichment := s.enrichAssignmentViews(ctx, wsID, assignments, args)
@@ -259,15 +259,15 @@ func (s *Service) listAssignmentsRaw(ctx context.Context, wsID string, args map[
 	return assignments, page, pageSize, nil
 }
 
-func (s *Service) getAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getAssignment(ctx context.Context, args map[string]any) (ToolResult, error) {
 	aID := stringArg(args, "assignment_id")
 	if err := resolve.ValidateID(aID, "assignment_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	scanArgs := make(map[string]any, len(args)+1)
@@ -300,7 +300,7 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (Resul
 		scanArgs["page"] = page
 		assignments, _, _, err := s.listAssignmentsRaw(ctx, wsID, scanArgs)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		pagesFetched++
 		entriesScanned += len(assignments)
@@ -326,11 +326,11 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (Resul
 			}
 		}
 		if len(assignments) < pageSize {
-			return ResultEnvelope{}, fmt.Errorf("assignment %s not found in scan range after scanning %d entries across %d pages; pass start/end to narrow or shift the search window", aID, entriesScanned, pagesFetched)
+			return ToolResult{}, fmt.Errorf("assignment %s not found in scan range after scanning %d entries across %d pages; pass start/end to narrow or shift the search window", aID, entriesScanned, pagesFetched)
 		}
 	}
 
-	return ResultEnvelope{}, fmt.Errorf("assignment search pagination safety stop reached at %d pages; narrow the date range", aggregatePageSafetyStop)
+	return ToolResult{}, fmt.Errorf("assignment search pagination safety stop reached at %d pages; narrow the date range", aggregatePageSafetyStop)
 }
 
 func defaultAssignmentScanRange(now time.Time) (string, string) {
@@ -374,15 +374,15 @@ func schedulingPublishSchema() map[string]any {
 // create/update produce drafts; this is the separate step that publishes
 // every draft assignment in the start..end window. The Clockify endpoint
 // returns no body, so the receipt is synthesised from the request (Axiom 8).
-func (s *Service) SchedulingPublish(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) SchedulingPublish(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	notify := false
 	if v, ok := args["notify_users"].(bool); ok {
@@ -400,10 +400,10 @@ func (s *Service) SchedulingPublish(ctx context.Context, args map[string]any) (R
 
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "publish")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Put(ctx, path, payload, nil); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_scheduling_publish", map[string]any{
 		"published":   true,
@@ -413,38 +413,38 @@ func (s *Service) SchedulingPublish(ctx context.Context, args map[string]any) (R
 	}, map[string]any{"workspaceId": wsID, "start": start, "end": end}), nil
 }
 
-func (s *Service) createAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createAssignment(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	userRef := stringArg(args, "user_id")
 	if userRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+		return ToolResult{}, fmt.Errorf("user_id is required")
 	}
 	userID, err := s.resolveUserID(ctx, wsID, userRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	projectRef := stringArg(args, "project_id")
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project_id is required")
+		return ToolResult{}, fmt.Errorf("project_id is required")
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	hoursPerDay, hasHoursPerDay := args["hours_per_day"]
 	if !hasHoursPerDay {
-		return ResultEnvelope{}, fmt.Errorf("hours_per_day is required")
+		return ToolResult{}, fmt.Errorf("hours_per_day is required")
 	}
 
 	payload := map[string]any{
@@ -472,14 +472,14 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	var result []map[string]any
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Post(ctx, path, payload, &result); err != nil {
 		var apiErr *clockify.APIError
 		if errors.As(err, &apiErr) && apiErr.StatusCode >= 500 {
-			return ResultEnvelope{}, fmt.Errorf("scheduling_capacity_unavailable: scheduling assignment create returned upstream %d; verify the workspace subscription/scheduling capacity and try clockify_list_assignments as a preflight: %w", apiErr.StatusCode, err)
+			return ToolResult{}, fmt.Errorf("scheduling_capacity_unavailable: scheduling assignment create returned upstream %d; verify the workspace subscription/scheduling capacity and try clockify_list_assignments as a preflight: %w", apiErr.StatusCode, err)
 		}
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_create_assignment", result, map[string]any{
@@ -490,21 +490,21 @@ func (s *Service) createAssignment(ctx context.Context, args map[string]any) (Re
 	}), nil
 }
 
-func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (ToolResult, error) {
 	aID := stringArg(args, "assignment_id")
 	if err := resolve.ValidateID(aID, "assignment_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{
@@ -528,11 +528,11 @@ func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (Re
 
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring", aID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var result []map[string]any
 	if err := s.Client.Patch(ctx, path, body, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_update_assignment", result, map[string]any{
@@ -541,24 +541,24 @@ func (s *Service) updateAssignment(ctx context.Context, args map[string]any) (Re
 	}), nil
 }
 
-func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (ToolResult, error) {
 	aID := stringArg(args, "assignment_id")
 	if err := resolve.ValidateID(aID, "assignment_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "recurring", aID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_assignment",
 			Data: dryrun.MinimalResult("clockify_delete_assignment", map[string]any{
@@ -574,7 +574,7 @@ func (s *Service) deleteAssignment(ctx context.Context, args map[string]any) (Re
 		query["seriesUpdateOption"] = v
 	}
 	if err := s.Client.DeleteWithQuery(ctx, path, query); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	return ok("clockify_delete_assignment", map[string]any{
@@ -611,15 +611,15 @@ func addRecurringAssignment(payload map[string]any, args map[string]any) int {
 	return weeks
 }
 
-func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getProjectScheduleTotals(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	totals, pageSize, err := s.getProjectScheduleTotalsRaw(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	enriched, enrichment := s.enrichProjectScheduleTotals(ctx, wsID, totals, args)
 
@@ -664,25 +664,25 @@ func (s *Service) getProjectScheduleTotalsRaw(ctx context.Context, wsID string, 
 	return totals, pageSize, nil
 }
 
-func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	userRef := stringArg(args, "user_id")
 	if userRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+		return ToolResult{}, fmt.Errorf("user_id is required")
 	}
 	userID, err := s.resolveUserID(ctx, wsID, userRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	page := intArg(args, "page", 1)
@@ -699,10 +699,10 @@ func (s *Service) filterScheduleCapacity(ctx context.Context, args map[string]an
 	var capacity map[string]any
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "users", userID, "totals")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Get(ctx, path, query, &capacity); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	enriched, enrichment := s.enrichScheduleCapacity(ctx, wsID, capacity, args)
 

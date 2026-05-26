@@ -10,19 +10,19 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) listInvoicePayments(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listInvoicePayments(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
 	payments, err := s.invoicePaymentViews(ctx, wsID, invoiceID, page, pageSize)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := addPaginationMeta(map[string]any{"workspaceId": wsID, "invoiceId": invoiceID, "count": len(payments)}, args, page, pageSize)
 	return ok("clockify_list_invoice_payments", payments, meta), nil
@@ -63,34 +63,34 @@ func normalizeInvoicePaymentDate(raw string) string {
 	return raw + "T00:00:00Z"
 }
 
-func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID, err := requiredIDArg(args, "invoice_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := requirePresentArgs(args, "amount", "date"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "payments")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := nativeBodyFromArgs(args, "amount", "note")
 	if raw, ok := body["amount"]; ok {
 		converted, err := convertToInvoiceMinorUnits(raw, stringArg(args, "amount_unit"))
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("amount: %w", err)
+			return ToolResult{}, fmt.Errorf("amount: %w", err)
 		}
 		body["amount"] = converted
 	}
 	body["paymentDate"] = normalizeInvoicePaymentDate(strings.TrimSpace(stringArg(args, "date")))
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	view := invoicePaymentViewFromRaw(created, "")
@@ -153,21 +153,21 @@ func invoicePaymentViewField(view InvoicePaymentView, field string) string {
 	return ""
 }
 
-func (s *Service) deleteInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteInvoicePaymentOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID, err := requiredIDArg(args, "invoice_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	paymentID, err := requiredIDArg(args, "payment_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_invoices_payments_delete",
 			Data: dryrun.MinimalResult("clockify_invoices_payments_delete", map[string]any{
@@ -179,10 +179,10 @@ func (s *Service) deleteInvoicePaymentOneUser(ctx context.Context, args map[stri
 	}
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "payments", paymentID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_invoices_payments_delete", map[string]any{
 		"deleted":   true,

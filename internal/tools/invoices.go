@@ -268,17 +268,17 @@ func normalizeInvoiceStatus(raw string) (string, error) {
 // Invoice handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) listInvoices(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listInvoices(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 
 	path, err := paths.Workspace(wsID, "invoices")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// Upstream returns {total: int, invoices: [...]} — discovered via
 	// clockify-api-probe-lab against the live workspace 2026-05-02.
@@ -295,12 +295,12 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	if v := stringArg(args, "status"); v != "" {
 		status, err := normalizeInvoiceStatus(v)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		query["statuses"] = status
 	}
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// has_more from the known total; the page-full heuristic is only a
 	// fallback for when the API does not report a usable total, otherwise an
@@ -319,51 +319,51 @@ func (s *Service) listInvoices(ctx context.Context, args map[string]any) (Result
 	}, "clockify_invoice_client_work")), nil
 }
 
-func (s *Service) getInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var invoice map[string]any
 	if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_get_invoice", invoiceViewFromRaw(invoice), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) getInvoiceSettings(ctx context.Context, _ map[string]any) (ResultEnvelope, error) {
+func (s *Service) getInvoiceSettings(ctx context.Context, _ map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "invoices", "settings")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var settings map[string]any
 	if err := s.Client.Get(ctx, path, nil, &settings); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_get_invoice_settings", invoiceSettingsViewFromRaw(settings), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) createInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientID := stringArg(args, "client_id")
 	if err := resolve.ValidateID(clientID, "client_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{"clientId": clientID, "status": "UNSENT"}
@@ -392,23 +392,23 @@ func (s *Service) createInvoice(ctx context.Context, args map[string]any) (Resul
 
 	path, err := paths.Workspace(wsID, "invoices")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_create_invoice", invoiceViewFromRaw(created), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{}
@@ -433,7 +433,7 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 	applyInvoiceOptionalFields(body, args)
 	status, hasStatus, err := invoiceStatusFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		preview := map[string]any{}
@@ -446,30 +446,30 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (Resul
 		return ok("clockify_update_invoice", dryrunPreviewPayload("clockify_update_invoice", preview), map[string]any{"workspaceId": wsID, "invoiceId": invoiceID}), nil
 	}
 	if len(body) == 0 && !hasStatus {
-		return ResultEnvelope{}, fmt.Errorf("at least one field (client_id, number, issued_date, currency, due_date, note, subject, bill_from, client_address, tax_percent, tax2_percent, discount_percent, tax_type, status) must be provided for update")
+		return ToolResult{}, fmt.Errorf("at least one field (client_id, number, issued_date, currency, due_date, note, subject, bill_from, client_address, tax_percent, tax2_percent, discount_percent, tax_type, status) must be provided for update")
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	updated := map[string]any{"id": invoiceID}
 	if len(body) > 0 {
 		var existing map[string]any
 		if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		merged := invoiceUpdateBodyFromExisting(existing)
 		for key, value := range body {
 			merged[key] = value
 		}
 		if err := s.Client.Put(ctx, path, merged, &updated); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	if hasStatus {
 		if err := s.patchInvoiceStatus(ctx, wsID, invoiceID, status); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		updated["status"] = status
 	}
@@ -553,27 +553,27 @@ func invoiceStatusFromArgs(args map[string]any) (string, bool, error) {
 	return status, true, err
 }
 
-func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		var invoice map[string]any
 		if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_invoice",
 			Data:   dryrun.WrapResult(invoice, "clockify_delete_invoice"),
@@ -582,7 +582,7 @@ func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (Resul
 	}
 
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_invoice", map[string]any{
 		"deleted":   true,
@@ -590,35 +590,35 @@ func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (Resul
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) sendInvoice(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) sendInvoice(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
-	return ResultEnvelope{}, fmt.Errorf("unsupported: Clockify does not expose an invoice send-email endpoint in this API surface; send invoice email from the Clockify UI")
+	return ToolResult{}, fmt.Errorf("unsupported: Clockify does not expose an invoice send-email endpoint in this API surface; send invoice email from the Clockify UI")
 }
 
-func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		var invoice map[string]any
 		if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_mark_invoice_paid",
 			Data:   dryrun.WrapResult(invoice, "clockify_mark_invoice_paid"),
@@ -628,13 +628,13 @@ func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (Res
 
 	var invoice map[string]any
 	if err := s.Client.Get(ctx, path, nil, &invoice); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	status := strings.ToUpper(firstReportString(invoice, "status", "invoiceStatus", "invoice_status"))
 	if status == "PAID" {
 		return ok("clockify_mark_invoice_paid", invoiceViewFromRaw(invoice), map[string]any{"workspaceId": wsID, "invoiceId": invoiceID}), nil
 	}
-	return ResultEnvelope{}, fmt.Errorf("invoice %s is not paid yet; create a payment with clockify_invoices_payments_create using invoice_id, amount, and date, then reload the invoice", invoiceID)
+	return ToolResult{}, fmt.Errorf("invoice %s is not paid yet; create a payment with clockify_invoices_payments_create using invoice_id, amount, and date, then reload the invoice", invoiceID)
 }
 
 func (s *Service) patchInvoiceStatus(ctx context.Context, wsID, invoiceID, status string) error {

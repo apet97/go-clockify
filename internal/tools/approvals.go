@@ -121,14 +121,14 @@ func approvalHandlers(s *Service) []mcp.ToolDescriptor {
 // Approval handlers
 // ---------------------------------------------------------------------------
 
-func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	items, page, pageSize, err := s.listApprovalRequestsRaw(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	for i := range items {
 		delete(items[i], "entries")
@@ -141,18 +141,18 @@ func (s *Service) listApprovalRequests(ctx context.Context, args map[string]any)
 	}, "clockify_approvals_submit")), nil
 }
 
-func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (ToolResult, error) {
 	approvalID := stringArg(args, "approval_id")
 	if err := resolve.ValidateID(approvalID, "approval_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	approval, pages, scanned, err := s.findApprovalRequest(ctx, wsID, approvalID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	entryCount := stripApprovalEntries(approval)
 	meta := map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned}
@@ -163,29 +163,29 @@ func (s *Service) getApprovalRequest(ctx context.Context, args map[string]any) (
 	return ok("clockify_get_approval_request", approvalViewFromRaw(approval), meta), nil
 }
 
-func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) submitForApproval(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.postApprovalPeriod(ctx, args, "clockify_submit_for_approval", "approval-requests")
 }
 
-func (s *Service) resubmitForApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) resubmitForApproval(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.postApprovalPeriod(ctx, args, "clockify_resubmit_for_approval", "approval-requests", "resubmit-entries-for-approval")
 }
 
-func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	approvalID, err := requiredIDArg(args, "approval_id")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	entryIDs, found, err := strictStringSliceArg(args, "entry_ids")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if !found || len(entryIDs) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("entry_ids is required and must contain at least one time entry ID")
+		return ToolResult{}, fmt.Errorf("entry_ids is required and must contain at least one time entry ID")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// Preflight: look up the approval's current state so a failed resubmit
 	// names the actual status and points at the right recovery, instead of
@@ -196,19 +196,19 @@ func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]a
 		status = strings.ToUpper(strings.TrimSpace(firstReportString(approval, "status", "state")))
 	}
 	if status == "APPROVED" {
-		return ResultEnvelope{}, fmt.Errorf("approval %s is already APPROVED; there is nothing to resubmit", approvalID)
+		return ToolResult{}, fmt.Errorf("approval %s is already APPROVED; there is nothing to resubmit", approvalID)
 	}
 	path, err := paths.Workspace(wsID, "approval-requests", "resubmit-entries-for-approval")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body := nativeBodyFromArgs(args, "approval_id", "entry_ids", "expense_ids", "period", "period_start", "note")
 	var updated any
 	if err := s.Client.Post(ctx, path, body, &updated); err != nil {
 		if status == "REJECTED" || strings.HasPrefix(status, "WITHDRAWN") {
-			return ResultEnvelope{}, fmt.Errorf("approval %s is %s: the resubmit endpoint re-submits entries for an active approval period; submit a fresh request for this period with clockify_approvals_submit", approvalID, status)
+			return ToolResult{}, fmt.Errorf("approval %s is %s: the resubmit endpoint re-submits entries for an active approval period; submit a fresh request for this period with clockify_approvals_submit", approvalID, status)
 		}
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_approvals_resubmit", approvalDataView(updated), map[string]any{
 		"workspaceId": wsID,
@@ -216,53 +216,53 @@ func (s *Service) resubmitApprovalOneUser(ctx context.Context, args map[string]a
 	}), nil
 }
 
-func (s *Service) submitForUserApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) submitForUserApproval(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.postUserApprovalPeriod(ctx, args, "clockify_submit_for_user_approval", "approval-requests", "users")
 }
 
-func (s *Service) resubmitForUserApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) resubmitForUserApproval(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.postUserApprovalPeriod(ctx, args, "clockify_resubmit_for_user_approval", "approval-requests", "users", "__USER__", "resubmit-entries-for-approval")
 }
 
-func (s *Service) postApprovalPeriod(ctx context.Context, args map[string]any, action string, parts ...string) (ResultEnvelope, error) {
+func (s *Service) postApprovalPeriod(ctx context.Context, args map[string]any, action string, parts ...string) (ToolResult, error) {
 	body, err := approvalPeriodBody(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, parts...)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok(action, dryrunPreviewPayload(action, body), map[string]any{"workspaceId": wsID}), nil
 	}
 	var created any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok(action, approvalDataView(created), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) postUserApprovalPeriod(ctx context.Context, args map[string]any, action string, parts ...string) (ResultEnvelope, error) {
+func (s *Service) postUserApprovalPeriod(ctx context.Context, args map[string]any, action string, parts ...string) (ToolResult, error) {
 	userRef := stringArg(args, "user_id")
 	if userRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+		return ToolResult{}, fmt.Errorf("user_id is required")
 	}
 	body, err := approvalPeriodBody(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userID, err := s.resolveUserID(ctx, wsID, userRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	for i, part := range parts {
 		if part == "__USER__" {
@@ -274,53 +274,53 @@ func (s *Service) postUserApprovalPeriod(ctx context.Context, args map[string]an
 	}
 	path, err := paths.Workspace(wsID, parts...)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok(action, dryrunPreviewPayload(action, body), map[string]any{"workspaceId": wsID, "userId": userID}), nil
 	}
 	var created any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok(action, approvalDataView(created), map[string]any{"workspaceId": wsID, "userId": userID}), nil
 }
 
-func (s *Service) approveTimesheet(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) approveTimesheet(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.patchApprovalState(ctx, args, "clockify_approve_timesheet", "APPROVED", stringArg(args, "note"))
 }
 
-func (s *Service) rejectTimesheet(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) rejectTimesheet(ctx context.Context, args map[string]any) (ToolResult, error) {
 	note := firstNonEmptyString(stringArg(args, "reason"), stringArg(args, "note"))
 	return s.patchApprovalState(ctx, args, "clockify_reject_timesheet", "REJECTED", note)
 }
 
-func (s *Service) withdrawApproval(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) withdrawApproval(ctx context.Context, args map[string]any) (ToolResult, error) {
 	state := firstNonEmptyString(stringArg(args, "state"), "WITHDRAWN_SUBMISSION")
 	if state != "WITHDRAWN_SUBMISSION" && state != "WITHDRAWN_APPROVAL" {
-		return ResultEnvelope{}, fmt.Errorf("state must be WITHDRAWN_SUBMISSION or WITHDRAWN_APPROVAL")
+		return ToolResult{}, fmt.Errorf("state must be WITHDRAWN_SUBMISSION or WITHDRAWN_APPROVAL")
 	}
 	return s.patchApprovalState(ctx, args, "clockify_withdraw_approval", state, stringArg(args, "note"))
 }
 
-func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, action, state, note string) (ResultEnvelope, error) {
+func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, action, state, note string) (ToolResult, error) {
 	approvalID := stringArg(args, "approval_id")
 	if err := resolve.ValidateID(approvalID, "approval_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "approval-requests", approvalID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		approval, pages, scanned, err := s.findApprovalRequest(ctx, wsID, approvalID, args)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		entryCount := stripApprovalEntries(approval)
 		meta := map[string]any{"workspaceId": wsID, "pagesScanned": pages, "itemsScanned": scanned, "state": state}
@@ -328,7 +328,7 @@ func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, a
 			meta["entriesOmitted"] = entryCount
 			meta["entriesHint"] = "Time entries are omitted to keep the response small; use clockify_reports_detailed for entry-level detail."
 		}
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: action,
 			Data:   dryrun.WrapResult(approvalViewFromRaw(approval), action),
@@ -342,7 +342,7 @@ func (s *Service) patchApprovalState(ctx context.Context, args map[string]any, a
 	}
 	var result map[string]any
 	if err := s.Client.Patch(ctx, path, body, &result); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok(action, approvalViewFromRaw(result), map[string]any{"workspaceId": wsID, "state": state}), nil
 }

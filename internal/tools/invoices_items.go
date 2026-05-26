@@ -10,14 +10,14 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
-func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Upstream rejects GET /invoices/{id}/items with 405. Items are
@@ -26,7 +26,7 @@ func (s *Service) listInvoiceItems(ctx context.Context, args map[string]any) (Re
 	// lab/findings/invoices.md (rev 2 2026-05-02).
 	inv, err := s.getInvoice(ctx, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	items := []InvoiceItemView{}
 	if invoice, ok := inv.Data.(InvoiceView); ok {
@@ -91,14 +91,14 @@ func convertToInvoiceMinorUnits(value any, unit string) (int64, error) {
 	}
 }
 
-func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := map[string]any{}
@@ -108,14 +108,14 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	if _, ok := args["quantity"]; ok {
 		quantity, isNumber := numberArg(args, "quantity")
 		if !isNumber || quantity <= 0 {
-			return ResultEnvelope{}, fmt.Errorf("quantity must be a number greater than 0")
+			return ToolResult{}, fmt.Errorf("quantity must be a number greater than 0")
 		}
 		body["quantity"] = quantity
 	}
 	if v, ok := args["unit_price"]; ok {
 		converted, err := convertToInvoiceMinorUnits(v, stringArg(args, "unit_price_unit"))
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("unit_price: %w", err)
+			return ToolResult{}, fmt.Errorf("unit_price: %w", err)
 		}
 		body["unitPrice"] = converted
 	}
@@ -126,13 +126,13 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	}
 	itemType := stringArg(args, "item_type")
 	if itemType == "" {
-		return ResultEnvelope{}, fmt.Errorf("item_type is required")
+		return ToolResult{}, fmt.Errorf("item_type is required")
 	}
 	body["itemType"] = itemType
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if dryrun.Enabled(args) {
 		return ok("clockify_add_invoice_item", dryrunPreviewPayload("clockify_add_invoice_item", body), map[string]any{
@@ -142,7 +142,7 @@ func (s *Service) addInvoiceItem(ctx context.Context, args map[string]any) (Resu
 	}
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_add_invoice_item", invoiceItemViewFromRaw(created, ""), map[string]any{
 		"workspaceId": wsID,
@@ -164,30 +164,30 @@ func invoiceItemIndexArg(args map[string]any) (string, error) {
 // invoice line items. The live API rejects PUT on the items path with code
 // 3000 ("Request method 'PUT' is not supported"); there is no PATCH route
 // either. Callers replace a line by deleting and re-adding it.
-func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateInvoiceItem(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
-	return ResultEnvelope{}, fmt.Errorf("unsupported: Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add")
+	return ToolResult{}, fmt.Errorf("unsupported: Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add")
 }
 
-func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (ToolResult, error) {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	itemIndex, err := invoiceItemIndexArg(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_invoice_item",
 			Data: dryrun.MinimalResult("clockify_delete_invoice_item", map[string]any{
@@ -201,10 +201,10 @@ func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (R
 
 	path, err := paths.Workspace(wsID, "invoices", invoiceID, "items", itemIndex)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_invoice_item", map[string]any{
 		"deleted":   true,

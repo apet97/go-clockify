@@ -198,17 +198,17 @@ func (s *Service) workspaceDefaultCurrency(ctx context.Context, wsID string) str
 	return ""
 }
 
-func (s *Service) listExpenses(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listExpenses(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page := intArg(args, "page", 1)
 	pageSize := intArg(args, "page_size", 50)
 
 	path, err := paths.Workspace(wsID, "expenses")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// Upstream wraps the list in a doubly-nested envelope:
 	// {expenses: {expenses: [...], count: N}, dailyTotals: [...], weeklyTotals: [...]}.
@@ -230,7 +230,7 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 		query["end"] = v
 	}
 	if err := s.Client.Get(ctx, path, query, &envelope); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	items := envelope.Expenses.Expenses
 	// has_more from the known total; the page-full heuristic is only a
@@ -251,31 +251,31 @@ func (s *Service) listExpenses(ctx context.Context, args map[string]any) (Result
 	}, "clockify_record_expense")), nil
 }
 
-func (s *Service) getExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getExpense(ctx context.Context, args map[string]any) (ToolResult, error) {
 	expenseID := stringArg(args, "expense_id")
 	if err := resolve.ValidateID(expenseID, "expense_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	path, err := paths.Workspace(wsID, "expenses", expenseID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var expense map[string]any
 	if err := s.Client.Get(ctx, path, nil, &expense); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_get_expense", expenseViewFromRaw(expense, s.workspaceDefaultCurrency(ctx, wsID)), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) createExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createExpense(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	// Required: amount, date (RFC3339), category_id. user_id defaults
@@ -283,33 +283,33 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	// POSTs that omit userId with a 400.
 	amount, hasAmount := numberArg(args, "amount")
 	if !hasAmount {
-		return ResultEnvelope{}, fmt.Errorf("amount is required")
+		return ToolResult{}, fmt.Errorf("amount is required")
 	}
 	if amount <= 0 {
-		return ResultEnvelope{}, fmt.Errorf("amount must be greater than 0")
+		return ToolResult{}, fmt.Errorf("amount must be greater than 0")
 	}
 	date := stringArg(args, "date")
 	if date == "" {
-		return ResultEnvelope{}, fmt.Errorf("date is required")
+		return ToolResult{}, fmt.Errorf("date is required")
 	}
 	loc, err := s.locationFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	parsedDate, err := parseFlexibleDateTime(date, loc)
 	if err != nil {
-		return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
+		return ToolResult{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
 	}
 	date = parsedDate.UTC().Format(time.RFC3339)
 	categoryID := stringArg(args, "category_id")
 	if categoryID == "" {
-		return ResultEnvelope{}, fmt.Errorf("category_id is required")
+		return ToolResult{}, fmt.Errorf("category_id is required")
 	}
 	userID := stringArg(args, "user_id")
 	if userID == "" {
 		current, err := s.getCurrentUser(ctx)
 		if err != nil {
-			return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+			return ToolResult{}, fmt.Errorf("resolve user_id from current user: %w", err)
 		}
 		userID = current.ID
 	}
@@ -318,7 +318,7 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	form.Set("userId", userID)
 	normalizedAmount, err := expenseAmountForClockify(args, amount)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	form.Set("amount", strconv.FormatFloat(normalizedAmount, 'f', -1, 64))
 	form.Set("date", date)
@@ -338,12 +338,12 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 
 	path, err := paths.Workspace(wsID, "expenses")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	files, err := expenseReceiptFiles(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
@@ -360,11 +360,11 @@ func (s *Service) createExpense(ctx context.Context, args map[string]any) (Resul
 	var created map[string]any
 	if len(files) > 0 {
 		if err := s.Client.PostMultipartWithFiles(ctx, path, form, files, &created); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	} else {
 		if err := s.Client.PostMultipart(ctx, path, form, &created); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	return ok("clockify_create_expense", expenseViewFromRaw(created, s.workspaceDefaultCurrency(ctx, wsID)), map[string]any{"workspaceId": wsID}), nil
@@ -504,39 +504,39 @@ func expenseAmountForClockify(args map[string]any, amount float64) (float64, err
 	}
 }
 
-func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ToolResult, error) {
 	expenseID := stringArg(args, "expense_id")
 	if err := resolve.ValidateID(expenseID, "expense_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	changeFields, err := parseUpdateExpenseChangeFields(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := validateUpdateExpenseChangedValues(changeFields, args); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if date := stringArg(args, "date"); date != "" {
 		loc, err := s.locationFromArgs(args)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		if _, err := parseFlexibleDateTime(date, loc); err != nil {
-			return ResultEnvelope{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
+			return ToolResult{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
 		}
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "expenses", expenseID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing map[string]any
 	if err := s.Client.Get(ctx, path, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	form := url.Values{}
@@ -545,11 +545,11 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 	}
 	if v, ok := numberArg(args, "amount"); ok {
 		if v <= 0 {
-			return ResultEnvelope{}, fmt.Errorf("amount must be greater than 0")
+			return ToolResult{}, fmt.Errorf("amount must be greater than 0")
 		}
 		normalized, err := expenseAmountForClockify(args, v)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		form.Set("amount", strconv.FormatFloat(normalized, 'f', -1, 64))
 	} else if v, ok := reportNumber(firstPresent(existing, "amount")); ok {
@@ -589,7 +589,7 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 		if userID == "" {
 			current, err := s.getCurrentUser(ctx)
 			if err != nil {
-				return ResultEnvelope{}, fmt.Errorf("resolve user_id from current user: %w", err)
+				return ToolResult{}, fmt.Errorf("resolve user_id from current user: %w", err)
 			}
 			userID = current.ID
 		}
@@ -610,31 +610,31 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (Resul
 
 	var updated map[string]any
 	if err := s.Client.PutMultipart(ctx, path, form, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_update_expense", expenseViewFromRaw(updated, s.workspaceDefaultCurrency(ctx, wsID)), map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (ToolResult, error) {
 	expenseID := stringArg(args, "expense_id")
 	if err := resolve.ValidateID(expenseID, "expense_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	expensePath, err := paths.Workspace(wsID, "expenses", expenseID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
 		var expense map[string]any
 		if err := s.Client.Get(ctx, expensePath, nil, &expense); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_expense",
 			Data:   dryrun.WrapResult(expense, "clockify_delete_expense"),
@@ -643,7 +643,7 @@ func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (Resul
 	}
 
 	if err := s.Client.Delete(ctx, expensePath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_expense", map[string]any{
 		"deleted":   true,
@@ -651,15 +651,15 @@ func (s *Service) deleteExpense(ctx context.Context, args map[string]any) (Resul
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) listExpenseCategories(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) listExpenseCategories(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	all, err := s.fetchAllExpenseCategories(ctx, wsID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	page, pageSize := paginationFromArgs(args)
 	start := (page - 1) * pageSize
@@ -678,14 +678,14 @@ func (s *Service) listExpenseCategories(ctx context.Context, args map[string]any
 	}, "clockify_expenses_categories_create")), nil
 }
 
-func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := stringArg(args, "name")
 	if name == "" {
-		return ResultEnvelope{}, fmt.Errorf("name is required")
+		return ToolResult{}, fmt.Errorf("name is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	body := expenseCategoryBody(args)
@@ -695,11 +695,11 @@ func (s *Service) createExpenseCategory(ctx context.Context, args map[string]any
 	}
 	path, err := paths.Workspace(wsID, "expenses", "categories")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var created map[string]any
 	if err := s.Client.Post(ctx, path, body, &created); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_create_expense_category", created, map[string]any{"workspaceId": wsID}), nil
 }
@@ -721,14 +721,14 @@ func expenseCategoryBody(args map[string]any) map[string]any {
 	return body
 }
 
-func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any) (ToolResult, error) {
 	catID := stringArg(args, "category_id")
 	if err := resolve.ValidateID(catID, "category_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if archived, ok := args["archived"].(bool); ok {
@@ -738,11 +738,11 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 
 	body := expenseCategoryBody(args)
 	if len(body) == 0 {
-		return ResultEnvelope{}, fmt.Errorf("at least one of name, has_unit_price, price_in_cents, unit, or archived is required")
+		return ToolResult{}, fmt.Errorf("at least one of name, has_unit_price, price_in_cents, unit, or archived is required")
 	}
 	existing, err := s.findExpenseCategory(ctx, wsID, catID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	body = expenseCategoryUpdateBody(existing, args)
 	if dryrun.Enabled(args) {
@@ -754,11 +754,11 @@ func (s *Service) updateExpenseCategory(ctx context.Context, args map[string]any
 
 	path, err := paths.Workspace(wsID, "expenses", "categories", catID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var updated map[string]any
 	if err := s.Client.Put(ctx, path, body, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_update_expense_category", updated, map[string]any{
 		"workspaceId": wsID,
@@ -832,14 +832,14 @@ func expenseCategoryUpdateBody(existing map[string]any, args map[string]any) map
 	return body
 }
 
-func (s *Service) archiveExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) archiveExpenseCategory(ctx context.Context, args map[string]any) (ToolResult, error) {
 	catID := stringArg(args, "category_id")
 	if err := resolve.ValidateID(catID, "category_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	archived := true
 	if v, ok := args["archived"].(bool); ok {
@@ -854,11 +854,11 @@ func (s *Service) archiveExpenseCategory(ctx context.Context, args map[string]an
 	}
 	path, err := paths.Workspace(wsID, "expenses", "categories", catID, "status")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var updated map[string]any
 	if err := s.Client.Patch(ctx, path, body, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_archive_expense_category", updated, map[string]any{
 		"workspaceId": wsID,
@@ -867,18 +867,18 @@ func (s *Service) archiveExpenseCategory(ctx context.Context, args map[string]an
 	}), nil
 }
 
-func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any) (ToolResult, error) {
 	catID := stringArg(args, "category_id")
 	if err := resolve.ValidateID(catID, "category_id"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_delete_expense_category",
 			Data: dryrun.MinimalResult("clockify_delete_expense_category", map[string]any{
@@ -891,19 +891,19 @@ func (s *Service) deleteExpenseCategory(ctx context.Context, args map[string]any
 
 	statusPath, err := paths.Workspace(wsID, "expenses", "categories", catID, "status")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var archived map[string]any
 	if err := s.Client.Patch(ctx, statusPath, map[string]any{"archived": true}, &archived); err != nil {
-		return ResultEnvelope{}, fmt.Errorf("archive expense category before delete failed: %w", err)
+		return ToolResult{}, fmt.Errorf("archive expense category before delete failed: %w", err)
 	}
 
 	path, err := paths.Workspace(wsID, "expenses", "categories", catID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	if err := s.Client.Delete(ctx, path); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_delete_expense_category", map[string]any{
 		"deleted":    true,

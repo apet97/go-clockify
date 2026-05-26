@@ -8,26 +8,26 @@ import (
 	"time"
 )
 
-func (s *Service) AssignmentReport(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) AssignmentReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	args, err = s.assignmentReportArgsWithResolvedFilters(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	start, end, err := assignmentRangeFromArgs(args, s.DefaultTimezone)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	groups, err := assignmentGroupsFromArgs(args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	assignments, page, pageSize, err := s.listAssignmentsRaw(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userTotals, userTotalsErr := s.getWorkspaceScheduleUserTotalsRaw(ctx, wsID, args)
 	projectTotals, _, projectTotalsErr := s.getProjectScheduleTotalsRaw(ctx, wsID, args)

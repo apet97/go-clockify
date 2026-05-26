@@ -24,26 +24,26 @@ func clientListQuery(args map[string]any, page, pageSize int) map[string]string 
 	return query
 }
 
-func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientRef := stringArg(args, "client")
 	if clientRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("client is required")
+		return ToolResult{}, fmt.Errorf("client is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "clients", clientID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out clockify.ClientEntity
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	view, financialMeta := s.enrichClientView(ctx, wsID, out, args, false)
 	return ok("clockify_clients_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "clientId": clientID}, financialMeta)), nil
@@ -56,27 +56,27 @@ func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (R
 // complete merged shape back. Caller-supplied empty strings are
 // treated as "do not change" (use the dedicated `archived` boolean
 // flag to flip archival state).
-func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientRef := stringArg(args, "client")
 	if clientRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("client is required")
+		return ToolResult{}, fmt.Errorf("client is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	clientPath, err := paths.Workspace(wsID, "clients", clientID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing clockify.ClientEntity
 	if err := s.Client.Get(ctx, clientPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	changedFields := make([]string, 0, 5)
@@ -97,7 +97,7 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 		changedFields = append(changedFields, "note")
 	}
 	if ccEmails, ok, err := strictStringSliceArg(args, "cc_emails"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		existing.CCEmails = ccEmails
 		changedFields = append(changedFields, "cc_emails")
@@ -118,7 +118,7 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_clients_update",
 			Data:   dryrun.Preview("clockify_clients_update", args),
@@ -132,7 +132,7 @@ func (s *Service) UpdateClient(ctx context.Context, args map[string]any) (Result
 	addBoolQuery(query, args, "archive_projects", "archive-projects")
 	addBoolQuery(query, args, "mark_tasks_as_done", "mark-tasks-as-done")
 	if err := s.Client.PutWithQuery(ctx, clientPath, query, payload, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	view, financialMeta := s.enrichClientView(ctx, wsID, updated, args, false)
 	return ok("clockify_clients_update", view, withFinancialMeta(meta, financialMeta)), nil
@@ -173,31 +173,31 @@ func clientPutPayload(c clockify.ClientEntity) map[string]any {
 // same as for projects), and the PUT archive validator additionally
 // requires the existing name in the body. The implementation mirrors
 // the rawArchiveAndDeleteClient cleanup helper in tests/.
-func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientRef := stringArg(args, "client")
 	if clientRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("client is required")
+		return ToolResult{}, fmt.Errorf("client is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	clientPath, err := paths.Workspace(wsID, "clients", clientID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing clockify.ClientEntity
 	if err := s.Client.Get(ctx, clientPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_clients_delete",
 			Data:   dryrun.WrapResult(existing, "clockify_clients_delete"),
@@ -207,19 +207,19 @@ func (s *Service) DeleteClient(ctx context.Context, args map[string]any) (Result
 
 	projects, err := s.listAllProjects(ctx, map[string]any{"clients": []any{clientID}, "archived": false})
 	if err == nil && len(projects) > 0 {
-		return ResultEnvelope{}, fmt.Errorf("client has %d active projects; reassign or archive them first", len(projects))
+		return ToolResult{}, fmt.Errorf("client has %d active projects; reassign or archive them first", len(projects))
 	}
 
 	if !existing.Archived {
 		archivePayload := map[string]any{"name": existing.Name, "archived": true}
 		var archived clockify.ClientEntity
 		if err := s.Client.Put(ctx, clientPath, archivePayload, &archived); err != nil {
-			return ResultEnvelope{}, fmt.Errorf("archive client %s before delete: %w", clientID, err)
+			return ToolResult{}, fmt.Errorf("archive client %s before delete: %w", clientID, err)
 		}
 	}
 
 	if err := s.Client.Delete(ctx, clientPath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_clients_delete", map[string]any{"deleted": true, "clientId": clientID}, map[string]any{"workspaceId": wsID}), nil
 }

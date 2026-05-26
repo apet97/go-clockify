@@ -9,14 +9,14 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
-func (s *Service) getWorkspaceScheduleUserTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getWorkspaceScheduleUserTotals(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	totals, err := s.getWorkspaceScheduleUserTotalsRaw(ctx, wsID, args)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	views := make([]map[string]any, 0, len(totals))
 	for _, total := range totals {
@@ -28,32 +28,32 @@ func (s *Service) getWorkspaceScheduleUserTotals(ctx context.Context, args map[s
 	}), nil
 }
 
-func (s *Service) schedulingUserTotalsOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) schedulingUserTotalsOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	userRef := stringArg(args, "user_id")
 	if userRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("user_id is required")
+		return ToolResult{}, fmt.Errorf("user_id is required")
 	}
 	userID, err := s.resolveUserID(ctx, wsID, userRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	query := map[string]string{"start": start, "end": end}
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "users", userID, "totals")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var raw any
 	if err := s.Client.Get(ctx, path, query, &raw); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var data any
 	if capacity, ok := raw.(map[string]any); ok {
@@ -71,14 +71,14 @@ func (s *Service) schedulingUserTotalsOneUser(ctx context.Context, args map[stri
 	}), nil
 }
 
-func (s *Service) schedulingCapacityOneUser(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) schedulingCapacityOneUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	userIDs, _, err := strictStringSliceArg(args, "user_ids")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	rawArgs := copyArgs(args)
 	if len(userIDs) > 0 {
@@ -86,7 +86,7 @@ func (s *Service) schedulingCapacityOneUser(ctx context.Context, args map[string
 	}
 	totals, err := s.getWorkspaceScheduleUserTotalsRaw(ctx, wsID, rawArgs)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	views := make([]map[string]any, 0, len(totals))
 	for _, total := range totals {
@@ -135,27 +135,27 @@ func (s *Service) getWorkspaceScheduleUserTotalsRaw(ctx context.Context, wsID st
 	return totals, nil
 }
 
-func (s *Service) getSingleProjectScheduleTotals(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) getSingleProjectScheduleTotals(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, stringArg(args, "project_id"))
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	loc, _ := s.locationFromArgs(args)
 	start, end, err := schedulingRangeArgs(args, loc)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "scheduling", "assignments", "projects", "totals", projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var total map[string]any
 	if err := s.Client.Get(ctx, path, map[string]string{"start": start, "end": end}, &total); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	enriched, meta := s.enrichProjectScheduleTotals(ctx, wsID, []map[string]any{total}, args)
 	if len(enriched) > 0 {

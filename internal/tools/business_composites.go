@@ -22,18 +22,18 @@ type UnbilledForClientView struct {
 	Raw              map[string]any      `json:"raw,omitempty"`
 }
 
-func (s *Service) UnbilledForClient(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UnbilledForClient(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientRef := strings.TrimSpace(stringArg(args, "client"))
 	if clientRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("client is required")
+		return ToolResult{}, fmt.Errorf("client is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	clientID, err := s.resolveClientID(ctx, wsID, clientRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	finRange := compositeFinancialRange(args, time.Now())
 	payload, err := s.detailedPayloadForRange(ctx, wsID, finRange, mergeMap(args, map[string]any{
@@ -41,7 +41,7 @@ func (s *Service) UnbilledForClient(ctx context.Context, args map[string]any) (R
 		"invoicing_state": "UNINVOICED",
 	}))
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	raw := cloneMap(payload)
 	views := normalizeDetailedReportPayload(payload)

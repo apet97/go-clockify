@@ -45,22 +45,22 @@ func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values
 	return values, nil
 }
 
-func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetProject(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := stringArg(args, "project")
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		return ToolResult{}, fmt.Errorf("project is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out clockify.Project
 	query := map[string]string{"hydrated": "true"}
@@ -68,35 +68,35 @@ func (s *Service) GetProject(ctx context.Context, args map[string]any) (ResultEn
 	addIntQuery(query, args, "expense_limit", "expense-limit")
 	addStringQuery(query, args, "expense_date", "expense-date")
 	if err := s.Client.Get(ctx, path, query, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	view, financialMeta := s.enrichProjectView(ctx, wsID, out, args)
 	return ok("clockify_projects_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
-func (s *Service) ListProjectMemberships(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) ListProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	if projectID == "" {
 		projectID = strings.TrimSpace(stringArg(args, "project"))
 	}
 	if projectID == "" {
-		return ResultEnvelope{}, fmt.Errorf("project_id is required")
+		return ToolResult{}, fmt.Errorf("project_id is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err = s.resolveProjectID(ctx, wsID, projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	path, err := paths.Workspace(wsID, "projects", projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var project map[string]any
 	if err := s.Client.Get(ctx, path, map[string]string{"hydrated": "true"}, &project); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	memberships := mapSlice(project["memberships"])
 	data := map[string]any{
@@ -120,27 +120,27 @@ func (s *Service) ListProjectMemberships(ctx context.Context, args map[string]an
 // caller-provided changes over it, and PUT the merged shape back.
 // Caller-supplied empty strings are treated as "do not change"; flip
 // archival state through the dedicated `archived` boolean instead.
-func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := stringArg(args, "project")
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		return ToolResult{}, fmt.Errorf("project is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectPath, err := paths.Workspace(wsID, "projects", projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing clockify.Project
 	if err := s.Client.Get(ctx, projectPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	changedFields := make([]string, 0, 6)
@@ -162,7 +162,7 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 	} else if clientRef := strings.TrimSpace(stringArg(args, "client")); clientRef != "" {
 		clientID, resolveErr := s.resolveClientID(ctx, wsID, clientRef)
 		if resolveErr != nil {
-			return ResultEnvelope{}, resolveErr
+			return ToolResult{}, resolveErr
 		}
 		if clientID != existing.ClientID {
 			existing.ClientID = clientID
@@ -189,7 +189,7 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_projects_update",
 			Data:   dryrun.Preview("clockify_projects_update", args),
@@ -199,11 +199,11 @@ func (s *Service) UpdateProject(ctx context.Context, args map[string]any) (Resul
 
 	payload := projectPutPayload(existing)
 	if err := applyProjectRequestFields(payload, args); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var updated clockify.Project
 	if err := s.Client.Put(ctx, projectPath, payload, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitResourceUpdate(ctx, projectResourceURI(wsID, projectID))
 	view, financialMeta := s.enrichProjectView(ctx, wsID, updated, args)
@@ -296,31 +296,31 @@ func applyProjectRequestFields(payload map[string]any, args map[string]any) erro
 // validator additionally requires the existing name in the body).
 // Mirrors clients.DeleteClient's archive-first pattern; both
 // resources share the same upstream constraint.
-func (s *Service) DeleteProject(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteProject(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := stringArg(args, "project")
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		return ToolResult{}, fmt.Errorf("project is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectPath, err := paths.Workspace(wsID, "projects", projectID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing clockify.Project
 	if err := s.Client.Get(ctx, projectPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_projects_delete",
 			Data:   dryrun.WrapResult(existing, "clockify_projects_delete"),
@@ -332,12 +332,12 @@ func (s *Service) DeleteProject(ctx context.Context, args map[string]any) (Resul
 		archivePayload := map[string]any{"name": existing.Name, "archived": true}
 		var archived clockify.Project
 		if err := s.Client.Put(ctx, projectPath, archivePayload, &archived); err != nil {
-			return ResultEnvelope{}, fmt.Errorf("archive project %s before delete: %w", projectID, err)
+			return ToolResult{}, fmt.Errorf("archive project %s before delete: %w", projectID, err)
 		}
 	}
 
 	if err := s.Client.Delete(ctx, projectPath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_projects_delete", map[string]any{"deleted": true, "projectId": projectID}, map[string]any{"workspaceId": wsID}), nil
 }

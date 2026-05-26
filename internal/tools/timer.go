@@ -14,7 +14,7 @@ import (
 
 var stopTimerNoRunningRetryDelays = []time.Duration{150 * time.Millisecond, 350 * time.Millisecond}
 
-func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, description string) (ResultEnvelope, error) {
+func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, description string) (ToolResult, error) {
 	return s.startTimer(ctx, map[string]any{
 		"project_id":  projectID,
 		"project":     projectRef,
@@ -22,21 +22,21 @@ func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, descrip
 	})
 }
 
-func (s *Service) StartTimerArgs(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) StartTimerArgs(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.startTimer(ctx, args)
 }
 
-func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) startTimer(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID := stringArg(args, "project_id")
 	projectRef := stringArg(args, "project")
 	if projectID == "" && projectRef != "" {
 		projectID, err = s.resolveProjectID(ctx, wsID, projectRef)
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 	payload := map[string]any{"start": time.Now().UTC().Format(time.RFC3339), "description": stringArg(args, "description")}
@@ -47,7 +47,7 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 		payload["type"] = entryType
 	}
 	if customFields, ok, err := entryCustomFieldsFromArgs(args); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		payload["customFields"] = customFields
 	}
@@ -59,7 +59,7 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	if dryrun.Enabled(args) {
 		running, _, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
 		if err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 		if userID != "" {
 			meta["userId"] = userID
@@ -82,10 +82,10 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	}
 	// C1: never create a timer that cannot later be stopped.
 	if running, _, _, runErr := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"}); runErr == nil && len(running) > 0 && running[0].IsRunning() {
-		return ResultEnvelope{}, fmt.Errorf("a timer is already running (entry %s) — stop it first with clockify_entries_timer_stop", running[0].ID)
+		return ToolResult{}, fmt.Errorf("a timer is already running (entry %s) — stop it first with clockify_entries_timer_stop", running[0].ID)
 	}
 	if projectID == "" && s.workspaceForcesProjects(ctx, wsID) {
-		return ResultEnvelope{}, fmt.Errorf("this workspace requires a project on every time entry — pass project_id or project")
+		return ToolResult{}, fmt.Errorf("this workspace requires a project on every time entry — pass project_id or project")
 	}
 	if projectID != "" {
 		// Billable defaults to the project's setting: Clockify treats an
@@ -106,11 +106,11 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ResultEn
 	meta["billable_source"] = billableSource
 	path, err := paths.Workspace(wsID, "time-entries")
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out clockify.TimeEntry
 	if err := s.Client.Post(ctx, path, payload, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	s.emitEntryAndWeeklyWithState(ctx, wsID, out)
 	view, financialMeta := s.enrichEntryView(ctx, wsID, out)
@@ -224,10 +224,10 @@ func firstEntryIsRunning(entries []clockify.TimeEntry) bool {
 	return len(entries) > 0 && entries[0].IsRunning()
 }
 
-func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) TimerStatus(ctx context.Context) (ToolResult, error) {
 	entries, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true"})
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	meta := map[string]any{"workspaceId": wsID, "userId": userID}
 
@@ -244,7 +244,7 @@ func (s *Service) TimerStatus(ctx context.Context) (ResultEnvelope, error) {
 	meta = withFinancialMeta(meta, financialMeta)
 	startTime, err := entry.StartTime()
 	if err != nil {
-		return ResultEnvelope{}, fmt.Errorf("parse start time: %w", err)
+		return ToolResult{}, fmt.Errorf("parse start time: %w", err)
 	}
 	elapsed := time.Since(startTime)
 	var elapsedStr string

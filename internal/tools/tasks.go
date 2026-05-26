@@ -22,34 +22,34 @@ func taskListQuery(args map[string]any, page, pageSize int) map[string]string {
 
 // GetTask fetches a single task by ID or exact name within a project.
 // project (name or ID) and task (ID or name) are both required.
-func (s *Service) GetTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) GetTask(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		return ToolResult{}, fmt.Errorf("project is required")
 	}
 	taskRef := strings.TrimSpace(stringArg(args, "task"))
 	if taskRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("task is required")
+		return ToolResult{}, fmt.Errorf("task is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	taskID, err := s.resolveTaskID(ctx, wsID, projectID, taskRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	taskPath, err := paths.Workspace(wsID, "projects", projectID, "tasks", taskID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out clockify.Task
 	if err := s.Client.Get(ctx, taskPath, nil, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, out, args)
 	return ok("clockify_tasks_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID, "taskId": taskID}, financialMeta)), nil
@@ -59,35 +59,35 @@ func (s *Service) GetTask(ctx context.Context, args map[string]any) (ResultEnvel
 // Clockify's PUT /projects/{pid}/tasks/{tid} is a full replacement;
 // we GET the existing task, layer caller changes on top, then PUT the
 // merged shape back. Empty-string caller args are treated as "no change".
-func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		return ToolResult{}, fmt.Errorf("project is required")
 	}
 	taskRef := strings.TrimSpace(stringArg(args, "task"))
 	if taskRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("task is required")
+		return ToolResult{}, fmt.Errorf("task is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	taskID, err := s.resolveTaskID(ctx, wsID, projectID, taskRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	taskPath, err := paths.Workspace(wsID, "projects", projectID, "tasks", taskID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing clockify.Task
 	if err := s.Client.Get(ctx, taskPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	changedFields := make([]string, 0, 4)
@@ -112,7 +112,7 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 		changedFields = append(changedFields, "assignee_id")
 	}
 	if assigneeIDs, ok, err := strictStringSliceArg(args, "assignee_ids"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		existing.AssigneeIDs = assigneeIDs
 		changedFields = append(changedFields, "assignee_ids")
@@ -122,7 +122,7 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 		changedFields = append(changedFields, "budget_estimate")
 	}
 	if groupIDs, ok, err := strictStringSliceArg(args, "user_group_ids"); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	} else if ok {
 		existing.UserGroupIDs = groupIDs
 		changedFields = append(changedFields, "user_group_ids")
@@ -136,7 +136,7 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 	}
 
 	if dryrun.Enabled(args) {
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_tasks_update",
 			Data:   dryrun.Preview("clockify_tasks_update", args),
@@ -146,14 +146,14 @@ func (s *Service) UpdateTask(ctx context.Context, args map[string]any) (ResultEn
 
 	payload := taskPutPayload(existing)
 	if err := applyTaskRequestFields(payload, args); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var updated clockify.Task
 	query := map[string]string{}
 	addBoolQuery(query, args, "contains_assignee", "contains-assignee")
 	addStringQuery(query, args, "membership_status", "membership-status")
 	if err := s.Client.PutWithQuery(ctx, taskPath, query, payload, &updated); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	view, financialMeta := s.enrichTaskView(ctx, wsID, projectID, updated, args)
 	return ok("clockify_tasks_update", view, withFinancialMeta(meta, financialMeta)), nil
@@ -205,35 +205,35 @@ func applyTaskRequestFields(payload map[string]any, args map[string]any) error {
 // DeleteTask deletes a task by project + task reference (ID or name).
 // Clockify requires tasks to be DONE before DELETE, so active tasks are first
 // updated with the existing full-replacement shape plus status=DONE.
-func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEnvelope, error) {
+func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := strings.TrimSpace(stringArg(args, "project"))
 	if projectRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("project is required")
+		return ToolResult{}, fmt.Errorf("project is required")
 	}
 	taskRef := strings.TrimSpace(stringArg(args, "task"))
 	if taskRef == "" {
-		return ResultEnvelope{}, fmt.Errorf("task is required")
+		return ToolResult{}, fmt.Errorf("task is required")
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	projectID, err := s.resolveProjectID(ctx, wsID, projectRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	taskID, err := s.resolveTaskID(ctx, wsID, projectID, taskRef)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	taskPath, err := paths.Workspace(wsID, "projects", projectID, "tasks", taskID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	var existing clockify.Task
 	if err := s.Client.Get(ctx, taskPath, nil, &existing); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 
 	if dryrun.Enabled(args) {
@@ -242,7 +242,7 @@ func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEn
 			steps = append(steps, "PUT status=DONE")
 		}
 		steps = append(steps, "DELETE task")
-		return ResultEnvelope{
+		return ToolResult{
 			OK:     true,
 			Action: "clockify_tasks_delete",
 			Data:   dryrun.WrapResult(existing, "clockify_tasks_delete"),
@@ -261,12 +261,12 @@ func (s *Service) DeleteTask(ctx context.Context, args map[string]any) (ResultEn
 		payload := taskPutPayload(existing)
 		var updated clockify.Task
 		if err := s.Client.Put(ctx, taskPath, payload, &updated); err != nil {
-			return ResultEnvelope{}, err
+			return ToolResult{}, err
 		}
 	}
 
 	if err := s.Client.Delete(ctx, taskPath); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_tasks_delete", map[string]any{"deleted": true, "taskId": taskID}, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }

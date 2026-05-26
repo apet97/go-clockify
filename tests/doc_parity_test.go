@@ -98,6 +98,7 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 	docsRoot := filepath.Join("..", "docs")
 	allowedCurrentDocs := map[string]bool{
 		filepath.Join(docsRoot, "agent-cookbook.md"):                     true,
+		filepath.Join(docsRoot, "architecture.md"):                       true,
 		filepath.Join(docsRoot, "tool-catalog.md"):                       true,
 		filepath.Join(docsRoot, "live-tests.md"):                         true,
 		filepath.Join(docsRoot, "agent-handoff.md"):                      true,
@@ -111,7 +112,7 @@ func TestHistoricalPlatformDocsCarryBanner(t *testing.T) {
 			return err
 		}
 		if d.IsDir() {
-			if path == filepath.Join(docsRoot, "openapi") {
+			if path == filepath.Join(docsRoot, "openapi") || path == filepath.Join(docsRoot, "audits") {
 				return filepath.SkipDir
 			}
 			return nil

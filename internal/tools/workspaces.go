@@ -39,10 +39,10 @@ func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("multiple workspaces found; set CLOCKIFY_WORKSPACE_ID")
 }
 
-func (s *Service) GetWorkspace(ctx context.Context) (ResultEnvelope, error) {
+func (s *Service) GetWorkspace(ctx context.Context) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	// paths.Workspace runs resolve.ValidateID and url.PathEscape per
 	// segment. Defence-in-depth: config.LoadOneUser already validates an
@@ -50,11 +50,11 @@ func (s *Service) GetWorkspace(ctx context.Context) (ResultEnvelope, error) {
 	// also return an auto-detected ID from a /workspaces response.
 	path, err := paths.Workspace(wsID)
 	if err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	var out map[string]any
 	if err := s.Client.Get(ctx, path, nil, &out); err != nil {
-		return ResultEnvelope{}, err
+		return ToolResult{}, err
 	}
 	return ok("clockify_workspace_settings", workspaceViewFromRaw(out), map[string]any{"workspaceId": wsID}), nil
 }

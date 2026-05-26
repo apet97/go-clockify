@@ -70,7 +70,7 @@ func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (an
 	if err != nil {
 		return nil, err
 	}
-	if env, ok := out.(ResultEnvelope); ok {
+	if env, ok := out.(ToolResult); ok {
 		if data, ok := env.Data.(map[string]any); ok && !boolFromAny(data["stopped"]) && strings.TrimSpace(reportValueString(data["reason"])) == "no timer running" {
 			ids := map[string]string{}
 			for key, value := range env.Meta {

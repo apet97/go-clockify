@@ -48,7 +48,7 @@ func TestDryRunStopTimerNoRunningValidationFailed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stop timer dry run: %v", err)
 	}
-	env := result.(ResultEnvelope)
+	env := result.(ToolResult)
 	data := env.Data.(map[string]any)
 	validation := data["validation"].(ValidationView)
 	if validation.Status != validationStatusFailed {

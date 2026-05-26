@@ -12,7 +12,7 @@ func TestResultEnvelopeMetaStandardizationPreservesListMetadata(t *testing.T) {
 
 	for _, action := range actions {
 		t.Run(action, func(t *testing.T) {
-			env := ResultEnvelope{
+			env := ToolResult{
 				OK:     true,
 				Action: action,
 				Data: []map[string]any{
@@ -50,7 +50,7 @@ func TestResultEnvelopeMetaStandardizationPreservesListMetadata(t *testing.T) {
 }
 
 func TestResultEnvelopeMetaStandardizationStillLiftsStringIDs(t *testing.T) {
-	env := ResultEnvelope{
+	env := ToolResult{
 		OK:     true,
 		Action: "clockify_invoices_get",
 		Data:   map[string]any{"number": "INV-1"},
