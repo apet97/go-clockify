@@ -168,6 +168,45 @@ arguments or unknown properties return JSON-RPC `-32602` with
 5. For raw writes, call `clockify_api_request` with `dry_run:true` first and
    reuse the returned `confirm_token` only for the identical live retry.
 
+## Auto-Paginate List Tools
+
+1. Default behaviour: `clockify_clients_list { "page": 1, "page_size": 50 }`
+   returns one page and `meta.has_more` indicates whether more rows exist —
+   chain calls yourself to walk pages.
+2. Opt in to server-side pagination with `auto_paginate: true`:
+   `clockify_projects_list { "auto_paginate": true }`. The MCP walks every
+   page using `page_size=200` (the documented Clockify maximum) regardless of
+   any `page_size` you pass, concatenates the rows into one `data` slice, and
+   stamps `meta.auto_paginate: true`, `meta.has_more: false`, and
+   `meta.count` set to the merged total.
+3. Cap the scan with `max_rows`:
+   `clockify_entries_list { "auto_paginate": true, "max_rows": 1000 }`.
+   Default cap is 5000, hard cap is 50000, and any non-positive value reverts
+   to the default. When the cap stops the scan before the last page, the meta
+   adds `truncated: true` so the agent sees that more rows exist upstream.
+4. Wired list tools (phase 1 — first-slice CRUD): `clockify_clients_list`,
+   `clockify_projects_list`, `clockify_tasks_list`, `clockify_tags_list`,
+   `clockify_entries_list`.
+5. Wired list tools (phase 2 — native domain): `clockify_invoices_list`,
+   `clockify_invoices_payments_list`, `clockify_projects_templates_list`,
+   `clockify_expenses_list`, `clockify_expenses_categories_list`,
+   `clockify_custom_fields_list`, `clockify_time_off_requests_list`,
+   `clockify_time_off_policies_list`, `clockify_scheduling_assignments_list`,
+   `clockify_approvals_list`, `clockify_webhooks_list`,
+   `clockify_groups_list`, `clockify_users_list`. Required filters (e.g.
+   `invoice_id` for `clockify_invoices_payments_list`, `start`/`end` for
+   `clockify_scheduling_assignments_list`) still apply when `auto_paginate`
+   is set.
+6. Not wired (no upstream pagination to walk): `clockify_holidays_list`,
+   `clockify_holidays_list_for_user_period`, `clockify_webhooks_events`,
+   `clockify_projects_memberships_list`, `clockify_invoices_items_list`,
+   `clockify_entity_changes_list`. These return their full data set in one
+   call; setting `auto_paginate: true` is harmless but unnecessary.
+7. Next action behavior: when `meta.truncated: true` the scan stopped at the
+   cap; raise `max_rows` (up to 50000) or narrow the upstream filter
+   (status/date range/project) and retry. When `meta.has_more: false` the
+   scan covered every row Clockify will return for that filter.
+
 ## Demo Smoke
 
 1. Seed deterministic objects:
