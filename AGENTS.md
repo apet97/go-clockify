@@ -59,6 +59,23 @@ as setup instructions.
   dry-runs/risk metadata, clearer error semantics docs, generated default
   toolset and coverage dashboard artifacts, and a modest `tools.Service` state
   split.
+- **Audit T1.1 + T1.2 landed** (2026-05-26). `FullAccessRegistry()` and
+  `nativeHighValueDescriptors()` panic-wrapping convenience constructors were
+  removed; callers now use `FullAccessRegistryChecked()` /
+  `nativeHighValueDescriptorsChecked()` and propagate errors. Startup registry
+  bugs now surface as clean `clockify-mcp doctor` errors instead of a binary
+  crash. The `openapi-drift` CI job pins Ruby via `ruby/setup-ruby@v1` +
+  `.ruby-version` (3.3); previously it relied silently on the `ubuntu-latest`
+  runner image's pre-installed Ruby. Full audit at
+  `docs/audits/2026-05-26-claude-audit.md`.
+- **Audit T2.1 deferred.** The `ResultEnvelope` → `ToolResult` convergence is
+  half-done: a mechanical rename across 53 files is safe at the wire level
+  (the four common fields align), but ~10 wire-contract tests assert that
+  handlers populate `IDs` and `Changed` — fields that exist on `ToolResult` but
+  not on `ResultEnvelope`. The per-handler migration (move IDs from `Meta` to
+  `IDs`, populate `Changed` on mutation paths) is the meat of T2.1 and remains
+  outstanding. See `docs/audits/2026-05-26-claude-audit.md` § T2.1 for the
+  full implementation guide.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the
