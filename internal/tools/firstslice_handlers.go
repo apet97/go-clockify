@@ -6,15 +6,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/dryrun"
 )
 
 func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, error) {
-	items, page, pageSize, err := s.listClients(ctx, args)
+	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, s.listClients)
 	if err != nil {
 		return nil, err
 	}
 	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	meta = addAutoPaginateMeta(meta, autoPaginated, truncated, maxRowsArg(args))
 	return result("clockify_clients_list", "client", map[string]string{"workspaceId": s.WorkspaceID}, withListPaginationData(map[string]any{
 		"clients":  items,
 		"count":    len(items),
@@ -43,11 +45,12 @@ func (s *Service) ClientsCreate(ctx context.Context, args map[string]any) (any, 
 }
 
 func (s *Service) ProjectsList(ctx context.Context, args map[string]any) (any, error) {
-	items, page, pageSize, err := s.listProjects(ctx, args)
+	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, s.listProjects)
 	if err != nil {
 		return nil, err
 	}
 	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	meta = addAutoPaginateMeta(meta, autoPaginated, truncated, maxRowsArg(args))
 	return result("clockify_projects_list", "project", map[string]string{"workspaceId": s.WorkspaceID}, withListPaginationData(map[string]any{
 		"projects": compactProjectViewsFromProjects(items),
 		"count":    len(items),
@@ -81,11 +84,15 @@ func (s *Service) TasksList(ctx context.Context, args map[string]any) (any, erro
 	if err != nil {
 		return nil, err
 	}
-	items, page, pageSize, err := s.listTasks(ctx, projectID, args)
+	tasksList := func(ctx context.Context, args map[string]any) ([]clockify.Task, int, int, error) {
+		return s.listTasks(ctx, projectID, args)
+	}
+	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, tasksList)
 	if err != nil {
 		return nil, err
 	}
 	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	meta = addAutoPaginateMeta(meta, autoPaginated, truncated, maxRowsArg(args))
 	return result("clockify_tasks_list", "task", map[string]string{"workspaceId": s.WorkspaceID, "projectId": projectID}, withListPaginationData(map[string]any{
 		"tasks":    items,
 		"count":    len(items),
@@ -115,11 +122,12 @@ func (s *Service) TasksCreate(ctx context.Context, args map[string]any) (any, er
 }
 
 func (s *Service) TagsList(ctx context.Context, args map[string]any) (any, error) {
-	items, page, pageSize, err := s.listTags(ctx, args)
+	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, s.listTags)
 	if err != nil {
 		return nil, err
 	}
 	meta := addPaginationMeta(map[string]any{"count": len(items)}, args, page, pageSize)
+	meta = addAutoPaginateMeta(meta, autoPaginated, truncated, maxRowsArg(args))
 	return result("clockify_tags_list", "tag", map[string]string{"workspaceId": s.WorkspaceID}, withListPaginationData(map[string]any{
 		"tags":     items,
 		"count":    len(items),
@@ -144,12 +152,21 @@ func (s *Service) TagsCreate(ctx context.Context, args map[string]any) (any, err
 }
 
 func (s *Service) EntriesList(ctx context.Context, args map[string]any) (any, error) {
-	entries, userID, page, pageSize, err := s.listCurrentUserEntries(ctx, args)
+	var capturedUserID string
+	entriesList := func(ctx context.Context, args map[string]any) ([]clockify.TimeEntry, int, int, error) {
+		batch, userID, page, pageSize, err := s.listCurrentUserEntries(ctx, args)
+		if userID != "" {
+			capturedUserID = userID
+		}
+		return batch, page, pageSize, err
+	}
+	entries, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, entriesList)
 	if err != nil {
 		return nil, err
 	}
 	meta := addPaginationMeta(map[string]any{"count": len(entries)}, args, page, pageSize)
-	return result("clockify_entries_list", "entry", map[string]string{"workspaceId": s.WorkspaceID, "userId": userID}, withListPaginationData(map[string]any{
+	meta = addAutoPaginateMeta(meta, autoPaginated, truncated, maxRowsArg(args))
+	return result("clockify_entries_list", "entry", map[string]string{"workspaceId": s.WorkspaceID, "userId": capturedUserID}, withListPaginationData(map[string]any{
 		"entries":  entries,
 		"count":    len(entries),
 		"page":     page,

@@ -5788,6 +5788,10 @@
       "input_schema": {
         "additionalProperties": false,
         "properties": {
+          "auto_paginate": {
+            "description": "When true, walk every page server-side and return one consolidated result. Bounded by max_rows.",
+            "type": "boolean"
+          },
           "description": {
             "description": "Free-text description.",
             "maxLength": 2000,
@@ -5808,6 +5812,10 @@
           "in_progress": {
             "description": "Filter to time entries that are currently running.",
             "type": "string"
+          },
+          "max_rows": {
+            "description": "Row cap for auto_paginate scans (default 5000, hard cap 50000).",
+            "type": "integer"
           },
           "page": {
             "description": "Page number (default 1)",

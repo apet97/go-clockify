@@ -183,6 +183,59 @@ always sets Entity; `ok()` never does.
 
 ---
 
+## 5a. Auto-paginate (T2.2)
+
+Audit § T2.2 introduced the `auto_paginate: true` knob on list tools.
+The shared `paginationSchema()` exposes two additive input properties
+on **every** list tool that uses it:
+
+| Property | Type | Description |
+|---|---|---|
+| `auto_paginate` | boolean | When `true`, the handler walks every server page and returns one consolidated `data` payload. |
+| `max_rows` | integer | Row cap for the scan; default `5000`, hard cap `50000`. Hitting the cap sets `meta.truncated: true`. |
+
+### How the helper works
+
+`internal/tools/helpers_pagination.go` provides:
+
+- `autoPaginateArg(args) bool` — reads the flag.
+- `maxRowsArg(args) int` — reads + clamps the cap.
+- `runListWithAutoPaginate[T](ctx, args, list)` — generic loop for any
+  handler that exposes a per-page list helper with signature
+  `func(ctx, args) ([]T, int, int, error)`. Returns
+  `(items, page, pageSize, autoPaginated, truncated, err)`.
+- `addAutoPaginateMeta(meta, autoPaginated, truncated, maxRows)` —
+  stamps `auto_paginate / max_rows / has_more / truncated` on the
+  meta map so the agent can see how the scan ended.
+
+### Wired handlers (post-T2.2)
+
+- `clockify_clients_list`
+- `clockify_projects_list`
+- `clockify_tasks_list`
+- `clockify_tags_list`
+- `clockify_entries_list`
+
+All five use `runListWithAutoPaginate` directly. Integration tests in
+`auto_paginate_integration_test.go` cover walk-every-page,
+`max_rows` truncation, and "no flag → single page" semantics against
+a fake Clockify backend.
+
+### Rollout TODO
+
+Other list handlers (invoices, expenses, custom_fields, time_off,
+scheduling, webhooks, approvals, audit_log, holidays, groups, users,
+project memberships, invoice items/payments/reports) still service
+the `auto_paginate` knob in their **input schema** (because they share
+`paginationSchema()`) but currently return a single page regardless.
+Wiring is per-handler because each owns a bespoke query builder and
+response envelope; migrate by introducing a `listXAuto` companion
+method that loops using the existing single-page helper and stamps
+`addAutoPaginateMeta`. The helper test suite is the regression net for
+the shared loop; integration tests should be added per migrated tool.
+
+---
+
 ## 6. How to add a new tool, end-to-end
 
 1. **Pick the layer** (table in §2). New high-level user intent →
