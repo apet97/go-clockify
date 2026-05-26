@@ -60,7 +60,11 @@ scripts/                 Current generators plus historical validation helpers
 ```
 
 The generated catalog should always show workflow tools first, domain tools
-second, and raw API fallback tools last.
+second, and raw API fallback tools last. For the layer call graph
+(`workflowDescriptors` → `FirstSliceRegistry` →
+`nativeHighValueDescriptorsChecked` → `FullAccessRegistryChecked`), the
+toolset filter, and the current `ToolResult` vs `ResultEnvelope` state, see
+[docs/architecture.md](docs/architecture.md).
 
 ## Pull Request Process
 

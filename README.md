@@ -201,7 +201,8 @@ Operator references:
 [dangerous tools](docs/dangerous-tools.md),
 [raw fallback](docs/raw-fallback.md), and
 [error recovery](docs/error-recovery.md). Contributors should also read
-[development guide](docs/development.md).
+[development guide](docs/development.md) and
+[architecture](docs/architecture.md).
 
 ### Raw API fallback
 
