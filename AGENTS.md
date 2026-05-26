@@ -68,14 +68,37 @@ as setup instructions.
   `.ruby-version` (3.3); previously it relied silently on the `ubuntu-latest`
   runner image's pre-installed Ruby. Full audit at
   `docs/audits/2026-05-26-claude-audit.md`.
-- **Audit T2.1 deferred.** The `ResultEnvelope` → `ToolResult` convergence is
-  half-done: a mechanical rename across 53 files is safe at the wire level
-  (the four common fields align), but ~10 wire-contract tests assert that
-  handlers populate `IDs` and `Changed` — fields that exist on `ToolResult` but
-  not on `ResultEnvelope`. The per-handler migration (move IDs from `Meta` to
-  `IDs`, populate `Changed` on mutation paths) is the meat of T2.1 and remains
-  outstanding. See `docs/audits/2026-05-26-claude-audit.md` § T2.1 for the
-  full implementation guide.
+- **Audit T2.1 landed** (2026-05-26, commit `e43f0cb`). `ResultEnvelope`
+  is gone; `ToolResult` is the single success type across every handler
+  (51 files renamed). Wire compatibility preserved via `,omitzero` on
+  `Changed ChangeSet` (Go 1.24+ tag — narrow envelopes still emit the
+  historical four-key shape). The bridge in
+  `oneuser_result_helpers.go:standardizeDomainResult` distinguishes
+  narrow-vs-rich results by the value-level signal `Entity != ""`
+  (set by `result()`, never by `ok()`) instead of the old type switch.
+  Per-handler IDs / Changed population was already done by the
+  `standardizeDomainResult` lifting pass; nothing further is needed
+  beyond the type unification itself. Regression tests in
+  `internal/tools/result_envelope_alias_test.go`.
+- **Audit T2.2 phase 1 landed** (2026-05-26, commit `2a4fa43`). The
+  `auto_paginate: true` + `max_rows` (default 5000, hard cap 50000)
+  knobs are on every list tool's input schema via the shared
+  `paginationSchema()`. Five first-slice handlers (`clockify_clients_list`,
+  `_projects_list`, `_tasks_list`, `_tags_list`, `_entries_list`)
+  service the loop via the generic `runListWithAutoPaginate[T]` helper
+  in `internal/tools/helpers_pagination.go`. The other ~16 list
+  handlers (invoices, expenses, custom_fields, time_off, scheduling,
+  webhooks, approvals, audit_log, holidays, groups, users, project
+  memberships, invoice items/payments/reports) **still service single
+  page upstream** — phase 2 wires them per-handler using the same
+  helper. See `docs/architecture.md §5a` for the wired-handler list
+  and the pattern.
+- **Audit T2.3 landed** (2026-05-26, commit `4ee1d2a`).
+  `docs/architecture.md` (~300 lines) documents the five tool layers,
+  the `buildFullAccessRegistry()` call graph, the toolset filter, the
+  `ToolResult` envelope (post-T2.1), the auto_paginate helper
+  (post-T2.2 phase 1), the end-to-end "add a new tool" recipe, the
+  seven drift gates, and the glossary.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the
