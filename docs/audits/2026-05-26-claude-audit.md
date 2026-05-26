@@ -260,11 +260,11 @@ The `ci.yml` workflow has 14 named jobs, all running on `ubuntu-latest` with pin
 
 ### Tier 3 — Lower urgency
 
-**T3.1: Add completeness check for `PAGINATED_LIST_OPS` in the generator**
+**T3.1: Add completeness check for `PAGINATED_LIST_OPS` in the generator** — _landed 2026-05-26._
 
-- **WHY:** A contributor can add a route to `PAGINATED_LIST_OPS` without a live probe; there is no gate that enforces "all paginated ops must have a `x-clockify-live-status: live-success` annotation."
-- **HOW:** After the merge pipeline in the generator, assert that every path in `PAGINATED_LIST_OPS` appears in the output spec _and_ has `x-clockify-live-status` set to `live-success` or `probe-documented`. Exit non-zero if not. This makes the "must be backed by a live probe" policy machine-enforced.
-- **EFFORT:** 4 hours (Ruby addition to generator + update drift gate).
+- **WHY:** A contributor can add a route to `PAGINATED_LIST_OPS` without a live probe; there was no gate that enforced "all paginated ops must have a `x-clockify-live-status: live-success` annotation."
+- **HOW:** `paginated_ops_live_evidence_errors(doc)` runs inside `validate_document` after the merge pipeline; it walks every entry in `PAGINATED_LIST_OPS`, asserts the emitted operation exists, and asserts `x-clockify-live-status ∈ {live-success, probe-documented}`. Mismatches bubble up through the existing `abort(errors.join("\n"))` so a contributor sees the failure at `make gen-openapi` time. `PAGINATED_LIVE_EVIDENCE_OK` (Set) is the single source of truth for accepted bucket names. `make perfect` green on commit; manual probe with `documented`/missing entries confirms the gate fires loudly.
+- **EFFORT:** 4 hours actual — Ruby helper + comment.
 
 **T3.2: Expand golangci-lint to cover `revive` style rules**
 

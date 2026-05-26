@@ -106,6 +106,16 @@ as setup instructions.
   `ToolResult` envelope (post-T2.1), the auto_paginate helper
   (post-T2.2 phase 1), the end-to-end "add a new tool" recipe, the
   seven drift gates, and the glossary.
+- **Audit T3.1 landed** (2026-05-26).
+  `paginated_ops_live_evidence_errors` in `scripts/gen-clockify-openapi`
+  now runs inside `validate_document` and asserts every entry in
+  `PAGINATED_LIST_OPS` (a) appears in the emitted spec and (b) carries
+  `x-clockify-live-status ∈ {live-success, probe-documented}`. The
+  `documented` bucket is rejected so a contributor cannot land a
+  paginated annotation without a passing live probe or a recorded
+  probe fixture. Failures bubble through the existing `abort` so the
+  failure surfaces at `make gen-openapi` time, before drift fixtures
+  regenerate.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the

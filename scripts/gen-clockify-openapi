@@ -1819,6 +1819,38 @@ def validate_document(doc, repo_root = nil)
       end
     end
   end
+  errors.concat(paginated_ops_live_evidence_errors(doc))
+  errors
+end
+
+# Verify every entry in PAGINATED_LIST_OPS made it into the emitted
+# spec AND is backed by live evidence — the operation must carry an
+# `x-clockify-live-status` of `live-success` or `probe-documented`. The
+# `documented` bucket is rejected because it means the entry was added
+# without a passing live probe or a recorded probe fixture, and a fern
+# generator pass that emits page+page-size on an operation we can't
+# prove the live API honours is the exact regression that the
+# `ensure_pagination!` annotation table is meant to prevent. Treating
+# this as a generator-level error (rather than a downstream Go test)
+# means a contributor who edits PAGINATED_LIST_OPS gets an immediate
+# loud failure at `make gen-openapi` time instead of a silent shipped
+# spec.
+PAGINATED_LIVE_EVIDENCE_OK = Set.new(%w[live-success probe-documented]).freeze
+
+def paginated_ops_live_evidence_errors(doc)
+  errors = []
+  paths = doc["paths"] || {}
+  PAGINATED_LIST_OPS.each do |(method, path)|
+    op = paths.dig(path, method)
+    if op.nil?
+      errors << "PAGINATED_LIST_OPS entry #{method.upcase} #{path} not emitted; remove the entry or restore the source operation"
+      next
+    end
+    status = op["x-clockify-live-status"].to_s
+    unless PAGINATED_LIVE_EVIDENCE_OK.include?(status)
+      errors << "PAGINATED_LIST_OPS entry #{method.upcase} #{path} has x-clockify-live-status=#{status.empty? ? "<unset>" : status}; must be one of #{PAGINATED_LIVE_EVIDENCE_OK.to_a.join(", ")} (back the entry with a live probe captured in addons-me/fern/spec/evidence/probes/ before re-adding)"
+    end
+  end
   errors
 end
 
