@@ -46,9 +46,16 @@ func TestHighRiskDryRunIssuesConfirmationToken(t *testing.T) {
 		return map[string]any{"ok": true, "action": "danger", "dry_run": true}, nil
 	})
 
+	// The target_id is a distinctive 22-char needle so the no-echo check
+	// below can use strings.Contains without colliding with random
+	// base64url substrings. Previously this used "t1" as the needle,
+	// which appears by chance in ~8% of random 43-char base64url
+	// tokens and caused TestHighRiskDryRunIssuesConfirmationToken to
+	// flake roughly one run in twelve.
+	const needleTargetID = "confirm-needle-target-1"
 	res, err := srv.callTool(context.Background(), ToolCallParams{
 		Name:      "danger",
-		Arguments: map[string]any{"target_id": "t1", "dry_run": true},
+		Arguments: map[string]any{"target_id": needleTargetID, "dry_run": true},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +66,7 @@ func TestHighRiskDryRunIssuesConfirmationToken(t *testing.T) {
 	env := res.(map[string]any)
 	confirmation, _ := env["confirmation"].(map[string]any)
 	token, _ := confirmation["confirm_token"].(string)
-	if len(token) < 16 || strings.Contains(token, "t1") {
+	if len(token) < 16 || strings.Contains(token, needleTargetID) {
 		t.Fatalf("bad confirmation token: %q", token)
 	}
 	if confirmation["required"] != true || confirmation["preview_hash"] == "" || confirmation["expires_at"] == "" {
