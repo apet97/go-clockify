@@ -392,14 +392,14 @@ func gapIssue(start, end time.Time) TimesheetIssue {
 	}
 }
 
-func (s *Service) findEntryOverlaps(ctx context.Context, start, end time.Time) ([]TimeEntryRef, string, error) {
+func (s *Service) findEntryOverlaps(ctx context.Context, start, end time.Time) ([]TimeEntryRef, error) {
 	lookbackStart := start.Add(-24 * time.Hour)
-	agg, _, userID, err := s.aggregateEntriesRange(ctx, lookbackStart, end, time.UTC, aggregateOptions{
+	agg, _, _, err := s.aggregateEntriesRange(ctx, lookbackStart, end, time.UTC, aggregateOptions{
 		PageSize:       reportPageSize,
 		IncludeEntries: true,
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	out := make([]TimeEntryRef, 0)
 	for _, entry := range agg.Entries {
@@ -411,7 +411,7 @@ func (s *Service) findEntryOverlaps(ctx context.Context, start, end time.Time) (
 			out = append(out, timeEntryRef(entry, entryStart, entryEnd))
 		}
 	}
-	return out, userID, nil
+	return out, nil
 }
 
 func timeEntryBounds(entry clockify.TimeEntry) (time.Time, time.Time, bool) {

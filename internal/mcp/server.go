@@ -88,16 +88,18 @@ func WithNotifier(ctx context.Context, n Notifier) context.Context {
 }
 
 // notifierFromContext returns the Notifier wrapped into ctx by WithNotifier,
-// or (nil, false) when no notifier is present. Direct-handler tests that
-// skip the transport path land in the false branch and the subscribe
-// handlers fall back to the broadcast sentinel so legacy test behaviour
-// stays intact.
-func notifierFromContext(ctx context.Context) (Notifier, bool) {
+// or nil when no notifier is present. Direct-handler tests that skip the
+// transport path receive nil and the subscribe handlers fall back to the
+// broadcast sentinel so legacy test behaviour stays intact.
+func notifierFromContext(ctx context.Context) Notifier {
 	if ctx == nil {
-		return nil, false
+		return nil
 	}
 	n, ok := ctx.Value(notifierCtxKey{}).(Notifier)
-	return n, ok && n != nil
+	if !ok || n == nil {
+		return nil
+	}
+	return n
 }
 
 // encoderNotifier adapts the stdio JSON encoder (and its mutex) to the
@@ -977,11 +979,7 @@ func (s *Server) handle(ctx context.Context, req Request) Response {
 			resp.Result = result
 		}
 	case "prompts/list":
-		if result, rpcErr := s.handlePromptsList(); rpcErr != nil {
-			resp.Error = rpcErr
-		} else {
-			resp.Result = result
-		}
+		resp.Result = s.handlePromptsList()
 	case "prompts/get":
 		if result, rpcErr := s.handlePromptsGet(req.Params); rpcErr != nil {
 			resp.Error = rpcErr

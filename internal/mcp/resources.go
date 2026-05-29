@@ -246,8 +246,7 @@ func (s *Server) handleResourcesSubscribe(ctx context.Context, raw any) (any, *R
 	if err := decodeParams(raw, &params); err != nil || params.URI == "" {
 		return nil, &RPCError{Code: -32602, Message: "invalid resources/subscribe params: missing uri"}
 	}
-	n, _ := notifierFromContext(ctx)
-	s.resourceSubs.add(n, params.URI)
+	s.resourceSubs.add(notifierFromContext(ctx), params.URI)
 	return map[string]any{}, nil
 }
 
@@ -259,8 +258,7 @@ func (s *Server) handleResourcesUnsubscribe(ctx context.Context, raw any) (any, 
 	if err := decodeParams(raw, &params); err != nil || params.URI == "" {
 		return nil, &RPCError{Code: -32602, Message: "invalid resources/unsubscribe params: missing uri"}
 	}
-	n, _ := notifierFromContext(ctx)
-	s.resourceSubs.remove(n, params.URI)
+	s.resourceSubs.remove(notifierFromContext(ctx), params.URI)
 	return map[string]any{}, nil
 }
 

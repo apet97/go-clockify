@@ -1353,7 +1353,7 @@ func TestFindEntryOverlapsPadsLookupWindow(t *testing.T) {
 	svc := New(client, "ws1")
 	start := time.Date(2026, 4, 2, 9, 0, 0, 0, time.UTC)
 	end := start.Add(time.Hour)
-	if _, _, err := svc.findEntryOverlaps(context.Background(), start, end); err != nil {
+	if _, err := svc.findEntryOverlaps(context.Background(), start, end); err != nil {
 		t.Fatalf("findEntryOverlaps: %v", err)
 	}
 	want := start.Add(-24 * time.Hour).Format(time.RFC3339)

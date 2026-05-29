@@ -48,7 +48,7 @@ func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any)
 	if err != nil {
 		return fmt.Errorf("could not parse date %q for end — use YYYY-MM-DD or RFC3339", endRaw)
 	}
-	overlaps, _, err := s.findEntryOverlaps(ctx, start, end)
+	overlaps, err := s.findEntryOverlaps(ctx, start, end)
 	if err != nil {
 		return err
 	}

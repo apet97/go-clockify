@@ -259,8 +259,8 @@ type promptGetParams struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
-func (s *Server) handlePromptsList() (any, *RPCError) {
-	return map[string]any{"prompts": s.prompts.list()}, nil
+func (s *Server) handlePromptsList() any {
+	return map[string]any{"prompts": s.prompts.list()}
 }
 
 func (s *Server) handlePromptsGet(raw any) (any, *RPCError) {
