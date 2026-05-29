@@ -63,7 +63,7 @@ The generated catalog should always show workflow tools first, domain tools
 second, and raw API fallback tools last. For the layer call graph
 (`workflowDescriptors` → `FirstSliceRegistry` →
 `nativeHighValueDescriptorsChecked` → `FullAccessRegistryChecked`), the
-toolset filter, and the current `ToolResult` vs `ResultEnvelope` state, see
+toolset filter, and the single `ToolResult` success envelope, see
 [docs/architecture.md](docs/architecture.md).
 
 ## Pull Request Process

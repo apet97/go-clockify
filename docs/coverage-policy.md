@@ -2,22 +2,20 @@
 
 ## Rule
 
-No regressions, only ratchets. Coverage floors live in
-`scripts/check-coverage.sh`; that script is the source of truth.
+No regressions, only ratchets. Coverage signal lives in `go test -cover`;
+the one-user gates below are the contract.
 
-Raising a floor is a normal maintenance change. Lowering a floor requires a
-clear reason in the PR description, such as deleted dead code or a package move
-that changes the denominator.
+Raising the bar is a normal maintenance change. Lowering it requires a
+clear reason in the PR description, such as deleted dead code or a package
+move that changes the denominator.
 
 ## Running Locally
 
-```sh
-make cover-check
-```
-
-For a faster read while iterating on one package:
+Run the standard test suite with the race detector and inspect coverage
+per package:
 
 ```sh
+make test
 go test -cover ./internal/tools
 go test -cover ./internal/mcp
 ```

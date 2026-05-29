@@ -309,18 +309,20 @@ no upstream pagination to walk:
 
 ## 7. Drift gates that pin the registry shape
 
-| Gate | What it pins | Why |
-|---|---|---|
-| `catalog-drift` | Sorted catalog vs `docs/tool-catalog.{json,md}` | Detects silent tool addition / rename / reorder. |
-| `raw-allowlist-drift` | `internal/tools/raw_allowlist_gen.go` vs the raw API allowlist | Stops accidental widening of the raw fallback. |
-| `selfinspect-drift` | The MCP server's self-inspection bundle vs `docs/selfinspect/` | Catches input/output schema drift end-to-end. |
-| `api-parity-matrix-drift` | `docs/api-parity-matrix.md` vs the live coverage ledger | Aligns the MCP tool surface with the OpenAPI ops. |
-| `coverage-dashboard-drift` | `docs/tool-coverage-dashboard.md` vs the runtime registry | Per-domain coverage snapshot. |
-| `mod-tidy-drift` | `go.mod` / `go.sum` | Prevents stealth dependency additions. |
-| `openapi-drift` | The canonical OpenAPI snapshot (regenerated via Ruby) | Holds the spec pipeline deterministic. |
+| Gate | What it pins | Why | CI |
+|---|---|---|---|
+| `catalog-drift` | Sorted catalog and default toolset vs `docs/tool-catalog.{json,md}` + `docs/default-toolset.{json,md}` | Detects silent tool addition / rename / reorder. | ✓ |
+| `raw-allowlist-drift` | `internal/tools/raw_allowlist_gen.go` vs the raw API allowlist | Stops accidental widening of the raw fallback. | ✓ |
+| `selfinspect-drift` | The MCP server's self-inspection bundle vs `docs/selfinspect/` | Catches input/output schema drift end-to-end. | ✓ |
+| `api-parity-matrix-drift` | `docs/api-parity-matrix.md` vs the live coverage ledger | Aligns the MCP tool surface with the OpenAPI ops. | ✓ |
+| `coverage-dashboard-drift` | `docs/tool-coverage-dashboard.md` vs the runtime registry | Per-domain coverage snapshot. | — |
+| `mod-tidy-drift` | `go.mod` / `go.sum` | Prevents stealth dependency additions. | ✓ |
+| `openapi-drift` | The canonical OpenAPI snapshot (regenerated via Ruby) | Holds the spec pipeline deterministic. | ✓ |
 
-All seven run in `ci.yml`. `make perfect` chains them with `fmt + vet
-+ test`. Never push to `main` with any drift gate red.
+`make perfect` chains all seven with `fmt + vet + test`. Six run in
+`ci.yml`; `coverage-dashboard-drift` is part of `make perfect` only and
+should also be exercised locally before tagging a release. Never push to
+`main` with any drift gate red.
 
 ---
 

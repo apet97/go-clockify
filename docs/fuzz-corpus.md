@@ -1,15 +1,20 @@
 # Fuzz corpus
 
-This repository commits a persistent fuzz corpus for three targets:
+Six fuzz targets back this repo's fuzz-short and weekly fuzz workflows.
+Three carry a committed regression corpus that Go replays on every
+`go test` run; three rely on inline `f.Add(...)` seeds.
 
-| Target | Package | Entries (at Wave D bootstrap) |
+| Target | Source | Persistent corpus |
 |---|---|---|
-| `FuzzParseDatetime` | `internal/timeparse` | 327 |
-| `FuzzValidateID` | `internal/resolve` | 85 |
-| `FuzzJSONRPCParse` | `internal/mcp` | 384 |
+| `FuzzParseDatetime` | `internal/timeparse/timeparse_test.go` | `internal/timeparse/testdata/fuzz/FuzzParseDatetime/` |
+| `FuzzValidateID` | `internal/resolve/resolve_test.go` | `internal/resolve/testdata/fuzz/FuzzValidateID/` |
+| `FuzzJSONRPCParse` | `internal/mcp/server_test.go` | `internal/mcp/testdata/fuzz/FuzzJSONRPCParse/` |
+| `FuzzSafeRawPath` | `internal/tools/raw_path_fuzz_test.go` | inline seeds only |
+| `FuzzTightenInputSchema` | `internal/tools/schema_tighten_fuzz_test.go` | inline seeds only |
+| `FuzzTranslateAPIError` | `internal/clockify/errors_fuzz_test.go` | inline seeds only |
 
-Corpus files live under `<package>/testdata/fuzz/<target>/`. Every
-entry is a file whose contents match Go's standard fuzz format:
+The persistent corpus lives under `<package>/testdata/fuzz/<target>/`.
+Every entry is a file whose contents match Go's standard fuzz format:
 
 ```
 go test fuzz v1
@@ -19,33 +24,23 @@ string("...")
 ## How the corpus is used
 
 **On every `go test` run** (no `-fuzz` flag), Go replays the entire
-committed corpus as regression inputs against the fuzz target. A
-test is registered per corpus file, named
-`FuzzX/<hex-digest-filename>`. This means the corpus doubles as a
-regression suite — if any committed input starts failing the fuzz
-invariant, CI breaks at that single entry.
+committed corpus as regression inputs against the matching fuzz target.
+A test is registered per corpus file, named
+`FuzzX/<hex-digest-filename>`. The corpus doubles as a regression suite —
+if any committed input starts failing the fuzz invariant, CI breaks at
+that single entry.
 
-**On `go test -fuzz=<target>`**, Go uses the committed corpus as
-seeds for new mutation, and writes any newly-interesting inputs to
-`$GOCACHE/fuzz/.../` (NOT to `testdata/fuzz/`). Committed inputs
-stay in the repo until someone explicitly commits more, deletes an
-entry, or prunes.
+**On `go test -fuzz=<target>`**, Go uses the committed corpus as seeds
+for new mutation and writes any newly-interesting inputs to
+`$GOCACHE/fuzz/.../` (NOT to `testdata/fuzz/`). Committed inputs stay in
+the repo until someone explicitly commits more, deletes an entry, or
+prunes.
 
-## How the corpus was bootstrapped (Wave D)
+The three targets without a `testdata/fuzz/` directory still benefit
+from their inline `f.Add(...)` seeds — but only under `-fuzz`. Bootstrap
+a persistent corpus for them when an interesting failure shows up.
 
-Before Wave D, all three fuzz targets had only the hand-written
-`f.Add(...)` seeds at the top of each fuzz function. `testdata/fuzz/`
-did not exist anywhere in the repo, so a bare `go test ./...`
-exercised only what the test author wrote — a narrow surface.
-
-The Wave D D5 commit ran each target with
-`go test -fuzz=<name> -fuzztime=60s` to populate
-`$GOCACHE/fuzz/github.com/apet97/go-clockify/<package>/<target>/`
-with auto-discovered interesting inputs, then copied every entry
-from the cache to `<package>/testdata/fuzz/<target>/` so Go's test
-runner will replay them on every CI invocation.
-
-## How to grow the corpus
+## How to grow a corpus
 
 When you fix a fuzz crash, or when you want to give the fuzzer more
 seed variety before a long fuzz run:
@@ -74,23 +69,22 @@ write the same bytes on top of themselves.
 ## When a fuzz crash fires
 
 If `go test -fuzz=X` finds a crash, Go writes a reproducer into the
-package's `testdata/fuzz/X/` directory automatically and fails the
-test with the path to the file. Commit the file immediately — it's
-now a crash regression and the fix can be validated by re-running
-the replay (not `-fuzz`):
+package's `testdata/fuzz/X/` directory automatically and fails the test
+with the path to the file. Commit the file immediately — it's now a
+crash regression and the fix can be validated by re-running the replay
+(not `-fuzz`):
 
 ```bash
 go test -count=1 -run 'FuzzX/<filename>' ./internal/<pkg>
 ```
 
-Do NOT add the input to `f.Add(...)` instead of committing the
-testdata file — the testdata path runs on every CI invocation; an
-`f.Add(...)` call only runs under `-fuzz`, defeating the regression
-gate.
+Do NOT add the input to `f.Add(...)` instead of committing the testdata
+file — the testdata path runs on every CI invocation; an `f.Add(...)`
+call only runs under `-fuzz`, defeating the regression gate.
 
 ## When to prune
 
-Rarely. The corpus is small (~3 MB total). Prune only when:
+Rarely. The corpus is small. Prune only when:
 
 - A fuzz target is renamed and the old `testdata/fuzz/<old-name>/`
   directory is unreferenced (delete with `git rm -r`).
@@ -101,10 +95,7 @@ Rarely. The corpus is small (~3 MB total). Prune only when:
 
 ## Related
 
-- Fuzz functions: `internal/timeparse/timeparse_test.go:FuzzParseDatetime`,
-  `internal/resolve/resolve_test.go:FuzzValidateID`,
-  `internal/mcp/server_test.go:FuzzJSONRPCParse`
-- CI fuzz-short gate: `Makefile:fuzz-short` target runs each target
-  for 10 s on every PR (not a corpus bootstrap — that's what this doc
-  is for; the PR gate is a smoke check).
-- Go fuzzing docs: https://go.dev/security/fuzz/
+- CI fuzz workflow: `.github/workflows/fuzz.yml` runs each of the six
+  targets weekly with `-fuzztime=30s` against the committed corpus and
+  inline seeds.
+- Go fuzzing docs: <https://go.dev/security/fuzz/>

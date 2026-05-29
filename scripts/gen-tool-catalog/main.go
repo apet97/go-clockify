@@ -1,19 +1,17 @@
 // gen-tool-catalog walks the one-user full-access registry and emits
-// a machine-readable catalog (JSON) and a human-readable rendering
-// (Markdown) for docs/tool-catalog.{json,md}.
+// the machine-readable catalog (JSON) and human-readable rendering
+// (Markdown) for both the full registry and the default toolset:
+// docs/tool-catalog.{json,md} and docs/default-toolset.{json,md}.
 //
 // Usage:
 //
 //	go run ./scripts/gen-tool-catalog -out docs
 //
 // The generator is deterministic: runs from the same code emit
-// byte-identical output. CI uses the drift check
-//
-//	make gen-tool-catalog && git diff --exit-code docs/tool-catalog.*
-//
-// to refuse PRs that forget to regenerate after adding or changing
-// a tool. No network calls, no real Clockify client — the descriptor
-// builders only need the Service struct populated with nil fields.
+// byte-identical output. CI uses `make catalog-drift` to refuse PRs
+// that forget to regenerate after adding or changing a tool. No
+// network calls, no real Clockify client — the descriptor builders
+// only need the Service struct populated with nil fields.
 package main
 
 import (
