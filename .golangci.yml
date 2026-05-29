@@ -40,14 +40,40 @@ linters:
         linters:
           - revive
       # T3.2 (2026-05-26 audit) enables `exported` to nudge every new
-      # exported symbol to ship with godoc. There are ~813 pre-existing
-      # exported symbols across internal/ that pre-date this rule and
-      # have no godoc; treating each as a build break would block
-      # progress, so the rule is set up but `exported` violations are
-      # silenced repo-wide until the godoc-coverage campaign lands as
-      # a follow-up. Remove this exclusion once every internal package
-      # has its exported surface documented (track progress in the
-      # audit doc).
-      - text: '^exported: '
+      # exported symbol to ship with godoc. The campaign started as a
+      # blanket repo-wide silencer; the 2026-05-29 godoc track converts
+      # that into per-package opt-outs so each package enforces
+      # `exported` the moment it reaches full coverage. Already-clean
+      # packages (paths, timeparse, jsonschema, tracing, logging,
+      # dryrun, jsonmergepatch, config) have no entry and the rule
+      # fires there. The remaining six packages keep their opt-out
+      # below; remove each row as that package gets documented.
+      - path: internal/resolve/
+        text: '^exported: '
+        linters:
+          - revive
+      - path: internal/safety/
+        text: '^exported: '
+        linters:
+          - revive
+      - path: internal/mcp/
+        text: '^exported: '
+        linters:
+          - revive
+      - path: internal/clockify/
+        text: '^exported: '
+        linters:
+          - revive
+      - path: internal/tools/
+        text: '^exported: '
+        linters:
+          - revive
+      # testclockify is the fake-server fixture used by the in-package
+      # tests. The 2026-05-29 godoc inventory missed it (no _test.go in
+      # the directory hides it from go-test-based scans); ~4 trivial
+      # exported symbols remain undocumented. Tracked as a follow-up to
+      # the godoc-coverage campaign.
+      - path: internal/testclockify/
+        text: '^exported: '
         linters:
           - revive

@@ -13,8 +13,18 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+// DefaultBaseURL is the production Clockify REST API base used when
+// CLOCKIFY_BASE_URL is not set. Override only for localhost/loopback
+// targets such as the fake-server fixture; LoadOneUser rejects every
+// other override that does not point at a documented Clockify host.
 const DefaultBaseURL = "https://api.clockify.me/api/v1"
 
+// Runtime defaults and ceilings for OneUserConfig. Defaults apply when
+// the corresponding environment variable is unset or empty; Min/Max
+// constants bound user-supplied overrides so a misconfigured env cannot
+// disable tool timeouts or accept unbounded request bodies. The rate
+// limit defaults are per-minute token-bucket budgets and `0` means
+// unlimited (the limiter is disabled).
 const (
 	DefaultMaxInFlightToolCalls           = 4
 	DefaultToolTimeout                    = 45 * time.Second
