@@ -776,10 +776,7 @@ func paginate[T any](items []T, r *http.Request) []T {
 	if start >= len(items) {
 		return []T{}
 	}
-	end := start + pageSize
-	if end > len(items) {
-		end = len(items)
-	}
+	end := min(start+pageSize, len(items))
 	return items[start:end]
 }
 

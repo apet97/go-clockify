@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/dryrun"
@@ -460,9 +461,7 @@ func (s *Service) updateInvoice(ctx context.Context, args map[string]any) (ToolR
 			return ToolResult{}, err
 		}
 		merged := invoiceUpdateBodyFromExisting(existing)
-		for key, value := range body {
-			merged[key] = value
-		}
+		maps.Copy(merged, body)
 		if err := s.Client.Put(ctx, path, merged, &updated); err != nil {
 			return ToolResult{}, err
 		}

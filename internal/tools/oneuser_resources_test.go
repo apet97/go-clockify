@@ -108,7 +108,7 @@ func TestAuditTailText_WrapsIOErrorAsGeneric(t *testing.T) {
 
 func TestDemoResourcesListIsCappedAt50(t *testing.T) {
 	svc := New(clockify.NewClient("k", "http://127.0.0.1:1", time.Second, 0), "ws1")
-	for i := 0; i < 70; i++ {
+	for i := range 70 {
 		svc.updateDemoResource(fmt.Sprintf("run-%03d", i), "p", "ok", ToolResult{})
 	}
 	got := len(svc.demoResourcesList())

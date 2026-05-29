@@ -2234,7 +2234,7 @@ func runOneUserProtocol(t *testing.T, server *mcp.Server, lines []string) map[fl
 		t.Fatal(err)
 	}
 	responses := map[float64]map[string]any{}
-	for _, line := range strings.Split(out.String(), "\n") {
+	for line := range strings.SplitSeq(out.String(), "\n") {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
@@ -2494,7 +2494,7 @@ func parseOneUserCoverageLedger(t *testing.T) coverageLedger {
 		t.Fatal(err)
 	}
 	var ledger coverageLedger
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		line = strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(line, "- Fake-smoke yes:"):
@@ -2969,7 +2969,7 @@ func collectTestFunctionNames(t *testing.T, roots ...string) map[string]bool {
 			if err != nil {
 				return err
 			}
-			for _, line := range strings.Split(string(raw), "\n") {
+			for line := range strings.SplitSeq(string(raw), "\n") {
 				line = strings.TrimSpace(line)
 				if !strings.HasPrefix(line, "func Test") {
 					continue
@@ -2989,12 +2989,7 @@ func collectTestFunctionNames(t *testing.T, roots ...string) map[string]bool {
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func assertCoverageYesRowsMatchEvidence(t *testing.T, rows []coverageRow, label string, value func(coverageRow) string, evidence map[string]bool) {
