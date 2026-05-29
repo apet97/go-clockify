@@ -125,7 +125,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"invoice_id": map[string]any{"type": "string"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.sendInvoice(ctx, args)
+			return nil, s.sendInvoice(ctx, args)
 		}},
 
 		// 8. Mark invoice paid
@@ -590,12 +590,16 @@ func (s *Service) deleteInvoice(ctx context.Context, args map[string]any) (ToolR
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
-func (s *Service) sendInvoice(_ context.Context, args map[string]any) (ToolResult, error) {
+// sendInvoice is an error-only stub for clockify_send_invoice: the public
+// Clockify API has no send-email endpoint, so every call returns the same
+// "unsupported" error after validating invoice_id. Returning only error
+// makes the dead success path explicit at the dispatcher.
+func (s *Service) sendInvoice(_ context.Context, args map[string]any) error {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ToolResult{}, err
+		return err
 	}
-	return ToolResult{}, fmt.Errorf("unsupported: Clockify does not expose an invoice send-email endpoint in this API surface; send invoice email from the Clockify UI")
+	return fmt.Errorf("unsupported: Clockify does not expose an invoice send-email endpoint in this API surface; send invoice email from the Clockify UI")
 }
 
 func (s *Service) markInvoicePaid(ctx context.Context, args map[string]any) (ToolResult, error) {

@@ -165,13 +165,13 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 	})
 
 	t.Run("unsupported send guidance", func(t *testing.T) {
-		if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true}); err == nil || !strings.Contains(err.Error(), "does not expose") {
+		if err := svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1", "dry_run": true}); err == nil || !strings.Contains(err.Error(), "does not expose") {
 			t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
 		}
-		if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "does not expose") {
+		if err := svc.sendInvoice(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "does not expose") {
 			t.Fatalf("expected unsupported send-invoice guidance, got %v", err)
 		}
-		if _, err := svc.sendInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
+		if err := svc.sendInvoice(ctx, map[string]any{"invoice_id": ""}); err == nil {
 			t.Fatal("expected validation error for empty invoice_id")
 		}
 	})
