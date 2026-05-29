@@ -21,12 +21,12 @@ type ValidationProblem struct {
 	Refs        []string `json:"refs,omitempty"`
 }
 
-func validationOK(quality string, warnings ...ValidationProblem) ValidationView {
+func validationOK(quality string) ValidationView {
 	ok := true
 	if quality == "" {
 		quality = "handler_validated"
 	}
-	return ValidationView{Status: validationStatusOK, OK: &ok, Warnings: warnings, PreviewQuality: quality}
+	return ValidationView{Status: validationStatusOK, OK: &ok, PreviewQuality: quality}
 }
 
 func validationFailed(quality string, errors ...ValidationProblem) ValidationView {
