@@ -1,3 +1,8 @@
+// Package testclockify provides an in-process fake of the Clockify
+// REST API used by internal/tools tests. The Server type implements
+// just enough of the live endpoint surface to round-trip every tool
+// the test suite exercises; tests that need a real outbound HTTP
+// dependency should use the live test build tag instead.
 package testclockify
 
 import (
@@ -14,6 +19,10 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 )
 
+// Server is the in-memory Clockify fake. Construct it with NewServer
+// and tear it down with Close. WorkspaceID, UserID, and URL are stable
+// across the lifetime of the server and meant for direct use in tests
+// that need to mint workspace-scoped requests or build base URLs.
 type Server struct {
 	WorkspaceID string
 	UserID      string
@@ -41,6 +50,10 @@ type fakeError struct {
 	Message string
 }
 
+// NewServer starts a backing httptest.Server, seeds an empty entity
+// store, and returns a ready Server. An empty workspaceID is
+// replaced with a 24-char hex sentinel so callers can rely on
+// WorkspaceID passing resolve.ValidateID without configuration.
 func NewServer(workspaceID string) *Server {
 	if workspaceID == "" {
 		workspaceID = "000000000000000000000001"
@@ -65,10 +78,19 @@ func NewServer(workspaceID string) *Server {
 	return s
 }
 
+// Close shuts down the underlying httptest.Server. Safe to defer
+// from tests; not safe to call more than once.
 func (s *Server) Close() {
 	s.http.Close()
 }
 
+// SetError installs a synthetic upstream failure for the next
+// (method, path) pair received by the fake. The next matching
+// request will respond with status + a JSON body of
+// {"message": message} instead of executing the normal handler;
+// useful for exercising the client's error-translation paths.
+// Errors are matched once per pair until SetError is called again
+// for the same key.
 func (s *Server) SetError(method, path string, status int, message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

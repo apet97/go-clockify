@@ -70,12 +70,3 @@ linters:
         text: '^exported: '
         linters:
           - revive
-      # testclockify is the fake-server fixture used by the in-package
-      # tests. The 2026-05-29 godoc inventory missed it (no _test.go in
-      # the directory hides it from go-test-based scans); ~4 trivial
-      # exported symbols remain undocumented. Tracked as a follow-up to
-      # the godoc-coverage campaign.
-      - path: internal/testclockify/
-        text: '^exported: '
-        linters:
-          - revive
