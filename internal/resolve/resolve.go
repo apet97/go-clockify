@@ -1,3 +1,9 @@
+// Package resolve centralises Clockify entity resolution and ID
+// validation. Tool handlers in internal/tools call ValidateID before
+// any path concatenation and the Resolve*ID helpers below to map
+// caller-supplied "name or ID" arguments to canonical Clockify IDs.
+// Static gates (TestPathSafety_* in internal/tools and this package)
+// enforce the validation discipline at build time.
 package resolve
 
 import (
@@ -51,6 +57,13 @@ const maxIDLength = 36
 // rejects pathologically long input.
 const maxNameRefLength = 128
 
+// ValidateID checks that id is suitable for use as a path segment in a
+// Clockify request URL. The character class is intentionally narrower
+// than the full Clockify ID surface so a pasted token or key fragment
+// fails before path construction: "/", "?", "#", "%", control bytes,
+// "..", empty/whitespace, and lengths over maxIDLength are rejected.
+// name appears verbatim in the returned error so the caller learns
+// which field was invalid (e.g. "project_id").
 func ValidateID(id, name string) error {
 	if len(id) > maxIDLength {
 		return fmt.Errorf("%s exceeds %d bytes", name, maxIDLength)
@@ -98,6 +111,12 @@ func ValidateNameRef(ref, kind string) error {
 	return nil
 }
 
+// ResolveProjectID returns the Clockify project ID for ref, which may
+// be either a canonical project ID (returned verbatim after validation)
+// or a workspace-local project name (resolved via case-insensitive
+// strict-name search against the workspace's project list). Returns an
+// error when the ref is unknown, ambiguous (multiple matches), or
+// fails ID validation when treated as an ID.
 func ResolveProjectID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "projects")
 	if err != nil {
@@ -106,6 +125,9 @@ func ResolveProjectID(ctx context.Context, client *clockify.Client, workspaceID,
 	return resolveByNameOrID(ctx, client, path, ref, "project")
 }
 
+// ResolveClientID returns the Clockify client ID for ref, which may
+// be a canonical client ID or a workspace-local client name. Same
+// resolution and error contract as ResolveProjectID.
 func ResolveClientID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "clients")
 	if err != nil {
@@ -114,6 +136,9 @@ func ResolveClientID(ctx context.Context, client *clockify.Client, workspaceID, 
 	return resolveByNameOrID(ctx, client, path, ref, "client")
 }
 
+// ResolveTagID returns the Clockify tag ID for ref, which may be a
+// canonical tag ID or a workspace-local tag name. Same resolution and
+// error contract as ResolveProjectID.
 func ResolveTagID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "tags")
 	if err != nil {
@@ -122,6 +147,14 @@ func ResolveTagID(ctx context.Context, client *clockify.Client, workspaceID, ref
 	return resolveByNameOrID(ctx, client, path, ref, "tag")
 }
 
+// ResolveUserID returns the Clockify user ID for ref. ref may be a
+// canonical user ID (returned verbatim after ValidateID), an email
+// address (matched against the user record's email field with
+// case-insensitive equality), or a display name (matched against the
+// name field with strict-name-search semantics). Email matches use
+// the Clockify "email=" query parameter and name matches use "name="
+// with strict-name-search=true to avoid prefix collisions. Returns an
+// error when the ref is unknown or ambiguous.
 func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	if looksLikeClockifyID(ref) {
 		// Strict path-segment validation only when the input is being
@@ -199,6 +232,11 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 	return "", fmt.Errorf("user '%s' not found. Use clockify_list_users to see available users", ref)
 }
 
+// ResolveTaskID returns the Clockify task ID for ref under the given
+// project. ref may be a canonical task ID or a project-local task
+// name. projectID must already be a validated Clockify project ID
+// (e.g. the result of ResolveProjectID). Same resolution and error
+// contract as ResolveProjectID.
 func ResolveTaskID(ctx context.Context, client *clockify.Client, workspaceID, projectID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "projects", projectID, "tasks")
 	if err != nil {
