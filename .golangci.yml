@@ -48,16 +48,6 @@ linters:
       # dryrun, jsonmergepatch, config) have no entry and the rule
       # fires there. The remaining six packages keep their opt-out
       # below; remove each row as that package gets documented.
-      # internal/resolve historical names (ResolveProjectID, ResolveClientID,
-      # ResolveTagID, ResolveUserID, ResolveTaskID) all stutter as
-      # `resolve.Resolve*ID` from callers. Renaming would break every
-      # call site across internal/tools (~60+ call sites). The names
-      # are intentional and stay; suppress only the stutter warning
-      # for this package while keeping `exported` (godoc) enforcement.
-      - path: internal/resolve/
-        text: 'and that stutters'
-        linters:
-          - revive
       - path: internal/mcp/
         text: '^exported: '
         linters:

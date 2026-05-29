@@ -83,7 +83,7 @@ func newTestClient(t *testing.T, handler http.HandlerFunc) (*clockify.Client, fu
 	return client, ts.Close
 }
 
-func TestResolveUserByEmailSuggestion(t *testing.T) {
+func TestUserByEmailSuggestion(t *testing.T) {
 	users := []map[string]any{
 		{"id": "aaa111bbb222ccc333ddd444", "name": "Alice Smith", "email": "alice@example.com"},
 		{"id": "bbb222ccc333ddd444eee555", "name": "Bob Jones", "email": "bob@example.com"},
@@ -96,7 +96,7 @@ func TestResolveUserByEmailSuggestion(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	id, err := ResolveUserID(ctx, client, "ws123", "alice@example.com")
+	id, err := UserID(ctx, client, "ws123", "alice@example.com")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestResolveUserByEmailSuggestion(t *testing.T) {
 	}
 }
 
-func TestResolveUserByNameMultiField(t *testing.T) {
+func TestUserByNameMultiField(t *testing.T) {
 	users := []map[string]any{
 		{"id": "aaa111bbb222ccc333ddd444", "name": "Alice Smith", "email": "alice@example.com"},
 		{"id": "bbb222ccc333ddd444eee555", "name": "Bob Jones", "email": "bob@example.com"},
@@ -120,7 +120,7 @@ func TestResolveUserByNameMultiField(t *testing.T) {
 	ctx := context.Background()
 
 	// Search by name
-	id, err := ResolveUserID(ctx, client, "ws123", "Bob Jones")
+	id, err := UserID(ctx, client, "ws123", "Bob Jones")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestResolveUserByNameMultiField(t *testing.T) {
 	}
 
 	// Name-based search also matches email field
-	id, err = ResolveUserID(ctx, client, "ws123", "alice@example.com")
+	id, err = UserID(ctx, client, "ws123", "alice@example.com")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestResolveUserByNameMultiField(t *testing.T) {
 	}
 }
 
-func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
+func TestUserIDPaginatesFilteredLookup(t *testing.T) {
 	pageOne := make([]map[string]any, 200)
 	for i := range pageOne {
 		pageOne[i] = map[string]any{"id": "filler", "name": "Filler User", "email": "filler@example.com"}
@@ -171,7 +171,7 @@ func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
 	})
 	defer cleanup()
 
-	id, err := ResolveUserID(context.Background(), client, "ws123", "Dana Scully")
+	id, err := UserID(context.Background(), client, "ws123", "Dana Scully")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestResolveUserIDPaginatesFilteredLookup(t *testing.T) {
 	}
 }
 
-func TestResolveUserIDScansAfterFirstExactMatchForAmbiguity(t *testing.T) {
+func TestUserIDScansAfterFirstExactMatchForAmbiguity(t *testing.T) {
 	pageOne := make([]map[string]any, 200)
 	pageOne[0] = map[string]any{"id": "ccc333ddd444eee555fff666", "name": "Dana Scully", "email": "dana@example.com"}
 	for i := 1; i < len(pageOne); i++ {
@@ -208,7 +208,7 @@ func TestResolveUserIDScansAfterFirstExactMatchForAmbiguity(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := ResolveUserID(context.Background(), client, "ws123", "Dana Scully")
+	_, err := UserID(context.Background(), client, "ws123", "Dana Scully")
 	if err == nil {
 		t.Fatal("expected ambiguous user error")
 	}
@@ -221,7 +221,7 @@ func TestResolveUserIDScansAfterFirstExactMatchForAmbiguity(t *testing.T) {
 }
 
 func TestImprovedErrorNotFound(t *testing.T) {
-	// Test user not found (uses ResolveUserID path)
+	// Test user not found (uses UserID path)
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]map[string]any{})
@@ -229,7 +229,7 @@ func TestImprovedErrorNotFound(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	_, err := ResolveUserID(ctx, client, "ws123", "nobody")
+	_, err := UserID(ctx, client, "ws123", "nobody")
 	if err == nil {
 		t.Fatal("expected error for not found user")
 	}
@@ -238,7 +238,7 @@ func TestImprovedErrorNotFound(t *testing.T) {
 	}
 
 	// Test project not found (uses resolveByNameOrID path)
-	_, err = ResolveProjectID(ctx, client, "ws123", "nonexistent")
+	_, err = ProjectID(ctx, client, "ws123", "nonexistent")
 	if err == nil {
 		t.Fatal("expected error for not found project")
 	}
@@ -261,7 +261,7 @@ func TestImprovedErrorMultiple(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	_, err := ResolveUserID(ctx, client, "ws123", "Alex")
+	_, err := UserID(ctx, client, "ws123", "Alex")
 	if err == nil {
 		t.Fatal("expected error for multiple matching users")
 	}
@@ -284,7 +284,7 @@ func TestImprovedErrorMultiple(t *testing.T) {
 	})
 	defer cleanup2()
 
-	_, err = ResolveProjectID(ctx, client2, "ws123", "MyProject")
+	_, err = ProjectID(ctx, client2, "ws123", "MyProject")
 	if err == nil {
 		t.Fatal("expected error for multiple matching projects")
 	}
@@ -296,12 +296,12 @@ func TestImprovedErrorMultiple(t *testing.T) {
 	}
 }
 
-// TestResolveProjectID_RejectsPrefixMatch verifies the strict-name-search
+// TestProjectID_RejectsPrefixMatch verifies the strict-name-search
 // contract: a user asking for "My" must not resolve to "MyProject" even
 // if the server returns a permissive search result. The local
 // exactMatches pass demands full equality; anything looser would be a
 // security regression (prefix-based privilege escalation).
-func TestResolveProjectID_RejectsPrefixMatch(t *testing.T) {
+func TestProjectID_RejectsPrefixMatch(t *testing.T) {
 	// Simulate a server that ignored strict-name-search and returned
 	// prefix matches anyway.
 	projects := []map[string]any{
@@ -314,7 +314,7 @@ func TestResolveProjectID_RejectsPrefixMatch(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := ResolveProjectID(context.Background(), client, "ws123", "My")
+	_, err := ProjectID(context.Background(), client, "ws123", "My")
 	if err == nil {
 		t.Fatal("expected prefix 'My' not to resolve to MyProject* via loose match")
 	}
@@ -323,14 +323,14 @@ func TestResolveProjectID_RejectsPrefixMatch(t *testing.T) {
 	}
 }
 
-// TestResolveProjectID_CaseFoldingContract confirms the resolver's
+// TestProjectID_CaseFoldingContract confirms the resolver's
 // documented case-insensitive exact-match behaviour: an input that
 // differs only in case must still resolve to the single matching
 // project. This is intentionally lenient (operators rarely care about
 // case) but is tied to the exactMatches contract via strings.EqualFold
 // — if someone replaces EqualFold with strings.Compare a regression
 // would silently break existing integrations.
-func TestResolveProjectID_CaseFoldingContract(t *testing.T) {
+func TestProjectID_CaseFoldingContract(t *testing.T) {
 	projects := []map[string]any{
 		{"id": "aaa111bbb222ccc333ddd444", "name": "MyProject"},
 	}
@@ -340,7 +340,7 @@ func TestResolveProjectID_CaseFoldingContract(t *testing.T) {
 	})
 	defer cleanup()
 
-	id, err := ResolveProjectID(context.Background(), client, "ws123", "myproject")
+	id, err := ProjectID(context.Background(), client, "ws123", "myproject")
 	if err != nil {
 		t.Fatalf("expected case-folded match to resolve, got: %v", err)
 	}
@@ -385,13 +385,13 @@ func TestValidateNameRef(t *testing.T) {
 	}
 }
 
-// TestResolveProjectID_AcceptsNameWithPunctuation locks audit
+// TestProjectID_AcceptsNameWithPunctuation locks audit
 // finding 2: a workspace name containing characters that ValidateID
 // rejects (slash, ampersand, percent) must still resolve when the
 // caller passes the name itself, because the lookup goes via a
 // query-parameter and never touches a URL path. Pre-fix the strict
 // validator rejected the input before the safe path could run.
-func TestResolveProjectID_AcceptsNameWithPunctuation(t *testing.T) {
+func TestProjectID_AcceptsNameWithPunctuation(t *testing.T) {
 	projects := []map[string]any{
 		{"id": "aaa111bbb222ccc333ddd444", "name": "ACME / Support"},
 	}
@@ -403,7 +403,7 @@ func TestResolveProjectID_AcceptsNameWithPunctuation(t *testing.T) {
 	})
 	defer cleanup()
 
-	id, err := ResolveProjectID(context.Background(), client, "ws123", "ACME / Support")
+	id, err := ProjectID(context.Background(), client, "ws123", "ACME / Support")
 	if err != nil {
 		t.Fatalf("name with slash should resolve via query-param lookup: %v", err)
 	}
@@ -415,11 +415,11 @@ func TestResolveProjectID_AcceptsNameWithPunctuation(t *testing.T) {
 	}
 }
 
-// TestResolveProjectID_StillRejectsPathInjectionShapedID makes sure
+// TestProjectID_StillRejectsPathInjectionShapedID makes sure
 // the relaxed name path doesn't open the door to a Clockify-ID-shaped
 // input that nonetheless contains a "/". A 24-char hex-shaped value
 // IS treated as an ID and runs through ValidateID.
-func TestResolveProjectID_StillRejectsPathInjectionShapedID(t *testing.T) {
+func TestProjectID_StillRejectsPathInjectionShapedID(t *testing.T) {
 	// 24-char hex literal containing a slash is impossible (slash is
 	// not in the hex class), so looksLikeClockifyID rejects it and the
 	// input falls into the name path — where ValidateNameRef accepts
@@ -433,7 +433,7 @@ func TestResolveProjectID_StillRejectsPathInjectionShapedID(t *testing.T) {
 	})
 	defer cleanup()
 
-	_, err := ResolveProjectID(context.Background(), client, "ws123", weird)
+	_, err := ProjectID(context.Background(), client, "ws123", weird)
 	if err == nil {
 		t.Fatal("expected not-found, since the test server returns no matches")
 	}

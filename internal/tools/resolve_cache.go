@@ -27,32 +27,32 @@ type resolveEntry struct {
 
 func (s *Service) resolveProjectID(ctx context.Context, workspaceID, ref string) (string, error) {
 	return s.resolveCached("project", workspaceID, ref, func() (string, error) {
-		return resolve.ResolveProjectID(ctx, s.Client, workspaceID, ref)
+		return resolve.ProjectID(ctx, s.Client, workspaceID, ref)
 	})
 }
 
 func (s *Service) resolveClientID(ctx context.Context, workspaceID, ref string) (string, error) {
 	return s.resolveCached("client", workspaceID, ref, func() (string, error) {
-		return resolve.ResolveClientID(ctx, s.Client, workspaceID, ref)
+		return resolve.ClientID(ctx, s.Client, workspaceID, ref)
 	})
 }
 
 func (s *Service) resolveTagID(ctx context.Context, workspaceID, ref string) (string, error) {
 	return s.resolveCached("tag", workspaceID, ref, func() (string, error) {
-		return resolve.ResolveTagID(ctx, s.Client, workspaceID, ref)
+		return resolve.TagID(ctx, s.Client, workspaceID, ref)
 	})
 }
 
 func (s *Service) resolveUserID(ctx context.Context, workspaceID, ref string) (string, error) {
 	return s.resolveCached("user", workspaceID, ref, func() (string, error) {
-		return resolve.ResolveUserID(ctx, s.Client, workspaceID, ref)
+		return resolve.UserID(ctx, s.Client, workspaceID, ref)
 	})
 }
 
 func (s *Service) resolveTaskID(ctx context.Context, workspaceID, projectID, ref string) (string, error) {
 	scope := workspaceID + "\x00" + projectID
 	return s.resolveCached("task", scope, ref, func() (string, error) {
-		return resolve.ResolveTaskID(ctx, s.Client, workspaceID, projectID, ref)
+		return resolve.TaskID(ctx, s.Client, workspaceID, projectID, ref)
 	})
 }
 

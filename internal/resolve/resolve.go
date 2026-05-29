@@ -111,13 +111,13 @@ func ValidateNameRef(ref, kind string) error {
 	return nil
 }
 
-// ResolveProjectID returns the Clockify project ID for ref, which may
+// ProjectID returns the Clockify project ID for ref, which may
 // be either a canonical project ID (returned verbatim after validation)
 // or a workspace-local project name (resolved via case-insensitive
 // strict-name search against the workspace's project list). Returns an
 // error when the ref is unknown, ambiguous (multiple matches), or
 // fails ID validation when treated as an ID.
-func ResolveProjectID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
+func ProjectID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "projects")
 	if err != nil {
 		return "", err
@@ -125,10 +125,10 @@ func ResolveProjectID(ctx context.Context, client *clockify.Client, workspaceID,
 	return resolveByNameOrID(ctx, client, path, ref, "project")
 }
 
-// ResolveClientID returns the Clockify client ID for ref, which may
+// ClientID returns the Clockify client ID for ref, which may
 // be a canonical client ID or a workspace-local client name. Same
-// resolution and error contract as ResolveProjectID.
-func ResolveClientID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
+// resolution and error contract as ProjectID.
+func ClientID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "clients")
 	if err != nil {
 		return "", err
@@ -136,10 +136,10 @@ func ResolveClientID(ctx context.Context, client *clockify.Client, workspaceID, 
 	return resolveByNameOrID(ctx, client, path, ref, "client")
 }
 
-// ResolveTagID returns the Clockify tag ID for ref, which may be a
+// TagID returns the Clockify tag ID for ref, which may be a
 // canonical tag ID or a workspace-local tag name. Same resolution and
-// error contract as ResolveProjectID.
-func ResolveTagID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
+// error contract as ProjectID.
+func TagID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "tags")
 	if err != nil {
 		return "", err
@@ -147,7 +147,7 @@ func ResolveTagID(ctx context.Context, client *clockify.Client, workspaceID, ref
 	return resolveByNameOrID(ctx, client, path, ref, "tag")
 }
 
-// ResolveUserID returns the Clockify user ID for ref. ref may be a
+// UserID returns the Clockify user ID for ref. ref may be a
 // canonical user ID (returned verbatim after ValidateID), an email
 // address (matched against the user record's email field with
 // case-insensitive equality), or a display name (matched against the
@@ -155,7 +155,7 @@ func ResolveTagID(ctx context.Context, client *clockify.Client, workspaceID, ref
 // the Clockify "email=" query parameter and name matches use "name="
 // with strict-name-search=true to avoid prefix collisions. Returns an
 // error when the ref is unknown or ambiguous.
-func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
+func UserID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
 	if looksLikeClockifyID(ref) {
 		// Strict path-segment validation only when the input is being
 		// returned verbatim for use in a URL path.
@@ -232,12 +232,12 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 	return "", fmt.Errorf("user '%s' not found. Use clockify_list_users to see available users", ref)
 }
 
-// ResolveTaskID returns the Clockify task ID for ref under the given
+// TaskID returns the Clockify task ID for ref under the given
 // project. ref may be a canonical task ID or a project-local task
 // name. projectID must already be a validated Clockify project ID
-// (e.g. the result of ResolveProjectID). Same resolution and error
-// contract as ResolveProjectID.
-func ResolveTaskID(ctx context.Context, client *clockify.Client, workspaceID, projectID, ref string) (string, error) {
+// (e.g. the result of ProjectID). Same resolution and error
+// contract as ProjectID.
+func TaskID(ctx context.Context, client *clockify.Client, workspaceID, projectID, ref string) (string, error) {
 	path, err := workspacePath(workspaceID, "projects", projectID, "tasks")
 	if err != nil {
 		return "", err

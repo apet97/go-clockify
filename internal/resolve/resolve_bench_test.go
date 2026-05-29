@@ -46,10 +46,10 @@ func BenchmarkValidateID(b *testing.B) {
 	}
 }
 
-// BenchmarkResolveProjectIDCold500Names exercises the resolver path that has
+// BenchmarkProjectIDCold500Names exercises the resolver path that has
 // historically regressed in owner workspaces: strict-name-search still returns
 // enough candidates to require pagination, and the exact match is late.
-func BenchmarkResolveProjectIDCold500Names(b *testing.B) {
+func BenchmarkProjectIDCold500Names(b *testing.B) {
 	const (
 		workspaceID = "ws-bench"
 		targetName  = "Target Project"
@@ -105,12 +105,12 @@ func BenchmarkResolveProjectIDCold500Names(b *testing.B) {
 	ctx := context.Background()
 	b.ReportAllocs()
 	for b.Loop() {
-		id, err := ResolveProjectID(ctx, client, workspaceID, targetName)
+		id, err := ProjectID(ctx, client, workspaceID, targetName)
 		if err != nil {
-			b.Fatalf("ResolveProjectID: %v", err)
+			b.Fatalf("ProjectID: %v", err)
 		}
 		if id != "p-target" {
-			b.Fatalf("ResolveProjectID=%q, want p-target", id)
+			b.Fatalf("ProjectID=%q, want p-target", id)
 		}
 	}
 }

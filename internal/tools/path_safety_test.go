@@ -11,10 +11,10 @@ import (
 // TestPathSafety_HandlersValidateIDsBeforeConcat enforces the convention
 // that every internal/tools/ handler file which concatenates a
 // non-workspace ID into a Clockify URL path also has a validation gate
-// in the same file — either a direct resolve.ValidateID call or a
-// resolve.Resolve*ID resolver that performs ValidateID internally
-// (resolveByNameOrID delegates to ValidateID before any name lookup,
-// see internal/resolve/resolve.go).
+// in the same file — either a direct resolve.ValidateID call or one
+// of the resolve.{Project,Client,Tag,User,Task}ID resolvers that
+// performs ValidateID internally (resolveByNameOrID delegates to
+// ValidateID before any name lookup, see internal/resolve/resolve.go).
 //
 // Why: clockify.Client.doOnce concatenates baseURL + path without
 // per-segment escaping. Every ID-bearing path segment must be
@@ -42,7 +42,7 @@ func TestPathSafety_HandlersValidateIDsBeforeConcat(t *testing.T) {
 	// Workspace IDs (wsID, workspaceID) are matched separately so the
 	// test can ignore files that only concat workspace IDs.
 	idConcatRE := regexp.MustCompile(`\+\s*(\w+)(ID|Id)\b`)
-	validateRE := regexp.MustCompile(`\b(resolve\.ValidateID|resolve\.Resolve\w+ID)\(`)
+	validateRE := regexp.MustCompile(`\bresolve\.(ValidateID|ProjectID|ClientID|TagID|UserID|TaskID)\(`)
 
 	matches, err := filepath.Glob("*.go")
 	if err != nil {
