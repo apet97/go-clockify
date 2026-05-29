@@ -3,11 +3,41 @@ package resolve
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 )
+
+// workspacePath builds "/workspaces/<wsID>[/sub1/sub2...]" with the same
+// safety contract as paths.Workspace: workspaceID is re-validated via
+// ValidateID and every sub-segment is percent-encoded via url.PathEscape.
+//
+// internal/paths cannot be imported here because paths already depends on
+// this package for ValidateID; duplicating the tiny validate+escape pattern
+// gives the five Resolve*ID helpers below the same belt-and-braces drift
+// protection that internal/tools/* gets from paths.Workspace. Keep the two
+// helpers in sync. Audit finding 2026-05-29 S6.
+func workspacePath(workspaceID string, sub ...string) (string, error) {
+	if err := ValidateID(workspaceID, "workspace_id"); err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("/workspaces/")
+	b.WriteString(url.PathEscape(workspaceID))
+	for i, seg := range sub {
+		if seg == "" {
+			return "", fmt.Errorf("path segment %d is empty", i)
+		}
+		if strings.Contains(seg, "/") {
+			return "", fmt.Errorf("path segment %d contains a slash: %q", i, seg)
+		}
+		b.WriteByte('/')
+		b.WriteString(url.PathEscape(seg))
+	}
+	return b.String(), nil
+}
 
 // maxIDLength caps an entity ID validated for path-segment use. Real
 // Clockify IDs are usually 24-char hex BSON ObjectIDs; some integration IDs
@@ -69,15 +99,27 @@ func ValidateNameRef(ref, kind string) error {
 }
 
 func ResolveProjectID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
-	return resolveByNameOrID(ctx, client, "/workspaces/"+workspaceID+"/projects", ref, "project")
+	path, err := workspacePath(workspaceID, "projects")
+	if err != nil {
+		return "", err
+	}
+	return resolveByNameOrID(ctx, client, path, ref, "project")
 }
 
 func ResolveClientID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
-	return resolveByNameOrID(ctx, client, "/workspaces/"+workspaceID+"/clients", ref, "client")
+	path, err := workspacePath(workspaceID, "clients")
+	if err != nil {
+		return "", err
+	}
+	return resolveByNameOrID(ctx, client, path, ref, "client")
 }
 
 func ResolveTagID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
-	return resolveByNameOrID(ctx, client, "/workspaces/"+workspaceID+"/tags", ref, "tag")
+	path, err := workspacePath(workspaceID, "tags")
+	if err != nil {
+		return "", err
+	}
+	return resolveByNameOrID(ctx, client, path, ref, "tag")
 }
 
 func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, ref string) (string, error) {
@@ -98,7 +140,10 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 
 	const pageSize = 200
 	isEmail := looksLikeEmail(ref)
-	path := "/workspaces/" + workspaceID + "/users"
+	path, err := workspacePath(workspaceID, "users")
+	if err != nil {
+		return "", err
+	}
 	query := map[string]string{"page-size": strconv.Itoa(pageSize)}
 	if isEmail {
 		query["email"] = ref
@@ -155,7 +200,11 @@ func ResolveUserID(ctx context.Context, client *clockify.Client, workspaceID, re
 }
 
 func ResolveTaskID(ctx context.Context, client *clockify.Client, workspaceID, projectID, ref string) (string, error) {
-	return resolveByNameOrID(ctx, client, "/workspaces/"+workspaceID+"/projects/"+projectID+"/tasks", ref, "task")
+	path, err := workspacePath(workspaceID, "projects", projectID, "tasks")
+	if err != nil {
+		return "", err
+	}
+	return resolveByNameOrID(ctx, client, path, ref, "task")
 }
 
 func resolveByNameOrID(ctx context.Context, client *clockify.Client, path, ref, kind string) (string, error) {
