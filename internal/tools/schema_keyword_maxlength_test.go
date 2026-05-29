@@ -61,7 +61,7 @@ func TestRegistryFreeTextFieldsHaveMaxLength(t *testing.T) {
 		if d.Tool.InputSchema == nil {
 			continue
 		}
-		for _, v := range walkFreeTextViolations(d.Tool.Name, d.Tool.InputSchema) {
+		for _, v := range walkFreeTextViolations(d.Tool.InputSchema) {
 			t.Errorf("%s: %s", d.Tool.Name, v)
 		}
 	}
@@ -72,7 +72,7 @@ func TestRegistryFreeTextFieldsHaveMaxLength(t *testing.T) {
 // free-text string field with no maxLength, or one whose maxLength
 // exceeds the ceiling. Returned strings carry the JSON-pointer-ish
 // path so a reviewer can locate the offender by eye.
-func walkFreeTextViolations(toolName string, schema map[string]any) []string {
+func walkFreeTextViolations(schema map[string]any) []string {
 	var out []string
 	walkSchemaFields(schema, "$", func(path, name string, prop map[string]any) {
 		ceil, ok := freeTextMaxLength[name]
