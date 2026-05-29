@@ -14,16 +14,13 @@ import (
 
 // callToolViaRun drives a single tools/call through Server.Run and returns the
 // decoded Response. Reused by every test in this file.
-func callToolViaRun(t *testing.T, server *Server, toolName string, args map[string]any) Response {
+func callToolViaRun(t *testing.T, server *Server, toolName string) Response {
 	t.Helper()
 	payload := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "tools/call",
 		"params":  map[string]any{"name": toolName},
-	}
-	if args != nil {
-		payload["params"].(map[string]any)["arguments"] = args
 	}
 	// Initialize first so tools/call is accepted.
 	inputLines := []string{
@@ -93,7 +90,7 @@ func TestToolsCall_StructuredContent_Object(t *testing.T) {
 		ReadOnlyHint: true,
 	}})
 
-	resp := callToolViaRun(t, server, "fake_ok", nil)
+	resp := callToolViaRun(t, server, "fake_ok")
 	if resp.Error != nil {
 		t.Fatalf("unexpected rpc error: %+v", resp.Error)
 	}
@@ -142,7 +139,7 @@ func TestToolsCall_StructuredContent_SuccessEnvelopeGolden(t *testing.T) {
 		ReadOnlyHint: true,
 	}})
 
-	resp := callToolViaRun(t, server, "contract_ok", nil)
+	resp := callToolViaRun(t, server, "contract_ok")
 	if resp.Error != nil {
 		t.Fatalf("unexpected rpc error: %+v", resp.Error)
 	}
@@ -174,7 +171,7 @@ func TestToolsCall_StructuredContent_RecoverableEnvelopeGolden(t *testing.T) {
 		ReadOnlyHint: true,
 	}})
 
-	resp := callToolViaRun(t, server, "contract_recovery", nil)
+	resp := callToolViaRun(t, server, "contract_recovery")
 	if resp.Error != nil {
 		t.Fatalf("recoverable tool envelope must not become an RPC error: %+v", resp.Error)
 	}
@@ -197,7 +194,7 @@ func TestToolsCall_StructuredContent_ResultMarshaledOnce(t *testing.T) {
 		ReadOnlyHint: true,
 	}})
 
-	resp := callToolViaRun(t, server, "counted", nil)
+	resp := callToolViaRun(t, server, "counted")
 	if resp.Error != nil {
 		t.Fatalf("unexpected rpc error: %+v", resp.Error)
 	}
@@ -307,7 +304,7 @@ func TestToolsCall_StructuredContent_NonObject(t *testing.T) {
 				ReadOnlyHint: true,
 			}})
 
-			resp := callToolViaRun(t, server, "fake_scalar", nil)
+			resp := callToolViaRun(t, server, "fake_scalar")
 			if resp.Error != nil {
 				t.Fatalf("unexpected rpc error: %+v", resp.Error)
 			}
