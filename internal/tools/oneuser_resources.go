@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"strings"
@@ -302,6 +304,13 @@ func (s *Service) readOneUserResource(ctx context.Context, uri string) ([]mcp.Re
 	}
 }
 
+// errAuditTailUnavailable is the generic surface error returned to MCP
+// clients when the audit-log file cannot be read. The underlying os error
+// is logged via slog (redacting handler) so operators can debug locally
+// without leaking filesystem detail (permission text, symlink loops, etc.)
+// across the protocol boundary.
+var errAuditTailUnavailable = errors.New("audit tail unavailable")
+
 func (s *Service) auditTailText() (string, error) {
 	if s == nil || strings.TrimSpace(s.AuditLogPath) == "" {
 		return "", nil
@@ -311,7 +320,8 @@ func (s *Service) auditTailText() (string, error) {
 		if os.IsNotExist(err) {
 			return "", nil
 		}
-		return "", err
+		slog.Warn("audit_tail_read_failed", "err", err)
+		return "", errAuditTailUnavailable
 	}
 	const maxTailBytes = 64 * 1024
 	if len(raw) > maxTailBytes {
