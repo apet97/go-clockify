@@ -120,12 +120,15 @@ as setup instructions.
   `.golangci.yml` with the three audit-specified rules (`exported`,
   `var-naming`, `unused-parameter`) under `enable-all-rules: false`.
   Production `unused-parameter` (5) and `var-naming` (1) violations
-  are fixed. The 813 pre-existing `exported` violations across
-  `internal/` are silenced via a single repo-wide exclusion pointing
-  back to the audit; phase 2 is the godoc-coverage campaign that
-  removes that exclusion package by package. CI's existing `lint` job
-  picks the new rules up automatically because it runs
-  `golangci-lint run` against the same config.
+  are fixed.
+- **Audit T3.2 phase 2 in progress** (started 2026-05-29). The blanket
+  `^exported: ` exclusion has been split into per-package opt-outs.
+  Eleven of thirteen `internal/` packages are now godoc-clean and
+  enforce `exported`: `paths`, `timeparse`, `jsonschema`, `tracing`,
+  `logging`, `dryrun`, `jsonmergepatch`, `config`, `resolve`, `safety`,
+  `testclockify`. Three packages remain (`mcp`, `clockify`, `tools`,
+  ~248 symbols combined) and keep a per-package opt-out in
+  `.golangci.yml` until their godoc coverage lands.
 - **Adversarial audit (2026-05-29) cleanup landed.** Stale doc/script
   claims fixed (architecture.md drift-gate CI column; `make cover-check`
   and `scripts/check-coverage.sh` references dropped; fuzz-corpus.md
@@ -138,6 +141,41 @@ as setup instructions.
   `findEntryOverlaps`). Contributor-local `/Users/15x/...` and
   `addons-me/fern/...` paths in AGENTS.md and tests genericised. All
   deterministic gates green after each commit.
+- **Polish campaign (2026-05-29) landed.** 17-commit follow-up driven
+  by a parallel six-slice read-only audit (docs, deadcode, versions,
+  security, tests, godoc). Items shipped: SECURITY.md supported-versions
+  bumped to 0.3.x; four `unparam` test-helper dead-arg removals
+  (`testMoneyEntry`, `oneUserCoverageEmail`, `callToolViaRun`,
+  `walkFreeTextViolations`); two error-only signatures replacing dead
+  `(ToolResult, error)` returns on the `sendInvoice` and
+  `updateInvoiceItem` "unsupported" stubs; dead variadic
+  `warnings ...` dropped from `validationOK`; `auditTailText` now
+  wraps the raw `os.ReadFile` error with the generic
+  `errAuditTailUnavailable` sentinel and logs the underlying err via
+  slog (covers SECURITY.md panic-message contract — see new
+  TestAuditTailText_WrapsIOErrorAsGeneric pin); the async
+  resource/prompt dispatch goroutine now defers `RecoverDispatch`
+  exactly like the sibling tools/call goroutine, closing a real
+  SECURITY.md panic-containment gap (
+  `TestPanicInResourceDispatchDoesNotCrashLoop` pins the contract);
+  `internal/resolve` workspace paths route through a new local
+  `workspacePath` helper that mirrors `paths.Workspace` (can't import
+  it directly — circular) and a sibling static gate
+  (`TestPathSafety_ResolveUsesWorkspaceHelper`) fails closed on raw
+  concat regression. Renamed `resolve.Resolve{Project,Client,Tag,User,
+  Task}ID → resolve.{Project,Client,Tag,User,Task}ID` (5 production
+  call sites in `internal/tools/resolve_cache.go` plus tests/benches);
+  the `path_safety_test.go` regex was widened to recognise the new
+  names; `.golangci.yml` no longer needs a stutter allowance for the
+  package. Modernization sweep applied to gopls suggestions in
+  touched files (`strings.SplitSeq`, `slices.Contains`, `maps.Copy`,
+  `range` over int, built-in `min`).
+- The cleanup, polish, and godoc-phase-2 commits all push direct to
+  `main` (current head `093d60b`). The push triggered the protected-
+  branch bypass notice ("Bypassed rule violations for refs/heads/main:
+  16 of 16 required status checks are expected") and every required
+  check went green post-push (CI + CodeQL + Semgrep + Dependency
+  Review).
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the

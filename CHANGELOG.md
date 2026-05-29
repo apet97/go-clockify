@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Async resource/prompt dispatch in `internal/mcp/server.go` now defers
+  `RecoverDispatch` exactly like the sibling tools/call goroutine.
+  Previously a panic inside a `ResourceProvider` (e.g.
+  `auditTailText`, `ClockifyStatus`, `EntriesList`, `ProjectsList`)
+  would escape the goroutine and crash the entire stdio loop instead
+  of producing the stable generic error envelope, violating the
+  SECURITY.md panic-containment promise. Pinned by
+  `TestPanicInResourceDispatchDoesNotCrashLoop`.
+- `auditTailText` in `internal/tools/oneuser_resources.go` now wraps
+  every non-`IsNotExist` `os.ReadFile` failure with the generic
+  `errAuditTailUnavailable` sentinel and logs the underlying err via
+  slog (redactor-covered). The raw filesystem detail (permission
+  text, symlink loop messages, `EISDIR`) no longer crosses the MCP
+  protocol boundary. Pinned by `TestAuditTailText_WrapsIOErrorAsGeneric`.
+
+### Changed
+
+- **Breaking (`internal/` API).** `resolve.Resolve{Project,Client,Tag,
+  User,Task}ID` renamed to `resolve.{Project,Client,Tag,User,Task}ID`
+  to drop the `resolve.Resolve*` stutter. `resolve.ValidateID` is
+  unchanged. Callers inside the module are migrated;
+  `internal/tools/path_safety_test.go` regex widened to recognise the
+  new names. Anyone embedding the module and reaching into
+  `internal/resolve` will need to rename their call sites.
+- `internal/resolve` workspace path construction now routes through a
+  new local `workspacePath` helper that validates the workspace ID
+  via `ValidateID` and percent-encodes every sub-segment via
+  `url.PathEscape` — mirroring `paths.Workspace`, which can't be
+  imported directly because `internal/paths` already depends on
+  `internal/resolve` (circular). A new sibling static gate
+  (`TestPathSafety_ResolveUsesWorkspaceHelper`) fails closed on raw
+  `"/workspaces/" +` regression.
+- `sendInvoice` and `updateInvoiceItem` in `internal/tools` are now
+  `error`-only stubs (no dead `(ToolResult, error)` return). Behavior
+  unchanged — both still return the same "unsupported" diagnostics
+  the Clockify API mandates. Dispatcher wrappers updated.
+- `validationOK` in `internal/tools/validation_view.go` drops the
+  unused variadic `warnings ...ValidationProblem`. No caller ever
+  populated it, so the resulting `ValidationView` shape is identical.
+
+### Docs
+
+- SECURITY.md supported-versions table tracks `0.3.x` instead of the
+  stale `0.1.x`.
+- `internal/config`, `internal/resolve`, `internal/safety`, and
+  `internal/testclockify` are now fully documented; revive's
+  `exported` rule is enforced for them via per-package opt-outs in
+  `.golangci.yml`. Three internal packages (`mcp`, `clockify`,
+  `tools`) still hold per-package opt-outs pending godoc coverage.
+- AGENTS.md and CLAUDE.md record the 2026-05-29 polish campaign and
+  the godoc-track progress; `docs/audits/2026-05-26-claude-audit.md`
+  T3.2 phase-2 status updated from "deferred" to "in progress".
+
 ## [0.3.0] - 2026-05-21
 
 ### Breaking — advertised toolset narrowed
