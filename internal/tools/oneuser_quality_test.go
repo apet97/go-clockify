@@ -1559,7 +1559,6 @@ func TestOneUserDocsAndDefaultCodeDoNotMentionRemovedProductTools(t *testing.T) 
 		"../../docs/agent-handoff.md",
 		"../../docs/agent-cookbook.md",
 		"../../docs/api-coverage.md",
-		"../../docs/clients.md",
 		"../../docs/coverage-policy.md",
 		"../../docs/performance.md",
 		"../../docs/policy/production-tool-scope.md",
