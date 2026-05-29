@@ -126,6 +126,18 @@ as setup instructions.
   removes that exclusion package by package. CI's existing `lint` job
   picks the new rules up automatically because it runs
   `golangci-lint run` against the same config.
+- **Adversarial audit (2026-05-29) cleanup landed.** Stale doc/script
+  claims fixed (architecture.md drift-gate CI column; `make cover-check`
+  and `scripts/check-coverage.sh` references dropped; fuzz-corpus.md
+  rewritten for the six actual targets; CONTRIBUTING.md dropped the
+  retired `ResultEnvelope` mention; `.gitignore` lost dead docker /
+  hygiene-script comments). Four dead docs deleted (`clients.md`,
+  `internal-test-posture.md`, `superpowers/plans/...`, the 9.6k-line
+  `goals/api-reconciliation/TRUTH.openapi.yaml`). Three `unparam` dead
+  return values removed (`handlePromptsList`, `notifierFromContext`,
+  `findEntryOverlaps`). Contributor-local `/Users/15x/...` and
+  `addons-me/fern/...` paths in AGENTS.md and tests genericised. All
+  deterministic gates green after each commit.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the
