@@ -715,6 +715,16 @@ func (s *Server) Run(ctx context.Context, r io.Reader, w io.Writer) (retErr erro
 				wg.Add(1)
 				go func(r Request) {
 					defer wg.Done()
+					// Mirror the tools/call goroutine's RecoverDispatch
+					// wrapper: a panic inside a ResourceProvider or
+					// PromptProvider must not take down the stdio loop.
+					// Closes the contract gap surfaced by the 2026-05-29
+					// audit (SECURITY.md panic containment).
+					defer RecoverDispatch(r.ID, "stdio_resource_dispatch", r.Method, func(resp Response) {
+						if err := s.writeResponse(resp); err != nil {
+							slog.Warn("async_response_failed", "error", err.Error())
+						}
+					})
 					resp := s.handle(ctx, r)
 					if err := s.writeResponse(resp); err != nil {
 						slog.Warn("async_response_failed", "error", err.Error())
