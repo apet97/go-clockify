@@ -155,10 +155,10 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	// /time-off/requests/users/{userId} (404 live), GET /time-off/
 	// requests (405 live; POST remains as the documented POST-as-list),
 	// GET /users/{userId}/time-off/balances (404 live). All probed
-	// against sandbox 65b382b606de527a7ee2b60e on 2026-05-25; all
-	// returned Clockify error code 3000. See addons-me/fern/spec/
-	// evidence/discrepancies.md > timeoff.legacy-policies-requests.
-	// phantom-path-quarantined for the full audit.
+	// against the sacrificial sandbox on 2026-05-25; all returned
+	// Clockify error code 3000. See the sibling clockify-ts-sdk repo
+	// (spec/evidence/discrepancies.md > timeoff.legacy-policies-requests.
+	// phantom-path-quarantined) for the full audit.
 	if got, want := len(contract.paths), 121; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
@@ -170,8 +170,9 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	// PHANTOM_PATHS (scripts/gen-clockify-openapi). The bare
 	// `/workspaces/{workspaceId}/balance` GET + PATCH pair previously
 	// lived here but was removed when the live-probed phantom-route
-	// quarantine landed (see addons-me/fern/spec/evidence/discrepancies.md
-	// > `deferred-list-endpoints.not-paginated-or-not-live`). The
+	// quarantine landed (see the sibling clockify-ts-sdk repo's
+	// spec/evidence/discrepancies.md >
+	// `deferred-list-endpoints.not-paginated-or-not-live`). The
 	// live-equivalent surface is the granular `/time-off/balance/policy/
 	// {policyId}` and `.../user/{userId}` routes (still asserted below).
 	requiredOperations := []openAPIOperation{

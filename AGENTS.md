@@ -132,7 +132,9 @@ as setup instructions.
   review-hardening stack. The latest live run is recorded in
   `docs/live-tests.md`; the optional-domain/high-risk/happy-path gates were not
   enabled for that run, and prefix cleanup reported `Leftovers: 0`.
-- Claude's local binary was rebuilt to `/Users/15x/.local/bin/clockify-mcp`.
+- The locally cached Claude binary (when used) lives at
+  `$HOME/.local/bin/clockify-mcp`. Each contributor may pin a different path
+  in their MCP client configuration.
 - The rolling nightly-live issue was still open and classified as env/config
   drift at the time of this refresh. Treat release tagging, issue closure/waiver,
   optional live campaigns, or new Clockify API drift as new work.
@@ -159,7 +161,7 @@ as setup instructions.
 | Full tests | `go test -count=1 ./...` |
 | Perfect deterministic gate | `make perfect` |
 | Perfect live gate | `make perfect-live` |
-| Build Claude binary | `go build -o /Users/15x/.local/bin/clockify-mcp ./cmd/clockify-mcp` |
+| Build binary into your MCP client path | `go build -o "$HOME/.local/bin/clockify-mcp" ./cmd/clockify-mcp` |
 | Race/check gate | `make check` |
 | Diff hygiene | `git diff --check` |
 | Local lint | `golangci-lint run` |
@@ -176,11 +178,10 @@ postgres/auth dependencies; check with
 `go list -deps ./cmd/clockify-mcp` (`internal/runtime/...` and Go `runtime`
 hits are expected, not regressions).
 
-Claude's global MCP config on this workstation points the `clockify` server at
-`/Users/15x/.local/bin/clockify-mcp`. After any runtime change that should be
-available to Claude, rebuild exactly to that path and verify the config still
-references it. Do not print the env block from the Claude config; it contains
-live credentials.
+If your MCP client launches `clockify-mcp` from a pinned path (a common setup
+points Claude or another MCP client at `$HOME/.local/bin/clockify-mcp`), rebuild
+to that path after any runtime change so the client picks the change up. Do not
+print the client's env block; it contains live credentials.
 
 ## Live Tests
 
