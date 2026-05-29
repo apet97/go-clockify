@@ -44,7 +44,7 @@ func TestEntryViewEnrichmentMapsReportsAPIMoney(t *testing.T) {
 
 	svc := New(client, "ws1")
 	svc.EntryFinancialReports = true
-	views, meta := svc.enrichEntryViews(context.Background(), "ws1", []clockify.TimeEntry{testMoneyEntry("entry-1", nil, nil, true)})
+	views, meta := svc.enrichEntryViews(context.Background(), "ws1", []clockify.TimeEntry{testMoneyEntry(nil, nil, true)})
 
 	if len(views) != 1 {
 		t.Fatalf("views length = %d, want 1", len(views))
@@ -102,7 +102,7 @@ func TestEntryViewEnrichmentFallsBackToDerivedRates(t *testing.T) {
 	svc := New(client, "ws1")
 	svc.EntryFinancialReports = true
 	views, _ := svc.enrichEntryViews(context.Background(), "ws1", []clockify.TimeEntry{
-		testMoneyEntry("entry-1", &clockify.Rate{Amount: 10000, Currency: "USD"}, &clockify.Rate{Amount: 4000, Currency: "USD"}, true),
+		testMoneyEntry(&clockify.Rate{Amount: 10000, Currency: "USD"}, &clockify.Rate{Amount: 4000, Currency: "USD"}, true),
 	})
 
 	fin := views[0].Financials
@@ -129,7 +129,7 @@ func TestEntryViewEnrichmentOmitsProfitForDifferentCurrencies(t *testing.T) {
 	svc := New(client, "ws1")
 	svc.EntryFinancialReports = true
 	views, _ := svc.enrichEntryViews(context.Background(), "ws1", []clockify.TimeEntry{
-		testMoneyEntry("entry-1", &clockify.Rate{Amount: 10000, Currency: "USD"}, &clockify.Rate{Amount: 4000, Currency: "EUR"}, true),
+		testMoneyEntry(&clockify.Rate{Amount: 10000, Currency: "USD"}, &clockify.Rate{Amount: 4000, Currency: "EUR"}, true),
 	})
 
 	fin := views[0].Financials
@@ -161,7 +161,7 @@ func TestEntryViewEnrichmentFailureDoesNotFailEntry(t *testing.T) {
 
 	svc := New(client, "ws1")
 	svc.EntryFinancialReports = true
-	views, meta := svc.enrichEntryViews(context.Background(), "ws1", []clockify.TimeEntry{testMoneyEntry("entry-1", nil, nil, true)})
+	views, meta := svc.enrichEntryViews(context.Background(), "ws1", []clockify.TimeEntry{testMoneyEntry(nil, nil, true)})
 
 	if len(views) != 1 || views[0].ID != "entry-1" {
 		t.Fatalf("entry not preserved after enrichment failure: %#v", views)
@@ -174,10 +174,10 @@ func TestEntryViewEnrichmentFailureDoesNotFailEntry(t *testing.T) {
 	}
 }
 
-func testMoneyEntry(id string, hourly, cost *clockify.Rate, billable bool) clockify.TimeEntry {
+func testMoneyEntry(hourly, cost *clockify.Rate, billable bool) clockify.TimeEntry {
 	start := time.Date(2026, 5, 13, 9, 0, 0, 0, time.UTC)
 	return clockify.TimeEntry{
-		ID:          id,
+		ID:          "entry-1",
 		Description: "Money entry",
 		Billable:    billable,
 		HourlyRate:  hourly,
