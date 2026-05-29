@@ -82,6 +82,14 @@ jobs:
           pack_json="$GITHUB_WORKSPACE/dist/npm-pack.json"
           npm pack --pack-destination "$GITHUB_WORKSPACE/dist" --json > "$pack_json"
           tarball="$(node -e "const fs=require('fs'); const pack=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(pack[0].filename)" "$pack_json")"
+          # Buffer the archive listing first so grep can exit early
+          # without sending SIGPIPE upstream to tar. With set -o pipefail
+          # the previous `tar | grep -qx` pipeline failed whenever grep
+          # matched before tar had flushed its full listing, which
+          # depended on archive-buffer alignment and turned the release
+          # workflow into a roll of the dice (see v0.4.0 first attempt
+          # on 2026-05-29: tar exited 141/SIGPIPE on the first binary).
+          entries=$(tar -tzf "$GITHUB_WORKSPACE/dist/$tarball")
           for binary in \
             clockify-mcp_darwin_arm64 \
             clockify-mcp_darwin_amd64 \
@@ -89,7 +97,7 @@ jobs:
             clockify-mcp_linux_arm64 \
             clockify-mcp_windows_amd64.exe
           do
-            tar -tzf "$GITHUB_WORKSPACE/dist/$tarball" | grep -qx "package/vendor/$binary"
+            grep -Fxq -- "package/vendor/$binary" <<<"$entries"
           done
       - name: Generate release checksums
         run: |
