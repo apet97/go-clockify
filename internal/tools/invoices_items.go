@@ -163,13 +163,14 @@ func invoiceItemIndexArg(args map[string]any) (string, error) {
 // updateInvoiceItem reports the absence of a Clockify update endpoint for
 // invoice line items. The live API rejects PUT on the items path with code
 // 3000 ("Request method 'PUT' is not supported"); there is no PATCH route
-// either. Callers replace a line by deleting and re-adding it.
-func (s *Service) updateInvoiceItem(_ context.Context, args map[string]any) (ToolResult, error) {
+// either. Callers replace a line by deleting and re-adding it. Returns
+// error only because the success path is unreachable.
+func (s *Service) updateInvoiceItem(_ context.Context, args map[string]any) error {
 	invoiceID := stringArg(args, "invoice_id")
 	if err := resolve.ValidateID(invoiceID, "invoice_id"); err != nil {
-		return ToolResult{}, err
+		return err
 	}
-	return ToolResult{}, fmt.Errorf("unsupported: Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add")
+	return fmt.Errorf("unsupported: Clockify does not expose an update endpoint for invoice line items; delete the line with clockify_invoices_items_delete and re-add it with clockify_invoices_items_add")
 }
 
 func (s *Service) deleteInvoiceItem(ctx context.Context, args map[string]any) (ToolResult, error) {

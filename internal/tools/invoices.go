@@ -202,7 +202,7 @@ func invoiceHandlers(s *Service) []mcp.ToolDescriptor {
 				"invoice_id": map[string]any{"type": "string"},
 			},
 		}), ReadOnlyHint: false, Handler: func(ctx context.Context, args map[string]any) (any, error) {
-			return s.updateInvoiceItem(ctx, args)
+			return nil, s.updateInvoiceItem(ctx, args)
 		}},
 
 		// 14. Delete invoice item

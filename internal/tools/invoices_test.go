@@ -222,10 +222,10 @@ func TestTier2_Invoices_FullSweep(t *testing.T) {
 			t.Fatal("expected validation error for empty invoice_id")
 		}
 
-		if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "unsupported") {
+		if err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "inv1"}); err == nil || !strings.Contains(err.Error(), "unsupported") {
 			t.Fatalf("expected unsupported-endpoint error from updateInvoiceItem, got %v", err)
 		}
-		if _, err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
+		if err := svc.updateInvoiceItem(ctx, map[string]any{"invoice_id": "", "item_id": "item1"}); err == nil {
 			t.Fatal("expected validation error for empty invoice_id")
 		}
 
@@ -748,7 +748,7 @@ func TestUpdateInvoiceItemRejectsMissingItemType(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	_, err := svc.updateInvoiceItem(context.Background(), map[string]any{
+	err := svc.updateInvoiceItem(context.Background(), map[string]any{
 		"invoice_id":  "inv1",
 		"item_id":     "item1",
 		"description": "Updated description",
@@ -968,7 +968,7 @@ func TestInvoiceItemIndexRequiredBeforeUpstream(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	if _, err := svc.updateInvoiceItem(context.Background(), map[string]any{
+	if err := svc.updateInvoiceItem(context.Background(), map[string]any{
 		"invoice_id": "inv1",
 		"item_type":  "NEW DEFAULT",
 	}); err == nil {
