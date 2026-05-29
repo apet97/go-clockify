@@ -3109,7 +3109,7 @@ func oneUserCoverageArgs(tool mcp.Tool) map[string]any {
 		args["time_entry_ids"] = []any{oneUserCoverageID("entry_id")}
 		args["invoiced"] = true
 	case "clockify_users_invite":
-		args["emails"] = []any{oneUserCoverageEmail("coverage")}
+		args["emails"] = []any{oneUserCoverageEmail()}
 	case "clockify_audit_logs_search":
 		args["actions"] = []any{"CREATE_PROJECT"}
 	case "clockify_entity_changes_list":
@@ -3143,9 +3143,9 @@ func oneUserCoverageValue(name string, schema map[string]any) any {
 	case "currency":
 		return "USD"
 	case "email":
-		return oneUserCoverageEmail("coverage")
+		return oneUserCoverageEmail()
 	case "emails":
-		return []any{oneUserCoverageEmail("coverage")}
+		return []any{oneUserCoverageEmail()}
 	case "memberships":
 		return []any{map[string]any{"user_id": oneUserCoverageID("user_id")}}
 	case "role_grants":
@@ -3252,8 +3252,8 @@ func oneUserCoverageID(name string) string {
 	return "65b382b606de527a7ee2b61f"
 }
 
-func oneUserCoverageEmail(local string) string {
-	return local + "@example.invalid"
+func oneUserCoverageEmail() string {
+	return "coverage@example.invalid"
 }
 
 func newOneUserCoverageUpstream() *httptest.Server {
@@ -3277,7 +3277,7 @@ func oneUserCoveragePayload(workspaceID, userID, method, path, rawQuery string) 
 	user := map[string]any{
 		"id":                 userID,
 		"name":               "Coverage User",
-		"email":              oneUserCoverageEmail("coverage"),
+		"email":              oneUserCoverageEmail(),
 		"activeWorkspace":    workspaceID,
 		"defaultWorkspace":   workspaceID,
 		"activeWorkspaceId":  workspaceID,
