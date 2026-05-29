@@ -58,10 +58,6 @@ linters:
         text: 'and that stutters'
         linters:
           - revive
-      - path: internal/safety/
-        text: '^exported: '
-        linters:
-          - revive
       - path: internal/mcp/
         text: '^exported: '
         linters:

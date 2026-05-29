@@ -1,3 +1,9 @@
+// Package safety implements the runtime safety rails for destructive,
+// administrative, and raw-write tool calls: confirmation-token issuance
+// and validation (TokenStore), risk-class policy lookup
+// (RequirementForRisk), and canonical-JSON hashing used to bind a
+// confirmation token to the exact argument payload that previewed it
+// (HashCanonical).
 package safety
 
 import (
@@ -6,6 +12,11 @@ import (
 	"encoding/json"
 )
 
+// HashCanonical returns a hex-encoded SHA-256 of v after stripping
+// non-deterministic fields ("confirm_token", "dry_run") and recursively
+// normalising map/slice contents. The resulting digest is stable across
+// equivalent argument shapes so a confirmation-token preview hash can be
+// matched against a follow-up call's arguments byte-for-byte.
 func HashCanonical(v any) string {
 	normalized := normalizeJSONValue(v)
 	b, _ := json.Marshal(normalized)
