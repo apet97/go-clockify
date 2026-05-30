@@ -24,6 +24,10 @@ type ToolResult struct {
 	Next     []NextAction      `json:"next,omitempty"`
 }
 
+// ToolError is the recoverable-failure envelope a tool handler returns
+// (ok:false): the action, any partial IDs, a structured Error, and a
+// RecoveryHint guiding the caller toward a fix. Supported/Performed flag the
+// "unsupported endpoint" and "no-op" cases.
 type ToolError struct {
 	OK        bool              `json:"ok"`
 	Supported *bool             `json:"supported,omitempty"`
@@ -35,6 +39,8 @@ type ToolError struct {
 	Warnings  []Warning         `json:"warnings,omitempty"`
 }
 
+// ChangeSet records the entities a write touched, grouped by created, updated,
+// deleted, and reused, for the ToolResult.changed block.
 type ChangeSet struct {
 	Created []EntityRef `json:"created,omitempty"`
 	Updated []EntityRef `json:"updated,omitempty"`
@@ -42,28 +48,38 @@ type ChangeSet struct {
 	Reused  []EntityRef `json:"reused,omitempty"`
 }
 
+// EntityRef identifies one affected entity in a ChangeSet by type, id, and
+// optional name.
 type EntityRef struct {
 	Type string `json:"type"`
 	ID   string `json:"id"`
 	Name string `json:"name,omitempty"`
 }
 
+// Warning is a non-fatal advisory attached to a tool result: an optional code
+// and a human-readable message.
 type Warning struct {
 	Code    string `json:"code,omitempty"`
 	Message string `json:"message"`
 }
 
+// NextAction suggests a follow-up tool call (with optional args and a reason)
+// to chain after the current result.
 type NextAction struct {
 	Tool   string         `json:"tool"`
 	Args   map[string]any `json:"args,omitempty"`
 	Reason string         `json:"reason,omitempty"`
 }
 
+// ErrorInfo is the structured error detail in a ToolError: a stable code and a
+// client-facing message.
 type ErrorInfo struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
+// RecoveryHint guides a caller toward recovering from a ToolError: a free-text
+// hint, an optional suggested tool/args to retry, and retryability metadata.
 type RecoveryHint struct {
 	Hint              string         `json:"hint"`
 	Tool              string         `json:"tool,omitempty"`

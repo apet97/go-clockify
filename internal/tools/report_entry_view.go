@@ -26,6 +26,8 @@ type EntryEntityRef struct {
 	Raw   map[string]any `json:"raw,omitempty"`
 }
 
+// EntryEntitiesView groups the entity references (user, client, project, task,
+// tags) resolved from a report entry row.
 type EntryEntitiesView struct {
 	User    *EntryEntityRef  `json:"user,omitempty"`
 	Client  *EntryEntityRef  `json:"client,omitempty"`
@@ -34,6 +36,8 @@ type EntryEntitiesView struct {
 	Tags    []EntryEntityRef `json:"tags,omitempty"`
 }
 
+// EntryApprovalView is the approval projection for a report entry: the request
+// ID and state, with the source field and raw payload for provenance.
 type EntryApprovalView struct {
 	RequestID string         `json:"request_id,omitempty"`
 	State     string         `json:"state,omitempty"`
@@ -41,6 +45,8 @@ type EntryApprovalView struct {
 	Raw       map[string]any `json:"raw,omitempty"`
 }
 
+// EntryInvoicingView is the invoicing projection for a report entry: whether it
+// is invoiced, its state, and the linked invoice id/number.
 type EntryInvoicingView struct {
 	Invoiced      *bool          `json:"invoiced,omitempty"`
 	State         string         `json:"state,omitempty"`
@@ -50,6 +56,8 @@ type EntryInvoicingView struct {
 	Raw           map[string]any `json:"raw,omitempty"`
 }
 
+// EntryAuditView flags data-quality issues on a report entry: locked status and
+// missing description/project/task, with the source and raw payload.
 type EntryAuditView struct {
 	Locked             *bool          `json:"locked,omitempty"`
 	MissingDescription *bool          `json:"missing_description,omitempty"`
@@ -59,6 +67,8 @@ type EntryAuditView struct {
 	Raw                map[string]any `json:"raw,omitempty"`
 }
 
+// MoneyByCurrencyView is a single per-currency money figure (with a type label,
+// e.g. amount vs cost) extracted from a report entry's multi-currency totals.
 type MoneyByCurrencyView struct {
 	Type     string         `json:"type,omitempty"`
 	Currency string         `json:"currency,omitempty"`
@@ -66,6 +76,8 @@ type MoneyByCurrencyView struct {
 	Raw      map[string]any `json:"raw,omitempty"`
 }
 
+// ReportRateBreakdownView decomposes a report entry's monetary figures into rate
+// and amount across the earned/cost dimensions, normalized to MoneyView.
 type ReportRateBreakdownView struct {
 	Rate         *MoneyView     `json:"rate,omitempty"`
 	Amount       *MoneyView     `json:"amount,omitempty"`
@@ -77,6 +89,9 @@ type ReportRateBreakdownView struct {
 	Raw          map[string]any `json:"raw,omitempty"`
 }
 
+// ReportEntryView is the fully shaped projection of a single report entry row:
+// core fields plus normalized duration, resolved entities, custom fields, and
+// approval/invoicing/audit/financial/rate breakdowns.
 type ReportEntryView struct {
 	ID                string                   `json:"id,omitempty"`
 	Description       string                   `json:"description,omitempty"`
@@ -98,6 +113,9 @@ type ReportEntryView struct {
 	MoneyByCurrency   []MoneyByCurrencyView    `json:"money_by_currency,omitempty"`
 }
 
+// ReportEntrySummary aggregates a set of report entries: total count and
+// duration, billable/unbillable/unset and locked counts, data-quality miss
+// counts, and a by-type breakdown.
 type ReportEntrySummary struct {
 	Count                   int               `json:"count"`
 	Duration                EntryDurationView `json:"duration"`
@@ -111,6 +129,9 @@ type ReportEntrySummary struct {
 	ByType                  map[string]int    `json:"by_type,omitempty"`
 }
 
+// ReportApprovalSummary aggregates approval coverage across a report's entries:
+// counts with/without an approval request, per-state counts, and durations by
+// state.
 type ReportApprovalSummary struct {
 	WithApprovalRequest    int                          `json:"with_approval_request,omitempty"`
 	WithoutApprovalRequest int                          `json:"without_approval_request,omitempty"`
@@ -119,6 +140,8 @@ type ReportApprovalSummary struct {
 	DurationsByState       map[string]EntryDurationView `json:"durations_by_state,omitempty"`
 }
 
+// ReportTotalsSummary holds a report's overall totals: row and entry counts,
+// total and billable time, financials, and per-currency money.
 type ReportTotalsSummary struct {
 	Rows              int                   `json:"rows"`
 	EntriesCount      int                   `json:"entries_count,omitempty"`
@@ -128,6 +151,8 @@ type ReportTotalsSummary struct {
 	MoneyByCurrency   []MoneyByCurrencyView `json:"money_by_currency,omitempty"`
 }
 
+// ReportEntityRollup is the per-entity rollup row in a report's entity summary:
+// the entity identity plus its entry count and total duration.
 type ReportEntityRollup struct {
 	ID       string            `json:"id,omitempty"`
 	Name     string            `json:"name,omitempty"`
@@ -137,6 +162,8 @@ type ReportEntityRollup struct {
 	Duration EntryDurationView `json:"duration"`
 }
 
+// ReportEntitySummary groups a report's entity rollups by dimension (users,
+// clients, projects, tasks, tags).
 type ReportEntitySummary struct {
 	Users    []ReportEntityRollup `json:"users,omitempty"`
 	Clients  []ReportEntityRollup `json:"clients,omitempty"`
@@ -145,6 +172,8 @@ type ReportEntitySummary struct {
 	Tags     []ReportEntityRollup `json:"tags,omitempty"`
 }
 
+// ReportClientSummary is the per-client section of a report: the client
+// reference with its entry summary, financials, and approval summary.
 type ReportClientSummary struct {
 	Client          EntryEntityRef        `json:"client"`
 	EntrySummary    ReportEntrySummary    `json:"entry_summary"`

@@ -1,13 +1,14 @@
 package mcp
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"math"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,9 @@ import (
 	"github.com/apet97/go-clockify/internal/tracing"
 )
 
+// UnknownToolError is returned by tool dispatch when a tools/call names a tool
+// that is not in the registry. The dispatch maps it to a JSON-RPC method-not-
+// found style error so clients can distinguish it from argument failures.
 type UnknownToolError struct {
 	Name string
 }
@@ -60,6 +64,8 @@ func (s *Server) tryMarshalCachedToolsListResponse(req Request) ([]byte, bool, e
 	return out, true, err
 }
 
+// DefaultToolsListPageSize is the page size used for paginated tools/list
+// responses when the client does not request a specific cursor page.
 const DefaultToolsListPageSize = 80
 
 func (s *Server) marshalCachedToolsListResponse(id any) ([]byte, error) {
@@ -205,12 +211,15 @@ func toolsListParamsEmpty(raw any) bool {
 	return ok && len(m) == 0
 }
 
+// toolListItem pairs an advertised tool with its sort key (priority then name).
+type toolListItem struct {
+	name string
+	tool Tool
+	prio int
+}
+
 func (s *Server) buildToolListLocked() []Tool {
-	items := make([]struct {
-		name string
-		tool Tool
-		prio int
-	}, 0, len(s.tools))
+	items := make([]toolListItem, 0, len(s.tools))
 	priorityAware := false
 	for name, descriptor := range s.tools {
 		if s.advertisedTools != nil && !s.advertisedTools[name] {
@@ -226,22 +235,18 @@ func (s *Server) buildToolListLocked() []Tool {
 		if !descriptor.AdvertiseOutputSchema {
 			tool.OutputSchema = compactToolResultOutputSchema()
 		}
-		items = append(items, struct {
-			name string
-			tool Tool
-			prio int
-		}{name: name, tool: tool, prio: prio})
+		items = append(items, toolListItem{name: name, tool: tool, prio: prio})
 	}
 	if priorityAware {
-		sort.Slice(items, func(i, j int) bool {
-			if items[i].prio != items[j].prio {
-				return items[i].prio < items[j].prio
+		slices.SortFunc(items, func(a, b toolListItem) int {
+			if a.prio != b.prio {
+				return cmp.Compare(a.prio, b.prio)
 			}
-			return items[i].name < items[j].name
+			return cmp.Compare(a.name, b.name)
 		})
 	} else {
-		sort.Slice(items, func(i, j int) bool {
-			return items[i].name < items[j].name
+		slices.SortFunc(items, func(a, b toolListItem) int {
+			return cmp.Compare(a.name, b.name)
 		})
 	}
 

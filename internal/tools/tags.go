@@ -12,6 +12,8 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
+// ListTags handles clockify_tags_list: it lists tags in the pinned workspace
+// with pagination.
 func (s *Service) ListTags(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -60,6 +62,8 @@ func tagListQueryValues(args map[string]any, page, pageSize int) (url.Values, er
 	return values, nil
 }
 
+// CreateTag handles clockify_tags_create: it creates a tag by name in the pinned
+// workspace.
 func (s *Service) CreateTag(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {

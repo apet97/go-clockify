@@ -10,8 +10,11 @@ import (
 	"time"
 )
 
+// AuditLogMode selects which tool invocations the AuditLogger records.
 type AuditLogMode string
 
+// Audit log modes: Off disables the logger, SideEffectsOnly records only
+// write/high-risk tools, and All records every tool call.
 const (
 	AuditLogModeOff             AuditLogMode = "off"
 	AuditLogModeSideEffectsOnly AuditLogMode = "side_effects_only"
@@ -20,6 +23,10 @@ const (
 
 const maxAuditLogBytes int64 = 10 * 1024 * 1024
 
+// AuditLogger appends JSON-lines audit records for tool invocations to a
+// local file, rotating it once it exceeds maxAuditLogBytes. It records only a
+// redacted workspace-ID suffix, never the full ID. A nil *AuditLogger is a
+// valid no-op receiver.
 type AuditLogger struct {
 	mu                sync.Mutex
 	path              string
@@ -40,6 +47,10 @@ type auditRecord struct {
 	Upstream          map[string]any `json:"upstream,omitempty"`
 }
 
+// NewAuditLogger returns an AuditLogger writing to path in the given mode,
+// recording only a redacted suffix of workspaceID. It returns (nil, nil) when
+// path is empty or mode is off, so callers can treat the result as an
+// always-valid (possibly no-op) logger.
 func NewAuditLogger(path string, mode AuditLogMode, workspaceID string) (*AuditLogger, error) {
 	path = strings.TrimSpace(path)
 	mode = normalizeAuditLogMode(mode)
@@ -65,14 +76,22 @@ func normalizeAuditLogMode(mode AuditLogMode) AuditLogMode {
 	}
 }
 
+// Close releases any resources held by the logger. The file-per-record design
+// keeps no open handle, so Close is currently a no-op that satisfies io.Closer.
 func (l *AuditLogger) Close() error {
 	return nil
 }
 
+// Record writes an audit entry for a tool invocation with no confirmation
+// metadata. It is a thin wrapper over RecordWithConfirmation.
 func (l *AuditLogger) Record(descriptor ToolDescriptor, args map[string]any, result, errorCode string) error {
 	return l.RecordWithConfirmation(descriptor, args, result, errorCode, nil)
 }
 
+// RecordWithConfirmation appends one audit record for the given tool, filtering
+// by mode (side-effects-only skips non-write, non-high-risk tools). It captures
+// only the descriptor's allow-listed AuditKeys from args, the dry-run flag, and
+// any high-risk confirmation metadata. A nil logger or off mode is a no-op.
 func (l *AuditLogger) RecordWithConfirmation(descriptor ToolDescriptor, args map[string]any, result, errorCode string, confirmation map[string]any) error {
 	if l == nil || l.mode == AuditLogModeOff {
 		return nil

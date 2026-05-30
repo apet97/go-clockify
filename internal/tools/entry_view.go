@@ -48,6 +48,9 @@ type EntryView struct {
 	Audit             *EntryAuditView        `json:"audit,omitempty"`
 }
 
+// EntryFinancials holds the earned/cost/profit money figures for a single
+// report entry, along with the source/reason and the effective rate that
+// produced them.
 type EntryFinancials struct {
 	Earned *MoneyView     `json:"earned,omitempty"`
 	Cost   *MoneyView     `json:"cost,omitempty"`

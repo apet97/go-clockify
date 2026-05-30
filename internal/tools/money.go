@@ -12,6 +12,8 @@ import (
 // what it is, rather than only the final number.
 type RateScope string
 
+// Rate scopes, ordered from most to least specific, identifying which level of
+// the Clockify hierarchy supplied a time entry's effective rate.
 const (
 	RateScopeEntry         RateScope = "ENTRY"
 	RateScopeTask          RateScope = "TASK"

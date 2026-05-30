@@ -12,6 +12,8 @@ import (
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
+// ClockifyLogWork handles clockify_log_work: it logs a finished time entry using
+// human-friendly names or returned IDs.
 func (s *Service) ClockifyLogWork(ctx context.Context, args map[string]any) (any, error) {
 	if strings.TrimSpace(stringArg(args, "end")) == "" {
 		return nil, fmt.Errorf("end is required for clockify_log_work; use clockify_start_work for a running timer")
@@ -69,6 +71,8 @@ func (s *Service) rejectLogWorkOverlap(ctx context.Context, args map[string]any)
 	return nil
 }
 
+// ClockifyStartWork handles clockify_start_work: it starts a running work timer
+// using names or IDs.
 func (s *Service) ClockifyStartWork(ctx context.Context, args map[string]any) (any, error) {
 	startArgs, startDefaulted, err := s.prepareStartWorkArgs(ctx, args)
 	if err != nil {
@@ -89,6 +93,8 @@ func (s *Service) ClockifyStartWork(ctx context.Context, args map[string]any) (a
 	}, meta), nil
 }
 
+// ClockifyStopWork handles clockify_stop_work: it stops the current running work
+// timer.
 func (s *Service) ClockifyStopWork(ctx context.Context, args map[string]any) (any, error) {
 	out, err := s.StopTimer(ctx, args)
 	if err != nil {
@@ -143,6 +149,8 @@ func summarizeToolResult(r any) map[string]any {
 	}
 }
 
+// ClockifySwitchWork handles clockify_switch_work: it switches the running timer
+// to another work item using names or IDs.
 func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (any, error) {
 	warnings := []Warning{}
 	startArgs, startDefaulted, err := s.prepareStartWorkArgs(ctx, args)
@@ -249,6 +257,9 @@ func (s *Service) prepareStartWorkArgs(ctx context.Context, args map[string]any)
 	return startArgs, startDefaulted, nil
 }
 
+// ClockifyFixEntry handles clockify_fix_entry: it finds one entry by ID or
+// strict filters, then updates the selected fields, delegating to
+// FindAndUpdateEntry.
 func (s *Service) ClockifyFixEntry(ctx context.Context, args map[string]any) (any, error) {
 	fixArgs := copyArgs(args)
 	if v := strings.TrimSpace(stringArg(fixArgs, "description")); v != "" && strings.TrimSpace(stringArg(fixArgs, "new_description")) == "" {

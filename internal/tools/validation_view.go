@@ -5,6 +5,8 @@ const (
 	validationStatusFailed = "failed"
 )
 
+// ValidationView is the validation block attached to a dry-run preview: the
+// overall status/ok, any errors and warnings, and a preview-quality label.
 type ValidationView struct {
 	Status         string              `json:"status"`
 	OK             *bool               `json:"ok,omitempty"`
@@ -13,6 +15,8 @@ type ValidationView struct {
 	PreviewQuality string              `json:"preview_quality,omitempty"`
 }
 
+// ValidationProblem is a single validation error or warning: a code, the
+// offending field, a message, and an optional remediation hint with refs.
 type ValidationProblem struct {
 	Code        string   `json:"code,omitempty"`
 	Field       string   `json:"field,omitempty"`

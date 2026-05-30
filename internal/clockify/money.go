@@ -21,6 +21,10 @@ type Rate struct {
 	Inherited bool   `json:"inherited,omitempty"`
 }
 
+// UnmarshalJSON decodes a Clockify rate from either the "##default" inherit
+// sentinel string (yielding Inherited=true) or an {amount, currency} object.
+// Amount is normalized to integer minor units, rounding the float form the
+// reports API sometimes returns to the nearest cent.
 func (r *Rate) UnmarshalJSON(b []byte) error {
 	if len(b) == 0 || bytes.Equal(b, []byte("null")) {
 		return nil
@@ -62,6 +66,9 @@ func (r *Rate) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON encodes a Rate as null for a nil receiver, as the "##default"
+// sentinel string when Inherited, and otherwise as an {amount, currency}
+// object.
 func (r *Rate) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return []byte("null"), nil

@@ -15,6 +15,8 @@ import (
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
+// FindAndUpdateEntry backs clockify_fix_entry: it locates one time entry by ID
+// or strict filters, then applies the selected field updates.
 func (s *Service) FindAndUpdateEntry(ctx context.Context, args map[string]any) (any, error) {
 	loc, err := s.locationFromArgs(args)
 	if err != nil {
@@ -145,6 +147,8 @@ func proposedEntryChanges(entry clockify.TimeEntry, fields []string) map[string]
 	return out
 }
 
+// SwitchProject stops the current running timer and starts a new one on the
+// target project, backing the switch-work timer workflow.
 func (s *Service) SwitchProject(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	projectRef := strings.TrimSpace(stringArg(args, "project"))

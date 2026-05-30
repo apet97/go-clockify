@@ -88,6 +88,11 @@ func valuesFromQueryMap(query map[string]string) url.Values {
 	return values
 }
 
+// Client is the Clockify HTTP API client. It authenticates with the configured
+// API key, enforces a max response-body size, retries idempotent requests, and
+// optionally gates calls through a per-endpoint circuit breaker. The verb
+// methods (Get/Post/Put/Patch/Delete and their variants) target the main host;
+// RequestRaw* methods target a documented host explicitly.
 type Client struct {
 	apiKey               string
 	baseURL              string
@@ -98,12 +103,17 @@ type Client struct {
 	breaker              *CircuitBreaker
 }
 
+// Documented Clockify API hosts. Raw fallback is fenced to these hosts: the
+// main v1 API, the reports API, and the audit-log API.
 const (
 	DocumentedHostMain     = "https://api.clockify.me/api/v1"
 	DocumentedHostReports  = "https://reports.api.clockify.me/v1"
 	DocumentedHostAuditLog = "https://auditlog-api.api.clockify.me/v1"
 )
 
+// NewClient builds a Client for baseURL with the given API key, request timeout
+// (default 30s when non-positive), and retry budget (clamped to >= 0). The
+// underlying transport refuses cross-host redirects and HTTPS->HTTP downgrades.
 func NewClient(apiKey, baseURL string, timeout time.Duration, maxRetries int) *Client {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -154,6 +164,8 @@ func (c *Client) SetUserAgent(ua string) {
 	c.userAgent = ua
 }
 
+// HTTPTimeout returns the per-request timeout configured on the underlying
+// http.Client, or 0 for a nil client.
 func (c *Client) HTTPTimeout() time.Duration {
 	if c == nil || c.httpClient == nil {
 		return 0
@@ -161,6 +173,8 @@ func (c *Client) HTTPTimeout() time.Duration {
 	return c.httpClient.Timeout
 }
 
+// SetMaxResponseBodyBytes caps the number of response bytes read per request.
+// A non-positive n resets the cap to DefaultMaxResponseBodyBytes.
 func (c *Client) SetMaxResponseBodyBytes(n int) {
 	if n <= 0 {
 		c.maxResponseBodyBytes = DefaultMaxResponseBodyBytes
@@ -169,6 +183,8 @@ func (c *Client) SetMaxResponseBodyBytes(n int) {
 	c.maxResponseBodyBytes = int64(n)
 }
 
+// MaxResponseBodyBytes returns the current response-body cap, falling back to
+// DefaultMaxResponseBodyBytes for a nil client or an unset cap.
 func (c *Client) MaxResponseBodyBytes() int64 {
 	if c == nil || c.maxResponseBodyBytes <= 0 {
 		return DefaultMaxResponseBodyBytes
@@ -176,6 +192,8 @@ func (c *Client) MaxResponseBodyBytes() int64 {
 	return c.maxResponseBodyBytes
 }
 
+// SetCircuitBreaker installs (or, when cfg.Enabled is false, clears) the
+// per-endpoint circuit breaker applied to subsequent requests.
 func (c *Client) SetCircuitBreaker(cfg CircuitBreakerConfig) {
 	if !cfg.Enabled {
 		c.breaker = nil
@@ -184,38 +202,52 @@ func (c *Client) SetCircuitBreaker(cfg CircuitBreakerConfig) {
 	c.breaker = NewCircuitBreaker(cfg)
 }
 
+// Get issues a GET to the main host and decodes the JSON response into out.
 func (c *Client) Get(ctx context.Context, path string, query map[string]string, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodGet, path, query, nil, out)
 }
 
+// GetValues is like Get but accepts url.Values query parameters, allowing
+// repeated keys.
 func (c *Client) GetValues(ctx context.Context, path string, query url.Values, out any) error {
 	return c.doJSONValues(ctx, c.baseURL, http.MethodGet, path, query, nil, out)
 }
 
+// Post issues a POST with a JSON body to the main host and decodes the response
+// into out.
 func (c *Client) Post(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPost, path, nil, body, out)
 }
 
+// PostWithQuery is like Post but additionally sends query parameters.
 func (c *Client) PostWithQuery(ctx context.Context, path string, query map[string]string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPost, path, query, body, out)
 }
 
+// Put issues a PUT with a JSON body to the main host and decodes the response
+// into out.
 func (c *Client) Put(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPut, path, nil, body, out)
 }
 
+// PutWithQuery is like Put but additionally sends query parameters.
 func (c *Client) PutWithQuery(ctx context.Context, path string, query map[string]string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPut, path, query, body, out)
 }
 
+// Patch issues a PATCH with a JSON body to the main host and decodes the
+// response into out.
 func (c *Client) Patch(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodPatch, path, nil, body, out)
 }
 
+// Delete issues a DELETE to the main host, discarding any response body.
 func (c *Client) Delete(ctx context.Context, path string) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, nil, nil)
 }
 
+// DeleteWithQuery issues a DELETE with query parameters, discarding any
+// response body.
 func (c *Client) DeleteWithQuery(ctx context.Context, path string, query map[string]string) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, nil)
 }
@@ -229,6 +261,8 @@ func (c *Client) DeleteWithQueryCapture(ctx context.Context, path string, query 
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, out)
 }
 
+// DeleteWithBody issues a DELETE with a JSON request body and decodes any
+// response into out, for the Clockify routes that require a delete payload.
 func (c *Client) DeleteWithBody(ctx context.Context, path string, body any, out any) error {
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, nil, body, out)
 }
@@ -440,6 +474,7 @@ const (
 	listAllSafetyStopPages = 1000
 )
 
+// ListAllOptions tunes the auto-paginating ListAll/ListAllFunc helpers.
 type ListAllOptions struct {
 	// MaxRows bounds total decoded rows before ListAll/ListAllFunc fail
 	// closed. 0 uses the default production cap.

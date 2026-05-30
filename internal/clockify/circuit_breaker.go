@@ -7,8 +7,16 @@ import (
 	"time"
 )
 
+// ErrCircuitBreakerOpen is the sentinel that CircuitBreakerOpenError matches
+// via errors.Is, letting callers detect a tripped breaker without depending on
+// the concrete error type.
 var ErrCircuitBreakerOpen = errors.New("clockify upstream circuit breaker open")
 
+// CircuitBreakerConfig configures a CircuitBreaker. Enabled gates the breaker;
+// FailureThreshold is the consecutive-failure count that opens it; OpenDuration
+// is how long it stays open before probing; HalfOpenProbes is the number of
+// concurrent trial requests allowed while half-open. Zero/negative numeric
+// fields fall back to defaults in NewCircuitBreaker.
 type CircuitBreakerConfig struct {
 	Enabled          bool
 	FailureThreshold int
@@ -16,6 +24,9 @@ type CircuitBreakerConfig struct {
 	HalfOpenProbes   int
 }
 
+// CircuitBreakerOpenError is returned by CircuitBreaker.Before when a request
+// is rejected because the per-endpoint breaker is open. RetryAfter is the
+// remaining cool-down before the next probe is allowed.
 type CircuitBreakerOpenError struct {
 	Endpoint   string
 	Method     string
@@ -29,6 +40,8 @@ func (e *CircuitBreakerOpenError) Error() string {
 	return fmt.Sprintf("clockify upstream circuit breaker open: method=%s endpoint=%s retry_after=%s", e.Method, e.Endpoint, e.RetryAfter.Truncate(time.Millisecond))
 }
 
+// Is reports whether target is ErrCircuitBreakerOpen, enabling
+// errors.Is(err, ErrCircuitBreakerOpen) on a *CircuitBreakerOpenError.
 func (e *CircuitBreakerOpenError) Is(target error) bool {
 	return target == ErrCircuitBreakerOpen
 }
@@ -53,6 +66,10 @@ type breakerEndpointState struct {
 	halfOpenInFlight int
 }
 
+// CircuitBreaker is a per-endpoint (method+path) circuit breaker for the
+// Clockify HTTP client. It transitions closed -> open after FailureThreshold
+// consecutive upstream failures, half-open after OpenDuration, and back to
+// closed on a successful probe. A nil or disabled breaker is a no-op.
 type CircuitBreaker struct {
 	enabled          bool
 	failureThreshold int
@@ -64,6 +81,8 @@ type CircuitBreaker struct {
 	states map[breakerKey]*breakerEndpointState
 }
 
+// NewCircuitBreaker builds a CircuitBreaker from cfg, substituting defaults for
+// any zero/negative numeric field (5 failures, 45s open, 1 half-open probe).
 func NewCircuitBreaker(cfg CircuitBreakerConfig) *CircuitBreaker {
 	threshold := cfg.FailureThreshold
 	if threshold <= 0 {
@@ -87,6 +106,9 @@ func NewCircuitBreaker(cfg CircuitBreakerConfig) *CircuitBreaker {
 	}
 }
 
+// Before is called prior to an upstream request for (endpoint, method). It
+// returns a *CircuitBreakerOpenError when the breaker is open (or half-open and
+// already saturated with probes), and nil when the request may proceed.
 func (b *CircuitBreaker) Before(endpoint, method string) error {
 	if b == nil || !b.enabled {
 		return nil
@@ -114,6 +136,9 @@ func (b *CircuitBreaker) Before(endpoint, method string) error {
 	return nil
 }
 
+// After records the outcome of a request admitted by Before. upstreamFailure
+// advances the failure count (and may open the breaker); a success resets it
+// and closes the breaker. Endpoint and method identify the per-endpoint state.
 func (b *CircuitBreaker) After(endpoint, method string, upstreamFailure bool) {
 	if b == nil || !b.enabled {
 		return

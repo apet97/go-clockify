@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// ReportRollupView is a node in a hierarchical report rollup: a group's
+// identity, aggregated duration/entries/financials, optional per-currency and
+// weekly-day breakdowns, and nested child rollups.
 type ReportRollupView struct {
 	Group              string                `json:"group,omitempty"`
 	Level              int                   `json:"level,omitempty"`
@@ -21,6 +24,8 @@ type ReportRollupView struct {
 	Children           []ReportRollupView    `json:"children,omitempty"`
 }
 
+// ReportGroupTotalsSummary aggregates a report's group totals: the group count,
+// summed duration and financials, and a by-group-type breakdown.
 type ReportGroupTotalsSummary struct {
 	Count       int               `json:"count"`
 	Duration    EntryDurationView `json:"duration"`
@@ -28,6 +33,8 @@ type ReportGroupTotalsSummary struct {
 	ByGroupType map[string]int    `json:"by_group_type,omitempty"`
 }
 
+// WeeklyDayTotalView is the per-day total within a weekly report: the date (with
+// a future-day flag), duration, financials, and per-currency money.
 type WeeklyDayTotalView struct {
 	Date            string                `json:"date,omitempty"`
 	IsFuture        bool                  `json:"is_future,omitempty"`

@@ -1,8 +1,9 @@
 package mcp
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -106,8 +107,8 @@ func substituteArgs(text string, args map[string]any) string {
 	for k := range args {
 		keys = append(keys, k)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		return len(keys[i]) > len(keys[j])
+	slices.SortFunc(keys, func(a, b string) int {
+		return cmp.Compare(len(b), len(a))
 	})
 	for _, k := range keys {
 		v := args[k]

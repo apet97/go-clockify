@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// ResolveName handles the name-resolution tool: it resolves an entity_type +
+// name_or_id pair to a concrete entity, surfacing the one-user tool guide as the
+// recovery action on failure.
 func (s *Service) ResolveName(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.resolveName(ctx, args, oneUserToolGuide)
 }

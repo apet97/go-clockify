@@ -256,6 +256,9 @@ func taskRateDescriptor(name, desc, endpoint string, handler func(context.Contex
 // Handlers
 // ---------------------------------------------------------------------------
 
+// ListProjectTemplates handles clockify_list_project_templates: it lists the
+// pinned workspace's template projects (is-template=true), paginated via
+// page/page_size.
 func (s *Service) ListProjectTemplates(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -314,6 +317,8 @@ func truncateProjectTemplateListNote(note string) (string, bool) {
 	return string(runes[:keep]) + projectTemplateListNoteSuffix, true
 }
 
+// GetProjectTemplate returns a project template by its project ID from the
+// pinned workspace.
 func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -335,6 +340,8 @@ func (s *Service) GetProjectTemplate(ctx context.Context, args map[string]any) (
 	return ok("clockify_get_project_template", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// CreateProjectTemplate handles clockify_projects_templates_create: it creates a
+// new project template in the workspace.
 func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := stringArg(args, "name")
 	if name == "" {
@@ -376,6 +383,8 @@ func (s *Service) CreateProjectTemplate(ctx context.Context, args map[string]any
 	return ok("clockify_create_project_template", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// CreateProjectFromTemplate creates a new project seeded from an existing
+// project template.
 func (s *Service) CreateProjectFromTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -413,6 +422,8 @@ func (s *Service) CreateProjectFromTemplate(ctx context.Context, args map[string
 	return ok("clockify_create_project_from_template", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// UpdateProjectEstimate handles clockify_projects_estimates_update: it updates a
+// project's documented estimate fields.
 func (s *Service) UpdateProjectEstimate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -500,6 +511,9 @@ func isoDurationFromSeconds(seconds int64) string {
 	return out
 }
 
+// UpdateProjectMemberships handles clockify_projects_memberships_update: it
+// replaces a project's full membership array and optional user-group filter/rate
+// metadata via PATCH.
 func (s *Service) UpdateProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -542,6 +556,9 @@ func (s *Service) UpdateProjectMemberships(ctx context.Context, args map[string]
 	return ok("clockify_update_project_memberships", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }
 
+// SetProjectMemberships sets a project's membership from a user_ids array (with
+// an optional shared hourly_rate), building the membership objects and
+// delegating to UpdateProjectMemberships.
 func (s *Service) SetProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -600,6 +617,9 @@ func mapsFromAny(items []map[string]any) []any {
 	return out
 }
 
+// AssignProjectMemberships adds or (when remove is true) removes the given
+// user_ids / user_groups from a project's membership via POST, without replacing
+// the full membership array.
 func (s *Service) AssignProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -637,6 +657,8 @@ func (s *Service) AssignProjectMemberships(ctx context.Context, args map[string]
 	return ok("clockify_assign_project_memberships", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }
 
+// UpdateProjectTemplate toggles a project's is_template flag via PATCH to the
+// project template route.
 func (s *Service) UpdateProjectTemplate(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -666,6 +688,9 @@ func (s *Service) UpdateProjectTemplate(ctx context.Context, args map[string]any
 	return ok("clockify_update_project_template", out, map[string]any{"workspaceId": wsID, "projectId": projectID}), nil
 }
 
+// UpdateProjectUserRate backs clockify_projects_rates_update: it sets a project
+// member's rate at the given endpoint ("hourly-rate" or "cost-rate"). The change
+// flows through every future time entry on the project.
 func (s *Service) UpdateProjectUserRate(ctx context.Context, args map[string]any, endpoint string) (ToolResult, error) {
 	projectID := stringArg(args, "project_id")
 	if err := resolve.ValidateID(projectID, "project_id"); err != nil {
@@ -699,6 +724,10 @@ func (s *Service) UpdateProjectUserRate(ctx context.Context, args map[string]any
 	return ok(action, out, map[string]any{"workspaceId": wsID, "projectId": projectID, "userId": userID}), nil
 }
 
+// UpdateTaskRate backs clockify_tasks_rates_update: it sets a task's rate at the
+// given endpoint ("hourly-rate" or "cost-rate"), resolving project and task by
+// id or name. The change affects the billable amount of every future entry on
+// the task.
 func (s *Service) UpdateTaskRate(ctx context.Context, args map[string]any, endpoint string) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -755,6 +784,8 @@ func rateBodyFromArgs(args map[string]any) (map[string]any, error) {
 	return body, nil
 }
 
+// ArchiveProjects backs clockify_projects_archive: it archives one or more
+// projects by ID, removing them from active work.
 func (s *Service) ArchiveProjects(ctx context.Context, args map[string]any) (ToolResult, error) {
 	rawIDs, rawOk := args["project_ids"].([]any)
 	if !rawOk || len(rawIDs) == 0 {

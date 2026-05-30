@@ -6,6 +6,8 @@ package mcp
 // pattern-match against bits for logging, filtering, or UX hints.
 type RiskClass uint32
 
+// Risk-class bits. Each value occupies one bit so a tool's RiskClass can
+// combine several attributes; see RiskHighMask for the high-risk subset.
 const (
 	RiskRead               RiskClass = 1 << iota // safe, idempotent reads
 	RiskWrite                                    // ordinary mutating writes

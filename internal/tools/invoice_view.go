@@ -6,7 +6,12 @@ import (
 	"strings"
 )
 
+// InvoiceView is the pass-through invoice projection: the raw upstream invoice
+// object as a generic map.
 type InvoiceView map[string]any
+
+// CompactInvoiceView is the trimmed invoice projection: id, number, status,
+// client, dates, and normalized amount.
 type CompactInvoiceView struct {
 	ID         string     `json:"id"`
 	Number     string     `json:"number,omitempty"`
@@ -19,10 +24,20 @@ type CompactInvoiceView struct {
 	Amount     *MoneyView `json:"amount,omitempty"`
 }
 
+// InvoiceItemView is the pass-through invoice-line-item projection as a generic
+// map.
 type InvoiceItemView map[string]any
+
+// InvoicePaymentView is the pass-through invoice-payment projection as a generic
+// map.
 type InvoicePaymentView map[string]any
+
+// InvoiceSettingsView is the pass-through invoice-settings projection as a
+// generic map.
 type InvoiceSettingsView map[string]any
 
+// InvoiceReportView is the shaped result of an invoice rollup: the per-invoice
+// views, page-scoped and overall totals/status counts, and a Summary.
 type InvoiceReportView struct {
 	Invoices         []InvoiceView  `json:"invoices"`
 	AggregationScope string         `json:"aggregationScope"`
@@ -34,6 +49,9 @@ type InvoiceReportView struct {
 	Raw              map[string]any `json:"raw,omitempty"`
 }
 
+// InvoiceSummary aggregates an invoice set: total count, per-status and overdue
+// counts, imported time/expense counts, normalized amount/paid/balance totals,
+// and the currencies present.
 type InvoiceSummary struct {
 	Count                 int            `json:"count"`
 	ByStatus              map[string]int `json:"by_status,omitempty"`

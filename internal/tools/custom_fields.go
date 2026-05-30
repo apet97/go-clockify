@@ -168,6 +168,8 @@ func customFieldHandlers(s *Service) []mcp.ToolDescriptor {
 // Handlers
 // ---------------------------------------------------------------------------
 
+// ListCustomFields handles clockify_custom_fields_list: it lists the workspace's
+// custom-field definitions with optional pagination.
 func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -212,6 +214,8 @@ func (s *Service) ListCustomFields(ctx context.Context, args map[string]any) (To
 	}, "clockify_custom_fields_create")), nil
 }
 
+// GetCustomField handles clockify_custom_fields_get: it returns a custom-field
+// definition by ID from the pinned workspace.
 func (s *Service) GetCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
@@ -389,6 +393,9 @@ func customFieldStatusArg(args map[string]any, fallback string) (string, error) 
 	return status, nil
 }
 
+// CreateCustomField handles clockify_custom_fields_create: it creates a custom
+// field of a valid type (TXT, NUMBER, DROPDOWN_SINGLE, DROPDOWN_MULTIPLE,
+// CHECKBOX, or LINK), validating allowedValues for dropdown types.
 func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -446,6 +453,8 @@ func (s *Service) CreateCustomField(ctx context.Context, args map[string]any) (T
 	return ok("clockify_create_custom_field", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// UpdateCustomField handles clockify_custom_fields_update: it updates an
+// existing custom-field definition by ID.
 func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
@@ -517,6 +526,8 @@ func (s *Service) UpdateCustomField(ctx context.Context, args map[string]any) (T
 	return ok("clockify_update_custom_field", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// DeleteCustomField handles clockify_custom_fields_delete: it deletes a custom
+// field by ID and supports a dry_run preview.
 func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {
@@ -553,6 +564,9 @@ func (s *Service) DeleteCustomField(ctx context.Context, args map[string]any) (T
 	}, map[string]any{"workspaceId": wsID}), nil
 }
 
+// SetCustomFieldValue handles clockify_custom_fields_set_value: it sets a custom
+// field value on a project or time entry, routing through the documented
+// custom-fields route for projects and the entry route for entries.
 func (s *Service) SetCustomFieldValue(ctx context.Context, args map[string]any) (ToolResult, error) {
 	fieldID := stringArg(args, "field_id")
 	if err := resolve.ValidateID(fieldID, "field_id"); err != nil {

@@ -10,11 +10,15 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
+// ClientCurrencyView is the currency projection (code + id) embedded in a
+// ClientView.
 type ClientCurrencyView struct {
 	Code string `json:"code,omitempty"`
 	ID   string `json:"id,omitempty"`
 }
 
+// ClientContactView is the contact-details projection (email, address, note,
+// cc-emails) embedded in a ClientView.
 type ClientContactView struct {
 	Email    string `json:"email,omitempty"`
 	Address  string `json:"address,omitempty"`
@@ -22,6 +26,8 @@ type ClientContactView struct {
 	CCEmails any    `json:"ccEmails,omitempty"`
 }
 
+// ClientProjectSummary aggregates a client's projects (counts by active,
+// archived, billable, and tasks) for the enriched client view.
 type ClientProjectSummary struct {
 	Count         int  `json:"count"`
 	ActiveCount   int  `json:"active_count,omitempty"`
@@ -31,6 +37,8 @@ type ClientProjectSummary struct {
 	Truncated     bool `json:"truncated,omitempty"`
 }
 
+// ClientTimeSummary aggregates tracked time for a client (duration, entry count,
+// and the source/reason describing how the figures were derived).
 type ClientTimeSummary struct {
 	TrackedDurationSeconds int64   `json:"tracked_duration_seconds,omitempty"`
 	TrackedHours           float64 `json:"tracked_hours,omitempty"`
@@ -40,6 +48,8 @@ type ClientTimeSummary struct {
 	Reason                 string  `json:"reason,omitempty"`
 }
 
+// ClientInvoiceSummary aggregates a client's invoices (counts, amounts, balance,
+// paid, overdue, and a by-status breakdown) for the enriched client view.
 type ClientInvoiceSummary struct {
 	TotalCount    int            `json:"total_count,omitempty"`
 	ReturnedCount int            `json:"returned_count,omitempty"`
@@ -52,6 +62,9 @@ type ClientInvoiceSummary struct {
 	Reason        string         `json:"reason,omitempty"`
 }
 
+// ClientApprovalSummary aggregates approval coverage for a client's entries
+// (counts with/without an approval request, per-state counts, and durations by
+// state) for the enriched client view.
 type ClientApprovalSummary struct {
 	Source                 string                       `json:"source"`
 	Reason                 string                       `json:"reason,omitempty"`
@@ -62,6 +75,8 @@ type ClientApprovalSummary struct {
 	DurationsByState       map[string]EntryDurationView `json:"durations_by_state,omitempty"`
 }
 
+// ClientView is the shaped client output returned by client tools: the core
+// client fields plus optional enriched project/time/invoice/approval summaries.
 type ClientView struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`

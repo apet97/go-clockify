@@ -332,6 +332,8 @@ func mergeMeta(base, extra map[string]any) map[string]any {
 // sizes bounded.
 const reportPageSize = 200
 
+// SummaryReport handles clockify_reports_summary: it runs Clockify's summary
+// report for simple time totals over the requested range/grouping.
 func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_summary",
@@ -340,6 +342,8 @@ func (s *Service) SummaryReport(ctx context.Context, args map[string]any) (ToolR
 	})
 }
 
+// WeeklySummary handles clockify_reports_weekly: it runs Clockify's weekly
+// report over a 7-day range.
 func (s *Service) WeeklySummary(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.weeklySummary(ctx, args, "")
 }
@@ -360,6 +364,9 @@ func (s *Service) weeklySummary(ctx context.Context, args map[string]any, worksp
 	})
 }
 
+// QuickReport runs a local time-entries-wrapper rollup over the last N days
+// (default 7), returning totals, top/per-project summaries, optional entry
+// samples, and any running entries.
 func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	days := intArg(args, "days", 7)
 	if days < 1 || days > quickReportMaxDays {
@@ -424,6 +431,8 @@ func (s *Service) QuickReport(ctx context.Context, args map[string]any) (ToolRes
 	return ok("clockify_reports_summary", data, meta), nil
 }
 
+// MoneyReport handles clockify_reports_money: it runs the summary report tuned
+// for billing-rate money breakdowns by user or project.
 func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_money",
@@ -432,6 +441,8 @@ func (s *Service) MoneyReport(ctx context.Context, args map[string]any) (ToolRes
 	})
 }
 
+// ExpenseReport handles clockify_reports_expense: it runs Clockify's detailed
+// expense report over the requested range.
 func (s *Service) ExpenseReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_expense",
@@ -440,6 +451,8 @@ func (s *Service) ExpenseReport(ctx context.Context, args map[string]any) (ToolR
 	})
 }
 
+// DetailedReport handles clockify_reports_detailed: it runs Clockify's detailed
+// time report over the requested range.
 func (s *Service) DetailedReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_detailed",

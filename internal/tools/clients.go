@@ -24,6 +24,8 @@ func clientListQuery(args map[string]any, page, pageSize int) map[string]string 
 	return query
 }
 
+// GetClientWithArgs handles clockify_clients_get: it resolves the client by name
+// or ID and returns the enriched client view.
 func (s *Service) GetClientWithArgs(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientRef := stringArg(args, "client")
 	if clientRef == "" {

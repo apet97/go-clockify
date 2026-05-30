@@ -41,22 +41,11 @@ linters:
           - revive
       # T3.2 (2026-05-26 audit) enables `exported` to nudge every new
       # exported symbol to ship with godoc. The campaign started as a
-      # blanket repo-wide silencer; the 2026-05-29 godoc track converts
-      # that into per-package opt-outs so each package enforces
-      # `exported` the moment it reaches full coverage. Already-clean
-      # packages (paths, timeparse, jsonschema, tracing, logging,
-      # dryrun, jsonmergepatch, config) have no entry and the rule
-      # fires there. The remaining six packages keep their opt-out
-      # below; remove each row as that package gets documented.
-      - path: internal/mcp/
-        text: '^exported: '
-        linters:
-          - revive
-      - path: internal/clockify/
-        text: '^exported: '
-        linters:
-          - revive
-      - path: internal/tools/
-        text: '^exported: '
-        linters:
-          - revive
+      # blanket repo-wide silencer; the 2026-05-29 godoc track converted
+      # that into per-package opt-outs so each package enforced
+      # `exported` the moment it reached full coverage. The 2026-05-30
+      # godoc phase-2 closed the last three packages
+      # (internal/mcp, internal/clockify, internal/tools), so the
+      # `exported` rule now fires across every Go package with no
+      # per-package opt-outs. (internal/benchdata is a data-only
+      # directory with no Go source, so it is not in scope.)

@@ -2,14 +2,20 @@ package tools
 
 var assignmentReportGroups = []string{"USER", "PROJECT", "CLIENT", "TASK", "DATE", "WEEK", "MONTH"}
 
+// AssignmentView is the pass-through scheduling-assignment projection as a
+// generic map.
 type AssignmentView map[string]any
 
+// AssignmentDurationView is the normalized duration block (seconds, hours,
+// display) used throughout scheduling-assignment report rows and totals.
 type AssignmentDurationView struct {
 	Seconds int64   `json:"seconds"`
 	Hours   float64 `json:"hours"`
 	Display string  `json:"display,omitempty"`
 }
 
+// AssignmentReportMoney holds the earned/cost/profit money figures for a
+// scheduling-assignment report scope, with source/reason provenance.
 type AssignmentReportMoney struct {
 	Earned *MoneyView `json:"earned,omitempty"`
 	Cost   *MoneyView `json:"cost,omitempty"`
@@ -18,6 +24,9 @@ type AssignmentReportMoney struct {
 	Reason string     `json:"reason,omitempty"`
 }
 
+// AssignmentReportRow is one grouped row of a scheduling-assignment report:
+// scheduled vs available vs tracked durations and their money figures, plus the
+// computed difference and realized/expected profit.
 type AssignmentReportRow struct {
 	Title            string                 `json:"title"`
 	GroupKey         map[string]string      `json:"group_key"`
@@ -41,6 +50,9 @@ type AssignmentReportRow struct {
 	Raw              map[string]any         `json:"raw,omitempty"`
 }
 
+// AssignmentReportTotals aggregates a scheduling-assignment report across all
+// rows: total scheduled/available/tracked/difference durations and their money
+// figures.
 type AssignmentReportTotals struct {
 	Scheduled        AssignmentDurationView `json:"scheduled"`
 	Available        AssignmentDurationView `json:"available"`
@@ -56,6 +68,8 @@ type AssignmentReportTotals struct {
 	RealizedProfit   *MoneyView             `json:"realized_profit,omitempty"`
 }
 
+// AssignmentReportData is the shaped result of a scheduling-assignment report:
+// the date range, the grouping dimensions, the per-group rows, and the totals.
 type AssignmentReportData struct {
 	Range  FinancialRangeView     `json:"range"`
 	Groups []string               `json:"groups"`

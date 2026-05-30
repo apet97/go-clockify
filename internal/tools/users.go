@@ -43,6 +43,8 @@ func (s *Service) requireCurrentUserEntry(ctx context.Context, entry clockify.Ti
 	return nil
 }
 
+// CurrentUser handles clockify_users_profile: it returns the current Clockify
+// user.
 func (s *Service) CurrentUser(ctx context.Context) (ToolResult, error) {
 	user, err := s.getCurrentUser(ctx)
 	if err != nil {
@@ -69,6 +71,8 @@ func (s *Service) getCurrentUser(ctx context.Context) (clockify.User, error) {
 	return user, nil
 }
 
+// ListUsers handles clockify_users_list: it lists users in the pinned workspace
+// with pagination.
 func (s *Service) ListUsers(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

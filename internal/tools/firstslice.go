@@ -6,6 +6,11 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+// FirstSliceRegistry returns the "first slice" of domain tool descriptors
+// (clients, projects, tasks, and related CRUD) that the full-access registry
+// appends after the workflow tools. Duplicate workflow-annotated tools are
+// deduped by buildFullAccessRegistry, so they are intentionally not re-listed
+// here.
 func (s *Service) FirstSliceRegistry() []mcp.ToolDescriptor {
 	// clockify_status, clockify_demo_seed, and clockify_demo_cleanup are
 	// registered by workflowDescriptors(), which buildFullAccessRegistry

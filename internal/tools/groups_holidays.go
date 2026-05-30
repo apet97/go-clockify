@@ -207,6 +207,9 @@ func userGroupListQuery(args map[string]any) (map[string]string, int, int) {
 	return query, page, pageSize
 }
 
+// ListUserGroupsAdmin handles clockify_list_user_groups_admin: it lists the
+// pinned workspace's user groups with the admin-scope query options, paginated
+// via page/page_size.
 func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -229,6 +232,8 @@ func (s *Service) ListUserGroupsAdmin(ctx context.Context, args map[string]any) 
 	return ok("clockify_list_user_groups_admin", out, meta), nil
 }
 
+// GetUserGroup handles clockify_groups_get: it returns a user group by ID from
+// the pinned workspace.
 func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
@@ -255,6 +260,8 @@ func (s *Service) GetUserGroup(ctx context.Context, args map[string]any) (ToolRe
 	return ToolResult{}, fmt.Errorf("user group %s not found", groupID)
 }
 
+// CreateUserGroupAdmin handles clockify_groups_create: it creates a user group
+// with an optional set of member user IDs.
 func (s *Service) CreateUserGroupAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -343,6 +350,8 @@ func createGroupUserIDs(args map[string]any) []string {
 	return out
 }
 
+// UpdateUserGroupAdmin handles clockify_groups_update: it updates a user group
+// by ID. user_ids must carry the full desired membership, not a partial append.
 func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
@@ -372,6 +381,8 @@ func (s *Service) UpdateUserGroupAdmin(ctx context.Context, args map[string]any)
 	return ok("clockify_update_user_group_admin", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// DeleteUserGroupAdmin handles clockify_groups_delete: it deletes a user group
+// by ID and supports a dry_run preview.
 func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any) (ToolResult, error) {
 	groupID := stringArg(args, "group_id")
 	if err := resolve.ValidateID(groupID, "group_id"); err != nil {
@@ -408,6 +419,8 @@ func (s *Service) DeleteUserGroupAdmin(ctx context.Context, args map[string]any)
 // Holiday Handlers
 // ---------------------------------------------------------------------------
 
+// ListHolidays handles clockify_holidays_list: it returns every holiday
+// configured in the workspace on a single page.
 func (s *Service) ListHolidays(ctx context.Context) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -435,6 +448,8 @@ func (s *Service) ListHolidays(ctx context.Context) (ToolResult, error) {
 	}, "clockify_holidays_create")), nil
 }
 
+// GetHoliday handles clockify_holidays_get: it returns one holiday by ID from
+// the pinned workspace.
 func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	holidayID, err := requiredIDArg(args, "holiday_id")
 	if err != nil {
@@ -455,6 +470,9 @@ func (s *Service) GetHoliday(ctx context.Context, args map[string]any) (ToolResu
 	}), nil
 }
 
+// ListHolidaysInPeriod handles clockify_holidays_list_for_user_period: it lists
+// the holidays assigned to a user across a date period, returning the full set
+// on a single page.
 func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any) (ToolResult, error) {
 	assignedTo := firstNonEmptyString(strings.TrimSpace(stringArg(args, "assigned_to")), strings.TrimSpace(stringArg(args, "user_id")))
 	if assignedTo == "" {
@@ -490,6 +508,9 @@ func (s *Service) ListHolidaysInPeriod(ctx context.Context, args map[string]any)
 	}, "")), nil
 }
 
+// CreateHoliday handles clockify_holidays_create: it creates a holiday,
+// requiring name + start_date and at least one user_ids or user_group_ids
+// assignee, and rejecting an unparseable date locally.
 func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -566,6 +587,8 @@ func (s *Service) CreateHoliday(ctx context.Context, args map[string]any) (ToolR
 	return ok("clockify_create_holiday", out, map[string]any{"workspaceId": wsID}), nil
 }
 
+// UpdateHoliday handles clockify_holidays_update: it is a partial update keyed
+// by holiday_id, merging unspecified fields from the existing record.
 func (s *Service) UpdateHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	holidayID, err := requiredIDArg(args, "holiday_id")
 	if err != nil {
@@ -719,6 +742,8 @@ func holidayDatePeriodSnake(out map[string]any, fallbackStart, fallbackEnd strin
 	return map[string]any{"start_date": start, "end_date": end}
 }
 
+// DeleteHoliday handles clockify_holidays_delete: it deletes a holiday by ID and
+// supports a dry_run preview.
 func (s *Service) DeleteHoliday(ctx context.Context, args map[string]any) (ToolResult, error) {
 	holidayID := stringArg(args, "holiday_id")
 	if err := resolve.ValidateID(holidayID, "holiday_id"); err != nil {

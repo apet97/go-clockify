@@ -17,6 +17,9 @@ type reportEndpoint struct {
 	filterKey string
 }
 
+// AttendanceReport handles clockify_reports_attendance: it runs Clockify's
+// attendance report; raw amounts are minor units and meta.totalAmount carries
+// the normalized major-unit totals.
 func (s *Service) AttendanceReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.reportsAPIReport(ctx, args, reportEndpoint{
 		toolName:  "clockify_reports_attendance",

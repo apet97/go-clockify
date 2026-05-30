@@ -26,6 +26,8 @@ type UserView struct {
 	FeatureFlags           UserFeatureFlags       `json:"feature_flags"`
 }
 
+// ReportDefaults captures a user's reporting preferences (timezone, week start,
+// date/time formats, summary-report settings) used to default report arguments.
 type ReportDefaults struct {
 	Timezone              string `json:"timezone,omitempty"`
 	WeekStart             string `json:"week_start,omitempty"`
@@ -35,12 +37,17 @@ type ReportDefaults struct {
 	Source                string `json:"source,omitempty"`
 }
 
+// UserFeatureFlags reports which optional Clockify features (scheduling,
+// approval, PTO) are available to the current user.
 type UserFeatureFlags struct {
 	Scheduling bool `json:"scheduling,omitempty"`
 	Approval   bool `json:"approval,omitempty"`
 	PTO        bool `json:"pto,omitempty"`
 }
 
+// WorkspaceView is the enriched workspace output: the core workspace fields plus
+// human-readable feature labels, a subscription/plan summary, and a settings
+// summary.
 type WorkspaceView struct {
 	ID                      string            `json:"id"`
 	Name                    string            `json:"name"`
@@ -60,6 +67,9 @@ type WorkspaceView struct {
 	SettingsSummary         WorkspaceSettings `json:"settings_summary"`
 }
 
+// WorkspaceSettings is the summarized workspace settings projection: plan,
+// formats, working-day configuration, lock/rounding policy, rate availability,
+// and membership count.
 type WorkspaceSettings struct {
 	Currencies                any      `json:"currencies,omitempty"`
 	FeaturePlan               string   `json:"feature_plan,omitempty"`
@@ -83,6 +93,7 @@ type WorkspaceSettings struct {
 	Source                    string   `json:"source,omitempty"`
 }
 
+// FeatureLabel pairs a raw workspace feature key with its human-readable label.
 type FeatureLabel struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`

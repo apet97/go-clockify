@@ -49,6 +49,9 @@ func reportHelperSchema() map[string]any {
 	}})
 }
 
+// EntriesRunning handles clockify_entries_running: it returns the user's
+// currently running time entry, or an empty entry result when no timer is
+// running.
 func (s *Service) EntriesRunning(ctx context.Context, _ map[string]any) (any, error) {
 	timer, err := s.currentTimer(ctx)
 	if err != nil {
@@ -57,6 +60,9 @@ func (s *Service) EntriesRunning(ctx context.Context, _ map[string]any) (any, er
 	return result("clockify_entries_running", "entry", map[string]string{"workspaceId": s.WorkspaceID}, timer, ChangeSet{}, nil, nil), nil
 }
 
+// EntriesTimerStart handles clockify_entries_timer_start: it starts a running
+// time-entry timer for the current user, wrapping StartTimerArgs in the standard
+// domain result.
 func (s *Service) EntriesTimerStart(ctx context.Context, args map[string]any) (any, error) {
 	out, err := s.StartTimerArgs(ctx, args)
 	if err != nil {
@@ -65,6 +71,9 @@ func (s *Service) EntriesTimerStart(ctx context.Context, args map[string]any) (a
 	return standardizeDomainResult("clockify_entries_timer_start", "entry", "created", out, args), nil
 }
 
+// EntriesTimerStop handles clockify_entries_timer_stop: it stops the current
+// user's running timer, preserving the clean no-timer-running no-op shape and
+// otherwise wrapping StopTimer in the standard domain result.
 func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (any, error) {
 	out, err := s.StopTimer(ctx, args)
 	if err != nil {
@@ -84,6 +93,9 @@ func (s *Service) EntriesTimerStop(ctx context.Context, args map[string]any) (an
 	return standardizeDomainResult("clockify_entries_timer_stop", "entry", "updated", out, args), nil
 }
 
+// EntriesTimerStatus handles clockify_entries_timer_status: it reports whether
+// the current user has a running timer, wrapping TimerStatus in the standard
+// domain result.
 func (s *Service) EntriesTimerStatus(ctx context.Context, _ map[string]any) (any, error) {
 	out, err := s.TimerStatus(ctx)
 	if err != nil {
@@ -92,6 +104,9 @@ func (s *Service) EntriesTimerStatus(ctx context.Context, _ map[string]any) (any
 	return standardizeDomainResult("clockify_entries_timer_status", "entry", "", out, nil), nil
 }
 
+// EntriesTimerSwitch handles clockify_entries_timer_switch: it switches the
+// running timer to another project, wrapping SwitchProject in the standard
+// domain result.
 func (s *Service) EntriesTimerSwitch(ctx context.Context, args map[string]any) (any, error) {
 	out, err := s.SwitchProject(ctx, args)
 	if err != nil {

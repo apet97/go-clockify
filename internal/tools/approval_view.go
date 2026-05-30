@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// ApprovalView is the fully shaped approval-request output: the request/owner/
+// status metadata, audit trail, duration and money totals, entry/expense
+// summaries, per-client and per-entity rollups, and the underlying entries.
 type ApprovalView struct {
 	ID               string                          `json:"id,omitempty"`
 	Request          map[string]any                  `json:"request,omitempty"`
@@ -29,6 +32,8 @@ type ApprovalView struct {
 	Raw              map[string]any                  `json:"raw,omitempty"`
 }
 
+// ApprovalAuditTrail captures the latest approval-state transition: the state,
+// who changed it and when, and any note.
 type ApprovalAuditTrail struct {
 	State         string         `json:"state,omitempty"`
 	UpdatedBy     string         `json:"updated_by,omitempty"`
@@ -40,6 +45,8 @@ type ApprovalAuditTrail struct {
 	Raw           map[string]any `json:"raw,omitempty"`
 }
 
+// ApprovalDurationTotals breaks down an approval request's durations by category
+// (approved, pending, tracked, billable, break).
 type ApprovalDurationTotals struct {
 	Approved *EntryDurationView `json:"approved,omitempty"`
 	Pending  *EntryDurationView `json:"pending,omitempty"`
@@ -48,6 +55,8 @@ type ApprovalDurationTotals struct {
 	Break    *EntryDurationView `json:"break,omitempty"`
 }
 
+// ApprovalMoneyTotals breaks down an approval request's money figures
+// (earned, cost, expenses, profit) with source/reason provenance.
 type ApprovalMoneyTotals struct {
 	Earned   *MoneyView `json:"earned,omitempty"`
 	Cost     *MoneyView `json:"cost,omitempty"`
@@ -57,6 +66,8 @@ type ApprovalMoneyTotals struct {
 	Reason   string     `json:"reason,omitempty"`
 }
 
+// ApprovalExpenseSummary aggregates the expenses within an approval request:
+// total and billable counts and the total amount.
 type ApprovalExpenseSummary struct {
 	Count         int        `json:"count"`
 	BillableCount int        `json:"billable_count,omitempty"`

@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+// APIError is a structured non-2xx response from the Clockify HTTP API. It
+// carries the request method/path, HTTP status, the (secret-redacted) response
+// body, any Retry-After hint, and an optional precomputed Translation. Error()
+// renders the full diagnostic for server-side logs; Sanitized,
+// ClientFacingMessage, and ErrorTranslation produce client-safe views.
 type APIError struct {
 	Method      string
 	Path        string
@@ -18,6 +23,9 @@ type APIError struct {
 	Translation *ErrorTranslation
 }
 
+// ErrorTranslation is a client-facing rendering of an upstream failure: a clean
+// Message, an actionable Remediation hint, and optional Refs pointing at the
+// relevant env vars, tools, or Clockify docs.
 type ErrorTranslation struct {
 	Message     string   `json:"message"`
 	Remediation string   `json:"remediation,omitempty"`
@@ -89,6 +97,10 @@ func (e *APIError) ClientFacingMessage() string {
 	return msg
 }
 
+// ErrorTranslation returns the client-facing translation for this error: the
+// precomputed Translation when set, otherwise one derived from the status code
+// and body via TranslateAPIError. The return type is any to satisfy the wire
+// error-translation interface used by the MCP layer.
 func (e *APIError) ErrorTranslation() any {
 	if e == nil {
 		return ErrorTranslation{}
@@ -99,6 +111,10 @@ func (e *APIError) ErrorTranslation() any {
 	return TranslateAPIError(e.StatusCode, e.Body)
 }
 
+// TranslateAPIError maps an upstream HTTP status code and response body to an
+// ErrorTranslation, classifying common cases (auth, permission, not-found,
+// cross-workspace, rate-limit, plan/feature, locked) into a clean message plus
+// a tailored remediation hint.
 func TranslateAPIError(statusCode int, body string) ErrorTranslation {
 	message := "Clockify request failed."
 	if compact, ok := compactUpstreamErrorBody(body); ok {

@@ -16,6 +16,8 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+// WebhookLogView is the pass-through projection of a webhook delivery-log entry
+// as a generic map.
 type WebhookLogView map[string]any
 
 func webhookHandlers(s *Service) []mcp.ToolDescriptor {

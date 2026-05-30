@@ -6,6 +6,10 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+// FullAccessRegistryChecked builds (once, memoized) and returns the full 156-tool
+// registry in the canonical order (workflow, domain, raw fallback), validating
+// it via ValidateRegistry. It returns an error rather than panicking when
+// descriptor construction or validation fails.
 func (s *Service) FullAccessRegistryChecked() ([]mcp.ToolDescriptor, error) {
 	s.registry.once.Do(func() {
 		s.registry.descriptors, s.registry.err = s.buildFullAccessRegistry()

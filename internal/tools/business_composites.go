@@ -9,6 +9,9 @@ import (
 	"github.com/apet97/go-clockify/internal/paths"
 )
 
+// UnbilledForClientView is the shaped output of the unbilled-work composite: a
+// client's unbilled entries over a date range with entry/totals summaries,
+// financials, and suggested next actions.
 type UnbilledForClientView struct {
 	ClientID         string              `json:"client_id,omitempty"`
 	Client           string              `json:"client,omitempty"`
@@ -22,6 +25,9 @@ type UnbilledForClientView struct {
 	Raw              map[string]any      `json:"raw,omitempty"`
 }
 
+// UnbilledForClient handles the unbilled-for-client composite tool: it resolves
+// the client and returns its unbilled work over a date range with summaries,
+// financials, and suggested invoicing actions.
 func (s *Service) UnbilledForClient(ctx context.Context, args map[string]any) (ToolResult, error) {
 	clientRef := strings.TrimSpace(stringArg(args, "client"))
 	if clientRef == "" {

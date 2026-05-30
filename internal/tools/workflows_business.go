@@ -12,6 +12,8 @@ import (
 	"github.com/apet97/go-clockify/internal/timeparse"
 )
 
+// ClockifyCreateWorkPackage handles clockify_create_work_package: it creates or
+// reuses a client/project/task/tag work package from names or IDs.
 func (s *Service) ClockifyCreateWorkPackage(ctx context.Context, args map[string]any) (any, error) {
 	upsert := true
 	if v, ok := args["upsert"].(bool); ok {
@@ -124,6 +126,9 @@ func (s *Service) ClockifyCreateWorkPackage(ctx context.Context, args map[string
 	}), nil
 }
 
+// ClockifyInvoiceClientWork handles clockify_invoice_client_work: the billing
+// workflow that creates an invoice for a client from a name or ID, degrading
+// gracefully when invoicing is unavailable and supporting a dry_run preview.
 func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string]any) (any, error) {
 	invoiceArgs := copyArgs(args)
 	clientID := strings.TrimSpace(stringArg(invoiceArgs, "client_id"))
@@ -213,6 +218,9 @@ func (s *Service) ClockifyInvoiceClientWork(ctx context.Context, args map[string
 	return standard, nil
 }
 
+// ClockifyRecordExpense handles clockify_record_expense: the billing workflow
+// that records an expense with category, project, task, and user names or IDs,
+// supporting a dry_run preview.
 func (s *Service) ClockifyRecordExpense(ctx context.Context, args map[string]any) (any, error) {
 	expenseArgs := copyArgs(args)
 	if strings.TrimSpace(stringArg(expenseArgs, "date")) == "" {
@@ -247,6 +255,10 @@ func (s *Service) ClockifyRecordExpense(ctx context.Context, args map[string]any
 	return standard, nil
 }
 
+// ClockifyRequestTimeOff handles clockify_request_time_off: the admin workflow
+// that creates a time-off request from a policy name or ID (resolving names
+// across all pages); it can enter approval workflows and affect PTO balances and
+// supports a dry_run preview.
 func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]any) (any, error) {
 	reqArgs := copyArgs(args)
 	if strings.TrimSpace(stringArg(reqArgs, "policy_id")) == "" {
@@ -274,6 +286,10 @@ func (s *Service) ClockifyRequestTimeOff(ctx context.Context, args map[string]an
 	return standard, nil
 }
 
+// ClockifyScheduleWork handles clockify_schedule_work: the admin scheduling
+// workflow that creates an assignment from user/project names or IDs, failing
+// fast with one clear message when either is missing, and supporting a dry_run
+// preview.
 func (s *Service) ClockifyScheduleWork(ctx context.Context, args map[string]any) (any, error) {
 	scheduleArgs := copyArgs(args)
 	wsID, err := s.ResolveWorkspaceID(ctx)
@@ -356,6 +372,9 @@ func singleAssignmentData(data any) any {
 	return data
 }
 
+// ClockifySetupWebhook handles clockify_setup_webhook: the external-side-effect
+// workflow that creates a webhook subscription for this workspace and future
+// outbound deliveries, supporting a dry_run preview.
 func (s *Service) ClockifySetupWebhook(ctx context.Context, args map[string]any) (any, error) {
 	webhookArgs := copyArgs(args)
 	if strings.TrimSpace(stringArg(webhookArgs, "webhook_event")) == "" {

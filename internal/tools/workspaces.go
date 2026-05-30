@@ -9,6 +9,9 @@ import (
 	"github.com/apet97/go-clockify/internal/resolve"
 )
 
+// ResolveWorkspaceID returns the pinned workspace ID, validating it; when none
+// is configured it auto-detects from /workspaces (caching the result) and errors
+// if zero or multiple workspaces are available.
 func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 	if s.WorkspaceID != "" {
 		if err := resolve.ValidateID(s.WorkspaceID, "workspace_id"); err != nil {
@@ -39,6 +42,8 @@ func (s *Service) ResolveWorkspaceID(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("multiple workspaces found; set CLOCKIFY_WORKSPACE_ID")
 }
 
+// GetWorkspace handles clockify_workspace_settings: it reads the pinned
+// workspace's settings.
 func (s *Service) GetWorkspace(ctx context.Context) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

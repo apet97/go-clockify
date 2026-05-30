@@ -33,10 +33,15 @@ var SupportedProtocolVersions = []string{
 	"2024-11-05",
 }
 
+// IsSupportedProtocolVersion reports whether version (trimmed) is one of the
+// MCP protocol versions this server can negotiate.
 func IsSupportedProtocolVersion(version string) bool {
 	return slices.Contains(SupportedProtocolVersions, strings.TrimSpace(version))
 }
 
+// DefaultProtocolVersion returns configured when it is a supported version,
+// otherwise the newest supported version. Used to pick the version advertised
+// when a client's initialize omits protocolVersion.
 func DefaultProtocolVersion(configured string) string {
 	configured = strings.TrimSpace(configured)
 	if IsSupportedProtocolVersion(configured) {
@@ -136,8 +141,15 @@ type errorTranslator interface {
 	ErrorTranslation() any
 }
 
+// ToolHandler executes a single tool call: it receives the request context and
+// the decoded arguments map and returns the tool result (typically a
+// *tools.ToolResult) or an error for runtime/protocol failures.
 type ToolHandler func(context.Context, map[string]any) (any, error)
 
+// ToolDescriptor is a registry entry binding a Tool's wire metadata to its
+// Handler and the server-side policy that governs it: MCP boolean hints, the
+// structured RiskClass, audit keys, confirmation/dry-run policy, and the
+// advertised toolset tiers it belongs to.
 type ToolDescriptor struct {
 	Tool            Tool
 	Handler         ToolHandler
@@ -172,6 +184,11 @@ type ToolDescriptor struct {
 	SafetyExemption string
 }
 
+// Server is the MCP protocol engine for the stdio transport. It holds the tool
+// registry, optional resource/prompt providers, per-call concurrency and size
+// limits, rate limits, and the audit logger, and drives the JSON-RPC
+// read/dispatch/write loop. Configure exported fields before Run; the unexported
+// state is managed internally and guarded by mu.
 type Server struct {
 	Version     string
 	ToolTimeout time.Duration // per-call timeout; 0 = default 45s
@@ -338,6 +355,10 @@ func (s *Server) MarkInitialized(protocolVersion, clientName, clientVersion stri
 	s.initialized.Store(true)
 }
 
+// NewServer builds a Server with the given version string and tool registry,
+// indexing the descriptors by tool name and wiring default internal state
+// (in-flight tracking, prompt registry). Configure the exported policy fields
+// on the returned Server before calling Run.
 func NewServer(version string, descriptors []ToolDescriptor) *Server {
 	toolMap := make(map[string]ToolDescriptor, len(descriptors))
 	for _, d := range descriptors {
@@ -1406,6 +1427,8 @@ func (s *Server) ConfigureToolLimits(ratePerMinute int) {
 	})
 }
 
+// ConfigureRiskRateLimits installs per-risk-tier rate limiting for tool calls,
+// replacing any previously configured limiter. Call before Run.
 func (s *Server) ConfigureRiskRateLimits(limits RiskRateLimits) {
 	s.toolRateLimiter = newRiskRateLimiter(limits)
 }

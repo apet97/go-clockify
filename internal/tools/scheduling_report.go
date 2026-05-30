@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// AssignmentReport runs the scheduling-assignment report: it groups recurring
+// assignments over a date range and compares scheduled vs available vs tracked
+// time (with money figures when Reports access is available).
 func (s *Service) AssignmentReport(ctx context.Context, args map[string]any) (ToolResult, error) {
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {

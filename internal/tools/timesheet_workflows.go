@@ -10,6 +10,9 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 )
 
+// TimesheetReviewData is the shaped result of a timesheet review: the date
+// range, totals, per-day and per-project breakdowns, detected issues, suggested
+// actions, and the underlying entries.
 type TimesheetReviewData struct {
 	Range            DateRange        `json:"range"`
 	Totals           SummaryTotals    `json:"totals"`
@@ -22,6 +25,9 @@ type TimesheetReviewData struct {
 
 const defaultTimesheetReviewMaxRows = 15
 
+// TimesheetIssue is a single problem detected during a timesheet review (e.g.
+// an overlap or gap): its type, severity, message, and the related entry IDs and
+// time window.
 type TimesheetIssue struct {
 	Type            string   `json:"type"`
 	Severity        string   `json:"severity"`
@@ -32,6 +38,8 @@ type TimesheetIssue struct {
 	End             string   `json:"end,omitempty"`
 }
 
+// ToolSuggestion recommends a follow-up tool call: the tool name, the reason,
+// proposed arguments, and any arguments the caller still needs to supply.
 type ToolSuggestion struct {
 	Tool        string         `json:"tool"`
 	Reason      string         `json:"reason"`
@@ -39,6 +47,8 @@ type ToolSuggestion struct {
 	MissingArgs []string       `json:"missingArgs,omitempty"`
 }
 
+// TimeEntryRef is a lightweight reference to a time entry (id, description,
+// project, and time window) used in review and issue payloads.
 type TimeEntryRef struct {
 	ID          string `json:"id"`
 	Description string `json:"description,omitempty"`
@@ -48,6 +58,9 @@ type TimeEntryRef struct {
 	End         string `json:"end,omitempty"`
 }
 
+// TimesheetReview handles the timesheet-review workflow: it summarizes the
+// user's entries over a date range, detects issues (gaps, overlaps, missing
+// metadata), and returns suggested corrective actions.
 func (s *Service) TimesheetReview(ctx context.Context, args map[string]any) (ToolResult, error) {
 	loc, err := loadLocation(stringArg(args, "timezone"), s.DefaultTimezone)
 	if err != nil {

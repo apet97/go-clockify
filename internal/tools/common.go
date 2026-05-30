@@ -55,6 +55,10 @@ func timeEntryPutPayload(entry clockify.TimeEntry) map[string]any {
 	return payload
 }
 
+// Service holds the runtime state for all Clockify tools: the HTTP client, the
+// pinned workspace ID, timezone/webhook-safety configuration, the raw-fallback
+// enablement gates, and the cached resolver/resource emitter state. It is the
+// receiver for every tool handler.
 type Service struct {
 	Client          *clockify.Client
 	WorkspaceID     string
@@ -301,6 +305,9 @@ func stringSlicesEqual(a, b []string) bool {
 	return true
 }
 
+// New returns a Service bound to the given Clockify client and pinned workspace
+// ID, with webhook DNS validation enabled by default and the resource emitter
+// caches initialized.
 func New(client *clockify.Client, workspaceID string) *Service {
 	return &Service{
 		Client:             client,

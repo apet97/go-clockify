@@ -6,7 +6,12 @@ import (
 	"time"
 )
 
+// ExpenseView is the pass-through expense projection: the raw upstream expense
+// object as a generic map.
 type ExpenseView map[string]any
+
+// CompactExpenseView is the trimmed expense projection returned by expense
+// tools: id, date, normalized amount, category/project/user, and flags.
 type CompactExpenseView struct {
 	ID           string     `json:"id"`
 	Date         string     `json:"date,omitempty"`
@@ -21,7 +26,12 @@ type CompactExpenseView struct {
 	Notes        string     `json:"notes,omitempty"`
 }
 
+// TimeOffPolicyView is the pass-through time-off-policy projection: the raw
+// upstream policy object as a generic map.
 type TimeOffPolicyView map[string]any
+
+// CompactTimeOffPolicyView is the trimmed time-off-policy projection: id, name,
+// time unit, and assignee counts.
 type CompactTimeOffPolicyView struct {
 	ID             string `json:"id"`
 	Name           string `json:"name"`
@@ -32,7 +42,12 @@ type CompactTimeOffPolicyView struct {
 	AssigneeCount  int    `json:"assigneeCount"`
 }
 
+// TimeOffRequestView is the pass-through time-off-request projection: the raw
+// upstream request object as a generic map.
 type TimeOffRequestView map[string]any
+
+// TimeOffBalanceView is the pass-through time-off-balance projection: the raw
+// upstream balance object as a generic map.
 type TimeOffBalanceView map[string]any
 
 func compactExpenseViewFromRaw(raw map[string]any, workspaceCurrency string) CompactExpenseView {

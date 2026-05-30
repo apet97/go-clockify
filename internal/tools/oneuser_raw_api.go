@@ -32,10 +32,15 @@ func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
 	}
 }
 
+// RawAPIGet handles clockify_api_get: the raw GET fallback for documented
+// Clockify endpoints, workspace-fenced to /user or the pinned workspace.
 func (s *Service) RawAPIGet(ctx context.Context, args map[string]any) (any, error) {
 	return s.rawAPI(ctx, "GET", args)
 }
 
+// RawAPIRequest handles the raw method/path fallback tool: it requires an
+// explicit HTTP method in args and dispatches through the workspace-fenced raw
+// API path, subject to the raw-tools and raw-write enablement gates.
 func (s *Service) RawAPIRequest(ctx context.Context, args map[string]any) (any, error) {
 	method := strings.ToUpper(strings.TrimSpace(stringArg(args, "method")))
 	if method == "" {

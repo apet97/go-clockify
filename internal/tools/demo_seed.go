@@ -13,6 +13,9 @@ import (
 
 const demoDefaultRunID = "phase1"
 
+// ClockifyDemoSeed handles clockify_demo_seed: it creates or reuses
+// deterministic demo client/project/task/tag/time-entry objects keyed by a run
+// ID prefix.
 func (s *Service) ClockifyDemoSeed(ctx context.Context, args map[string]any) (any, error) {
 	runID := demoRunID(args)
 	prefix := demoPrefix(args)
@@ -89,6 +92,8 @@ func (s *Service) ClockifyDemoSeed(ctx context.Context, args map[string]any) (an
 	return out, nil
 }
 
+// ClockifyDemoCleanup handles clockify_demo_cleanup: it deletes the deterministic
+// demo objects for a run ID prefix, continuing through partial failures.
 func (s *Service) ClockifyDemoCleanup(ctx context.Context, args map[string]any) (any, error) {
 	runID := demoRunID(args)
 	prefix := demoPrefix(args)

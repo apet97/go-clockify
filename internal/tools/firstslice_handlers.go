@@ -10,6 +10,8 @@ import (
 	"github.com/apet97/go-clockify/internal/dryrun"
 )
 
+// ClientsList handles clockify_clients_list: it lists workspace clients with
+// pagination and optional auto-pagination, returning compact pagination meta.
 func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, error) {
 	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, s.listClients)
 	if err != nil {
@@ -25,6 +27,8 @@ func (s *Service) ClientsList(ctx context.Context, args map[string]any) (any, er
 	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
+// ClientsCreate handles clockify_clients_create: it creates a client by name and
+// returns its ID plus a next-action suggestion to create a project for it.
 func (s *Service) ClientsCreate(ctx context.Context, args map[string]any) (any, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -44,6 +48,8 @@ func (s *Service) ClientsCreate(ctx context.Context, args map[string]any) (any, 
 	}}), nil
 }
 
+// ProjectsList handles clockify_projects_list: it lists workspace projects
+// (compact view) with pagination and optional auto-pagination.
 func (s *Service) ProjectsList(ctx context.Context, args map[string]any) (any, error) {
 	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, s.listProjects)
 	if err != nil {
@@ -59,6 +65,9 @@ func (s *Service) ProjectsList(ctx context.Context, args map[string]any) (any, e
 	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
+// ProjectsCreate handles clockify_projects_create: it creates a project (with
+// optional client linkage) and returns its ID plus a next-action suggestion to
+// add a task.
 func (s *Service) ProjectsCreate(ctx context.Context, args map[string]any) (any, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -79,6 +88,8 @@ func (s *Service) ProjectsCreate(ctx context.Context, args map[string]any) (any,
 	}}), nil
 }
 
+// TasksList handles clockify_tasks_list: it resolves the project from args and
+// lists its tasks with pagination and optional auto-pagination.
 func (s *Service) TasksList(ctx context.Context, args map[string]any) (any, error) {
 	projectID, err := s.projectIDFromArgs(ctx, args)
 	if err != nil {
@@ -101,6 +112,8 @@ func (s *Service) TasksList(ctx context.Context, args map[string]any) (any, erro
 	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
+// TasksCreate handles clockify_tasks_create: it resolves the project from args
+// and creates a task by name under it, returning the new task ID.
 func (s *Service) TasksCreate(ctx context.Context, args map[string]any) (any, error) {
 	projectID, err := s.projectIDFromArgs(ctx, args)
 	if err != nil {
@@ -121,6 +134,8 @@ func (s *Service) TasksCreate(ctx context.Context, args map[string]any) (any, er
 	}, task, ChangeSet{Created: []EntityRef{taskRef(task)}}, nil, nil), nil
 }
 
+// TagsList handles clockify_tags_list: it lists workspace tags with pagination
+// and optional auto-pagination.
 func (s *Service) TagsList(ctx context.Context, args map[string]any) (any, error) {
 	items, page, pageSize, autoPaginated, truncated, err := runListWithAutoPaginate(ctx, args, s.listTags)
 	if err != nil {
@@ -136,6 +151,8 @@ func (s *Service) TagsList(ctx context.Context, args map[string]any) (any, error
 	}, meta), ChangeSet{}, nil, nil, meta), nil
 }
 
+// TagsCreate handles clockify_tags_create: it creates a tag by name and returns
+// its ID.
 func (s *Service) TagsCreate(ctx context.Context, args map[string]any) (any, error) {
 	name := strings.TrimSpace(stringArg(args, "name"))
 	if name == "" {
@@ -151,6 +168,9 @@ func (s *Service) TagsCreate(ctx context.Context, args map[string]any) (any, err
 	}, tag, ChangeSet{Created: []EntityRef{tagRef(tag)}}, nil, nil), nil
 }
 
+// EntriesList handles clockify_entries_list: it lists the current user's time
+// entries with pagination and optional auto-pagination, capturing the resolved
+// user ID into the result IDs.
 func (s *Service) EntriesList(ctx context.Context, args map[string]any) (any, error) {
 	var capturedUserID string
 	entriesList := func(ctx context.Context, args map[string]any) ([]clockify.TimeEntry, int, int, error) {
@@ -186,6 +206,9 @@ func withListPaginationData(data map[string]any, meta map[string]any) map[string
 	return data
 }
 
+// EntriesCreate handles clockify_entries_create: it creates a time entry,
+// honoring dry_run with a validated payload preview and emitting future-entry
+// warnings, then returns the created entry and the affected IDs.
 func (s *Service) EntriesCreate(ctx context.Context, args map[string]any) (any, error) {
 	if dryrun.Enabled(args) {
 		payload, ids, err := s.buildEntryPayload(ctx, args)

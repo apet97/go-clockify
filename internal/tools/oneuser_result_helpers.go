@@ -43,6 +43,8 @@ func aliasHandler(action, entity, change string, handler func(context.Context, m
 	}
 }
 
+// EntriesMarkInvoiced handles clockify_entries_mark_invoiced: it marks the given
+// time entries as invoiced or not invoiced.
 func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) (ToolResult, error) {
 	entryIDs, found, err := strictStringSliceArg(args, "time_entry_ids")
 	if err != nil {
@@ -76,6 +78,9 @@ func (s *Service) EntriesMarkInvoiced(ctx context.Context, args map[string]any) 
 	}, map[string]any{"workspaceId": wsID, "entryId": entryIDs[0]}), nil
 }
 
+// UsersInvite handles clockify_users_invite: it invites users by email. With
+// send_email true this is a permission-changing external side effect; it
+// supports a dry_run preview.
 func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ToolResult, error) {
 	emails, found, err := strictStringSliceArg(args, "emails")
 	if err != nil {

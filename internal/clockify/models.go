@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// Workspace is a Clockify workspace as returned by the API, including its
+// rates, currencies, enabled features, and memberships.
 type Workspace struct {
 	ID                      string              `json:"id"`
 	Name                    string              `json:"name"`
@@ -20,6 +22,8 @@ type Workspace struct {
 	WorkspaceSettings       any                 `json:"workspaceSettings,omitempty"`
 }
 
+// User is a Clockify user, including the active/default workspace and profile
+// settings returned by the users endpoints.
 type User struct {
 	ID               string `json:"id"`
 	Name             string `json:"name"`
@@ -33,6 +37,8 @@ type User struct {
 	Status           string `json:"status,omitempty"`
 }
 
+// Project is a Clockify project, including its client linkage, rates, estimate
+// and budget settings, memberships, and embedded tasks.
 type Project struct {
 	ID             string              `json:"id"`
 	Name           string              `json:"name"`
@@ -61,6 +67,8 @@ type Project struct {
 	WorkspaceID    string              `json:"workspaceId,omitempty"`
 }
 
+// ClientEntity is a Clockify client (billing customer). It is named
+// ClientEntity to avoid colliding with the HTTP Client type in this package.
 type ClientEntity struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
@@ -74,6 +82,7 @@ type ClientEntity struct {
 	WorkspaceID  string `json:"workspaceId,omitempty"`
 }
 
+// Tag is a Clockify tag used to label time entries.
 type Tag struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -81,6 +90,8 @@ type Tag struct {
 	WorkspaceID string `json:"workspaceId,omitempty"`
 }
 
+// Task is a Clockify task within a project, including assignees, rates, and
+// estimate/status fields.
 type Task struct {
 	ID             string   `json:"id"`
 	Name           string   `json:"name"`
@@ -97,12 +108,18 @@ type Task struct {
 	UserGroupIDs   []string `json:"userGroupIds,omitempty"`
 }
 
+// TimeInterval is a Clockify time-entry interval: RFC3339 start, optional end
+// (empty while running), and an ISO-8601 duration string.
 type TimeInterval struct {
 	Start    string `json:"start"`
 	End      string `json:"end,omitempty"`
 	Duration string `json:"duration,omitempty"`
 }
 
+// TimeEntry is a Clockify time entry. BillablePresent (excluded from JSON)
+// records whether the upstream payload actually carried a billable field, so
+// callers can distinguish an explicit false from an omitted value; see
+// UnmarshalJSON.
 type TimeEntry struct {
 	ID                string       `json:"id"`
 	Description       string       `json:"description"`
@@ -123,6 +140,9 @@ type TimeEntry struct {
 	TimeInterval      TimeInterval `json:"timeInterval"`
 }
 
+// UnmarshalJSON decodes a TimeEntry and additionally records whether the
+// payload included a billable field, setting BillablePresent so an omitted
+// billable is distinguishable from an explicit false.
 func (e *TimeEntry) UnmarshalJSON(data []byte) error {
 	type alias TimeEntry
 	aux := struct {
@@ -141,10 +161,13 @@ func (e *TimeEntry) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// StartTime parses the entry's interval start as an RFC3339 time.
 func (e TimeEntry) StartTime() (time.Time, error) {
 	return time.Parse(time.RFC3339, e.TimeInterval.Start)
 }
 
+// EndTime parses the entry's interval end as an RFC3339 time, returning the
+// zero time and a nil error when the entry is still running (no end set).
 func (e TimeEntry) EndTime() (time.Time, error) {
 	if e.TimeInterval.End == "" {
 		return time.Time{}, nil
@@ -152,10 +175,15 @@ func (e TimeEntry) EndTime() (time.Time, error) {
 	return time.Parse(time.RFC3339, e.TimeInterval.End)
 }
 
+// IsRunning reports whether the entry has no end time and is therefore still
+// running.
 func (e TimeEntry) IsRunning() bool {
 	return e.TimeInterval.End == ""
 }
 
+// DurationSeconds returns the entry's elapsed duration in whole seconds. For a
+// running entry it measures from the start to now (UTC); it returns 0 when the
+// start is unparseable or the computed end precedes the start.
 func (e TimeEntry) DurationSeconds() int64 {
 	start, err := e.StartTime()
 	if err != nil {

@@ -399,6 +399,8 @@ func (s *Service) DeleteUserGroup(ctx context.Context, args map[string]any) (Too
 	return ok("clockify_delete_user_group", map[string]any{"deleted": true, "groupId": groupID}, map[string]any{"workspaceId": wsID}), nil
 }
 
+// InviteUser invites a single user to the workspace by email (send_email
+// defaults to true), supporting a dry_run preview.
 func (s *Service) InviteUser(ctx context.Context, args map[string]any) (ToolResult, error) {
 	email := strings.TrimSpace(stringArg(args, "email"))
 	if email == "" {

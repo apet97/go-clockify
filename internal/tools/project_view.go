@@ -16,6 +16,8 @@ import (
 
 const projectTaskEnrichmentPageSize = 200
 
+// FinancialRangeView describes the date window a financial rollup was computed
+// over: start/end, the date-range type, and timezone.
 type FinancialRangeView struct {
 	Start         string `json:"start,omitempty"`
 	End           string `json:"end,omitempty"`
@@ -23,6 +25,9 @@ type FinancialRangeView struct {
 	Timezone      string `json:"timezone,omitempty"`
 }
 
+// ProjectView is the fully enriched project output returned by project tools:
+// the core project fields plus normalized custom fields, rates, financials,
+// estimates, estimate progress, and embedded task views.
 type ProjectView struct {
 	ID                     string                       `json:"id"`
 	Name                   string                       `json:"name"`
@@ -59,6 +64,8 @@ type ProjectView struct {
 	RawHydrated      map[string]any       `json:"raw_hydrated,omitempty"`
 }
 
+// CompactProjectView is the trimmed project projection used in list responses:
+// id, name, client, color, and the archived/billable/public/duration fields.
 type CompactProjectView struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
@@ -71,6 +78,9 @@ type CompactProjectView struct {
 	Duration   string `json:"duration,omitempty"`
 }
 
+// TaskView is the enriched task output embedded in a ProjectView (or returned by
+// task tools): the core task fields plus normalized custom fields, rates,
+// financials, estimates, and estimate progress.
 type TaskView struct {
 	ID                     string                 `json:"id"`
 	Name                   string                 `json:"name"`
@@ -93,6 +103,8 @@ type TaskView struct {
 	EstimateProgress EstimateProgressView `json:"estimate_progress"`
 }
 
+// ProjectRatesView aggregates a project's rates: project-level hourly/cost rates
+// (raw and as MoneyView) plus per-member and per-task rate breakdowns.
 type ProjectRatesView struct {
 	ProjectHourly      *clockify.Rate          `json:"project_hourly,omitempty"`
 	ProjectCost        *clockify.Rate          `json:"project_cost,omitempty"`
@@ -102,6 +114,9 @@ type ProjectRatesView struct {
 	Tasks              []TaskRateView          `json:"tasks,omitempty"`
 }
 
+// ProjectMemberRateView is the per-member rate projection within a
+// ProjectRatesView: the membership identity plus hourly/cost rates (raw and as
+// MoneyView).
 type ProjectMemberRateView struct {
 	UserID           string         `json:"user_id"`
 	TargetID         string         `json:"target_id,omitempty"`
@@ -113,6 +128,8 @@ type ProjectMemberRateView struct {
 	CostMoney        *MoneyView     `json:"cost_money,omitempty"`
 }
 
+// TaskRateView is the per-task rate projection within a ProjectRatesView: the
+// task identity plus hourly/cost rates (raw and as MoneyView).
 type TaskRateView struct {
 	TaskID      string         `json:"task_id,omitempty"`
 	TaskName    string         `json:"task_name,omitempty"`
@@ -122,6 +139,8 @@ type TaskRateView struct {
 	CostMoney   *MoneyView     `json:"cost_money,omitempty"`
 }
 
+// ProjectFinancials holds a project's or task's earned/cost/profit money totals
+// for a date range, along with the source/reason and the range they cover.
 type ProjectFinancials struct {
 	Earned *MoneyView          `json:"earned,omitempty"`
 	Cost   *MoneyView          `json:"cost,omitempty"`
@@ -131,6 +150,8 @@ type ProjectFinancials struct {
 	Range  *FinancialRangeView `json:"range,omitempty"`
 }
 
+// ProjectEstimateView normalizes a project's or task's estimate fields: the raw
+// upstream values plus their decoded duration/time-estimate seconds and budget.
 type ProjectEstimateView struct {
 	EstimateRaw         any        `json:"estimate_raw,omitempty"`
 	BudgetEstimateRaw   any        `json:"budget_estimate_raw,omitempty"`
@@ -143,6 +164,8 @@ type ProjectEstimateView struct {
 	BudgetEstimate      *MoneyView `json:"budget_estimate,omitempty"`
 }
 
+// EstimateProgressView compares tracked time against the estimate: tracked and
+// remaining seconds, percent used, and an over-estimate flag, with source/reason.
 type EstimateProgressView struct {
 	TrackedDurationSeconds int64    `json:"tracked_duration_seconds"`
 	EstimateSeconds        *int64   `json:"estimate_seconds,omitempty"`

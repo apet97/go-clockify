@@ -4,6 +4,9 @@ import (
 	"strings"
 )
 
+// CustomFieldDefinitionView is the shaped projection of a custom-field
+// definition (id, name, type, status, entity type) returned by custom-field
+// tools.
 type CustomFieldDefinitionView struct {
 	ID         string `json:"id,omitempty"`
 	Name       string `json:"name,omitempty"`
@@ -13,6 +16,8 @@ type CustomFieldDefinitionView struct {
 	Source     string `json:"source,omitempty"`
 }
 
+// CustomFieldValueView is the shaped projection of a custom-field value bound to
+// an entity: the definition metadata plus the concrete Value.
 type CustomFieldValueView struct {
 	ID            string `json:"id,omitempty"`
 	CustomFieldID string `json:"custom_field_id,omitempty"`

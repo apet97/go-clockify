@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// ClockifyToolsGuide handles clockify_tools_guide: it returns the grouped
+// workflow and domain tools with common-task guidance.
 func (s *Service) ClockifyToolsGuide(_ context.Context, _ map[string]any) (any, error) {
 	return result("clockify_tools_guide", "tool_guide", map[string]string{"workspaceId": s.WorkspaceID}, map[string]any{
 		"workflows": []map[string]any{
@@ -53,6 +55,8 @@ func workflowDomainGroups() []map[string]any {
 	}
 }
 
+// ClockifyReviewDay handles clockify_review_day: it reviews one day of work
+// (defaulting to today) and returns totals, issues, and next actions.
 func (s *Service) ClockifyReviewDay(ctx context.Context, args map[string]any) (any, error) {
 	reviewArgs := copyArgs(args)
 	if strings.TrimSpace(stringArg(reviewArgs, "date")) == "" && strings.TrimSpace(stringArg(reviewArgs, "start")) == "" {
@@ -61,6 +65,8 @@ func (s *Service) ClockifyReviewDay(ctx context.Context, args map[string]any) (a
 	return s.reviewWorkflow(ctx, "clockify_review_day", reviewArgs)
 }
 
+// ClockifyReviewWeek handles clockify_review_week: it reviews one week of work
+// (defaulting to the current week) and returns totals, issues, and next actions.
 func (s *Service) ClockifyReviewWeek(ctx context.Context, args map[string]any) (any, error) {
 	reviewArgs := copyArgs(args)
 	if strings.TrimSpace(stringArg(reviewArgs, "week_start")) == "" && strings.TrimSpace(stringArg(reviewArgs, "start")) == "" {

@@ -7,6 +7,10 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+// ValidateRegistry checks the assembled tool registry for contract violations:
+// duplicate tool names and ordering errors (raw API fallback tools must come
+// last). It returns a descriptive error on the first violation, or nil when the
+// registry is well-formed.
 func ValidateRegistry(reg []mcp.ToolDescriptor) error {
 	seen := map[string]int{}
 	rawStarted := false

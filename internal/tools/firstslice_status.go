@@ -8,6 +8,9 @@ import (
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
+// ClockifyStatus handles clockify_status: it reports the current user, pinned
+// workspace, timezone/week-start, any running timer, feature status, and the
+// recommended first tools.
 func (s *Service) ClockifyStatus(ctx context.Context, _ map[string]any) (any, error) {
 	user, err := s.getCurrentUser(ctx)
 	if err != nil {

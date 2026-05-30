@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// RiskRateLimits configures per-minute invocation ceilings for tools grouped
+// by risk tier. A zero or negative value for any field disables the limit for
+// that tier.
 type RiskRateLimits struct {
 	ReadPerMinute         int
 	WritePerMinute        int

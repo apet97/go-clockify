@@ -45,6 +45,8 @@ func projectListQueryValues(args map[string]any, page, pageSize int) (url.Values
 	return values, nil
 }
 
+// GetProject handles clockify_projects_get: it resolves a project by name or ID
+// and returns the enriched project view.
 func (s *Service) GetProject(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectRef := stringArg(args, "project")
 	if projectRef == "" {
@@ -74,6 +76,9 @@ func (s *Service) GetProject(ctx context.Context, args map[string]any) (ToolResu
 	return ok("clockify_projects_get", view, withFinancialMeta(map[string]any{"workspaceId": wsID, "projectId": projectID}, financialMeta)), nil
 }
 
+// ListProjectMemberships handles clockify_projects_memberships_list: it returns
+// the project's memberships read from the hydrated project record, as a single
+// page.
 func (s *Service) ListProjectMemberships(ctx context.Context, args map[string]any) (ToolResult, error) {
 	projectID := strings.TrimSpace(stringArg(args, "project_id"))
 	if projectID == "" {

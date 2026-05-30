@@ -14,6 +14,8 @@ import (
 
 var stopTimerNoRunningRetryDelays = []time.Duration{150 * time.Millisecond, 350 * time.Millisecond}
 
+// StartTimer starts a running timer for the current user from explicit
+// project ID/reference and description, delegating to the internal startTimer.
 func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, description string) (ToolResult, error) {
 	return s.startTimer(ctx, map[string]any{
 		"project_id":  projectID,
@@ -22,6 +24,8 @@ func (s *Service) StartTimer(ctx context.Context, projectID, projectRef, descrip
 	})
 }
 
+// StartTimerArgs starts a running timer for the current user from a raw args
+// map, delegating to the internal startTimer.
 func (s *Service) StartTimerArgs(ctx context.Context, args map[string]any) (ToolResult, error) {
 	return s.startTimer(ctx, args)
 }
@@ -117,6 +121,9 @@ func (s *Service) startTimer(ctx context.Context, args map[string]any) (ToolResu
 	return ok(oneUserToolEntriesTimerStart, view, withFinancialMeta(meta, financialMeta)), nil
 }
 
+// StopTimer stops the current user's running timer. With no running timer it is
+// a clean no-op (stopped:false), retrying briefly to absorb a just-started
+// timer, and supports a dry_run preview.
 func (s *Service) StopTimer(ctx context.Context, args map[string]any) (any, error) {
 	if dryrun.Enabled(args) {
 		entries, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true", "page-size": "1"})
@@ -224,6 +231,8 @@ func firstEntryIsRunning(entries []clockify.TimeEntry) bool {
 	return len(entries) > 0 && entries[0].IsRunning()
 }
 
+// TimerStatus reports whether the current user has a running timer and returns
+// it when present.
 func (s *Service) TimerStatus(ctx context.Context) (ToolResult, error) {
 	entries, wsID, userID, err := s.listEntriesWithQuery(ctx, map[string]string{"in-progress": "true"})
 	if err != nil {
