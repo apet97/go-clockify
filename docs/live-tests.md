@@ -89,14 +89,16 @@ continuous-detection signal, not a PR gate.
 
 ## Current live status
 
-As of 2026-05-25, a local `make perfect-live` run passed the core live
-contracts and cleanup reported `Leftovers: 0`; the optional-domain campaign was
-not enabled for that run. The rolling "Nightly live drift" issue remains open
-and classified as env/config drift: the captured failure stops at the
-`live-contract-local` environment gate before the suite can call Clockify. This
-is not current evidence of Clockify API drift or a code regression. Do not tag a
-release while the rolling drift issue is open unless the issue is classified and
-the release notes record an explicit maintainer waiver.
+As of 2026-05-30, a local `make perfect-live` run on `cf35703` passed the core
+live contracts and the `internal/tools` `TestOneUserLive*` family against a
+freshly-rotated sacrificial-workspace key, and cleanup reported `Leftovers: 0`;
+the optional-domain campaign was not enabled for that run. This resolved the
+rolling "Nightly live drift" issue (#134, closed with this evidence): it had
+been classified as env/config drift, and the prior failure stopped at the
+`live-contract-local` environment gate because the configured API key had been
+revoked upstream (401 / code 4003), not because of Clockify API drift or a code
+regression. Do not tag a release while any rolling drift issue is open unless it
+is classified and the release notes record an explicit maintainer waiver.
 
 ## Contract Coverage
 
@@ -137,6 +139,7 @@ identifiers are intentionally omitted — we record only the visible plan from
 
 | Date (UTC) | Commit | Workspace plan | Gates | Tests | Result | Prefix-object leftovers |
 |---|---|---|---|---|---|---|
+| 2026-05-30 | `cf35703` (`main` head) | fresh sacrificial workspace (rotated key; resolves #134) | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260530051806`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID`; optional-domain/high-risk/happy-path gates not set | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain campaign skipped, then `make live-clean-prefix` | PASS (33.591s core `tests`, 41.013s `internal/tools`) | 0 prefix-object leftovers — `live-clean-prefix` deleted 1 project, failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |
 | 2026-05-25 | local dirty tree on `54d62d0` | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260525203452`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID`; optional-domain/high-risk/happy-path gates not set | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain campaign skipped, then `make live-clean-prefix` | PASS (33.659s core `tests`, 42.861s `internal/tools`) | 0 prefix-object leftovers - `live-clean-prefix` deleted 1 project, failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |
 | 2026-05-23 | local dirty tree on `9dee283142c7` | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260523222058`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain `TestLive*` campaign, then `make live-clean-prefix` | PASS (36.244s core `tests`, 52.480s `internal/tools`, 58.089s optional `tests`) | 0 prefix-object leftovers - `live-clean-prefix` deleted 12 objects (3 clients, 4 projects, 3 tags, 1 user group, 1 holiday), failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |
 | 2026-05-22 | tested `d54d6ca6d3aa` | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain `TestLive*` campaign, then `make live-clean-prefix` | PASS (31.055s core `tests`, 59.624s `internal/tools`, 57.192s optional `tests`); first attempt exposed transient empty running-timer reads after `clockify_switch_work`, fixed by stop-timer retry and redacted live ID assertions | 0 prefix-object leftovers — `live-clean-prefix` deleted 12 objects, failed 0, post-delete prefix-object rescan reported `Leftovers: 0`; the failed pre-fix prefix was also swept separately (12 deleted, failed 0, leftovers 0) |
