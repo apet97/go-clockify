@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-05-30
+
+### Fixed
+
+- `nightly-live.yml` referenced `secrets.CLOCKIFY_API_KEY` and
+  `secrets.CLOCKIFY_WORKSPACE_ID`, but the repository secrets are named
+  `CLOCKIFY_LIVE_API_KEY` and `CLOCKIFY_LIVE_WORKSPACE_ID`. A missing secret
+  expands to an empty string in GitHub Actions, so the scheduled nightly live
+  job ran with blank credentials and failed at the environment gate every
+  night — the recurring `drift:env-config` signal behind the nightly-drift
+  issues (#134, #105), which was never a code or Clockify-API regression. The
+  workflow now reads the correctly-named secrets, and those secret values were
+  rotated to a valid sacrificial-workspace key. (Workflow/CI-only change; the
+  released binaries are byte-identical to v0.4.1.)
+
 ## [0.4.1] - 2026-05-30
 
 ### Added
@@ -3547,7 +3562,8 @@ Initial stable release.
 - **Signed releases** — cosign keyless signatures, SPDX SBOMs, and SLSA build provenance on every binary and container image.
 - **Reference Kubernetes manifests** — Deployment (non-root distroless, read-only root FS), NetworkPolicy (default-deny), PodDisruptionBudget, ServiceMonitor, and PrometheusRule with multi-window burn-rate alerts for a 99.9% SLO. Helm chart and Kustomize overlays included.
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/apet97/go-clockify/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/apet97/go-clockify/compare/v0.4.0...v0.4.1
 [1.3.0]: https://github.com/apet97/go-clockify/compare/v1.2.5...v1.3.0
 [1.2.2]: https://github.com/apet97/go-clockify/compare/v1.2.1...v1.2.2

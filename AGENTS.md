@@ -213,6 +213,16 @@ as setup instructions.
   and `cost` are now correctly `required` in the regenerated output
   schemas; runtime wire output unchanged), and `93ac19c` recording the
   2026-05-30 `make perfect-live` run. The work was tagged `v0.4.1`.
+- **Nightly-live CI fix + v0.4.2 (2026-05-30).** The recurring nightly-live
+  failure (the `drift:env-config` signal behind #134 and #105) was root-caused
+  to a secret-name mismatch: `nightly-live.yml` read
+  `secrets.CLOCKIFY_API_KEY` / `CLOCKIFY_WORKSPACE_ID`, which do not exist —
+  the repo secrets are `CLOCKIFY_LIVE_API_KEY` / `CLOCKIFY_LIVE_WORKSPACE_ID` —
+  so the scheduled job ran with empty creds and failed at the env gate every
+  night. The workflow now reads the correct secrets, whose values were rotated
+  to a valid sacrificial-workspace key; a manual `workflow_dispatch` run
+  confirmed green. Tagged `v0.4.2` (CI/docs-only; released binaries are
+  byte-identical to v0.4.1).
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect-local` was green on 2026-05-30 for the v0.4.1 release commit,
@@ -223,11 +233,14 @@ as setup instructions.
 - The locally cached Claude binary (when used) lives at
   `$HOME/.local/bin/clockify-mcp`. Each contributor may pin a different path
   in their MCP client configuration.
-- The rolling nightly-live drift issue (#134) was **resolved and closed** on
-  2026-05-30: the prior failure was a revoked API key (env/config drift), and a
-  rotated sacrificial-workspace key passed base `make perfect-live` with
-  `Leftovers: 0`. Treat broader optional live campaigns or new Clockify API
-  drift as new work.
+- The rolling nightly-live drift (#134, #105) was **root-caused and fixed** on
+  2026-05-30 (v0.4.2): the failure was a secret-name mismatch in
+  `nightly-live.yml` (it read non-existent `secrets.CLOCKIFY_API_KEY` /
+  `CLOCKIFY_WORKSPACE_ID` instead of the repo's `CLOCKIFY_LIVE_*` secrets), so
+  CI ran with empty credentials and stalled at the env gate. The workflow now
+  reads the correct secrets, whose values were rotated to a valid sacrificial
+  key, and a manual run is green. Treat broader optional live campaigns or new
+  Clockify API drift as new work.
 
 ## Safety Rules
 
