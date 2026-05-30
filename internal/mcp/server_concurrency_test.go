@@ -65,14 +65,13 @@ func TestStdioDispatch_BoundedConcurrency(t *testing.T) {
 	}()
 
 	var output bytes.Buffer
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx, pr, syncWriter{&output}) }()
 
 	// Wait until exactly `limit` handlers are in flight.
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		select {
 		case <-started:
 		case <-time.After(2 * time.Second):
@@ -172,7 +171,7 @@ func TestStdioDispatch_ContextCancelReleases(t *testing.T) {
 	go func() { done <- srv.Run(ctx, pr, syncWriter{&output}) }()
 
 	// Wait until `limit` handlers are stuck.
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		select {
 		case <-started:
 		case <-time.After(2 * time.Second):
@@ -223,8 +222,7 @@ func TestStdioDispatch_Unlimited(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx, &input, syncWriter{&output}) }()
@@ -248,8 +246,7 @@ func TestStdioDispatch_Unlimited(t *testing.T) {
 
 func TestEnqueueResponseBytesBlocksWhenQueueFull(t *testing.T) {
 	srv := NewServer("test", nil)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	srv.outCtx = ctx
 	srv.outDone = make(chan struct{})
 	srv.outChan = make(chan []byte, 1)

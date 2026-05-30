@@ -134,7 +134,7 @@ func contractAuditDestructiveName(name string) bool {
 		"cancel":  true,
 		"close":   true,
 	}
-	for _, part := range strings.Fields(strings.ReplaceAll(name, "_", " ")) {
+	for part := range strings.FieldsSeq(strings.ReplaceAll(name, "_", " ")) {
 		if destructiveTerms[part] {
 			return true
 		}

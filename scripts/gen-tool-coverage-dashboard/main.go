@@ -86,7 +86,7 @@ func readCoverage(path string) ([]coverageRow, []string, error) {
 	}
 	var rows []coverageRow
 	var notes []string
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "- ") {
 			lower := strings.ToLower(line)

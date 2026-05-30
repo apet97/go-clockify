@@ -21,7 +21,7 @@ func TestResourceStateCacheGetPut(t *testing.T) {
 
 func TestResourceStateCacheEviction(t *testing.T) {
 	c := newResourceStateCache(3)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		c.put("k"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	}
 	if c.len() != 3 {

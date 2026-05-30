@@ -204,10 +204,7 @@ func newClockifyClient(cfg config.OneUserConfig, maxRetries int) *clockify.Clien
 		timeout = config.DefaultToolTimeout
 	}
 	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, timeout, maxRetries)
-	responseCap := cfg.MaxToolResultBytes
-	if responseCap < clockify.DefaultMaxResponseBodyBytes {
-		responseCap = clockify.DefaultMaxResponseBodyBytes
-	}
+	responseCap := max(cfg.MaxToolResultBytes, clockify.DefaultMaxResponseBodyBytes)
 	client.SetMaxResponseBodyBytes(responseCap)
 	return client
 }

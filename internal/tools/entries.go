@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -80,9 +81,7 @@ func (s *Service) ListEntries(ctx context.Context, args map[string]any) (ToolRes
 	}
 
 	query := make(map[string]string, len(baseQuery)+2)
-	for k, v := range baseQuery {
-		query[k] = v
-	}
+	maps.Copy(query, baseQuery)
 	query["page"] = strconv.Itoa(page)
 	query["page-size"] = strconv.Itoa(pageSize)
 

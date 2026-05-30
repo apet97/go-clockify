@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/mcp"
@@ -143,12 +144,7 @@ func toolAllowedForToolset(toolset, name string) bool {
 }
 
 func descriptorInTier(descriptor mcp.ToolDescriptor, tier string) bool {
-	for _, candidate := range descriptor.Tiers {
-		if candidate == tier {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(descriptor.Tiers, tier)
 }
 
 func coreToolsetTool(name string) bool {

@@ -9,7 +9,7 @@ import (
 
 func TestToolsCallResultSizeGuardTruncatesArrayData(t *testing.T) {
 	rows := make([]map[string]any, 0, 12)
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		rows = append(rows, map[string]any{
 			"id":   i,
 			"note": strings.Repeat("x", 120),

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -46,7 +47,7 @@ func newPaginatedHandler(t testing.TB, pages [][]clockify.TimeEntry) http.Handle
 // exercise bucketing.
 func seedEntries(baseDate time.Time, n int, durationSec int) []clockify.TimeEntry {
 	out := make([]clockify.TimeEntry, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		startTS := baseDate.Add(time.Duration(i) * time.Minute)
 		endTS := startTS.Add(time.Duration(durationSec) * time.Second)
 		projectID := "p1"
@@ -75,10 +76,7 @@ func chunkEntries(entries []clockify.TimeEntry, pageSize int) [][]clockify.TimeE
 	}
 	var pages [][]clockify.TimeEntry
 	for i := 0; i < len(entries); i += pageSize {
-		end := i + pageSize
-		if end > len(entries) {
-			end = len(entries)
-		}
+		end := min(i+pageSize, len(entries))
 		pages = append(pages, entries[i:end])
 	}
 	if len(pages) == 0 {
@@ -885,12 +883,7 @@ func assertReportSuggestedActions(t *testing.T, suggestions []ToolSuggestion, wa
 }
 
 func stringSliceContains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func TestAggregatePaginationMetaReportsPageSizeClamp(t *testing.T) {
@@ -931,7 +924,6 @@ func TestAggregateEntriesRange_NeverLosesData(t *testing.T) {
 	const durSec = 60
 	cases := []int{0, 1, 199, 200, 201, 400, 599, 600, 999, 1000}
 	for _, n := range cases {
-		n := n
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			base := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
 			entries := seedEntries(base, n, durSec)
@@ -1047,7 +1039,7 @@ func TestDetailedReport_TruncationFlag(t *testing.T) {
 
 func reportTestRows(n int) []map[string]any {
 	rows := make([]map[string]any, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		rows[i] = map[string]any{"id": fmt.Sprintf("e-%d", i), "description": "row"}
 	}
 	return rows

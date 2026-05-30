@@ -99,7 +99,7 @@ func catalogToolIsHighRisk(risks []string) bool {
 func parseDangerousToolRows(t *testing.T, raw []byte) map[string]dangerousDocRow {
 	t.Helper()
 	rows := map[string]dangerousDocRow{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "| `clockify_") {
 			continue

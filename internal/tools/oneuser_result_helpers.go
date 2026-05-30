@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,9 +20,7 @@ func aliasArg(args map[string]any, from, to string) map[string]any {
 
 func aliasArgs(args map[string]any, aliases map[string]string) map[string]any {
 	out := make(map[string]any, len(args)+len(aliases))
-	for key, value := range args {
-		out[key] = value
-	}
+	maps.Copy(out, args)
 	for from, to := range aliases {
 		if _, ok := out[to]; ok {
 			continue
@@ -111,9 +110,7 @@ func (s *Service) UsersInvite(ctx context.Context, args map[string]any) (ToolRes
 	invitations := make([]any, 0, len(emails))
 	for _, email := range emails {
 		nextArgs := make(map[string]any, len(baseArgs)+1)
-		for key, value := range baseArgs {
-			nextArgs[key] = value
-		}
+		maps.Copy(nextArgs, baseArgs)
 		nextArgs["email"] = email
 		out, err := s.InviteUser(ctx, nextArgs)
 		if err != nil {
@@ -157,9 +154,7 @@ func requiredIDArg(args map[string]any, key string) (string, error) {
 func nativeBodyFromArgs(args map[string]any, keys ...string) map[string]any {
 	body := map[string]any{}
 	if raw, ok := args["body"].(map[string]any); ok {
-		for key, value := range raw {
-			body[key] = value
-		}
+		maps.Copy(body, raw)
 	}
 	for _, key := range keys {
 		if key == "body" {
@@ -213,9 +208,7 @@ func standardizeDomainResult(action, entity, change string, out any, args map[st
 			}
 		}
 	}
-	for key, value := range idsFromData(data, entity) {
-		ids[key] = value
-	}
+	maps.Copy(ids, idsFromData(data, entity))
 	changed := ChangeSet{}
 	if !dryRunResult(args, data) {
 		changed = changedFor(change, entity, data, ids)

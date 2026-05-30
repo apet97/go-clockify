@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -679,9 +680,7 @@ func schemaValidationArguments(schema map[string]any, args map[string]any) map[s
 			// Measured by BenchmarkDispatchToolsCallAliasArgument; the small
 			// copy keeps jsonschema validation unchanged while supporting _id aliases.
 			out = make(map[string]any, schemaValidationCopyCapacity(len(args)))
-			for key, value := range args {
-				out[key] = value
-			}
+			maps.Copy(out, args)
 		}
 		out[name] = value
 	}

@@ -167,9 +167,7 @@ func approvalStatusMap(request map[string]any) map[string]any {
 		out["state"] = state
 	}
 	if nested, ok := request["status"].(map[string]any); ok {
-		for k, v := range nested {
-			out[k] = v
-		}
+		maps.Copy(out, nested)
 	}
 	if len(out) == 0 {
 		return nil

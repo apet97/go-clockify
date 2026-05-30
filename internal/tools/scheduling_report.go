@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"strings"
 	"time"
 )
@@ -97,9 +99,7 @@ func (s *Service) AssignmentReport(ctx context.Context, args map[string]any) (To
 
 func (s *Service) assignmentReportArgsWithResolvedFilters(ctx context.Context, wsID string, args map[string]any) (map[string]any, error) {
 	out := make(map[string]any, len(args)+2)
-	for k, v := range args {
-		out[k] = v
-	}
+	maps.Copy(out, args)
 	if userRef := stringArg(args, "user_id"); userRef != "" {
 		if _, ok, err := strictStringSliceArg(args, "users"); err != nil {
 			return nil, err
@@ -133,10 +133,8 @@ func (a *assignmentReportAccumulator) sourceAppend(source string) {
 		a.raw = map[string]any{}
 	}
 	existing, _ := a.raw["sources"].([]string)
-	for _, item := range existing {
-		if item == source {
-			return
-		}
+	if slices.Contains(existing, source) {
+		return
 	}
 	a.raw["sources"] = append(existing, source)
 }

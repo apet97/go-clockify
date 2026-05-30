@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/url"
 	"strings"
 
@@ -111,9 +112,7 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 		action = "clockify_api_get"
 	}
 	ids := map[string]string{"workspaceId": s.WorkspaceID}
-	for key, value := range idsFromData(data, "raw_api") {
-		ids[key] = value
-	}
+	maps.Copy(ids, idsFromData(data, "raw_api"))
 	return result(action, "raw_api", ids, data, changedFor(rawChange(method), "raw_api", data, ids), nil, nil), nil
 }
 

@@ -111,7 +111,7 @@ func makeEntries(n int, day string) []clockify.TimeEntry {
 	entries := make([]clockify.TimeEntry, 0, n)
 	start := day + "T09:00:00Z"
 	end := day + "T10:00:00Z"
-	for i := 0; i < n; i++ {
+	for i := range n {
 		entries = append(entries, clockify.TimeEntry{
 			ID:          day + "-e" + itoaPad(i),
 			Description: "test",

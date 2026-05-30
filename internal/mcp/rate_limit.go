@@ -63,10 +63,7 @@ func (b *tokenBucket) allowWithRetry() (bool, int) {
 		if b.refillRate <= 0 {
 			return false, 60
 		}
-		seconds := int(math.Ceil((1 - b.tokens) / b.refillRate))
-		if seconds < 1 {
-			seconds = 1
-		}
+		seconds := max(int(math.Ceil((1-b.tokens)/b.refillRate)), 1)
 		return false, seconds
 	}
 	b.tokens--

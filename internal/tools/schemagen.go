@@ -85,7 +85,7 @@ func schemaForType(t reflect.Type) map[string]any {
 // helper exists so the cache-miss branch stays a single expression.
 func computeSchemaForType(t reflect.Type) map[string]any {
 	// time.Time is the one named struct that is treated as a primitive.
-	if t == reflect.TypeOf(time.Time{}) {
+	if t == reflect.TypeFor[time.Time]() {
 		return map[string]any{"type": "string", "format": "date-time"}
 	}
 

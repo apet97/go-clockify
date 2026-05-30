@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -186,9 +187,7 @@ func (s *Service) ClockifySwitchWork(ctx context.Context, args map[string]any) (
 	}
 	startResult, _ := started.(ToolResult)
 	ids := map[string]string{"workspaceId": s.WorkspaceID}
-	for k, v := range startResult.IDs {
-		ids[k] = v
-	}
+	maps.Copy(ids, startResult.IDs)
 	return result("clockify_switch_work", "entry", ids, map[string]any{
 		"status":  "ok",
 		"stopped": summarizeToolResult(stopped),

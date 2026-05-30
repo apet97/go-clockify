@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"maps"
 	"time"
 )
 
@@ -48,9 +49,7 @@ func appendAssignmentViewWarning(view AssignmentView, warning string) {
 
 func assignmentViewFromRaw(raw map[string]any, start, end time.Time) AssignmentView {
 	view := AssignmentView{}
-	for k, v := range raw {
-		view[k] = v
-	}
+	maps.Copy(view, raw)
 	scheduledSeconds := scheduledSecondsFromAssignment(raw, start, end)
 	view["scheduled"] = map[string]any{
 		"duration": durationView(scheduledSeconds),

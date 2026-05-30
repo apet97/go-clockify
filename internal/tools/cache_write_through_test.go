@@ -343,7 +343,7 @@ func cachedWeeklyReportFixtureN(entries int) WeeklySummaryData {
 	}
 	projectTotals := map[string]*ProjectSummary{}
 	dayTotals := map[string]*DaySummary{}
-	for i := 0; i < entries; i++ {
+	for i := range entries {
 		projectID := "p-alpha"
 		projectName := "Alpha"
 		switch i % 3 {

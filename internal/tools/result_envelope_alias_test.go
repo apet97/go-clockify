@@ -14,7 +14,7 @@ import (
 // four-key narrow envelope.
 func TestOkHelperReturnsToolResult(t *testing.T) {
 	env := ok("clockify_status", nil, nil)
-	if reflect.TypeOf(env).Name() != "ToolResult" {
+	if reflect.TypeFor[ToolResult]().Name() != "ToolResult" {
 		t.Fatalf("ok() returned %T, want ToolResult", env)
 	}
 	if env.Entity != "" || env.IDs != nil || env.Warnings != nil || env.Next != nil {

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -954,9 +955,7 @@ func TestCreateExpenseRejectsPartialFileTrio(t *testing.T) {
 	}
 	for i, partial := range partials {
 		args := map[string]any{"amount": 1.0, "date": "2026-04-11T00:00:00Z", "category_id": "cat1"}
-		for k, v := range partial {
-			args[k] = v
-		}
+		maps.Copy(args, partial)
 		_, err := svc.createExpense(context.Background(), args)
 		if err == nil || !strings.Contains(err.Error(), "file_name, file_content_base64, and file_content_type") {
 			t.Fatalf("case %d: expected partial-trio error, got %v", i, err)

@@ -13,9 +13,9 @@ import (
 // proving auto_paginate: true rolls every page into one ToolResult
 // and stamps the meta knobs.
 func TestClientsListAutoPaginateWalksEveryPage(t *testing.T) {
-	var requests int32
+	var requests atomic.Int32
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requests, 1)
+		requests.Add(1)
 		if !strings.HasSuffix(r.URL.Path, "/workspaces/ws1/clients") {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -47,7 +47,7 @@ func TestClientsListAutoPaginateWalksEveryPage(t *testing.T) {
 	if !ok {
 		t.Fatalf("result type = %T, want ToolResult", out)
 	}
-	if got := atomic.LoadInt32(&requests); got != 2 {
+	if got := requests.Load(); got != 2 {
 		t.Fatalf("expected 2 HTTP requests, got %d", got)
 	}
 	if v, _ := result.Meta["auto_paginate"].(bool); !v {
@@ -68,9 +68,9 @@ func TestClientsListAutoPaginateWalksEveryPage(t *testing.T) {
 // the consolidated result and flags truncated=true in meta so the
 // agent sees there is more data upstream.
 func TestClientsListAutoPaginateRespectsMaxRows(t *testing.T) {
-	var requests int32
+	var requests atomic.Int32
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requests, 1)
+		requests.Add(1)
 		body := make([]map[string]any, autoPaginatePageSize)
 		for i := range body {
 			body[i] = map[string]any{"id": "c", "name": "row"}
@@ -88,7 +88,7 @@ func TestClientsListAutoPaginateRespectsMaxRows(t *testing.T) {
 		t.Fatalf("ClientsList: %v", err)
 	}
 	result := out.(ToolResult)
-	if got := atomic.LoadInt32(&requests); got != 1 {
+	if got := requests.Load(); got != 1 {
 		t.Fatalf("expected 1 HTTP request before truncation, got %d", got)
 	}
 	if v, _ := result.Meta["truncated"].(bool); !v {
@@ -103,9 +103,9 @@ func TestClientsListAutoPaginateRespectsMaxRows(t *testing.T) {
 // path: a call without auto_paginate must hit the server exactly once
 // and not stamp the new meta knobs.
 func TestClientsListWithoutAutoPaginateUnchanged(t *testing.T) {
-	var requests int32
+	var requests atomic.Int32
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requests, 1)
+		requests.Add(1)
 		respondJSON(t, w, []map[string]any{{"id": "c1", "name": "Solo"}})
 	})
 	defer cleanup()
@@ -116,7 +116,7 @@ func TestClientsListWithoutAutoPaginateUnchanged(t *testing.T) {
 		t.Fatalf("ClientsList: %v", err)
 	}
 	result := out.(ToolResult)
-	if got := atomic.LoadInt32(&requests); got != 1 {
+	if got := requests.Load(); got != 1 {
 		t.Fatalf("expected 1 request, got %d", got)
 	}
 	if _, present := result.Meta["auto_paginate"]; present {

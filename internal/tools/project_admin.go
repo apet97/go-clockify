@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -291,9 +292,7 @@ func compactProjectTemplateListNotes(items []map[string]any) []map[string]any {
 	compact := make([]map[string]any, 0, len(items))
 	for _, item := range items {
 		row := make(map[string]any, len(item)+1)
-		for key, value := range item {
-			row[key] = value
-		}
+		maps.Copy(row, item)
 		if note, ok := row["note"].(string); ok {
 			if truncated, changed := truncateProjectTemplateListNote(note); changed {
 				row["note"] = truncated
@@ -310,10 +309,7 @@ func truncateProjectTemplateListNote(note string) (string, bool) {
 	if len(runes) <= projectTemplateListNoteLimit {
 		return note, false
 	}
-	keep := projectTemplateListNoteLimit - len([]rune(projectTemplateListNoteSuffix))
-	if keep < 0 {
-		keep = 0
-	}
+	keep := max(projectTemplateListNoteLimit-len([]rune(projectTemplateListNoteSuffix)), 0)
 	return string(runes[:keep]) + projectTemplateListNoteSuffix, true
 }
 

@@ -31,7 +31,7 @@ func TestResolveCacheCachesPositiveProjectName(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		id, err := svc.resolveProjectID(context.Background(), "ws1", "Alpha")
 		if err != nil {
 			t.Fatalf("resolve project #%d: %v", i+1, err)
@@ -45,10 +45,8 @@ func TestResolveCacheCachesPositiveProjectName(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			id, err := svc.resolveProjectID(context.Background(), "ws1", "alpha")
 			if err != nil {
 				t.Errorf("resolve cached project: %v", err)
@@ -56,7 +54,7 @@ func TestResolveCacheCachesPositiveProjectName(t *testing.T) {
 			if id != "p1" {
 				t.Errorf("resolve cached project = %q, want p1", id)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	if got := projectCalls.Load(); got != 1 {
@@ -82,7 +80,7 @@ func TestResolveCacheSkipsUserEmail(t *testing.T) {
 	defer cleanup()
 
 	svc := New(client, "ws1")
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		id, err := svc.resolveUserID(context.Background(), "ws1", "owner@example.com")
 		if err != nil {
 			t.Fatalf("resolve user #%d: %v", i+1, err)
@@ -189,7 +187,7 @@ func TestResolveCacheReclaimsExpiredEntries(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", "http://127.0.0.1:1", 0, 0), "ws1")
 	svc.resolver.entries = map[resolveKey]resolveEntry{}
 	expired := time.Now().Add(-time.Minute)
-	for i := 0; i < 1_100; i++ {
+	for i := range 1_100 {
 		svc.resolver.entries[resolveKey{kind: "project", scope: "ws1", ref: fmt.Sprintf("old-%d", i)}] = resolveEntry{
 			id:        fmt.Sprintf("p-%d", i),
 			expiresAt: expired,

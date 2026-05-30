@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
@@ -271,9 +272,7 @@ func (s *Service) getAssignment(ctx context.Context, args map[string]any) (ToolR
 	}
 
 	scanArgs := make(map[string]any, len(args)+1)
-	for k, v := range args {
-		scanArgs[k] = v
-	}
+	maps.Copy(scanArgs, args)
 	scanRangeDefaulted := false
 	if stringArg(scanArgs, "start") == "" || stringArg(scanArgs, "end") == "" {
 		start, end := defaultAssignmentScanRange(time.Now().UTC())
@@ -603,10 +602,7 @@ func addSchedulingOptionalFields(payload map[string]any, args map[string]any) {
 // defaults to 1; the schema's minimum:1 keeps 0 from reaching here, but
 // the clamp stays as defence so the API never sees weeks:0.
 func addRecurringAssignment(payload map[string]any, args map[string]any) int {
-	weeks := intArg(args, "weeks", 0)
-	if weeks < 1 {
-		weeks = 1
-	}
+	weeks := max(intArg(args, "weeks", 0), 1)
 	payload["recurringAssignment"] = map[string]any{"weeks": weeks}
 	return weeks
 }

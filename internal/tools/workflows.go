@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -337,9 +338,7 @@ func (s *Service) findSingleEntry(ctx context.Context, args findAndUpdateArgs) (
 	entriesScanned := 0
 	pagesFetched := 0
 	query := make(map[string]string, len(baseQuery)+1)
-	for k, v := range baseQuery {
-		query[k] = v
-	}
+	maps.Copy(query, baseQuery)
 	for page := 1; page <= aggregatePageSafetyStop; page++ {
 		query["page"] = strconv.Itoa(page)
 

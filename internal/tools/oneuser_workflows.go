@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"maps"
+
 	"github.com/apet97/go-clockify/internal/mcp"
 )
 
@@ -263,8 +265,6 @@ func demoCleanupSchema() map[string]any {
 
 func copyArgs(args map[string]any) map[string]any {
 	out := make(map[string]any, len(args))
-	for key, value := range args {
-		out[key] = value
-	}
+	maps.Copy(out, args)
 	return out
 }

@@ -146,10 +146,7 @@ func (s *Service) timeOffBalance(ctx context.Context, args map[string]any) (Tool
 			}
 		}
 		count := len(views)
-		total := count
-		if envelope.Count > count {
-			total = envelope.Count
-		}
+		total := max(envelope.Count, count)
 		meta := map[string]any{
 			"workspaceId": wsID,
 			"userId":      userID,

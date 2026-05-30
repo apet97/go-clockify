@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/apet97/go-clockify/internal/paths"
@@ -182,9 +184,7 @@ func (s *Service) enrichProjectScheduleTotals(ctx context.Context, wsID string, 
 	matched := 0
 	for _, total := range totals {
 		copyRow := map[string]any{}
-		for k, v := range total {
-			copyRow[k] = v
-		}
+		maps.Copy(copyRow, total)
 		projectID := cleanReportID(firstPresent(copyRow, "projectId", "project_id"))
 		key := "PROJECT=" + firstNonEmptyString(projectID, cleanReportID(firstPresent(copyRow, "projectName", "project_name")), "(without project)")
 		if value, ok := tracked[key]; ok {
@@ -208,9 +208,7 @@ func (s *Service) enrichProjectScheduleTotals(ctx context.Context, wsID string, 
 func (s *Service) enrichScheduleCapacity(ctx context.Context, wsID string, capacity map[string]any, args map[string]any) (map[string]any, map[string]any) {
 	meta := map[string]any{"source": entryFinancialSourceUnavailable}
 	out := map[string]any{}
-	for k, v := range capacity {
-		out[k] = v
-	}
+	maps.Copy(out, capacity)
 	start, end, _ := assignmentRangeFromArgs(args, s.DefaultTimezone)
 	tracked, err := s.reportFinancialsForAssignmentGroups(ctx, wsID, []string{"USER"}, start, end, args)
 	userID := cleanReportID(firstPresent(capacity, "userId", "user_id"))
@@ -230,9 +228,7 @@ func (s *Service) enrichScheduleCapacity(ctx context.Context, wsID string, capac
 
 func scheduleTotalView(raw map[string]any, kind string) map[string]any {
 	view := map[string]any{}
-	for k, v := range raw {
-		view[k] = v
-	}
+	maps.Copy(view, raw)
 	for _, key := range []string{
 		"capacityPerDay", "capacity_per_day",
 		"totalHoursPerDay", "total_hours_per_day",
@@ -382,10 +378,5 @@ func assignmentFinancialsMap(earned, cost, profit *MoneyView, source, reason str
 }
 
 func containsGroup(groups []string, want string) bool {
-	for _, group := range groups {
-		if group == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(groups, want)
 }

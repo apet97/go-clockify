@@ -286,7 +286,7 @@ func TestCircuitBreakerOpensAfterFinal5xx(t *testing.T) {
 		OpenDuration:     time.Minute,
 		HalfOpenProbes:   1,
 	})
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		var out map[string]any
 		if err := c.Get(context.Background(), "/test", nil, &out); err == nil {
 			t.Fatalf("call %d: expected upstream error", i+1)
@@ -326,7 +326,7 @@ func TestCircuitBreakerHalfOpenSuccessCloses(t *testing.T) {
 	now := time.Unix(1700000000, 0)
 	c.breaker.now = func() time.Time { return now }
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		var out map[string]any
 		if err := c.Get(context.Background(), "/test", nil, &out); err == nil {
 			t.Fatalf("call %d: expected upstream error", i+1)
@@ -903,7 +903,7 @@ func TestListAllSafetyStopErrorIncludesPath(t *testing.T) {
 func TestBackoffIncreasing(t *testing.T) {
 	// Run multiple samples to account for jitter and confirm the trend.
 	const samples = 20
-	for s := 0; s < samples; s++ {
+	for s := range samples {
 		b1 := backoff(1)
 		b2 := backoff(2)
 		b3 := backoff(3)
@@ -1161,7 +1161,7 @@ func TestConcurrentPutsShareBufPoolSafely(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(n)
 	errCh := make(chan error, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			defer wg.Done()
 			id := fmt.Sprintf("id-%04d", i)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1829,10 +1830,8 @@ func TestUpdateTimeOffRequestSchemaRequiresStatus(t *testing.T) {
 			continue
 		}
 		required := descriptor.Tool.InputSchema["required"].([]string)
-		for _, field := range required {
-			if field == "status" {
-				return
-			}
+		if slices.Contains(required, "status") {
+			return
 		}
 		t.Fatalf("required = %#v, want status", required)
 	}

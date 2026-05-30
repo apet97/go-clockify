@@ -6,7 +6,7 @@ import (
 )
 
 func TestServiceInternalStateIsGroupedByConcern(t *testing.T) {
-	serviceType := reflect.TypeOf(Service{})
+	serviceType := reflect.TypeFor[Service]()
 	legacyFields := []string{
 		"cachedUser",
 		"cachedWSID",

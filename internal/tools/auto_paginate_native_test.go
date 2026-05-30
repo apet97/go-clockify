@@ -16,9 +16,9 @@ import (
 // resubmitting `page=N` until a short batch comes back, then merges
 // the per-page Data slices.
 func TestInvoicesListAutoPaginateWalksEveryPage(t *testing.T) {
-	var requests int32
+	var requests atomic.Int32
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requests, 1)
+		requests.Add(1)
 		if !strings.HasSuffix(r.URL.Path, "/workspaces/ws1/invoices") {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -47,7 +47,7 @@ func TestInvoicesListAutoPaginateWalksEveryPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listInvoices auto: %v", err)
 	}
-	if got := atomic.LoadInt32(&requests); got != 2 {
+	if got := requests.Load(); got != 2 {
 		t.Fatalf("expected 2 HTTP requests, got %d", got)
 	}
 	if v, _ := result.Meta["auto_paginate"].(bool); !v {
@@ -71,7 +71,7 @@ func TestInvoicesListAutoPaginateWalksEveryPage(t *testing.T) {
 // pages forces the loop to halt on the cap rather than on a short page,
 // proving the truncation branch fires for this handler shape too.
 func TestExpensesListAutoPaginateRespectsMaxRows(t *testing.T) {
-	var requests int32
+	var requests atomic.Int32
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		// listExpenses also queries the workspace endpoint to look up the
 		// default currency; only count the expenses-list calls.
@@ -82,7 +82,7 @@ func TestExpensesListAutoPaginateRespectsMaxRows(t *testing.T) {
 		if !strings.HasSuffix(r.URL.Path, "/workspaces/ws1/expenses") {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		atomic.AddInt32(&requests, 1)
+		requests.Add(1)
 		page := make([]map[string]any, autoPaginatePageSize)
 		for i := range page {
 			page[i] = map[string]any{
@@ -113,7 +113,7 @@ func TestExpensesListAutoPaginateRespectsMaxRows(t *testing.T) {
 		t.Fatalf("listExpenses auto: %v", err)
 	}
 	// max_rows=250, page_size=200 → 2 fetches, second trimmed to 50.
-	if got := atomic.LoadInt32(&requests); got != 2 {
+	if got := requests.Load(); got != 2 {
 		t.Fatalf("expected 2 HTTP requests under max_rows=250, got %d", got)
 	}
 	if v, _ := result.Meta["truncated"].(bool); !v {
@@ -133,9 +133,9 @@ func TestExpensesListAutoPaginateRespectsMaxRows(t *testing.T) {
 // array (no envelope). Without the flag, the wrapper must invoke the
 // handler exactly once and not stamp the auto/truncated meta keys.
 func TestCustomFieldsListWithoutAutoPaginateUnchanged(t *testing.T) {
-	var requests int32
+	var requests atomic.Int32
 	client, cleanup := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requests, 1)
+		requests.Add(1)
 		respondJSON(t, w, []map[string]any{
 			{"id": "cf1", "name": "Cost Center"},
 			{"id": "cf2", "name": "Region"},
@@ -149,7 +149,7 @@ func TestCustomFieldsListWithoutAutoPaginateUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListCustomFields: %v", err)
 	}
-	if got := atomic.LoadInt32(&requests); got != 1 {
+	if got := requests.Load(); got != 1 {
 		t.Fatalf("expected 1 HTTP request, got %d", got)
 	}
 	if _, present := result.Meta["auto_paginate"]; present {

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"maps"
 	"strings"
 	"testing"
 
@@ -246,9 +247,7 @@ func synthesizeValue(prop map[string]any) (any, bool) {
 
 func cloneArgs(in map[string]any) map[string]any {
 	out := make(map[string]any, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 

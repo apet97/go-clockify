@@ -90,16 +90,14 @@ func TestNotifierHub_ConcurrentAddRemove(t *testing.T) {
 	var wg sync.WaitGroup
 	var sent atomic.Int64
 
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 20 {
+		wg.Go(func() {
 			n := &hubTestNotifier{}
 			remove := hub.add(n)
 			_ = hub.notify("concurrent", nil)
 			sent.Add(1)
 			remove()
-		}()
+		})
 	}
 	wg.Wait()
 	if sent.Load() != 20 {

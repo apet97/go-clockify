@@ -88,10 +88,7 @@ func BenchmarkProjectIDCold500Names(b *testing.B) {
 			_, _ = w.Write([]byte(`[]`))
 			return
 		}
-		end := start + pageSize
-		if end > len(projects) {
-			end = len(projects)
-		}
+		end := min(start+pageSize, len(projects))
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(projects[start:end]); err != nil {
 			b.Fatalf("encode projects: %v", err)

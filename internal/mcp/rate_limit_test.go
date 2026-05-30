@@ -9,7 +9,7 @@ import (
 func TestTokenBucketAllowsBurstUpToCapacityThenDenies(t *testing.T) {
 	b := newTokenBucket(120)
 	allowed := 0
-	for i := 0; i < 120; i++ {
+	for range 120 {
 		if b.allow() {
 			allowed++
 		}
@@ -27,7 +27,7 @@ func TestTokenBucketNilAlwaysAllows(t *testing.T) {
 	if newTokenBucket(0) != nil {
 		t.Fatal("newTokenBucket(0) should return nil (disabled)")
 	}
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		if !b.allow() {
 			t.Fatal("a nil token bucket must always allow")
 		}
@@ -80,7 +80,7 @@ func TestFamilyLimiterDoesNotCapReads(t *testing.T) {
 	l := newFamilyLimiter()
 	ctx := context.Background()
 	releases := make([]func(), 0, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		r, err := l.acquire(ctx, RiskRead)
 		if err != nil {
 			t.Fatalf("read acquire %d: %v", i, err)

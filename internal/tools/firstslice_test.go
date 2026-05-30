@@ -217,7 +217,7 @@ func TestWorkflowUpsertScansAllPages(t *testing.T) {
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 
 	t.Run("client", func(t *testing.T) {
-		for i := 0; i < 240; i++ {
+		for i := range 240 {
 			if _, err := svc.createClient(ctx, fmt.Sprintf("client-%03d", i)); err != nil {
 				t.Fatal(err)
 			}
@@ -237,7 +237,7 @@ func TestWorkflowUpsertScansAllPages(t *testing.T) {
 	})
 
 	t.Run("project", func(t *testing.T) {
-		for i := 0; i < 240; i++ {
+		for i := range 240 {
 			if _, _, err := svc.createProject(ctx, map[string]any{}, fmt.Sprintf("project-%03d", i)); err != nil {
 				t.Fatal(err)
 			}
@@ -261,7 +261,7 @@ func TestWorkflowUpsertScansAllPages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for i := 0; i < 240; i++ {
+		for i := range 240 {
 			if _, err := svc.createTask(ctx, project.ID, fmt.Sprintf("task-%03d", i), nil); err != nil {
 				t.Fatal(err)
 			}
@@ -281,7 +281,7 @@ func TestWorkflowUpsertScansAllPages(t *testing.T) {
 	})
 
 	t.Run("tag", func(t *testing.T) {
-		for i := 0; i < 240; i++ {
+		for i := range 240 {
 			if _, err := svc.createTag(ctx, fmt.Sprintf("tag-%03d", i)); err != nil {
 				t.Fatal(err)
 			}
@@ -307,7 +307,7 @@ func TestDemoCleanupScansAllProjectPages(t *testing.T) {
 	defer fake.Close()
 	svc := New(clockify.NewClient("test-key", fake.URL, time.Second, 0), fake.WorkspaceID)
 
-	for i := 0; i < 240; i++ {
+	for i := range 240 {
 		if _, _, err := svc.createProject(ctx, map[string]any{}, fmt.Sprintf("other-project-%03d", i)); err != nil {
 			t.Fatal(err)
 		}
