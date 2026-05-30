@@ -3341,7 +3341,9 @@
                           "required": [
                             "hourly_scope",
                             "cost_scope",
-                            "duration_seconds"
+                            "duration_seconds",
+                            "billable_earnings",
+                            "cost"
                           ],
                           "type": "object"
                         },
@@ -4379,7 +4381,9 @@
                           "required": [
                             "hourly_scope",
                             "cost_scope",
-                            "duration_seconds"
+                            "duration_seconds",
+                            "billable_earnings",
+                            "cost"
                           ],
                           "type": "object"
                         },
@@ -5407,7 +5411,9 @@
                         "required": [
                           "hourly_scope",
                           "cost_scope",
-                          "duration_seconds"
+                          "duration_seconds",
+                          "billable_earnings",
+                          "cost"
                         ],
                         "type": "object"
                       },
@@ -6778,7 +6784,9 @@
                     "required": [
                       "hourly_scope",
                       "cost_scope",
-                      "duration_seconds"
+                      "duration_seconds",
+                      "billable_earnings",
+                      "cost"
                     ],
                     "type": "object"
                   },
@@ -7629,7 +7637,9 @@
                     "required": [
                       "hourly_scope",
                       "cost_scope",
-                      "duration_seconds"
+                      "duration_seconds",
+                      "billable_earnings",
+                      "cost"
                     ],
                     "type": "object"
                   },

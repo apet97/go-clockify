@@ -293,8 +293,8 @@ type EntryRateView struct {
 	HourlyScope      RateScope      `json:"hourly_scope"`
 	CostScope        RateScope      `json:"cost_scope"`
 	DurationSeconds  int64          `json:"duration_seconds"`
-	BillableEarnings MoneyView      `json:"billable_earnings,omitempty"`
-	Cost             MoneyView      `json:"cost,omitempty"`
+	BillableEarnings MoneyView      `json:"billable_earnings"`
+	Cost             MoneyView      `json:"cost"`
 }
 
 // BuildEntryRateView is the canonical adapter from a (workspace,
