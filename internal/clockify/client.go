@@ -89,10 +89,12 @@ func valuesFromQueryMap(query map[string]string) url.Values {
 }
 
 // Client is the Clockify HTTP API client. It authenticates with the configured
-// API key, enforces a max response-body size, retries idempotent requests, and
-// optionally gates calls through a per-endpoint circuit breaker. The verb
-// methods (Get/Post/Put/Patch/Delete and their variants) target the main host;
-// RequestRaw* methods target a documented host explicitly.
+// API key, enforces a max response-body size, auto-retries only idempotent/safe
+// requests (GET/HEAD/OPTIONS/PUT) and never auto-retries mutating requests
+// (POST/PATCH/DELETE), and optionally gates calls through a per-endpoint circuit
+// breaker. The verb methods (Get/Post/Put/Patch/Delete and their variants)
+// target the main host; RequestRaw* methods target a documented host
+// explicitly.
 type Client struct {
 	apiKey               string
 	baseURL              string
@@ -644,7 +646,7 @@ func (c *Client) doRequestValues(ctx context.Context, baseURL, method, path stri
 		}
 		lastErr = err
 
-		if !isRetryableError(err) {
+		if !isRetryableError(method, err) {
 			c.recordCircuitBreakerResult(endpoint, method, err)
 			return err
 		}
@@ -835,13 +837,36 @@ func isRetryableStatus(code int) bool {
 		code == http.StatusGatewayTimeout
 }
 
+// isIdempotentMethod reports whether method is safe to auto-retry. GET, HEAD,
+// and OPTIONS are read-only/safe. PUT is idempotent by the HTTP contract
+// (Clockify uses it for full-resource replacement, not append). POST, PATCH,
+// and DELETE are treated as non-idempotent: a transport error or 5xx after the
+// server already processed the write would turn an automatic retry into a
+// duplicate mutation, so they are never auto-retried. An unknown/empty method
+// denies retry as a safety default.
+func isIdempotentMethod(method string) bool {
+	switch strings.ToUpper(method) {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPut:
+		return true
+	default:
+		return false
+	}
+}
+
 // isRetryableError reports whether a failed request attempt should be
-// retried: an APIError carrying a retryable HTTP status, or a transport-level
-// failure (DNS, connection reset, TLS, dial/read timeout) that never produced
-// a response. A caller-cancelled or deadline-exceeded request is never retried
-// — that is the caller's decision, not an upstream fault.
-func isRetryableError(err error) bool {
+// retried. It first gates on the HTTP method: only idempotent/safe methods
+// (GET/HEAD/OPTIONS/PUT) are eligible — mutating methods (POST/PATCH/DELETE)
+// are never auto-retried, because an upstream that processed the write before
+// returning an error would be mutated twice on retry. For eligible methods it
+// then requires an APIError carrying a retryable HTTP status, or a
+// transport-level failure (DNS, connection reset, TLS, dial/read timeout) that
+// never produced a response. A caller-cancelled or deadline-exceeded request is
+// never retried — that is the caller's decision, not an upstream fault.
+func isRetryableError(method string, err error) bool {
 	if err == nil {
+		return false
+	}
+	if !isIdempotentMethod(method) {
 		return false
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
