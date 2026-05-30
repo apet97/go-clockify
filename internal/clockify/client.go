@@ -263,6 +263,13 @@ func (c *Client) DeleteWithQueryCapture(ctx context.Context, path string, query 
 	return c.doJSON(ctx, c.baseURL, http.MethodDelete, path, query, nil, out)
 }
 
+// DeleteWithQueryCaptureValues is like DeleteWithQueryCapture but accepts
+// url.Values so repeated query keys (e.g. status=active&status=archived) are
+// preserved instead of being collapsed by a map[string]string.
+func (c *Client) DeleteWithQueryCaptureValues(ctx context.Context, path string, query url.Values, out any) error {
+	return c.doJSONValues(ctx, c.baseURL, http.MethodDelete, path, query, nil, out)
+}
+
 // DeleteWithBody issues a DELETE with a JSON request body and decodes any
 // response into out, for the Clockify routes that require a delete payload.
 func (c *Client) DeleteWithBody(ctx context.Context, path string, body any, out any) error {
@@ -335,6 +342,12 @@ func (c *Client) DocumentedBaseURL(host string) string {
 // shared-report endpoints; everything else should stay on Get.
 func (c *Client) GetReports(ctx context.Context, path string, query map[string]string, out any) error {
 	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, nil, out)
+}
+
+// GetReportsValues is like GetReports but accepts url.Values so repeated query
+// keys are preserved on the reports host.
+func (c *Client) GetReportsValues(ctx context.Context, path string, query url.Values, out any) error {
+	return c.doJSONValues(ctx, c.ReportsBaseURL(), http.MethodGet, path, query, nil, out)
 }
 
 // PostReports performs a POST against the reports host.

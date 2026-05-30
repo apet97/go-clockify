@@ -12,10 +12,10 @@ import (
 )
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
-	rawRequest := firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+	rawRequest := firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Report paths (/workspaces/{workspaceId}/reports*, /workspaces/{workspaceId}/shared-reports) route to reports.api.clockify.me; other paths route to api.clockify.me. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. Raw PATCH to reports paths is unsupported.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
 		"method":        map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
 		"path":          map[string]any{"type": "string"},
-		"query":         map[string]any{"type": "object", "additionalProperties": true},
+		"query":         map[string]any{"type": "object", "additionalProperties": true, "description": "Query object. Values may be string, number, boolean, or an array of those; arrays become repeated query parameters (status=active&status=archived)."},
 		"body":          map[string]any{"type": "object", "additionalProperties": true},
 		"dry_run":       map[string]any{"type": "boolean", "description": "Preview a raw mutating request without calling Clockify."},
 		"confirm_token": map[string]any{"type": "string", "description": "Short-lived token returned by a dry_run preview for this exact raw request.", "minLength": 16, "maxLength": 512},
@@ -25,9 +25,9 @@ func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
 		return safety.RequirementForRisk([]string{"write"}, false, method)
 	}
 	return []mcp.ToolDescriptor{
-		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
+		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Report paths (/workspaces/{workspaceId}/reports*, /workspaces/{workspaceId}/shared-reports) route to reports.api.clockify.me; other paths route to api.clockify.me. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
 			"path":  map[string]any{"type": "string"},
-			"query": map[string]any{"type": "object", "additionalProperties": true},
+			"query": map[string]any{"type": "object", "additionalProperties": true, "description": "Query object. Values may be string, number, boolean, or an array of those; arrays become repeated query parameters (status=active&status=archived)."},
 		}})), s.RawAPIGet),
 		rawRequest,
 	}
@@ -77,25 +77,51 @@ func (s *Service) rawAPI(ctx context.Context, method string, args map[string]any
 			"dry_run":          true,
 			"method":           method,
 			"path":             path,
-			"query_hash":       safety.HashCanonical(query),
+			"query_hash":       safety.HashCanonical(query.Encode()),
 			"body_hash":        safety.HashCanonical(body),
 			"documented_route": !s.RawWriteDocumentedOnly || isDocumentedRawWriteRoute(method, path),
 		}
 		return result(actionForRawMethod(method), "raw_api", map[string]string{"workspaceId": s.WorkspaceID}, data, ChangeSet{}, []Warning{{Code: "dry_run", Message: "No raw API request was sent to Clockify."}}, nil), nil
 	}
+	// Report and shared-report paths live on the reports host. Routing them
+	// through the main-host verbs returns a 404, so dispatch via the
+	// reports-host helpers instead.
+	reportsHost := isReportsPath(path)
 	var data any
 	switch method {
 	case "GET":
-		err = s.Client.Get(ctx, path, query, &data)
+		if reportsHost {
+			err = s.Client.GetReportsValues(ctx, path, query, &data)
+		} else {
+			err = s.Client.GetValues(ctx, path, query, &data)
+		}
 	case "POST":
-		err = s.Client.Post(ctx, path, body, &data)
+		if reportsHost {
+			err = s.Client.PostReports(ctx, path, body, &data)
+		} else {
+			err = s.Client.Post(ctx, path, body, &data)
+		}
 	case "PUT":
-		err = s.Client.Put(ctx, path, body, &data)
+		if reportsHost {
+			err = s.Client.PutReports(ctx, path, body, &data)
+		} else {
+			err = s.Client.Put(ctx, path, body, &data)
+		}
 	case "PATCH":
+		if reportsHost {
+			// The Clockify reports host has no PATCH endpoint, so there is no
+			// reports-host helper to route through. Reject deterministically
+			// instead of issuing a PATCH that the main host would 404.
+			return nil, fmt.Errorf("unsupported: raw PATCH to reports endpoints is not implemented; use the typed clockify_reports_* tools")
+		}
 		err = s.Client.Patch(ctx, path, body, &data)
 	case "DELETE":
 		var deleted any
-		err = s.Client.DeleteWithQueryCapture(ctx, path, query, &deleted)
+		if reportsHost {
+			err = s.Client.DeleteReportsCaptureValues(ctx, path, query, &deleted)
+		} else {
+			err = s.Client.DeleteWithQueryCaptureValues(ctx, path, query, &deleted)
+		}
 		if deleted != nil {
 			data = deleted
 		} else {
@@ -206,16 +232,42 @@ func safeRawPath(workspaceID, raw string) (string, error) {
 	return path, nil
 }
 
-func rawQuery(raw any) map[string]string {
+// rawQuery converts the user-supplied query object into url.Values so repeated
+// keys survive. A scalar (string/number/bool) becomes a single value; an array
+// becomes repeated values for the same key (status=active&status=archived); an
+// empty array contributes no values. A map[string]string would silently collapse
+// arrays into a comma-joined scalar, which breaks Clockify filters that expect
+// repeated keys.
+func rawQuery(raw any) url.Values {
 	m, ok := raw.(map[string]any)
 	if !ok || len(m) == 0 {
 		return nil
 	}
-	query := make(map[string]string, len(m))
+	query := url.Values{}
 	for key, value := range m {
-		query[key] = scalarToString(value)
+		if items, ok := value.([]any); ok {
+			for _, item := range items {
+				query.Add(key, scalarToString(item))
+			}
+			continue
+		}
+		query.Add(key, scalarToString(value))
+	}
+	if len(query) == 0 {
+		return nil
 	}
 	return query
+}
+
+// isReportsPath reports whether a raw path targets the Clockify reports host.
+// Report and shared-report paths live on reports.api.clockify.me, not the main
+// api.clockify.me host; routing them to the main host returns a 404.
+func isReportsPath(path string) bool {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	// Path shape: /workspaces/{wsId}/reports/... or
+	// /workspaces/{wsId}/shared-reports/...
+	return len(parts) >= 3 && parts[0] == "workspaces" &&
+		(parts[2] == "reports" || parts[2] == "shared-reports")
 }
 
 func rawChange(method string) string {
