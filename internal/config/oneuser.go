@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -14,10 +15,24 @@ import (
 )
 
 // DefaultBaseURL is the production Clockify REST API base used when
-// CLOCKIFY_BASE_URL is not set. Override only for localhost/loopback
-// targets such as the fake-server fixture; LoadOneUser rejects every
-// other override that does not point at a documented Clockify host.
+// CLOCKIFY_BASE_URL is not set. LoadOneUser rejects overrides that do not
+// point at a documented Clockify host (api.clockify.me,
+// reports.api.clockify.me, auditlog-api.api.clockify.me) or at a loopback
+// target (localhost / 127.x.x.x, for the fake-server fixture and local
+// proxies), unless CLOCKIFY_ALLOW_CUSTOM_BASE_URL=true is set to permit an
+// arbitrary HTTPS host. The allowlist prevents a stray override from
+// silently exfiltrating the API key to a non-Clockify endpoint.
 const DefaultBaseURL = "https://api.clockify.me/api/v1"
+
+// allowedBaseURLHosts is the set of bare hostnames LoadOneUser accepts for
+// CLOCKIFY_BASE_URL without the explicit custom-override opt-in. It mirrors
+// the documented Clockify API hosts the client targets
+// (clockify.DocumentedHost*).
+var allowedBaseURLHosts = map[string]struct{}{
+	"api.clockify.me":              {},
+	"reports.api.clockify.me":      {},
+	"auditlog-api.api.clockify.me": {},
+}
 
 // Runtime defaults and ceilings for OneUserConfig. Defaults apply when
 // the corresponding environment variable is unset or empty; Min/Max
@@ -386,13 +401,36 @@ func validateOneUserBaseURL(raw string) error {
 	if err != nil {
 		return fmt.Errorf("invalid CLOCKIFY_BASE_URL: %w", err)
 	}
-	if u.Scheme != "https" && !isLoopbackHost(u.Hostname()) {
-		return fmt.Errorf("invalid CLOCKIFY_BASE_URL: HTTPS is required unless the host is loopback")
-	}
 	if u.Host == "" {
 		return fmt.Errorf("invalid CLOCKIFY_BASE_URL: host is required")
 	}
-	return nil
+	host := u.Hostname()
+	// Loopback targets (fake-server fixtures, local proxies) may use HTTP or
+	// HTTPS and are always allowed.
+	if isLoopbackHost(host) {
+		return nil
+	}
+	// Non-loopback targets must use HTTPS so the API key is never sent in the
+	// clear.
+	if u.Scheme != "https" {
+		return fmt.Errorf("invalid CLOCKIFY_BASE_URL: HTTPS is required unless the host is loopback")
+	}
+	if _, ok := allowedBaseURLHosts[strings.ToLower(host)]; ok {
+		return nil
+	}
+	allowCustom, err := parseBoolEnv("CLOCKIFY_ALLOW_CUSTOM_BASE_URL")
+	if err != nil {
+		return err
+	}
+	if allowCustom {
+		slog.Warn("clockify config: CLOCKIFY_BASE_URL points at a non-Clockify host; allowed only because CLOCKIFY_ALLOW_CUSTOM_BASE_URL=true. Ensure this host is trusted with your API key.",
+			"host", host)
+		return nil
+	}
+	return fmt.Errorf(
+		"invalid CLOCKIFY_BASE_URL: host %q is not a documented Clockify host (api.clockify.me, reports.api.clockify.me, auditlog-api.api.clockify.me) or loopback; set CLOCKIFY_ALLOW_CUSTOM_BASE_URL=true to allow an arbitrary HTTPS host",
+		host,
+	)
 }
 
 func isLoopbackHost(host string) bool {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -353,6 +354,109 @@ func TestLoadOneUserRejectsUnsafeBaseURLAndWorkspaceID(t *testing.T) {
 	t.Setenv("CLOCKIFY_BASE_URL", "http://clockify.example.test/api/v1")
 	if _, err := LoadOneUser(); err == nil {
 		t.Fatal("expected non-HTTPS base URL error")
+	}
+}
+
+func TestLoadOneUserAcceptsDocumentedClockifyHosts(t *testing.T) {
+	hosts := []string{
+		"https://api.clockify.me/api/v1",
+		"https://reports.api.clockify.me/v1",
+		"https://auditlog-api.api.clockify.me/v1",
+	}
+	for _, host := range hosts {
+		t.Run(host, func(t *testing.T) {
+			t.Setenv("CLOCKIFY_API_KEY", "test-key")
+			t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+			t.Setenv("CLOCKIFY_BASE_URL", host)
+
+			cfg, err := LoadOneUser()
+			if err != nil {
+				t.Fatalf("LoadOneUser(%q) returned error: %v", host, err)
+			}
+			if cfg.BaseURL != host {
+				t.Fatalf("BaseURL = %q, want %q", cfg.BaseURL, host)
+			}
+		})
+	}
+}
+
+func TestLoadOneUserRejectsNonClockifyHTTPSBaseURL(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+	t.Setenv("CLOCKIFY_BASE_URL", "https://evil.example.com/api/v1")
+
+	_, err := LoadOneUser()
+	if err == nil {
+		t.Fatal("expected error for arbitrary HTTPS host without override")
+	}
+	if !strings.Contains(err.Error(), "CLOCKIFY_ALLOW_CUSTOM_BASE_URL") {
+		t.Fatalf("error %q should mention the custom-override env var", err)
+	}
+	if !strings.Contains(err.Error(), "api.clockify.me") {
+		t.Fatalf("error %q should list the documented Clockify hosts", err)
+	}
+}
+
+func TestLoadOneUserAllowsArbitraryHTTPSWithExplicitOverride(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+	t.Setenv("CLOCKIFY_BASE_URL", "https://custom.internal/api/v1")
+	t.Setenv("CLOCKIFY_ALLOW_CUSTOM_BASE_URL", "true")
+
+	cfg, err := LoadOneUser()
+	if err != nil {
+		t.Fatalf("LoadOneUser returned error: %v", err)
+	}
+	if cfg.BaseURL != "https://custom.internal/api/v1" {
+		t.Fatalf("BaseURL = %q, want custom override URL", cfg.BaseURL)
+	}
+}
+
+func TestLoadOneUserRejectsArbitraryHTTPEvenWithOverride(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+	t.Setenv("CLOCKIFY_BASE_URL", "http://evil.example.com/api/v1")
+	t.Setenv("CLOCKIFY_ALLOW_CUSTOM_BASE_URL", "true")
+
+	_, err := LoadOneUser()
+	if err == nil {
+		t.Fatal("expected error for non-HTTPS host even with custom override")
+	}
+	if !strings.Contains(err.Error(), "HTTPS is required") {
+		t.Fatalf("error %q should require HTTPS for non-loopback hosts", err)
+	}
+}
+
+func TestLoadOneUserAcceptsLoopbackHTTPSUnchanged(t *testing.T) {
+	// localhost is loopback, so it is accepted regardless of scheme; this
+	// guards that the loopback allowance also covers the HTTPS form.
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+	t.Setenv("CLOCKIFY_BASE_URL", "https://localhost:8080/api/v1")
+
+	if _, err := LoadOneUser(); err != nil {
+		t.Fatalf("LoadOneUser returned error for loopback https: %v", err)
+	}
+}
+
+func TestLoadOneUserBaseURLValidationErrorMessages(t *testing.T) {
+	t.Setenv("CLOCKIFY_API_KEY", "test-key")
+	t.Setenv("CLOCKIFY_WORKSPACE_ID", "000000000000000000000001")
+	t.Setenv("CLOCKIFY_BASE_URL", "https://not-clockify.test/api/v1")
+
+	_, err := LoadOneUser()
+	if err == nil {
+		t.Fatal("expected error for non-Clockify HTTPS host")
+	}
+	for _, want := range []string{
+		"api.clockify.me",
+		"reports.api.clockify.me",
+		"auditlog-api.api.clockify.me",
+		"CLOCKIFY_ALLOW_CUSTOM_BASE_URL",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q should mention %q", err, want)
+		}
 	}
 }
 

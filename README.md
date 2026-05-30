@@ -228,7 +228,8 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL |
+| `CLOCKIFY_BASE_URL` | `https://api.clockify.me/api/v1` | Clockify API base URL. Overrides must point at a documented Clockify host (`api.clockify.me`, `reports.api.clockify.me`, `auditlog-api.api.clockify.me`) or a loopback target (test fixtures / local proxies); any other HTTPS host requires `CLOCKIFY_ALLOW_CUSTOM_BASE_URL=true` |
+| `CLOCKIFY_ALLOW_CUSTOM_BASE_URL` | `false` | `true` allows an arbitrary HTTPS `CLOCKIFY_BASE_URL` host off the Clockify allowlist (logs a warning). Use only for a trusted proxy; non-HTTPS non-loopback hosts are still rejected |
 | `CLOCKIFY_TIMEZONE` | system local | Timezone for date handling |
 | `CLOCKIFY_TOOLSET` | `default` | Tool surface advertised and authorized on the wire: `default` (16 everyday tools), `core`, `business`, `admin`, or `all` (156). The full registry of 156 tools is loaded for self-inspection, but default/core/business/admin reject unadvertised tool calls. |
 | `CLOCKIFY_TOOL_RATE_LIMIT_PER_MINUTE` | `120` | Tool-invocation rate cap per minute. Risk buckets narrow this to 30/min writes, 10/min billing/admin, and 5/min destructive tools; explicit `0` disables rate limiting. |
