@@ -19,11 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_API_KEY }}
-      CLOCKIFY_WORKSPACE_ID: ${{ secrets.CLOCKIFY_WORKSPACE_ID }}
+      CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_LIVE_API_KEY }}
+      CLOCKIFY_WORKSPACE_ID: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
       CLOCKIFY_RUN_LIVE_E2E: "1"
       CLOCKIFY_LIVE_PREFIX: "MCP-LIVE-CI-${{ github.run_id }}-"
-      CLOCKIFY_LIVE_WORKSPACE_CONFIRM: ${{ secrets.CLOCKIFY_WORKSPACE_ID }}
+      CLOCKIFY_LIVE_WORKSPACE_CONFIRM: ${{ secrets.CLOCKIFY_LIVE_WORKSPACE_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
