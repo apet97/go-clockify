@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-30
+
+### Added
+
+- Completed audit track T3.2 phase 2: godoc on every exported symbol in
+  `internal/mcp` (25), `internal/clockify` (45), and `internal/tools` (128) —
+  198 total. The per-package `^exported:` opt-outs were removed from
+  `.golangci.yml`, so every `internal/` package now enforces the revive
+  `exported` rule and no godoc opt-outs remain.
+
+### Changed
+
+- Module-wide gopls modernization sweep (behavior-preserving, 42 files):
+  `maps.Copy` for copy loops, `slices.Contains` for linear membership, the
+  `min`/`max` builtins, range-over-int loops, `atomic.Int32`,
+  `reflect.TypeFor`, `t.Context` in tests, and `strings.SplitSeq`/`FieldsSeq`.
+- `EntryRateView.BillableEarnings` and `.Cost` dropped their no-op `,omitempty`
+  JSON tag — `omitempty` has no effect on non-pointer structs, so these fields
+  were always emitted. The regenerated tool catalog now correctly marks
+  `billable_earnings` and `cost` as `required` in the affected tools' output
+  schemas. Runtime wire output is unchanged.
+- Refreshed the sibling TypeScript surface in the docs
+  (`clockify-sdk-ts-115@0.9.0`, `@clockify115/cli@0.1.0` 28 commands,
+  `@clockify115/mcp-server@0.3.0` 105 tools), added an OpenAPI gotchas
+  cross-link to the sibling `discrepancies.md` ledger, and bumped the
+  SECURITY.md supported-versions row.
+- Recorded the 2026-05-30 `make perfect-live` run in `docs/live-tests.md` and
+  resolved/closed the rolling nightly-live drift issue (#134): the prior
+  failure was a revoked API key (env/config drift), not Clockify API drift or a
+  code regression.
+
 ## [0.4.0] - 2026-05-29
 
 ### Fixed
@@ -3516,7 +3547,8 @@ Initial stable release.
 - **Signed releases** — cosign keyless signatures, SPDX SBOMs, and SLSA build provenance on every binary and container image.
 - **Reference Kubernetes manifests** — Deployment (non-root distroless, read-only root FS), NetworkPolicy (default-deny), PodDisruptionBudget, ServiceMonitor, and PrometheusRule with multi-window burn-rate alerts for a 99.9% SLO. Helm chart and Kustomize overlays included.
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/apet97/go-clockify/compare/v0.4.0...v0.4.1
 [1.3.0]: https://github.com/apet97/go-clockify/compare/v1.2.5...v1.3.0
 [1.2.2]: https://github.com/apet97/go-clockify/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/apet97/go-clockify/releases/tag/v1.2.1

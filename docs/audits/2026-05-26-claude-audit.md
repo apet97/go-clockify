@@ -270,20 +270,18 @@ The `ci.yml` workflow has 14 named jobs, all running on `ubuntu-latest` with pin
 
 - **WHY:** The code is generally idiomatic but some unexported helpers in large files (`common.go`, `schema_helpers.go`) lack comments and have inconsistent short-variable names (e.g., `p`, `s` reused as both pagination page and service receiver in different scopes).
 - **HOW (phase 1, landed):** `revive` enabled in `.golangci.yml` with the three audit-specified rules (`exported`, `var-naming`, `unused-parameter`) and `enable-all-rules: false` so noisier defaults (e.g. `package-comments`) stay quiet. Five `unused-parameter` violations renamed to `_`; one `var-naming` violation (`scanApiCoverageCounts` → `scanAPICoverageCounts`) renamed. At phase-1 landing, the 813 pre-existing `exported` violations across `internal/` were silenced via a single `text: ^exported: ` exclusion with a load-bearing comment pointing back to T3.2. (Phase 2, started 2026-05-29, has since converted that blanket exclusion to per-package opt-outs and brought the godoc-clean count to eleven of thirteen `internal/` packages — see HOW (phase 2) below.)
-- **HOW (phase 2, in progress — started 2026-05-29):** Godoc-coverage
-  campaign across `internal/{clockify,mcp,safety,resolve,testclockify,tools}`.
-  The blanket `text: ^exported: ` exclusion has been split into
-  per-package `path:` opt-outs. Eleven of thirteen `internal/`
-  packages are now clean and enforce `exported`:
-  `paths`, `timeparse`, `jsonschema`, `tracing`, `logging`, `dryrun`,
-  `jsonmergepatch`, `config`, `resolve`, `safety`, `testclockify`.
-  Three packages remain: `mcp` (~25 symbols), `clockify` (~45), and
-  `tools` (~178). Each remaining package keeps a per-package opt-out
-  in `.golangci.yml` until its godoc lands.
-- **EFFORT:** Phase 1 ≈ 1 h actual. Phase 2 so far ≈ 2 h for the
-  four small packages (config, resolve, safety, testclockify).
-  The three remaining packages are the bulk of the work; rough
-  estimate 1 h for `mcp`, 2 h for `clockify`, 4 h for `tools`.
+- **HOW (phase 2, COMPLETE — finished 2026-05-30, commit `72f0ee5`):**
+  Godoc-coverage campaign across `internal/`. The blanket
+  `text: ^exported: ` exclusion was split into per-package `path:`
+  opt-outs, then each opt-out was removed as its package reached full
+  coverage. The final three packages were documented on 2026-05-30 —
+  `internal/mcp` (25 exported symbols), `internal/clockify` (45), and
+  `internal/tools` (128); 198 total — and their opt-outs removed. Every
+  `internal/` package now enforces `exported`; no godoc opt-outs remain
+  in `.golangci.yml`.
+- **EFFORT:** Phase 1 ≈ 1 h actual. Phase 2 ≈ 2 h for the four small
+  packages (config, resolve, safety, testclockify) plus the final
+  three-package documentation pass that closed the track.
 
 ---
 

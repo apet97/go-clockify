@@ -121,14 +121,12 @@ as setup instructions.
   `var-naming`, `unused-parameter`) under `enable-all-rules: false`.
   Production `unused-parameter` (5) and `var-naming` (1) violations
   are fixed.
-- **Audit T3.2 phase 2 in progress** (started 2026-05-29). The blanket
-  `^exported: ` exclusion has been split into per-package opt-outs.
-  Eleven of thirteen `internal/` packages are now godoc-clean and
-  enforce `exported`: `paths`, `timeparse`, `jsonschema`, `tracing`,
-  `logging`, `dryrun`, `jsonmergepatch`, `config`, `resolve`, `safety`,
-  `testclockify`. Three packages remain (`mcp`, `clockify`, `tools`,
-  ~248 symbols combined) and keep a per-package opt-out in
-  `.golangci.yml` until their godoc coverage lands.
+- **Audit T3.2 phase 2 COMPLETE** (2026-05-30, commit `72f0ee5`). The
+  final three packages — `internal/mcp` (25 exported symbols),
+  `internal/clockify` (45), and `internal/tools` (128); 198 total —
+  were documented and their per-package `^exported:` opt-outs removed
+  from `.golangci.yml`. Every `internal/` package now enforces revive
+  `exported`; no godoc opt-outs remain.
 - **Adversarial audit (2026-05-29) cleanup landed.** Stale doc/script
   claims fixed (architecture.md drift-gate CI column; `make cover-check`
   and `scripts/check-coverage.sh` references dropped; fuzz-corpus.md
@@ -186,8 +184,9 @@ as setup instructions.
   godoc-track comment corrected (it claimed "remaining six packages"
   while listing three — now names the eleven clean Go packages,
   including `resolve`/`safety`/`testclockify`, notes the data-only
-  `internal/benchdata` is out of scope, and says three packages
-  (`mcp`/`clockify`/`tools`) keep their opt-out); a cross-link added at
+  `internal/benchdata` is out of scope, and noted three packages
+  (`mcp`/`clockify`/`tools`) still carried an opt-out — all since
+  removed by the T3.2 phase-2 completion below); a cross-link added at
   the top of the "Known Clockify API Gotchas" section pointing readers
   to the sibling `../fern/spec/evidence/discrepancies.md` ledger for
   the shared live-probed OpenAPI-vs-live divergences. The git-ignored
@@ -202,18 +201,33 @@ as setup instructions.
   invariant and point at docs pruned from `main`; they were annotated
   locally as deprecated/historical (not committed). The 156-tool /
   16-advertised contract and all generated artifacts are unchanged.
+- **godoc phase-2, modernization, money cleanup, and the v0.4.1 release
+  (2026-05-30).** Five commits landed direct to `main` on top of
+  `c7b19da` (v0.4.0), every required check green post-push: `00b3b9d`
+  (doc refresh, above), `72f0ee5` (godoc phase-2 completion, above),
+  `7cc165d` a module-wide behavior-preserving gopls modernization sweep
+  (`maps.Copy`, `slices.Contains`, `min`/`max`, range-over-int,
+  `atomic.Int32`, `reflect.TypeFor`, `t.Context`, `SplitSeq`/`FieldsSeq`;
+  42 files), `cf35703` dropping the no-op `,omitempty` on
+  `EntryRateView`'s non-pointer `MoneyView` fields (`billable_earnings`
+  and `cost` are now correctly `required` in the regenerated output
+  schemas; runtime wire output unchanged), and `93ac19c` recording the
+  2026-05-30 `make perfect-live` run. The work was tagged `v0.4.1`.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
-- `make perfect` and `make perfect-live` were green on 2026-05-25 for the
-  review-hardening stack. The latest live run is recorded in
+- `make perfect-local` was green on 2026-05-30 for the v0.4.1 release commit,
+  and base `make perfect-live` passed the same day on a rotated
+  sacrificial-workspace key. The latest live run is recorded in
   `docs/live-tests.md`; the optional-domain/high-risk/happy-path gates were not
   enabled for that run, and prefix cleanup reported `Leftovers: 0`.
 - The locally cached Claude binary (when used) lives at
   `$HOME/.local/bin/clockify-mcp`. Each contributor may pin a different path
   in their MCP client configuration.
-- The rolling nightly-live issue was still open and classified as env/config
-  drift at the time of this refresh. Treat release tagging, issue closure/waiver,
-  optional live campaigns, or new Clockify API drift as new work.
+- The rolling nightly-live drift issue (#134) was **resolved and closed** on
+  2026-05-30: the prior failure was a revoked API key (env/config drift), and a
+  rotated sacrificial-workspace key passed base `make perfect-live` with
+  `Leftovers: 0`. Treat broader optional live campaigns or new Clockify API
+  drift as new work.
 
 ## Safety Rules
 
