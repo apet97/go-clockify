@@ -171,11 +171,37 @@ as setup instructions.
   touched files (`strings.SplitSeq`, `slices.Contains`, `maps.Copy`,
   `range` over int, built-in `min`).
 - The cleanup, polish, and godoc-phase-2 commits all push direct to
-  `main` (current head `093d60b`). The push triggered the protected-
-  branch bypass notice ("Bypassed rule violations for refs/heads/main:
-  16 of 16 required status checks are expected") and every required
-  check went green post-push (CI + CodeQL + Semgrep + Dependency
-  Review).
+  `main` (head `093d60b` for that campaign). The push triggered the
+  protected-branch bypass notice ("Bypassed rule violations for
+  refs/heads/main: 16 of 16 required status checks are expected") and
+  every required check went green post-push (CI + CodeQL + Semgrep +
+  Dependency Review). `main` then advanced through the test-flake fix,
+  CHANGELOG roll-up, and CI tar-listing fix to the current head
+  `c7b19da` (tag `v0.4.0`).
+- **Documentation-refresh campaign (2026-05-30) landing.** A read-only
+  audit confirmed several doc-only drifts; this campaign fixes them
+  without touching tool behavior, schemas, or generated artifacts:
+  SECURITY.md "Supported Versions" bumped from `0.3.x` to `0.4.x` to
+  match CHANGELOG `[0.4.0]` and tag `v0.4.0`; the `.golangci.yml`
+  godoc-track comment corrected (it claimed "remaining six packages"
+  while listing three — now names the eleven clean Go packages,
+  including `resolve`/`safety`/`testclockify`, notes the data-only
+  `internal/benchdata` is out of scope, and says three packages
+  (`mcp`/`clockify`/`tools`) keep their opt-out); a cross-link added at
+  the top of the "Known Clockify API Gotchas" section pointing readers
+  to the sibling `../fern/spec/evidence/discrepancies.md` ledger for
+  the shared live-probed OpenAPI-vs-live divergences. The git-ignored
+  `CLAUDE.md` "Sibling TypeScript packages" section was refreshed
+  locally (not committed) to the real `../fern` surface:
+  `clockify-sdk-ts-115@0.9.0`, `@clockify115/cli@0.1.0` (28 commands),
+  and `@clockify115/mcp-server@0.3.0` (105 tools = 17 workflow + 88
+  domain) — the narrower sibling to this 156-tool Go MCP. The two
+  git-ignored `.claude/commands/` files (`postgres-e2e.md`,
+  `session-rehydration.md`) describe platform-era multi-tenant /
+  streamable-HTTP work that contradicts the stdio-only single-user
+  invariant and point at docs pruned from `main`; they were annotated
+  locally as deprecated/historical (not committed). The 156-tool /
+  16-advertised contract and all generated artifacts are unchanged.
 - Branch protection requires the 16 current one-user checks in
   `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
 - `make perfect` and `make perfect-live` were green on 2026-05-25 for the
@@ -301,6 +327,18 @@ instead of depending on Psych's exact parser wording.
   The drift gates fail until all of it agrees.
 
 ## Known Clockify API Gotchas
+
+These gotchas cover the Go MCP runtime layer. For the authoritative,
+live-probed evidence behind shared OpenAPI-vs-live-API divergences —
+phantom paths, pagination/last-page-header audits, webhook signature
+scheme, and cross-SDK schema collisions — see the sibling TS SDK repo's
+ledger at `../fern/spec/evidence/discrepancies.md`. That file records
+the probe fixtures, status (resolved/open/documented), and root cause
+for each item; the `scripts/gen-clockify-openapi` `PHANTOM_PATHS`,
+`PAGINATED_LIST_OPS`, and `LAST_PAGE_HEADER_OPS` constants are the
+Go-side counterparts of those entries. Go-MCP-only runtime contracts
+(e.g. `CLOCKIFY_MAX_TOOL_RESULT_BYTES` capping, PDF-only invoice export)
+live below and are not mirrored in that ledger.
 
 - Time-off request listing is POST, not GET (GET returned 405 in live probes):
   `POST /workspaces/{workspaceId}/time-off/requests`.

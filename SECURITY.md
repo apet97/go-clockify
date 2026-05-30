@@ -7,7 +7,7 @@ the latest release.
 
 | Version | Status    |
 | ------- | --------- |
-| 0.3.x   | Supported |
+| 0.4.x   | Supported |
 
 ## Reporting a Vulnerability
 
