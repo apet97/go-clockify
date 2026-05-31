@@ -160,7 +160,13 @@ func renderDashboard(cat catalogFile, rows []coverageRow, notes []string) string
 	})
 	rawFallbackOnly := filterRows(rows, func(r coverageRow) bool {
 		text := strings.ToLower(r.Status + " " + r.NextAction + " " + r.Endpoint)
-		return strings.Contains(text, "raw-fallback-only")
+		// Ledger cells use the underscore form `raw_fallback_only`; prose notes
+		// use the hyphenated `raw-fallback-only`. Match both so the two raw
+		// fallback tools (clockify_api_get / clockify_api_request) are counted
+		// instead of silently dropping to zero while the section still carries a
+		// raw-fallback note.
+		return strings.Contains(text, "raw-fallback-only") ||
+			strings.Contains(text, "raw_fallback_only")
 	})
 
 	var b strings.Builder

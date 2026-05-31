@@ -15,7 +15,7 @@ Buckets are intentionally non-exclusive: a tool can be ready and still be counte
 - Ready: **154**
 - Recovery-only live posture: **19**
 - Paid-feature-sensitive rows: **0**
-- Raw-fallback-only rows: **0**
+- Raw-fallback-only rows: **2**
 - Ledger classification notes: **3**
 
 Catalog/ledger parity: **ok**.
@@ -50,7 +50,10 @@ None.
 
 ## Raw-fallback-only
 
-None.
+| Tool | Class | Status | Live Protocol | Live Happy | Next action |
+|------|-------|--------|---------------|------------|-------------|
+| `clockify_api_get` | raw | raw_fallback_only | raw_fallback_only | raw_fallback_only | keep_raw_fallback_last |
+| `clockify_api_request` | raw | raw_fallback_only | raw_fallback_only | raw_fallback_only | keep_raw_fallback_last |
 
 ## Ledger Classification Notes
 
