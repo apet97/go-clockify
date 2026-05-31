@@ -108,7 +108,11 @@ classifier and the drift gates assume the full 156-tool set.
 | `core` | `coreToolsetTool(name)`: workflow + clients/projects/tasks/tags/entries/reports | `oneuser_domains.go:150` |
 | `business` | `core` + invoices + expenses | `oneuser_domains.go:169` |
 | `admin` | `business` + custom_fields + time_off + scheduling + approvals + webhooks + groups + holidays + users + workspace_settings | `oneuser_domains.go:184` |
-| `all` (default if unset) | Full 156 | — |
+| `all` | Full 156 | Must be set explicitly. |
+
+When `CLOCKIFY_TOOLSET` is unset, the toolset is `default` (the 16
+advertised tools), not `all`; see `DefaultToolset` in
+`internal/config/oneuser.go`.
 
 Raw API tools (`clockify_api_get` / `clockify_api_request`) are appended
 to **any** non-`all` toolset when `EnableRawTools=true`, but as a
@@ -334,7 +338,8 @@ confirmation-token store, rate-limit thresholds, feature flags
 (`EnableRawTools`, `EnableRawGet`, `EnableRawWrites`,
 `RawWriteDocumentedOnly`), notifier, subscription gate, and resource
 provider hooks. Every tool handler is a method on `*Service`. The
-struct lives in `internal/tools/context.go`; it's constructed once at
+struct lives in `internal/tools/common.go` (a `service_state.go`
+companion groups runtime state by concern); it's constructed once at
 startup and passed by pointer everywhere. Receiver naming is **always**
 `s *Service` — no exceptions.
 

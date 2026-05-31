@@ -50,6 +50,21 @@ Sensitive workspace reads such as invoices, users, audit logs, approvals, time
 off, balances, webhooks, and workspace settings are rejected unless the selected
 toolset is `admin` or `all`. Use the typed tools first.
 
+## Host routing
+
+Raw paths are routed to the correct Clockify host before dispatch:
+
+- Report and shared-report paths
+  (`/workspaces/{workspaceId}/reports*` and
+  `/workspaces/{workspaceId}/shared-reports`) are sent to the reports host
+  (`reports.api.clockify.me`).
+- Every other raw path is sent to the standard API host
+  (`api.clockify.me`).
+
+Raw `PATCH` to a report path is unsupported and is rejected before dispatch
+(the Clockify reports host has no `PATCH` endpoint); use `POST`/`PUT` for
+report mutations.
+
 ## Raw Writes
 
 Raw write methods require raw tools plus the write gate:
