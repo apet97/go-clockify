@@ -91,33 +91,14 @@ func (s *Service) resolveCacheGet(key resolveKey, now time.Time) (string, bool) 
 	if s == nil {
 		return "", false
 	}
-	s.resolver.mu.RLock()
-	entry, ok := s.resolver.entries[key]
-	s.resolver.mu.RUnlock()
-	if !ok || !now.Before(entry.expiresAt) {
-		return "", false
-	}
-	return entry.id, true
+	return s.resolver.get(key, now)
 }
 
 func (s *Service) resolveCacheSet(key resolveKey, id string, expiresAt time.Time) {
 	if s == nil {
 		return
 	}
-	s.resolver.mu.Lock()
-	if s.resolver.entries == nil {
-		s.resolver.entries = make(map[resolveKey]resolveEntry)
-	}
-	if len(s.resolver.entries) >= resolveCacheSweepThreshold {
-		now := time.Now()
-		for cachedKey, entry := range s.resolver.entries {
-			if !now.Before(entry.expiresAt) {
-				delete(s.resolver.entries, cachedKey)
-			}
-		}
-	}
-	s.resolver.entries[key] = resolveEntry{id: id, expiresAt: expiresAt}
-	s.resolver.mu.Unlock()
+	s.resolver.set(key, id, expiresAt)
 }
 
 func looksLikeEmailForResolveCache(s string) bool {
