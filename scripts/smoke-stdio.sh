@@ -4,9 +4,11 @@
 #   - closes stdin so Run() flushes and exits,
 #   - asserts:
 #       initialize  -> serverInfo.name == clockify-go-mcp,
-#       default tools/list -> exactly 16 advertised tools,
+#       default tools/list -> exactly 16 advertised tools (single page),
 #       all tools/list     -> cursor-paginated exactly 156 advertised tools,
 #                             first=clockify_status, last=clockify_api_request,
+#                             by FOLLOWING nextCursor to completion (not just
+#                             the first page),
 #       no old activation/policy helper tools in any response,
 #       prompts/list  -> >=1,
 #       resources/list -> >=1.
@@ -33,6 +35,15 @@ set -euo pipefail
 
 EXPECTED_DEFAULT_ADVERTISED_TOOLS=16
 EXPECTED_ALL_ADVERTISED_TOOLS=156
+# tools/list is cursor-paginated; all-mode (156 tools) spans more than one page.
+# The first page's nextCursor is the offset for the next page. This must match
+# the server's tools/list page size (DefaultToolsListPageSize). The all-mode
+# request batch below requests the follow-up page at this cursor; the assertions
+# verify the server actually paginated here and that the second page completes
+# the surface (no further nextCursor). If the page size changes, update this and
+# the ALL_REQUESTS follow-up cursor together — the union-is-156 assertion fails
+# loudly if they ever drift apart, so all 156 tools always stay reachable.
+ALL_FOLLOWUP_CURSOR=80
 BIN="${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke"
 OUT="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.out.XXXXXX")"
 ERR="$(mktemp "${TMPDIR:-/tmp}/clockify-mcp-stdio-smoke.err.XXXXXX")"
@@ -61,6 +72,9 @@ fi
 go build -o "$BIN" ./cmd/clockify-mcp
 
 DEFAULT_REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","clientInfo":{"name":"smoke","version":"0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{}}\n{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}\n'
+# NOTE: This is an ANSI-C $'...' string, so shell parameter expansion does NOT
+# occur inside it; the follow-up cursor must be the literal "80" and is kept in
+# lockstep with ALL_FOLLOWUP_CURSOR below (the assertions check they agree).
 ALL_REQUESTS=$'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","clientInfo":{"name":"smoke","version":"0"}}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n{"jsonrpc":"2.0","id":5,"method":"tools/list","params":{"cursor":"80"}}\n{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{}}\n{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}\n'
 
 run_stdio_surface() {
@@ -126,14 +140,24 @@ run_stdio_surface() {
     echo "OK: [$label] initialize -> serverInfo.name=$init_name"
 
     if [ "$expect_raw_last" = "yes" ]; then
+        # All-mode advertises the full registry, which spans more than one
+        # tools/list page. Prove the server actually paginated (page 1 carries a
+        # nextCursor), that the batched follow-up used that exact cursor, and
+        # that following it to the next page completes the surface (no further
+        # nextCursor). A non-cursor client would see only the first page, so the
+        # union of both pages is what must total 156 below.
         first_next=$(jq -r 'select(.id == 2) | .result.nextCursor // empty' "$OUT")
         second_next=$(jq -r 'select(.id == 5) | .result.nextCursor // empty' "$OUT")
-        if [ "$first_next" != "80" ]; then
-            echo "FAIL: [$label] first tools/list page nextCursor=${first_next:-empty} (expected 80)" >&2
+        if [ -z "$first_next" ]; then
+            echo "FAIL: [$label] first tools/list page had no nextCursor; all-mode must paginate the full 156-tool surface" >&2
+            exit 1
+        fi
+        if [ "$first_next" != "$ALL_FOLLOWUP_CURSOR" ]; then
+            echo "FAIL: [$label] first tools/list nextCursor=$first_next but the script followed cursor=$ALL_FOLLOWUP_CURSOR; update ALL_FOLLOWUP_CURSOR to match the server page size" >&2
             exit 1
         fi
         if [ -n "$second_next" ]; then
-            echo "FAIL: [$label] second tools/list page nextCursor=$second_next (expected empty)" >&2
+            echo "FAIL: [$label] second tools/list page still has nextCursor=$second_next; pagination did not complete in two pages" >&2
             exit 1
         fi
         jq -s '[.[] | select(.id == 2 or .id == 5) | .result.tools[]]' "$OUT" >"$TOOLS_OUT"

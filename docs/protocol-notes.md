@@ -35,6 +35,14 @@ string cursors:
 
 Omit `nextCursor` on the last page. The current default page size is 80 tools.
 
+Compatibility note: the default 16-tool surface fits a single page, but
+`CLOCKIFY_TOOLSET=all` advertises the full 156-tool registry across two pages —
+the first `tools/list` response carries `nextCursor:"80"`, and a client that
+ignores it sees only the first 80 tools. Follow `nextCursor` (pass it back as
+`params.cursor`) until it is absent to enumerate the whole advertised surface.
+`scripts/smoke-stdio.sh` drives this loop in all-mode and asserts the union of
+both pages is exactly 156 tool names.
+
 ## Wire vs. validation: outputSchema
 
 `tools/list` advertises an `outputSchema` for every advertised tool. Workflow
