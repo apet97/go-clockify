@@ -5,6 +5,21 @@ import (
 	"time"
 )
 
+// CurrencyView is a Clockify currency object: a Mongo-style id, an ISO code,
+// and (within a workspace currency list) whether it is the workspace default.
+// It is decode-only on Workspace.Currencies; no handler re-marshals it upstream.
+type CurrencyView struct {
+	ID        string `json:"id,omitempty"`
+	Code      string `json:"code,omitempty"`
+	IsDefault bool   `json:"isDefault,omitempty"`
+}
+
+// SubdomainView is a Clockify workspace subdomain configuration.
+type SubdomainView struct {
+	Name    string `json:"name,omitempty"`
+	Enabled bool   `json:"enabled,omitempty"`
+}
+
 // Workspace is a Clockify workspace as returned by the API, including its
 // rates, currencies, enabled features, and memberships.
 type Workspace struct {
@@ -12,13 +27,13 @@ type Workspace struct {
 	Name                    string              `json:"name"`
 	CakeOrganizationID      string              `json:"cakeOrganizationId,omitempty"`
 	CostRate                *Rate               `json:"costRate,omitempty"`
-	Currencies              any                 `json:"currencies,omitempty"`
+	Currencies              []CurrencyView      `json:"currencies,omitempty"`
 	FeatureSubscriptionType string              `json:"featureSubscriptionType,omitempty"`
 	Features                []string            `json:"features,omitempty"`
 	HourlyRate              *Rate               `json:"hourlyRate,omitempty"`
 	ImageURL                string              `json:"imageUrl,omitempty"`
 	Memberships             []ProjectMembership `json:"memberships,omitempty"`
-	Subdomain               any                 `json:"subdomain,omitempty"`
+	Subdomain               *SubdomainView      `json:"subdomain,omitempty"`
 	WorkspaceSettings       any                 `json:"workspaceSettings,omitempty"`
 }
 
@@ -70,16 +85,16 @@ type Project struct {
 // ClientEntity is a Clockify client (billing customer). It is named
 // ClientEntity to avoid colliding with the HTTP Client type in this package.
 type ClientEntity struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	Address      string `json:"address,omitempty"`
-	Archived     bool   `json:"archived,omitempty"`
-	CCEmails     any    `json:"ccEmails,omitempty"`
-	CurrencyCode string `json:"currencyCode,omitempty"`
-	CurrencyID   string `json:"currencyId,omitempty"`
-	Email        string `json:"email,omitempty"`
-	Note         string `json:"note,omitempty"`
-	WorkspaceID  string `json:"workspaceId,omitempty"`
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Address      string   `json:"address,omitempty"`
+	Archived     bool     `json:"archived,omitempty"`
+	CCEmails     []string `json:"ccEmails,omitempty"`
+	CurrencyCode string   `json:"currencyCode,omitempty"`
+	CurrencyID   string   `json:"currencyId,omitempty"`
+	Email        string   `json:"email,omitempty"`
+	Note         string   `json:"note,omitempty"`
+	WorkspaceID  string   `json:"workspaceId,omitempty"`
 }
 
 // Tag is a Clockify tag used to label time entries.
