@@ -17,6 +17,7 @@ import (
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
 	"github.com/apet97/go-clockify/internal/mcp"
+	"github.com/apet97/go-clockify/internal/runtime"
 	"github.com/apet97/go-clockify/internal/tools"
 )
 
@@ -55,27 +56,23 @@ func setupLiveMCPHarness(t *testing.T, _ liveMCPOptions) *liveMCPHarness {
 		t.Fatalf("config.LoadOneUser: %v", err)
 	}
 
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, 30*time.Second, 2)
-	t.Cleanup(client.Close)
+	// Build the server through the same production wiring the binary uses
+	// (internal/runtime.BuildServer) so the live harness exercises the real
+	// toolset filter, advertised-tool enforcement, audit logging, and
+	// resource/notifier hookup instead of a hand-rolled approximation.
+	//
+	// Force toolset=all so the full 156-tool surface stays callable: these
+	// suites invoke domain tools directly over the wire, and a scoped toolset
+	// would reject the unadvertised ones via EnforceAdvertisedTools.
+	cfg.Toolset = "all"
 
-	service := tools.New(client, cfg.WorkspaceID)
-	if cfg.Timezone != "" {
-		if loc, err := time.LoadLocation(cfg.Timezone); err == nil {
-			service.DefaultTimezone = loc
-		}
-	}
-
-	reg, err := service.FullAccessRegistryChecked()
+	built, err := runtime.BuildServer(cfg, "livee2e")
 	if err != nil {
-		t.Fatalf("FullAccessRegistryChecked: %v", err)
+		t.Fatalf("runtime.BuildServer: %v", err)
 	}
-	server := mcp.NewServer("livee2e", reg)
-	server.StaticToolList = true
-	server.ResourceProvider = service
-	service.EmitResourceUpdate = server.NotifyResourceUpdated
-	service.SubscriptionGate = server.HasResourceSubscription
+	t.Cleanup(func() { _ = built.Close() })
 
-	return &liveMCPHarness{t: t, Service: service, Server: server}
+	return &liveMCPHarness{t: t, Service: built.Service, Server: built.Server}
 }
 
 func (h *liveMCPHarness) clearRunningTimer(ctx context.Context) {

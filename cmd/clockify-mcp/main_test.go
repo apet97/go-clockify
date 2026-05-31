@@ -17,6 +17,7 @@ import (
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
+	"github.com/apet97/go-clockify/internal/runtime"
 	"github.com/apet97/go-clockify/internal/testclockify"
 )
 
@@ -87,7 +88,7 @@ func TestNewClockifyClientUsesToolTimeoutAndRaisedResultCap(t *testing.T) {
 		MaxToolResultBytes: 32 * 1024 * 1024,
 	}
 
-	client := newClockifyClient(cfg, 0)
+	client := runtime.NewClockifyClient(cfg, 0)
 	defer client.Close()
 
 	if got := client.HTTPTimeout(); got != 2*time.Minute {
@@ -106,7 +107,7 @@ func TestNewClockifyClientKeepsDefaultResponseCapWhenToolResultCapIsSmall(t *tes
 		MaxToolResultBytes: config.DefaultMaxToolResultBytes,
 	}
 
-	client := newClockifyClient(cfg, 0)
+	client := runtime.NewClockifyClient(cfg, 0)
 	defer client.Close()
 
 	if got, want := client.MaxResponseBodyBytes(), int64(clockify.DefaultMaxResponseBodyBytes); got != want {

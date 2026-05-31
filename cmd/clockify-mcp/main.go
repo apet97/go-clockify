@@ -13,13 +13,11 @@ import (
 	"runtime/debug"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
 	"github.com/apet97/go-clockify/internal/config"
 	logslog "github.com/apet97/go-clockify/internal/logging"
-	"github.com/apet97/go-clockify/internal/mcp"
-	"github.com/apet97/go-clockify/internal/safety"
+	"github.com/apet97/go-clockify/internal/runtime"
 	"github.com/apet97/go-clockify/internal/tools"
 )
 
@@ -113,79 +111,13 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		return &startupConfigError{err}
 	}
 	effective := effectiveVersion()
-	client := newClockifyClient(cfg, 2)
-	client.SetUserAgent("clockify-mcp-one-user/" + effective)
-	client.SetCircuitBreaker(cfg.CircuitBreaker)
-	defer client.Close()
-
-	service := tools.New(client, cfg.WorkspaceID)
-	rawToolsEnabled := cfg.EnableRawTools || cfg.Toolset == "all"
-	service.EnableRawWrites = cfg.EnableRawWrites
-	service.EnableRawTools = rawToolsEnabled
-	service.EnableRawGet = rawToolsEnabled && (cfg.EnableRawGet || cfg.Toolset == "all")
-	service.RawWriteDocumentedOnly = cfg.RawWriteDocumentedOnly
-	service.Toolset = cfg.Toolset
-	service.ToolRateLimitDisabled = cfg.ToolRateLimitDisabled
-	service.ToolRateLimits = map[string]int{
-		"read":          cfg.ReadRateLimitPerMinute,
-		"write":         cfg.WriteRateLimitPerMinute,
-		"billing_admin": cfg.BillingAdminRateLimitPerMinute,
-		"destructive":   cfg.DestructiveRateLimitPerMinute,
-	}
-	service.ConfirmationMode = "required"
-	service.WebhookValidateDNS = true
-	service.WebhookAllowedDomains = cfg.WebhookAllowedDomains
-	if cfg.Timezone != "" {
-		loc, err := time.LoadLocation(cfg.Timezone)
-		if err != nil {
-			return err
-		}
-		service.DefaultTimezone = loc
-	}
-	fullRegistry, err := service.FullAccessRegistryChecked()
-	if err != nil {
-		return fmt.Errorf("invalid full tool registry: %w", err)
-	}
-	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
-	if rawToolsEnabled && cfg.Toolset != "all" {
-		advertisedRegistry = appendRawDescriptors(advertisedRegistry, fullRegistry)
-	}
-	if err := tools.ValidateRegistry(advertisedRegistry); err != nil {
-		return fmt.Errorf("invalid advertised tool registry: %w", err)
-	}
-	server := mcp.NewServer(effective, fullRegistry)
-	server.SetAdvertisedTools(advertisedRegistry)
-	server.EnforceAdvertisedTools = cfg.Toolset != "all"
-	server.ConfirmationStore = safety.NewTokenStore(safety.TokenStoreOptions{})
-	server.WorkspaceIDForSafety = cfg.WorkspaceID
-	server.ConfirmationMode = "required"
-	server.StaticToolList = true
-	server.MaxInFlightToolCalls = cfg.MaxInFlightToolCalls
-	server.ConfigureRiskRateLimits(mcp.RiskRateLimits{
-		ReadPerMinute:         cfg.ReadRateLimitPerMinute,
-		WritePerMinute:        cfg.WriteRateLimitPerMinute,
-		BillingAdminPerMinute: cfg.BillingAdminRateLimitPerMinute,
-		DestructivePerMinute:  cfg.DestructiveRateLimitPerMinute,
-	})
-	auditLogger, err := mcp.NewAuditLogger(cfg.AuditLogPath, mcp.AuditLogMode(cfg.AuditLogMode), cfg.WorkspaceID)
+	built, err := runtime.BuildServer(cfg, effective)
 	if err != nil {
 		return err
 	}
-	if auditLogger != nil {
-		defer func() {
-			_ = auditLogger.Close()
-		}()
-		server.AuditLogger = auditLogger
-		service.AuditLogPath = cfg.AuditLogPath
-	}
-	server.ToolTimeout = cfg.ToolTimeout
-	server.MaxMessageSize = cfg.MaxMessageSize
-	server.MaxToolResultBytes = cfg.MaxToolResultBytes
-	server.ResourceProvider = service
-	service.EmitResourceUpdate = server.NotifyResourceUpdated
-	service.EmitResourceListChanged = server.NotifyResourcesListChanged
-	service.SubscriptionGate = server.HasResourceSubscription
-	service.Notifier = server
+	defer func() {
+		_ = built.Close()
+	}()
 
 	slog.Info("one_user_server_start",
 		"version", effective,
@@ -195,36 +127,7 @@ func runWithContext(ctx context.Context, stdin io.Reader, stdout io.Writer) erro
 		"toolset", cfg.Toolset,
 	)
 
-	return server.Run(ctx, stdin, stdout)
-}
-
-func newClockifyClient(cfg config.OneUserConfig, maxRetries int) *clockify.Client {
-	timeout := cfg.ToolTimeout
-	if timeout <= 0 {
-		timeout = config.DefaultToolTimeout
-	}
-	client := clockify.NewClient(cfg.APIKey, cfg.BaseURL, timeout, maxRetries)
-	responseCap := max(cfg.MaxToolResultBytes, clockify.DefaultMaxResponseBodyBytes)
-	client.SetMaxResponseBodyBytes(responseCap)
-	return client
-}
-
-func appendRawDescriptors(advertised, full []mcp.ToolDescriptor) []mcp.ToolDescriptor {
-	seen := make(map[string]bool, len(advertised)+2)
-	for _, descriptor := range advertised {
-		seen[descriptor.Tool.Name] = true
-	}
-	out := append([]mcp.ToolDescriptor(nil), advertised...)
-	for _, descriptor := range full {
-		switch descriptor.Tool.Name {
-		case "clockify_api_get", "clockify_api_request":
-			if !seen[descriptor.Tool.Name] {
-				out = append(out, descriptor)
-				seen[descriptor.Tool.Name] = true
-			}
-		}
-	}
-	return out
+	return built.Server.Run(ctx, stdin, stdout)
 }
 
 // parseLogLevel maps MCP_LOG_LEVEL to a slog level. An unset or unrecognised
@@ -274,7 +177,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "config error: %v\n", err)
 		return 2
 	}
-	client := newClockifyClient(cfg, 0)
+	client := runtime.NewClockifyClient(cfg, 0)
 	defer client.Close()
 	service := tools.New(client, cfg.WorkspaceID)
 	service.EnableRawTools = cfg.EnableRawTools || cfg.Toolset == "all"
@@ -288,7 +191,7 @@ func runDoctor(args []string, stdout, stderr io.Writer) int {
 	}
 	advertisedRegistry := service.RegistryForToolset(cfg.Toolset)
 	if (cfg.EnableRawTools || cfg.Toolset == "all") && cfg.Toolset != "all" {
-		advertisedRegistry = appendRawDescriptors(advertisedRegistry, fullRegistry)
+		advertisedRegistry = runtime.AppendRawDescriptors(advertisedRegistry, fullRegistry)
 	}
 	registryLoaded := len(fullRegistry)
 	advertisedSurface := len(advertisedRegistry)
@@ -351,7 +254,7 @@ func runDoctorLive(cfg config.OneUserConfig, stdout, stderr io.Writer) int {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, cfg.ToolTimeout)
 	defer cancel()
-	client := newClockifyClient(cfg, 0)
+	client := runtime.NewClockifyClient(cfg, 0)
 	client.SetUserAgent("clockify-mcp-one-user/" + effectiveVersion() + " doctor")
 	defer client.Close()
 
