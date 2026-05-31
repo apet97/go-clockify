@@ -133,6 +133,207 @@ func TestLiveRawClockifyReadSideSchemaDiff(t *testing.T) {
 	}
 }
 
+// TestLiveRawClockifyWriteSideSchemaDiff extends the read-side schema canary to
+// the domains the original test did not cover: invoices, expenses, approvals,
+// scheduling, time off, groups, custom fields, and webhooks. It stays read-only
+// — every probe is a GET (or, for time-off request listing, the POST that
+// Clockify requires; a GET there returns 405). None of these domains has a
+// dedicated typed response model in internal/clockify, so each subtest decodes
+// the documented container shape the matching handler relies on and asserts the
+// key id field is populated when the collection is non-empty. Empty collections
+// in the sacrificial workspace are skipped rather than failed, mirroring the
+// read-side test's "no live sample" logging.
+func TestLiveRawClockifyWriteSideSchemaDiff(t *testing.T) {
+	cfg := setupLiveSchemaConfig(t)
+	ctx, cancel := context.WithTimeout(context.Background(), liveRawSchemaTimeout)
+	defer cancel()
+
+	httpClient := &http.Client{Timeout: liveRawSchemaTimeout}
+	get := func(path string, query map[string]string, out any) {
+		t.Helper()
+		if err := liveGetRaw(ctx, httpClient, cfg, path, query, out); err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+	}
+
+	wsID := strings.TrimSpace(cfg.WorkspaceID)
+	if wsID == "" {
+		t.Fatal("no workspace id available for write-side schema diff")
+	}
+	mustWorkspacePath := func(segments ...string) string {
+		t.Helper()
+		p, err := paths.Workspace(wsID, segments...)
+		if err != nil {
+			t.Fatalf("workspace path %v: %v", segments, err)
+		}
+		return p
+	}
+
+	t.Run("invoice-settings", func(t *testing.T) {
+		// Invoice settings is a single object (the /invoices/settings route the
+		// get_invoice_settings handler reads); confirm it decodes to an object.
+		var settings map[string]json.RawMessage
+		get(mustWorkspacePath("invoices", "settings"), nil, &settings)
+		if len(settings) == 0 {
+			t.Skip("invoice settings returned an empty object")
+		}
+	})
+
+	t.Run("invoices", func(t *testing.T) {
+		// list_invoices reads {total:int, invoices:[...]} (see invoices.go).
+		var env struct {
+			Total    int                          `json:"total"`
+			Invoices []map[string]json.RawMessage `json:"invoices"`
+		}
+		get(mustWorkspacePath("invoices"), firstPageQuery(), &env)
+		assertItemsHaveID(t, "invoices", env.Invoices)
+	})
+
+	t.Run("expense-categories", func(t *testing.T) {
+		// expenses_categories_* reads a paged {categories:[...]} envelope.
+		var env struct {
+			Categories []map[string]json.RawMessage `json:"categories"`
+		}
+		get(mustWorkspacePath("expenses", "categories"), firstPageQuery(), &env)
+		assertItemsHaveID(t, "expense-categories", env.Categories)
+	})
+
+	t.Run("expenses", func(t *testing.T) {
+		// list_expenses reads a paged {expenses:[...]} envelope.
+		var env struct {
+			Expenses []map[string]json.RawMessage `json:"expenses"`
+		}
+		get(mustWorkspacePath("expenses"), firstPageQuery(), &env)
+		assertItemsHaveID(t, "expenses", env.Expenses)
+	})
+
+	t.Run("approvals", func(t *testing.T) {
+		// approval-requests list accepts only PENDING/APPROVED/WITHDRAWN_APPROVAL
+		// (AGENTS.md gotcha). The response is a bare array of request objects.
+		var requests []map[string]json.RawMessage
+		get(mustWorkspacePath("approval-requests"), map[string]string{"status": "PENDING"}, &requests)
+		assertItemsHaveID(t, "approvals", requests)
+	})
+
+	t.Run("scheduling-assignments", func(t *testing.T) {
+		// scheduling_assignments_list reads the /scheduling/assignments/all route
+		// (bare /assignments returns 404 — AGENTS.md gotcha).
+		var assignments []map[string]json.RawMessage
+		get(mustWorkspacePath("scheduling", "assignments", "all"), firstPageQuery(), &assignments)
+		assertItemsHaveID(t, "scheduling-assignments", assignments)
+	})
+
+	t.Run("time-off-policies", func(t *testing.T) {
+		// time_off_policies_list reads a paged {policies:[...]} envelope.
+		var env struct {
+			Policies []map[string]json.RawMessage `json:"policies"`
+		}
+		get(mustWorkspacePath("time-off", "policies"), firstPageQuery(), &env)
+		assertItemsHaveID(t, "time-off-policies", env.Policies)
+	})
+
+	t.Run("time-off-requests", func(t *testing.T) {
+		// Time-off request listing is POST, not GET (a GET returns 405 — see the
+		// AGENTS.md gotcha and clockify_request_time_off). The response is a
+		// {requests:[...], count:int} envelope.
+		body := map[string]any{
+			"start":      "2020-01-01T00:00:00Z",
+			"end":        "2020-01-02T00:00:00Z",
+			"statuses":   []string{"PENDING"},
+			"page":       1,
+			"pageSize":   1,
+			"users":      []string{},
+			"userGroups": []string{},
+		}
+		var env struct {
+			Requests []map[string]json.RawMessage `json:"requests"`
+		}
+		if err := livePostRaw(ctx, httpClient, cfg, mustWorkspacePath("time-off", "requests"), body, &env); err != nil {
+			t.Fatalf("POST time-off/requests: %v", err)
+		}
+		assertItemsHaveID(t, "time-off-requests", env.Requests)
+	})
+
+	t.Run("groups", func(t *testing.T) {
+		// groups_list reads the /user-groups route; response is a bare array.
+		var groups []map[string]json.RawMessage
+		get(mustWorkspacePath("user-groups"), firstPageQuery(), &groups)
+		assertItemsHaveID(t, "groups", groups)
+	})
+
+	t.Run("custom-fields", func(t *testing.T) {
+		// custom_fields_list reads the /custom-fields route; response is a bare
+		// array of field definitions.
+		var fields []map[string]json.RawMessage
+		get(mustWorkspacePath("custom-fields"), firstPageQuery(), &fields)
+		assertItemsHaveID(t, "custom-fields", fields)
+	})
+
+	t.Run("webhooks", func(t *testing.T) {
+		// webhooks_list reads the /webhooks route; response is a bare array.
+		var hooks []map[string]json.RawMessage
+		get(mustWorkspacePath("webhooks"), nil, &hooks)
+		assertItemsHaveID(t, "webhooks", hooks)
+	})
+}
+
+// assertItemsHaveID asserts that every object in a decoded collection carries a
+// non-empty id field, at the same strictness as the read-side schema checks. An
+// empty collection is skipped (the sacrificial workspace may legitimately hold
+// none of a given entity), mirroring the read-side "no live sample" handling.
+func assertItemsHaveID(t *testing.T, label string, items []map[string]json.RawMessage) {
+	t.Helper()
+	if len(items) == 0 {
+		t.Skipf("%s: no items returned; schema diff has no live sample", label)
+	}
+	for i, item := range items {
+		if id := stringField(item, "id"); id == "" {
+			t.Fatalf("%s[%d]: expected non-empty id, got fields %v", label, i, sortedKeys(item))
+		}
+	}
+}
+
+func sortedKeys(item map[string]json.RawMessage) []string {
+	keys := make([]string, 0, len(item))
+	for k := range item {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// livePostRaw issues a JSON POST against the live API, mirroring liveGetRaw. It
+// exists for time-off request listing, which Clockify exposes only via POST.
+func livePostRaw(ctx context.Context, client *http.Client, cfg config.OneUserConfig, path string, body, out any) error {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	u := strings.TrimRight(cfg.BaseURL, "/") + path
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, strings.NewReader(string(payload)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Api-Key", cfg.APIKey)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "clockify-mcp-live-schema-diff")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+		return fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+	return json.NewDecoder(io.LimitReader(resp.Body, 10*1024*1024)).Decode(out)
+}
+
 func setupLiveSchemaConfig(t *testing.T) config.OneUserConfig {
 	t.Helper()
 	if os.Getenv("CLOCKIFY_API_KEY") == "" {
