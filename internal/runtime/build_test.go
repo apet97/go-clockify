@@ -165,7 +165,7 @@ func TestBuildServerDefaultToolsetAdvertisesExactlySixteen(t *testing.T) {
 
 // TestBuildServerDefaultToolsetRejectsUnadvertisedCall confirms the built
 // server enforces EnforceAdvertisedTools for the default toolset: a tools/call
-// for a tool that is loaded in the full 156-tool registry but not advertised in
+// for a tool that is loaded in the full startup registry but not advertised in
 // the default surface (clockify_clients_list) is rejected by the toolset gate,
 // never dispatched.
 func TestBuildServerDefaultToolsetRejectsUnadvertisedCall(t *testing.T) {
