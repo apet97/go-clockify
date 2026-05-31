@@ -215,7 +215,24 @@
                     ],
                     "type": "object"
                   },
-                  "currencies": {},
+                  "currencies": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "isDefault": {
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "featureSubscriptionType": {
                     "type": "string"
                   },
@@ -312,7 +329,18 @@
                   "name": {
                     "type": "string"
                   },
-                  "subdomain": {},
+                  "subdomain": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "workspaceSettings": {}
                 },
                 "required": [
@@ -8406,7 +8434,12 @@
                     "archived": {
                       "type": "boolean"
                     },
-                    "ccEmails": {},
+                    "ccEmails": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "currencyCode": {
                       "type": "string"
                     },
@@ -8717,7 +8750,12 @@
               "archived": {
                 "type": "boolean"
               },
-              "ccEmails": {},
+              "ccEmails": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "currencyCode": {
                 "type": "string"
               },
