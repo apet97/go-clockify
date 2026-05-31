@@ -54,20 +54,14 @@ func (s *Service) CurrentUser(ctx context.Context) (ToolResult, error) {
 }
 
 func (s *Service) getCurrentUser(ctx context.Context) (clockify.User, error) {
-	s.identity.mu.RLock()
-	if s.identity.cachedUser != nil {
-		u := *s.identity.cachedUser
-		s.identity.mu.RUnlock()
-		return u, nil
+	if user, ok := s.identity.cachedUserSnapshot(); ok {
+		return user, nil
 	}
-	s.identity.mu.RUnlock()
 	var user clockify.User
 	if err := s.Client.Get(ctx, "/user", nil, &user); err != nil {
 		return clockify.User{}, err
 	}
-	s.identity.mu.Lock()
-	s.identity.cachedUser = &user
-	s.identity.mu.Unlock()
+	s.identity.storeUser(user)
 	return user, nil
 }
 
