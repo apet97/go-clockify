@@ -241,7 +241,7 @@ settings tools will return `feature_unavailable` or Clockify permission errors.
 | `CLOCKIFY_ENABLE_RAW_GET` | `false` | Allow raw `GET` outside `CLOCKIFY_TOOLSET=all`; sensitive workspace reads still require `admin` or `all` |
 | `CLOCKIFY_ENABLE_RAW_WRITES` | `false` | Allow raw `POST` / `PUT` / `PATCH` / `DELETE` when raw tools are enabled |
 | `CLOCKIFY_RAW_WRITE_DOCUMENTED_ONLY` | `true` | Limit raw writes to documented Clockify routes |
-| `CLOCKIFY_AUDIT_LOG` | off | Optional local JSONL audit path for redacted tool-call records |
+| `CLOCKIFY_AUDIT_LOG` | off | Optional local JSONL audit path for redacted tool-call records. This is a local, optional operator-debugging aid, not a tamper-evident or compliance-grade audit trail. |
 | `CLOCKIFY_AUDIT_LOG_MODE` | `off` | Audit mode: `off`, `side_effects_only`, or `all` |
 | `CLOCKIFY_WEBHOOK_ALLOWED_DOMAINS` | none | Comma-separated allowlist of webhook callback domains |
 | `CLOCKIFY_CIRCUIT_BREAKER` | `enabled` | Clockify circuit breaker: `enabled`/`auto`/`on` or `disabled`/`off` |
