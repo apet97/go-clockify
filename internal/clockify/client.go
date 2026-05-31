@@ -376,6 +376,14 @@ func (c *Client) DeleteReports(ctx context.Context, path string) error {
 	return c.doJSON(ctx, c.ReportsBaseURL(), http.MethodDelete, path, nil, nil, nil)
 }
 
+// DeleteReportsCaptureValues issues a DELETE against the reports host, preserving
+// repeated query keys and decoding any response body into out (some Clockify
+// DELETE routes return the deleted entity; out is left at its zero value when
+// the server sends an empty body). out must be non-nil.
+func (c *Client) DeleteReportsCaptureValues(ctx context.Context, path string, query url.Values, out any) error {
+	return c.doJSONValues(ctx, c.ReportsBaseURL(), http.MethodDelete, path, query, nil, out)
+}
+
 // PostAuditLog performs a POST against the audit-log host. The Clockify
 // audit-log API lives on a separate host (auditlog-api.api.clockify.me);
 // every other call stays on Post against the primary host.

@@ -56316,7 +56316,7 @@
     {
       "name": "clockify_api_get",
       "title": "Raw Clockify API GET",
-      "description": "Raw GET fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.",
+      "description": "Raw GET fallback for documented Clockify endpoints. Report/shared-report paths route to the reports host; others to api.clockify.me. Path must stay within /user or the pinned workspace; other workspaces/hosts rejected.",
       "category": "raw",
       "handler_kind": "native handler",
       "read_only": true,
@@ -56336,7 +56336,7 @@
           },
           "query": {
             "additionalProperties": true,
-            "description": "Query-string parameters as a key/value object.",
+            "description": "Query object. Values may be string, number, boolean, or an array of those; arrays become repeated query parameters (status=active\u0026status=archived).",
             "type": "object"
           }
         },
@@ -56577,7 +56577,7 @@
     {
       "name": "clockify_api_request",
       "title": "Raw Clockify API Request",
-      "description": "Raw method fallback for documented Clockify endpoints. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.",
+      "description": "Raw method fallback for documented Clockify endpoints. Report/shared-report paths route to the reports host; others to api.clockify.me. Path must stay within /user or the pinned workspace. Raw PATCH to reports paths is unsupported.",
       "category": "raw",
       "handler_kind": "native handler",
       "read_only": false,
@@ -56623,7 +56623,7 @@
           },
           "query": {
             "additionalProperties": true,
-            "description": "Query-string parameters as a key/value object.",
+            "description": "Query object. Values may be string, number, boolean, or an array of those; arrays become repeated query parameters (status=active\u0026status=archived).",
             "type": "object"
           }
         },

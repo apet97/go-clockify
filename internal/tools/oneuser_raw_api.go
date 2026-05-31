@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
-	rawRequest := firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Report paths (/workspaces/{workspaceId}/reports*, /workspaces/{workspaceId}/shared-reports) route to reports.api.clockify.me; other paths route to api.clockify.me. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected. Raw PATCH to reports paths is unsupported.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
+	rawRequest := firstSliceDescriptor(9001, toolRW("clockify_api_request", "Raw method fallback for documented Clockify endpoints. Report/shared-report paths route to the reports host; others to api.clockify.me. Path must stay within /user or the pinned workspace. Raw PATCH to reports paths is unsupported.", objectSchema(map[string]any{"required": []string{"method", "path"}, "properties": map[string]any{
 		"method":        map[string]any{"type": "string", "enum": []string{"GET", "POST", "PUT", "PATCH", "DELETE"}},
 		"path":          map[string]any{"type": "string"},
 		"query":         map[string]any{"type": "object", "additionalProperties": true, "description": "Query object. Values may be string, number, boolean, or an array of those; arrays become repeated query parameters (status=active&status=archived)."},
@@ -25,7 +25,7 @@ func (s *Service) rawAPIDescriptors() []mcp.ToolDescriptor {
 		return safety.RequirementForRisk([]string{"write"}, false, method)
 	}
 	return []mcp.ToolDescriptor{
-		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Report paths (/workspaces/{workspaceId}/reports*, /workspaces/{workspaceId}/shared-reports) route to reports.api.clockify.me; other paths route to api.clockify.me. Path must stay within /user or the pinned workspace (/workspaces/{workspaceId}/...); other workspaces and hosts are rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
+		firstSliceDescriptor(9000, toolRO("clockify_api_get", "Raw GET fallback for documented Clockify endpoints. Report/shared-report paths route to the reports host; others to api.clockify.me. Path must stay within /user or the pinned workspace; other workspaces/hosts rejected.", objectSchema(map[string]any{"required": []string{"path"}, "properties": map[string]any{
 			"path":  map[string]any{"type": "string"},
 			"query": map[string]any{"type": "object", "additionalProperties": true, "description": "Query object. Values may be string, number, boolean, or an array of those; arrays become repeated query parameters (status=active&status=archived)."},
 		}})), s.RawAPIGet),
