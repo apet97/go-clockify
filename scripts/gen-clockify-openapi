@@ -1196,10 +1196,10 @@ SDK_METHOD_NAMES = {
   # batch). Each stamp here uses the obvious domain verb so the SDK
   # surface across all 21 stamped modules is uniformly idiomatic.
   # Modules where the existing operationId is already a clean
-  # verb-noun (files.uploadImage, roles.giveUserManagerRole/
-  # removeUserManagerRole, expenseReport.generateDetailedReportV1)
+  # verb-noun (files.uploadImage, expenseReport.generateDetailedReportV1)
   # are intentionally left operationId-derived -- the rename would
-  # not improve clarity.
+  # not improve clarity. The user manager-role grant/revoke ops are
+  # stamped under `users` below (giveRole/removeRole).
 
   # auditLogReport — single search op (POST .../audit-log with body).
   ["post",   "/workspaces/{workspaceId}/audit-log"]                                 => {group: "auditLogReport", name: "search"},
@@ -1221,6 +1221,12 @@ SDK_METHOD_NAMES = {
   # memberProfiles — per-user profile read + partial update.
   ["get",    "/workspaces/{workspaceId}/member-profile/{userId}"]                   => {group: "memberProfiles", name: "get"},
   ["patch",  "/workspaces/{workspaceId}/member-profile/{userId}"]                   => {group: "memberProfiles", name: "update"},
+  # users — workspace user listing plus manager-role grant/revoke. The
+  # role verbs live under `users` (matching how Clockify/Go scope role
+  # writes to a user) rather than a one-method `roles` module.
+  ["get",    "/workspaces/{workspaceId}/users"]                                     => {group: "users", name: "list"},
+  ["post",   "/workspaces/{workspaceId}/users/{userId}/roles"]                      => {group: "users", name: "giveRole"},
+  ["delete", "/workspaces/{workspaceId}/users/{userId}/roles"]                      => {group: "users", name: "removeRole"},
   # workspaces — CRUDL on the workspace resource itself, plus the two
   # workspace-level rate updates and the addUser action verb. Per-user
   # status / cost-rate / hourly-rate are kept operationId-derived

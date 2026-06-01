@@ -12299,6 +12299,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
+      x-fern-sdk-group-name: users
+      x-fern-sdk-method-name: list
     post:
       tags:
       - Workspaces
@@ -13068,6 +13070,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
+      x-fern-sdk-group-name: users
+      x-fern-sdk-method-name: giveRole
     delete:
       tags:
       - Roles
@@ -13128,6 +13132,8 @@ paths:
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
+      x-fern-sdk-group-name: users
+      x-fern-sdk-method-name: removeRole
   "/workspaces/{workspaceId}/webhooks":
     get:
       tags:
