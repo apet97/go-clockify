@@ -97,3 +97,47 @@ func TestDefaultRecoverySchedulingMentionsRole(t *testing.T) {
 		}
 	}
 }
+
+// TestRecoverableSurfacesNameReservationOnCreate asserts that a create that
+// fails with Clockify's "... name already exists" gets a recovery hint
+// explaining the name may be reserved and to retry with a distinct name, while
+// keeping the action's own list tool. Clockify keeps a project/tag/client name
+// reserved even after the entity is archived-then-deleted, so a previously used
+// name still reports "already exists" though it is invisible in any list — a
+// live finding carried over from the ai-assistant-addon Clockify work.
+func TestRecoverableSurfacesNameReservationOnCreate(t *testing.T) {
+	for _, tc := range []struct {
+		action   string
+		wantTool string
+	}{
+		{"clockify_projects_create", "clockify_projects_list"},
+		{"clockify_tags_create", "clockify_tags_list"},
+		{"clockify_clients_create", "clockify_clients_list"},
+	} {
+		te := recoverable(tc.action,
+			fmt.Errorf("Project with this name already exists"),
+			defaultRecovery(tc.action, nil))
+		hint := strings.ToLower(te.Recovery.Hint)
+		if !strings.Contains(hint, "reserved") {
+			t.Errorf("%s: recovery hint should mention the name is reserved, got %q", tc.action, te.Recovery.Hint)
+		}
+		if !strings.Contains(hint, "distinct name") {
+			t.Errorf("%s: recovery hint should suggest a distinct name, got %q", tc.action, te.Recovery.Hint)
+		}
+		if te.Recovery.Tool != tc.wantTool {
+			t.Errorf("%s: recovery tool = %q, want %q", tc.action, te.Recovery.Tool, tc.wantTool)
+		}
+	}
+}
+
+// TestRecoverableLeavesUnrelatedCreateErrorsAlone asserts the name-reservation
+// hint is scoped to "already exists" failures and does not hijack other create
+// errors (which keep their action default recovery).
+func TestRecoverableLeavesUnrelatedCreateErrorsAlone(t *testing.T) {
+	te := recoverable("clockify_projects_create",
+		fmt.Errorf("Client doesn't belong to Workspace"),
+		defaultRecovery("clockify_projects_create", nil))
+	if strings.Contains(strings.ToLower(te.Recovery.Hint), "reserved") {
+		t.Errorf("non-conflict create error should not get the reservation hint, got %q", te.Recovery.Hint)
+	}
+}
