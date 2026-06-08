@@ -77,6 +77,20 @@ func recoverable(action string, err error, recovery RecoveryHint) ToolError {
 			Hint: "This workspace requires a project on every time entry. List projects, then retry with project_id or project.",
 			Tool: "clockify_projects_list",
 		}
+	} else if strings.Contains(action, "create") && strings.Contains(strings.ToLower(rawMessage), "already exists") {
+		// Clockify keeps a project, tag, or client NAME reserved even after the
+		// entity was archived and then deleted, so a previously used name can
+		// still report "already exists" although it no longer appears in any
+		// list — listing won't reveal it and the only fix is a distinct name.
+		// (Live finding carried over from the ai-assistant-addon Clockify work.)
+		tool := recovery.Tool
+		if tool == "" {
+			tool = "clockify_status"
+		}
+		recovery = RecoveryHint{
+			Hint: "That name may be reserved by Clockify: a project, tag, or client name stays reserved even after the entity was archived and deleted, so it can report \"already exists\" while being invisible in the list. Retry with a distinct name.",
+			Tool: tool,
+		}
 	} else if recovery.Hint == "" {
 		recovery = defaultRecovery(action, nil)
 	}
