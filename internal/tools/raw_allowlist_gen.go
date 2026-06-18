@@ -146,7 +146,6 @@ var documentedWriteRoutes = map[string]bool{
 	// user
 	"DELETE /workspaces/{workspaceId}/user/{userId}/time-entries":                       true,
 	"PATCH /workspaces/{workspaceId}/user/{userId}/time-entries":                        true,
-	"PATCH /workspaces/{workspaceId}/user/{userId}/time-entries/stop":                   true,
 	"POST /workspaces/{workspaceId}/user/{userId}/time-entries":                         true,
 	"POST /workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate": true,
 	"PUT /workspaces/{workspaceId}/user/{userId}/time-entries":                          true,

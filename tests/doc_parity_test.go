@@ -159,10 +159,10 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	// Clockify error code 3000. See the sibling clockify-ts-sdk repo
 	// (spec/evidence/discrepancies.md > timeoff.legacy-policies-requests.
 	// phantom-path-quarantined) for the full audit.
-	if got, want := len(contract.paths), 121; got < want {
+	if got, want := len(contract.paths), 120; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
-	if got, want := contract.operationCount(), 185; got < want {
+	if got, want := contract.operationCount(), 184; got < want {
 		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
 	}
 

@@ -12023,56 +12023,6 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
-  "/workspaces/{workspaceId}/user/{userId}/time-entries/stop":
-    patch:
-      tags:
-      - Time Entries
-      summary: Stop currently running timer for user
-      operationId: patchWorkspacesWorkspaceIdUserUserIdTimeEntriesStop
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                end:
-                  format: date-time
-                  type: string
-              required:
-              - end
-              type: object
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TimeEntry"
-          description: Stopped entry
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: timeEntries
-      x-fern-sdk-method-name: stopTimer
   "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate":
     post:
       tags:
@@ -23617,6 +23567,9 @@ x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
     PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/user/{userId}/time-entries/stop):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/time-off/requests/users/{userId}):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'

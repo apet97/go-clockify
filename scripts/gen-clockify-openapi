@@ -507,7 +507,13 @@ PHANTOM_PATHS = [
   # discrepancies.md > timeoff.legacy-policies-requests.phantom-path-quarantined.
   ["post", "/workspaces/{workspaceId}/time-off/requests/users/{userId}"],
   ["get",  "/workspaces/{workspaceId}/time-off/requests"],
-  ["get",  "/workspaces/{workspaceId}/users/{userId}/time-off/balances"]
+  ["get",  "/workspaces/{workspaceId}/users/{userId}/time-off/balances"],
+  # PATCH /workspaces/{wsId}/user/{userId}/time-entries/stop — the legacy
+  # "stop running timer via dedicated /stop route". The live stop flow is a
+  # PATCH on /user/{userId}/time-entries with {end} (timeEntries.updateForUser);
+  # the /stop route is dead generated surface (F1 2B cleanup). Ledger:
+  # clockify-ts-sdk spec/evidence/discrepancies.md.
+  ["patch", "/workspaces/{workspaceId}/user/{userId}/time-entries/stop"]
 ].freeze
 
 def phantom_path?(method, path)
@@ -1146,8 +1152,10 @@ SDK_METHOD_NAMES = {
   ["put",    "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate"]   => {group: "tasks", name: "updateBillableRate"},
   # timeEntries — the action-verb roster: timer flows, invoiced flags,
   # per-user shape. `startTimer` is the PUT on /user/{userId}/time-entries
-  # (Clockify's "start a running entry" call); `stopTimer` is the PATCH
-  # on /stop. `duplicate` matches the explicit /duplicate sub-route.
+  # (Clockify's "start a running entry" call). The live "stop" flow is a
+  # PATCH on the same /user/{userId}/time-entries with {end} (`updateForUser`),
+  # not a dedicated /stop route. `duplicate` matches the explicit
+  # /duplicate sub-route.
   ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced"]                                                 => {group: "timeEntries", name: "markInvoiced"},
   ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced/bulk"]                                            => {group: "timeEntries", name: "markInvoicedBulk"},
   ["get",    "/workspaces/{workspaceId}/time-entries/status/in-progress"]                                       => {group: "timeEntries", name: "listInProgress"},
@@ -1155,7 +1163,6 @@ SDK_METHOD_NAMES = {
   ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "createForUser"},
   ["put",    "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "startTimer"},
   ["patch",  "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "updateForUser"},
-  ["patch",  "/workspaces/{workspaceId}/user/{userId}/time-entries/stop"]                                       => {group: "timeEntries", name: "stopTimer"},
   ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate"]                    => {group: "timeEntries", name: "duplicate"},
   # holidays — the in-period filter route.
   ["get",    "/workspaces/{workspaceId}/holidays/in-period"]                                => {group: "holidays", name: "listInPeriod"},
