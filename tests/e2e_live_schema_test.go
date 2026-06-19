@@ -408,7 +408,10 @@ func TestLiveRawClockifyWriteCRUDShapeOracle(t *testing.T) {
 	}
 	assertNoUnknownFields[clockify.Tag](t, "tags.create", tag)
 	tagID := requireStringField(t, "tags.create", tag, "id")
-	t.Cleanup(func() { cleanupDeleteRaw(context.Background(), t, httpClient, cfg, mustWorkspacePath("tags", tagID)) })
+	t.Cleanup(func() {
+		cleanupDeleteRaw(context.Background(), t, httpClient, cfg, mustWorkspacePath("tags", tagID),
+			findingsDelete{templatePath: "/workspaces/{workspaceId}/tags/{tagId}", fixture: "fixtures/live-shape/tags-delete.txt"})
+	})
 	logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/tags", status, "fixtures/live-shape/tags-create.json")
 
 	tagItemPath := mustWorkspacePath("tags", tagID)
@@ -475,7 +478,8 @@ func TestLiveRawClockifyWriteCRUDShapeOracle(t *testing.T) {
 		assertNoUnknownFields[clockify.TimeEntry](t, "timeEntries.create", entry)
 		entryID := requireStringField(t, "timeEntries.create", entry, "id")
 		t.Cleanup(func() {
-			cleanupDeleteRaw(context.Background(), t, httpClient, cfg, mustWorkspacePath("time-entries", entryID))
+			cleanupDeleteRaw(context.Background(), t, httpClient, cfg, mustWorkspacePath("time-entries", entryID),
+				findingsDelete{templatePath: "/workspaces/{workspaceId}/time-entries/{timeEntryId}", fixture: "fixtures/live-shape/time-entries-delete.txt"})
 		})
 		logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/time-entries", status, "fixtures/live-shape/time-entries-create.json")
 
@@ -638,7 +642,8 @@ func cleanupClientRaw(ctx context.Context, t *testing.T, client *http.Client, cf
 	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodPut, path, map[string]any{"name": name, "archived": true}, &archived); err != nil {
 		t.Errorf("archive client cleanup %s: %v", clientID, err)
 	}
-	cleanupDeleteRaw(ctx, t, client, cfg, path)
+	cleanupDeleteRaw(ctx, t, client, cfg, path,
+		findingsDelete{templatePath: "/workspaces/{workspaceId}/clients/{clientId}", fixture: "fixtures/live-shape/clients-delete.txt"})
 }
 
 func cleanupProjectRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, wsID, projectID, fallbackName string) {
@@ -653,7 +658,8 @@ func cleanupProjectRaw(ctx context.Context, t *testing.T, client *http.Client, c
 	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodPut, path, map[string]any{"name": name, "archived": true}, &archived); err != nil {
 		t.Errorf("archive project cleanup %s: %v", projectID, err)
 	}
-	cleanupDeleteRaw(ctx, t, client, cfg, path)
+	cleanupDeleteRaw(ctx, t, client, cfg, path,
+		findingsDelete{templatePath: "/workspaces/{workspaceId}/projects/{projectId}", fixture: "fixtures/live-shape/projects-delete.txt"})
 }
 
 func cleanupTaskRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, wsID, projectID, taskID, fallbackName string) {
@@ -668,13 +674,39 @@ func cleanupTaskRaw(ctx context.Context, t *testing.T, client *http.Client, cfg 
 	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodPut, path, map[string]any{"name": name, "billable": true, "status": "DONE"}, &done); err != nil {
 		t.Errorf("mark task done cleanup %s: %v", taskID, err)
 	}
-	cleanupDeleteRaw(ctx, t, client, cfg, path)
+	cleanupDeleteRaw(ctx, t, client, cfg, path,
+		findingsDelete{templatePath: "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}", fixture: "fixtures/live-shape/tasks-delete.txt"})
 }
 
-func cleanupDeleteRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, path string) {
+// findingsDelete carries the template-path + fixture metadata needed to emit a
+// promotable findings row for a cleanup DELETE. It is optional: a zero value
+// (no templatePath) keeps the cleanup status-silent, preserving the prior
+// behaviour for deletes whose op should not be promoted.
+type findingsDelete struct {
+	templatePath string
+	fixture      string
+}
+
+// cleanupDeleteRaw issues the teardown DELETE. Historically it discarded the
+// HTTP status entirely, which is exactly why the ~5 DELETE ops could never be
+// promoted to live-success — the harness exercised them but never captured the
+// real 2xx. It now CAPTURES the DELETE status and, when findings metadata is
+// supplied, emits a copy-pasteable findings row for the real captured status
+// (the row only promotes a stamp if the status is a 2xx, per the generator's
+// status_bucket). It still treats a delete error as a test error so a failed
+// teardown never silently leaks objects or fabricates a row.
+func cleanupDeleteRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, path string, finding ...findingsDelete) {
 	t.Helper()
-	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodDelete, path, nil, nil); err != nil {
+	status, err := liveJSONRaw(ctx, client, cfg, http.MethodDelete, path, nil, nil)
+	if err != nil {
 		t.Errorf("delete cleanup %s: %v", livePathLabel(cfg, path), err)
+		return
+	}
+	for _, f := range finding {
+		if f.templatePath == "" {
+			continue
+		}
+		logFindingsRow(t, http.MethodDelete, "api.clockify.me", f.templatePath, status, f.fixture)
 	}
 }
 
