@@ -119,8 +119,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/clients.md",
-      "bytes": 980,
-      "sha256": "4e28bf47f4a2286cb1d705fd2bd5bf025f5d54b5a50415b560f381534e6df0ec"
+      "bytes": 1145,
+      "sha256": "6fc2222b77c2097601177cd7d1247b0a25becf110d584db39dadec97109e84c6"
     },
     {
       "path": "clockify-api-probe-lab/findings/custom-fields.md",
@@ -169,18 +169,18 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/tags.md",
-      "bytes": 938,
-      "sha256": "ddd7a444468df6835909d48fbe0b0af938f47384da630b9e7bda579580c110ad"
+      "bytes": 1103,
+      "sha256": "3db92a81c6af71dbbc5471e552b92ab8943af6358180a6411a21171bfae017d7"
     },
     {
       "path": "clockify-api-probe-lab/findings/tasks.md",
-      "bytes": 1057,
-      "sha256": "5b2707e41887b54546631fd103a79f3be55f10d6a02f06fc30c415ce3be81bee"
+      "bytes": 1222,
+      "sha256": "f74a4e47fd868c1a444c9194b31ce0b78e99ce01988e2934e78a903b1c7a503d"
     },
     {
       "path": "clockify-api-probe-lab/findings/time-entries.md",
-      "bytes": 1185,
-      "sha256": "5fb4fdc032a80b68daf413c26e00b959e630e25471885038c230e86777c6f097"
+      "bytes": 1359,
+      "sha256": "834ae4be76bac241b2c07a68ea2d5e89d379eb89a9002bf5e80d1c8dd60b1c5b"
     },
     {
       "path": "clockify-api-probe-lab/findings/time-off.md",
