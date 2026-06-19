@@ -384,6 +384,41 @@ func (h *liveMCPHarness) callOK(ctx context.Context, tool string, args map[strin
 	return envelope
 }
 
+// callOKWithConfirm runs the dry_run -> confirm_token -> execute handshake the
+// MCP server enforces for high-risk tools (e.g. write+billing expense
+// categories). It calls the tool once with dry_run:true to obtain a
+// short-lived confirm_token from the preview receipt, then retries with that
+// token (and without dry_run) to perform the real write. HashCanonical strips
+// both dry_run and confirm_token, so the preview and execute payloads bind to
+// the same hash. The supplied args must NOT already contain dry_run or
+// confirm_token.
+func (h *liveMCPHarness) callOKWithConfirm(ctx context.Context, tool string, args map[string]any) map[string]any {
+	h.t.Helper()
+
+	preview := make(map[string]any, len(args)+1)
+	for k, v := range args {
+		preview[k] = v
+	}
+	preview["dry_run"] = true
+	previewEnv := h.callOK(ctx, tool, preview)
+
+	confirmation, _ := previewEnv["confirmation"].(map[string]any)
+	if confirmation == nil {
+		h.t.Fatalf("%s dry_run preview missing confirmation block: %#v", tool, previewEnv)
+	}
+	token, _ := confirmation["confirm_token"].(string)
+	if token == "" {
+		h.t.Fatalf("%s dry_run preview returned no confirm_token: %#v", tool, confirmation)
+	}
+
+	execute := make(map[string]any, len(args)+1)
+	for k, v := range args {
+		execute[k] = v
+	}
+	execute["confirm_token"] = token
+	return h.callOK(ctx, tool, execute)
+}
+
 // callExpectError invokes the tool and returns the error message. Fails the
 // test if the call succeeds.
 func (h *liveMCPHarness) callExpectError(ctx context.Context, tool string, args map[string]any) string {

@@ -200,37 +200,60 @@ func TestLiveRawClockifyWriteSideSchemaDiff(t *testing.T) {
 	})
 
 	t.Run("expenses", func(t *testing.T) {
-		// list_expenses reads a paged {expenses:[...]} envelope.
+		// GET /workspaces/{ws}/expenses returns the WorkspaceExpensesDtoV1 ->
+		// ExpensesWithCountDtoV1 shape: the top-level "expenses" key is an
+		// OBJECT {count:int, expenses:[...]}, sitting alongside dailyTotals[]
+		// and weeklyTotals[] — not a bare array. The list_expenses handler
+		// decodes this same doubly-nested envelope (see expenses.go), so the
+		// oracle must mirror it. Verified live 2026-05-02.
 		var env struct {
-			Expenses []map[string]json.RawMessage `json:"expenses"`
+			Expenses struct {
+				Count    int                          `json:"count"`
+				Expenses []map[string]json.RawMessage `json:"expenses"`
+			} `json:"expenses"`
+			DailyTotals  []json.RawMessage `json:"dailyTotals"`
+			WeeklyTotals []json.RawMessage `json:"weeklyTotals"`
 		}
 		get(mustWorkspacePath("expenses"), firstPageQuery(), &env)
-		assertItemsHaveID(t, "expenses", env.Expenses)
+		assertItemsHaveID(t, "expenses", env.Expenses.Expenses)
 	})
 
 	t.Run("approvals", func(t *testing.T) {
 		// approval-requests list accepts only PENDING/APPROVED/WITHDRAWN_APPROVAL
-		// (AGENTS.md gotcha). The response is a bare array of request objects.
+		// (AGENTS.md gotcha). The response is a bare array, but each element is a
+		// wrapper: the request object (and its id) lives under the nested
+		// "approvalRequest" key, alongside sibling rollups (approvedTime,
+		// billableAmount, trackedTime, ...). The list_approvals handler reads the
+		// id via approvalRequestMap -> approvalRequest, so the oracle must dive
+		// into that nested object rather than expecting a top-level id.
 		var requests []map[string]json.RawMessage
 		get(mustWorkspacePath("approval-requests"), map[string]string{"status": "PENDING"}, &requests)
-		assertItemsHaveID(t, "approvals", requests)
+		assertApprovalRequestsHaveID(t, "approvals", requests)
 	})
 
 	t.Run("scheduling-assignments", func(t *testing.T) {
 		// scheduling_assignments_list reads the /scheduling/assignments/all route
-		// (bare /assignments returns 404 — AGENTS.md gotcha).
+		// (bare /assignments returns 404 — AGENTS.md gotcha). That route requires
+		// "start" and "end" query parameters; omitting them is a 400
+		// ("Required request parameter 'start' ... is not present"). The
+		// listAssignmentsRaw handler always supplies a start/end range, so the
+		// oracle must too.
+		query := firstPageQuery()
+		query["start"] = "2020-01-01T00:00:00Z"
+		query["end"] = "2020-12-31T23:59:59Z"
 		var assignments []map[string]json.RawMessage
-		get(mustWorkspacePath("scheduling", "assignments", "all"), firstPageQuery(), &assignments)
+		get(mustWorkspacePath("scheduling", "assignments", "all"), query, &assignments)
 		assertItemsHaveID(t, "scheduling-assignments", assignments)
 	})
 
 	t.Run("time-off-policies", func(t *testing.T) {
-		// time_off_policies_list reads a paged {policies:[...]} envelope.
-		var env struct {
-			Policies []map[string]json.RawMessage `json:"policies"`
-		}
-		get(mustWorkspacePath("time-off", "policies"), firstPageQuery(), &env)
-		assertItemsHaveID(t, "time-off-policies", env.Policies)
+		// GET /workspaces/{ws}/time-off/policies returns a BARE ARRAY of policy
+		// objects (the fetchTimeOffPolicies handler decodes []map[string]any
+		// directly), not a {policies:[...]} envelope. The oracle must mirror
+		// that bare-array shape.
+		var policies []map[string]json.RawMessage
+		get(mustWorkspacePath("time-off", "policies"), firstPageQuery(), &policies)
+		assertItemsHaveID(t, "time-off-policies", policies)
 	})
 
 	t.Run("time-off-requests", func(t *testing.T) {
@@ -271,10 +294,16 @@ func TestLiveRawClockifyWriteSideSchemaDiff(t *testing.T) {
 	})
 
 	t.Run("webhooks", func(t *testing.T) {
-		// webhooks_list reads the /webhooks route; response is a bare array.
-		var hooks []map[string]json.RawMessage
-		get(mustWorkspacePath("webhooks"), nil, &hooks)
-		assertItemsHaveID(t, "webhooks", hooks)
+		// GET /workspaces/{ws}/webhooks returns an OBJECT envelope
+		// {workspaceWebhookCount:int, webhooks:[...]}, not a bare array. The
+		// ListWebhooks handler decodes exactly this shape (see webhooks.go),
+		// so the oracle must pull the items out of the webhooks field.
+		var env struct {
+			WorkspaceWebhookCount int                          `json:"workspaceWebhookCount"`
+			Webhooks              []map[string]json.RawMessage `json:"webhooks"`
+		}
+		get(mustWorkspacePath("webhooks"), nil, &env)
+		assertItemsHaveID(t, "webhooks", env.Webhooks)
 	})
 }
 
@@ -724,6 +753,34 @@ func assertItemsHaveID(t *testing.T, label string, items []map[string]json.RawMe
 	for i, item := range items {
 		if id := stringField(item, "id"); id == "" {
 			t.Fatalf("%s[%d]: expected non-empty id, got fields %v", label, i, sortedKeys(item))
+		}
+	}
+}
+
+// assertApprovalRequestsHaveID mirrors assertItemsHaveID for the approval-requests
+// list, whose elements wrap the request (and its id) under a nested
+// "approvalRequest" object instead of carrying a top-level id.
+func assertApprovalRequestsHaveID(t *testing.T, label string, items []map[string]json.RawMessage) {
+	t.Helper()
+	if len(items) == 0 {
+		t.Skipf("%s: no items returned; schema diff has no live sample", label)
+	}
+	for i, item := range items {
+		// Tolerate a top-level id if the API ever flattens, but the live
+		// shape nests it under approvalRequest.
+		if id := stringField(item, "id"); id != "" {
+			continue
+		}
+		nestedRaw, ok := item["approvalRequest"]
+		if !ok {
+			t.Fatalf("%s[%d]: expected an approvalRequest wrapper, got fields %v", label, i, sortedKeys(item))
+		}
+		var nested map[string]json.RawMessage
+		if err := json.Unmarshal(nestedRaw, &nested); err != nil {
+			t.Fatalf("%s[%d]: approvalRequest is not an object: %v", label, i, err)
+		}
+		if id := stringField(nested, "id"); id == "" {
+			t.Fatalf("%s[%d]: approvalRequest has no id, fields %v", label, i, sortedKeys(nested))
 		}
 	}
 }

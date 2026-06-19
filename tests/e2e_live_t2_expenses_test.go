@@ -29,7 +29,11 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 	t.Run("create_expense_category", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		result := h.callOK(ctx, "clockify_expenses_categories_create", map[string]any{
+		// clockify_expenses_categories_create is a high-risk write+billing
+		// tool: the server requires the dry_run -> confirm_token handshake
+		// before it performs the create. callOKWithConfirm previews with
+		// dry_run:true, extracts the confirm_token, then retries to execute.
+		result := h.callOKWithConfirm(ctx, "clockify_expenses_categories_create", map[string]any{
 			"name": categoryName,
 		})
 		data := extractDataMap(t, result)
@@ -69,7 +73,8 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		updated := categoryName + "-renamed"
-		result := h.callOK(ctx, "clockify_expenses_categories_update", map[string]any{
+		// Update is also a high-risk write+billing tool requiring confirmation.
+		result := h.callOKWithConfirm(ctx, "clockify_expenses_categories_update", map[string]any{
 			"category_id": categoryID,
 			"name":        updated,
 		})
@@ -84,7 +89,7 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		deleteCategoryDeleted := false
-		result := h.callOK(ctx, "clockify_expenses_categories_create", map[string]any{
+		result := h.callOKWithConfirm(ctx, "clockify_expenses_categories_create", map[string]any{
 			"name": c.LivePrefix("exp-cat-delete", 0),
 		})
 		deleteCategoryID, _ := extractDataMap(t, result)["id"].(string)
@@ -97,7 +102,9 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 			}
 			return c.rawDeletePath(ctx, "/expenses/categories/"+deleteCategoryID)
 		})
-		deleted := h.callOK(ctx, "clockify_expenses_categories_delete", map[string]any{
+		// Delete is destructive (billing+destructive) and requires the
+		// dry_run -> confirm_token handshake before the DELETE is issued.
+		deleted := h.callOKWithConfirm(ctx, "clockify_expenses_categories_delete", map[string]any{
 			"category_id": deleteCategoryID,
 		})
 		if okFlag, _ := structuredContentMap(t, deleted)["ok"].(bool); !okFlag {
@@ -120,7 +127,9 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 		// raw client below so a leaked expense doesn't survive the
 		// test even if asserts fail.
 		date := time.Now().UTC().Truncate(time.Second).Format("2006-01-02T15:04:05Z")
-		result := h.callOK(ctx, "clockify_expenses_create", map[string]any{
+		// Creating an expense is a high-risk write+billing tool; run the
+		// dry_run -> confirm_token handshake before the real create.
+		result := h.callOKWithConfirm(ctx, "clockify_expenses_create", map[string]any{
 			"amount":      1.0,
 			"date":        date,
 			"category_id": categoryID,
@@ -154,7 +163,9 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 			t.Fatalf("get_expense id mismatch: got %q want %q", gotID, expenseID)
 		}
 
-		updated := h.callOK(ctx, "clockify_expenses_update", map[string]any{
+		// Update + delete are high-risk billing tools; both require the
+		// dry_run -> confirm_token handshake.
+		updated := h.callOKWithConfirm(ctx, "clockify_expenses_update", map[string]any{
 			"expense_id":    expenseID,
 			"change_fields": []any{"NOTES", "AMOUNT"},
 			"notes":         c.LivePrefix("exp-updated", 0),
@@ -164,7 +175,7 @@ func TestLiveOneUserExpensesCRUD(t *testing.T) {
 			t.Fatalf("update_expense id mismatch: got %q want %q", updatedID, expenseID)
 		}
 
-		_ = h.callOK(ctx, "clockify_expenses_delete", map[string]any{
+		_ = h.callOKWithConfirm(ctx, "clockify_expenses_delete", map[string]any{
 			"expense_id": expenseID,
 		})
 		expenseDeleted = true
