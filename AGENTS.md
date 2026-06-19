@@ -60,10 +60,25 @@ as setup instructions.
   canonical generator table is `CORE_ENTITY_REQUIRED_FIELDS` in
   `scripts/gen-clockify-openapi`; the live oracle is
   `TestLiveRawClockifyWriteCRUDShapeOracle` in `tests/e2e_live_schema_test.go`.
-  The generated OpenAPI snapshot now records 37 `live-success` operations,
+  The generated OpenAPI snapshot now records 41 `live-success` operations,
   removes `TODO-live` rows from the emitted manifest/status surface, and keeps
   expense create optionality aligned with live behavior (`file` and
   `projectId` stay optional).
+- **Live CRUD test fixes + four create promotions (2026-06-19).** Two live-test
+  fixes let the core create probes pass and flip from `probe-documented` to
+  `live-success`, taking the snapshot from 37 to 41 (the four create ops:
+  clients, tasks, tags, and per-user time entries). First, the schema oracle in
+  `tests/e2e_live_schema_test.go` (`TestLiveRawClockifyWriteSideSchemaDiff`) now
+  matches the real list envelopes each handler already decodes: `expenses` is a
+  doubly-nested object `{expenses:{count,expenses:[...]}}` (not a bare array),
+  `webhooks` is `{workspaceWebhookCount,webhooks:[...]}`, approval-request items
+  nest the id under `approvalRequest`, `scheduling/assignments/all` requires
+  `start`/`end` query params, and `time-off/policies` returns a bare array.
+  Second, the live harness gained `callOKWithConfirm` in
+  `tests/live_harness_test.go`, which runs the server's `dry_run` ->
+  `confirm_token` -> execute handshake required by high-risk write/billing tools;
+  the expense CRUD suite (`tests/e2e_live_t2_expenses_test.go`) now uses it for
+  create/update/delete instead of plain `callOK`.
 - `main` is at or beyond the adversarial-review hardening stack after
   `54d62d0`: fail-fast registry construction, workflow business-write
   dry-runs/risk metadata, clearer error semantics docs, generated default

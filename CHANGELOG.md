@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The raw read-side schema oracle in `tests/e2e_live_schema_test.go` decoded
+  the `expenses` list as a single-nested `{expenses:[...]}` envelope, but
+  `GET /workspaces/{ws}/expenses` returns the doubly-nested
+  `ExpensesWithCountDtoV1` shape — `expenses` is an object
+  `{count, expenses:[...]}` sitting beside `dailyTotals[]` and
+  `weeklyTotals[]`. The oracle struct now mirrors the `list_expenses` handler,
+  so the live read-shape diff finds the item array instead of failing to
+  decode. The same pass corrected three sibling oracles whose live shapes had
+  drifted from their handlers: `approvals` (id nested under `approvalRequest`),
+  `scheduling-assignments` (the `/assignments/all` route 400s without
+  `start`/`end`, now supplied), and `webhooks` (an object envelope
+  `{workspaceWebhookCount, webhooks:[...]}`, not a bare array). `time-off-policies`
+  was relaxed to the bare-array shape its handler already decodes.
+- The expenses live CRUD test (`tests/e2e_live_t2_expenses_test.go`) called the
+  high-risk write/billing tools (`clockify_expenses_categories_create`/`update`/
+  `delete`, `clockify_expenses_create`/`update`/`delete`) with a plain call,
+  which the server rejects because those tools require the
+  `dry_run` -> `confirm_token` handshake. Added a `callOKWithConfirm` harness
+  helper that previews with `dry_run:true`, extracts the `confirm_token`, and
+  retries to execute, and switched the expenses CRUD test to it.
+
+### Changed
+
+- Promoted four read-side list operations — clients, tags, tasks, and time
+  entries (`GET` on `/clients`, `/tags`, `/projects/{id}/tasks`, and
+  `/user/{id}/time-entries`) — from `probe-documented` to
+  `x-clockify-live-status: live-success` in the canonical OpenAPI generator and
+  snapshot, after `TestLiveRawClockifyReadSideSchemaDiff` decoded each live 2xx
+  body into the typed `internal/clockify` model with no unknown fields. The
+  probe-lab findings now record `200` (not `TODO-live-2xx`) for those list
+  GETs, and the generated spec's `live-success` count rises from 37 to 41.
+
 ## [0.4.3] - 2026-06-19
 
 ### Changed
