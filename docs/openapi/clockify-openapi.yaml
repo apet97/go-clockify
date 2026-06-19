@@ -1449,19 +1449,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/clients/{clientId}
+        | 200 | fixtures/live-shape/clients-delete.txt |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CLIENTDOC.md
       - clockify-api-probe-lab/CLIENTSDOC.md
+      - clockify-api-probe-lab/findings/clients.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: clients
@@ -5755,13 +5759,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}
+        | 200 | fixtures/live-shape/projects-delete.txt |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -5778,6 +5785,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/projects.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -6918,14 +6926,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}
+        | 200 | fixtures/live-shape/tasks-delete.txt |"
       - Live Clockify requires marking some tasks DONE before deletion.
       x-clockify-risk:
       - destructive
@@ -6943,6 +6954,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TASKDOC.md
+      - clockify-api-probe-lab/findings/tasks.md
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
@@ -9539,17 +9551,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/tags/{tagId} | 200
+        | fixtures/live-shape/tags-delete.txt |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TAGDOC.md
+      - clockify-api-probe-lab/findings/tags.md
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -9880,16 +9897,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId}
+        | 204 | fixtures/live-shape/time-entries-delete.txt |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
+      - clockify-api-probe-lab/findings/time-entries.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
@@ -23652,7 +23674,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 374a67673259dc8d13792718b295d631421ec4d490cafa77f451cdb78a442067
+    sha256: 98d82bacd76ac516860d4833103a46bfd80171e2a4307932ead4556fc9905479
     files: 91
   sourcePrecedence:
   - live/probe findings metadata
