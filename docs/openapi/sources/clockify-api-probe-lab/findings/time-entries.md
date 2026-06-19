@@ -1,0 +1,16 @@
+# Finding scaffold: time entries write-shape campaign
+
+Rows with concrete status codes were captured by
+`TestLiveRawClockifyWriteCRUDShapeOracle` against the sacrificial workspace on
+2026-06-19. `TODO-live-2xx` rows are scaffolds only and are ignored by the
+generator until a future live run captures that operation. If the workspace has
+required time-entry custom fields, capture the raw `customFields` payload first
+and remove the test skip.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/user/{userId}/time-entries | TODO-live-2xx | fixtures/live-shape/time-entries-list.json |
+| POST | api.clockify.me | /workspaces/{workspaceId}/time-entries | 201 | fixtures/live-shape/time-entries-create.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 200 | fixtures/live-shape/time-entries-get.json |
+| PUT | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 200 | fixtures/live-shape/time-entries-update.json |
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | TODO-live-2xx | fixtures/live-shape/time-entries-delete.txt |

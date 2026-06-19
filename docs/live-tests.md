@@ -38,8 +38,10 @@ such as `CLOCKIFY_LIVE_ADMIN_ENABLED=true`,
 `CLOCKIFY_LIVE_BILLING_ENABLED=true`, and
 `CLOCKIFY_LIVE_SETTINGS_ENABLED=true`.
 `CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1` is only for paid-feature happy-path
-campaigns that create real invoices, expenses, time-off records, scheduling
-assignments, and webhooks in the confirmed sacrificial workspace.
+campaigns and raw write-shape campaigns that create real clients, projects,
+tasks, tags, time entries, invoices, expenses, time-off records, scheduling
+assignments, reports reads, and webhooks in the confirmed sacrificial
+workspace.
 
 ## What To Run
 
@@ -54,6 +56,16 @@ Run the main one-user MCP live contracts:
 ```sh
 go test -tags=livee2e -count=1 -timeout 5m \
   -run '^(TestLiveOneUserWorkflowMCP|TestLiveRawClockifyReadSideSchemaDiff)$' \
+  ./tests/...
+```
+
+Run the raw write-shape oracle after setting
+`CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1` and
+`CLOCKIFY_LIVE_WORKSPACE_CONFIRM="$CLOCKIFY_WORKSPACE_ID"`:
+
+```sh
+go test -tags=livee2e -count=1 -timeout 5m \
+  -run '^TestLiveRawClockifyWriteCRUDShapeOracle$' \
   ./tests/...
 ```
 
@@ -89,16 +101,16 @@ continuous-detection signal, not a PR gate.
 
 ## Current live status
 
-As of 2026-05-30, a local `make perfect-live` run on `cf35703` passed the core
-live contracts and the `internal/tools` `TestOneUserLive*` family against a
-freshly-rotated sacrificial-workspace key, and cleanup reported `Leftovers: 0`;
-the optional-domain campaign was not enabled for that run. This resolved the
-rolling "Nightly live drift" issue (#134, closed with this evidence): it had
-been classified as env/config drift, and the prior failure stopped at the
-`live-contract-local` environment gate because the configured API key had been
-revoked upstream (401 / code 4003), not because of Clockify API drift or a code
-regression. Do not tag a release while any rolling drift issue is open unless it
-is classified and the release notes record an explicit maintainer waiver.
+As of 2026-06-19, a local `TestLiveRawClockifyWriteCRUDShapeOracle` run on the
+`feat/close-sdk-ceiling` branch passed against a freshly supplied
+sacrificial-workspace key, promoted 19 hot operations to `live-success`, and
+cleanup reported `Leftovers: 0`. The previous full `make perfect-live` evidence
+was 2026-05-30 on `cf35703`, when the core live contracts and the
+`internal/tools` `TestOneUserLive*` family passed after a key rotation; that run
+resolved the rolling "Nightly live drift" issue (#134) as env/config drift
+rather than Clockify API drift. Do not tag a release while any rolling drift
+issue is open unless it is classified and the release notes record an explicit
+maintainer waiver.
 
 ## Contract Coverage
 
@@ -106,6 +118,7 @@ is classified and the release notes record an explicit maintainer waiver.
 |---|---|
 | `TestLiveOneUserWorkflowMCP` | The MCP path initializes and calls workflow tools through the same one-user registry used by `cmd/clockify-mcp`. |
 | `TestLiveRawClockifyReadSideSchemaDiff` | Live read-side Clockify responses still match the structs in `internal/clockify`. |
+| `TestLiveRawClockifyWriteCRUDShapeOracle` | Live create/update/get happy paths for core SDK-ceiling entities and report reads still match `internal/clockify`; it logs finding rows for live-success promotion. |
 | `TestOneUserLiveWorkflow` | The internal one-user service can seed, log, start, switch, stop, fix, review, and clean up work in the configured workspace. |
 | `TestOneUserLivePaidFeatureWorkflowRecovery` | Paid or high-risk workflow tools return useful success/recovery envelopes under `CLOCKIFY_LIVE_HIGH_RISK_WORKFLOWS=1`. |
 | `TestOneUserLiveOptionalDomainContracts` | Optional domain tools return stable success/recovery envelopes under `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`. |
@@ -139,6 +152,7 @@ identifiers are intentionally omitted — we record only the visible plan from
 
 | Date (UTC) | Commit | Workspace plan | Gates | Tests | Result | Prefix-object leftovers |
 |---|---|---|---|---|---|---|
+| 2026-06-19 | local dirty tree on `31befa2` (`feat/close-sdk-ceiling`) | sacrificial workspace (fresh key supplied for this run) | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260619161225`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `TestLiveRawClockifyWriteCRUDShapeOracle`, then `make live-clean-prefix` | PASS (5.951s `tests`); promoted 19 live-shape operations to `x-clockify-live-status: live-success` | 0 prefix-object leftovers — `live-clean-prefix` deleted 0, failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |
 | 2026-05-30 | `cf35703` (`main` head) | fresh sacrificial workspace (rotated key; resolves #134) | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260530051806`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID`; optional-domain/high-risk/happy-path gates not set | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain campaign skipped, then `make live-clean-prefix` | PASS (33.591s core `tests`, 41.013s `internal/tools`) | 0 prefix-object leftovers — `live-clean-prefix` deleted 1 project, failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |
 | 2026-05-25 | local dirty tree on `54d62d0` | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260525203452`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID`; optional-domain/high-risk/happy-path gates not set | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain campaign skipped, then `make live-clean-prefix` | PASS (33.659s core `tests`, 42.861s `internal/tools`) | 0 prefix-object leftovers - `live-clean-prefix` deleted 1 project, failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |
 | 2026-05-23 | local dirty tree on `9dee283142c7` | BUNDLE_YEAR_2024 sacrificial | `CLOCKIFY_RUN_LIVE_E2E=1`, `CLOCKIFY_LIVE_OPTIONAL_DOMAINS=1`, `CLOCKIFY_LIVE_PREFIX=MCP-LIVE-20260523222058`, `CLOCKIFY_LIVE_WORKSPACE_CONFIRM=$CLOCKIFY_WORKSPACE_ID` | `make perfect-live`: core (`TestLiveOneUserWorkflowMCP`, `TestLiveRawClockifyReadSideSchemaDiff`), `internal/tools` `TestOneUserLive*`, optional-domain `TestLive*` campaign, then `make live-clean-prefix` | PASS (36.244s core `tests`, 52.480s `internal/tools`, 58.089s optional `tests`) | 0 prefix-object leftovers - `live-clean-prefix` deleted 12 objects (3 clients, 4 projects, 3 tags, 1 user group, 1 holiday), failed 0, post-delete prefix-object rescan reported `Leftovers: 0` |

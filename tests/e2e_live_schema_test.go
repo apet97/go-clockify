@@ -3,6 +3,7 @@
 package e2e_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -277,6 +278,440 @@ func TestLiveRawClockifyWriteSideSchemaDiff(t *testing.T) {
 	})
 }
 
+func TestLiveRawClockifyWriteCRUDShapeOracle(t *testing.T) {
+	cfg := setupLiveSchemaConfig(t)
+	requireLiveWriteShapeGate(t, cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	httpClient := &http.Client{Timeout: liveRawSchemaTimeout}
+	wsID := strings.TrimSpace(cfg.WorkspaceID)
+	prefix := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX"))
+	if wsID == "" || prefix == "" {
+		t.Fatal("CLOCKIFY_WORKSPACE_ID and CLOCKIFY_LIVE_PREFIX are required")
+	}
+	pathLabel := func(path string) string { return livePathLabel(cfg, path) }
+	mustWorkspacePath := func(segments ...string) string {
+		t.Helper()
+		p, err := paths.Workspace(wsID, segments...)
+		if err != nil {
+			t.Fatalf("workspace path %v: %v", segments, err)
+		}
+		return p
+	}
+
+	var user map[string]json.RawMessage
+	if _, err := liveJSONRaw(ctx, httpClient, cfg, http.MethodGet, "/user", nil, &user); err != nil {
+		t.Fatalf("GET /user: %v", err)
+	}
+	userID := stringField(user, "id")
+	if userID == "" {
+		t.Fatal("/user response did not include id")
+	}
+
+	clientPath := mustWorkspacePath("clients")
+	clientName := prefix + " shape client"
+	var client map[string]json.RawMessage
+	status, err := liveJSONRaw(ctx, httpClient, cfg, http.MethodPost, clientPath, map[string]any{"name": clientName}, &client)
+	if err != nil {
+		t.Fatalf("POST %s: %v", pathLabel(clientPath), err)
+	}
+	assertNoUnknownFields[clockify.ClientEntity](t, "clients.create", client)
+	clientID := requireStringField(t, "clients.create", client, "id")
+	t.Cleanup(func() { cleanupClientRaw(context.Background(), t, httpClient, cfg, wsID, clientID, clientName) })
+	logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/clients", status, "fixtures/live-shape/clients-create.json")
+
+	clientItemPath := mustWorkspacePath("clients", clientID)
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPut, clientItemPath, map[string]any{"name": clientName + " updated", "archived": false}, &client)
+	if err != nil {
+		t.Fatalf("PUT %s: %v", pathLabel(clientItemPath), err)
+	}
+	assertNoUnknownFields[clockify.ClientEntity](t, "clients.update", client)
+	logFindingsRow(t, http.MethodPut, "api.clockify.me", "/workspaces/{workspaceId}/clients/{clientId}", status, "fixtures/live-shape/clients-update.json")
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodGet, clientItemPath, nil, &client)
+	if err != nil {
+		t.Fatalf("GET %s: %v", pathLabel(clientItemPath), err)
+	}
+	assertNoUnknownFields[clockify.ClientEntity](t, "clients.get", client)
+	logFindingsRow(t, http.MethodGet, "api.clockify.me", "/workspaces/{workspaceId}/clients/{clientId}", status, "fixtures/live-shape/clients-get.json")
+
+	projectPath := mustWorkspacePath("projects")
+	projectName := prefix + " shape project"
+	projectBody := map[string]any{
+		"name":     projectName,
+		"clientId": clientID,
+		"color":    "#03A9F4",
+		"billable": true,
+		"isPublic": false,
+	}
+	var project map[string]json.RawMessage
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPost, projectPath, projectBody, &project)
+	if err != nil {
+		t.Fatalf("POST %s: %v", pathLabel(projectPath), err)
+	}
+	assertNoUnknownFields[clockify.Project](t, "projects.create", project)
+	projectID := requireStringField(t, "projects.create", project, "id")
+	t.Cleanup(func() { cleanupProjectRaw(context.Background(), t, httpClient, cfg, wsID, projectID, projectName) })
+	logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/projects", status, "fixtures/live-shape/projects-create.json")
+
+	projectItemPath := mustWorkspacePath("projects", projectID)
+	projectBody["name"] = projectName + " updated"
+	projectBody["archived"] = false
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPut, projectItemPath, projectBody, &project)
+	if err != nil {
+		t.Fatalf("PUT %s: %v", pathLabel(projectItemPath), err)
+	}
+	assertNoUnknownFields[clockify.Project](t, "projects.update", project)
+	logFindingsRow(t, http.MethodPut, "api.clockify.me", "/workspaces/{workspaceId}/projects/{projectId}", status, "fixtures/live-shape/projects-update.json")
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodGet, projectItemPath, nil, &project)
+	if err != nil {
+		t.Fatalf("GET %s: %v", pathLabel(projectItemPath), err)
+	}
+	assertNoUnknownFields[clockify.Project](t, "projects.get", project)
+	logFindingsRow(t, http.MethodGet, "api.clockify.me", "/workspaces/{workspaceId}/projects/{projectId}", status, "fixtures/live-shape/projects-get.json")
+
+	tagPath := mustWorkspacePath("tags")
+	tagName := prefix + " shape tag"
+	var tag map[string]json.RawMessage
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPost, tagPath, map[string]any{"name": tagName}, &tag)
+	if err != nil {
+		t.Fatalf("POST %s: %v", pathLabel(tagPath), err)
+	}
+	assertNoUnknownFields[clockify.Tag](t, "tags.create", tag)
+	tagID := requireStringField(t, "tags.create", tag, "id")
+	t.Cleanup(func() { cleanupDeleteRaw(context.Background(), t, httpClient, cfg, mustWorkspacePath("tags", tagID)) })
+	logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/tags", status, "fixtures/live-shape/tags-create.json")
+
+	tagItemPath := mustWorkspacePath("tags", tagID)
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPut, tagItemPath, map[string]any{"name": tagName + " updated", "archived": false}, &tag)
+	if err != nil {
+		t.Fatalf("PUT %s: %v", pathLabel(tagItemPath), err)
+	}
+	assertNoUnknownFields[clockify.Tag](t, "tags.update", tag)
+	logFindingsRow(t, http.MethodPut, "api.clockify.me", "/workspaces/{workspaceId}/tags/{tagId}", status, "fixtures/live-shape/tags-update.json")
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodGet, tagItemPath, nil, &tag)
+	if err != nil {
+		t.Fatalf("GET %s: %v", pathLabel(tagItemPath), err)
+	}
+	assertNoUnknownFields[clockify.Tag](t, "tags.get", tag)
+	logFindingsRow(t, http.MethodGet, "api.clockify.me", "/workspaces/{workspaceId}/tags/{tagId}", status, "fixtures/live-shape/tags-get.json")
+
+	taskPath := mustWorkspacePath("projects", projectID, "tasks")
+	taskName := prefix + " shape task"
+	var task map[string]json.RawMessage
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPost, taskPath, map[string]any{"name": taskName, "billable": true}, &task)
+	if err != nil {
+		t.Fatalf("POST %s: %v", pathLabel(taskPath), err)
+	}
+	assertNoUnknownFields[clockify.Task](t, "tasks.create", task)
+	taskID := requireStringField(t, "tasks.create", task, "id")
+	t.Cleanup(func() { cleanupTaskRaw(context.Background(), t, httpClient, cfg, wsID, projectID, taskID, taskName) })
+	logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/projects/{projectId}/tasks", status, "fixtures/live-shape/tasks-create.json")
+
+	taskItemPath := mustWorkspacePath("projects", projectID, "tasks", taskID)
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPut, taskItemPath, map[string]any{"name": taskName + " updated", "billable": true, "status": "ACTIVE"}, &task)
+	if err != nil {
+		t.Fatalf("PUT %s: %v", pathLabel(taskItemPath), err)
+	}
+	assertNoUnknownFields[clockify.Task](t, "tasks.update", task)
+	logFindingsRow(t, http.MethodPut, "api.clockify.me", "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}", status, "fixtures/live-shape/tasks-update.json")
+	status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodGet, taskItemPath, nil, &task)
+	if err != nil {
+		t.Fatalf("GET %s: %v", pathLabel(taskItemPath), err)
+	}
+	assertNoUnknownFields[clockify.Task](t, "tasks.get", task)
+	logFindingsRow(t, http.MethodGet, "api.clockify.me", "/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}", status, "fixtures/live-shape/tasks-get.json")
+
+	t.Run("time-entry-crud", func(t *testing.T) {
+		if hasRequiredTimeEntryCustomFields(ctx, t, httpClient, cfg, wsID) {
+			t.Skip("workspace has required time-entry custom fields; raw shape oracle needs captured customFields payload")
+		}
+		entryStart := time.Now().UTC().Add(-90 * time.Minute).Truncate(time.Second)
+		entryEnd := entryStart.Add(30 * time.Minute)
+		entryBody := map[string]any{
+			"start":       entryStart.Format(time.RFC3339),
+			"end":         entryEnd.Format(time.RFC3339),
+			"description": prefix + " shape entry",
+			"projectId":   projectID,
+			"taskId":      taskID,
+			"tagIds":      []string{tagID},
+			"billable":    true,
+		}
+		var entry map[string]json.RawMessage
+		entryPath := mustWorkspacePath("time-entries")
+		status, err := liveJSONRaw(ctx, httpClient, cfg, http.MethodPost, entryPath, entryBody, &entry)
+		if err != nil {
+			t.Fatalf("POST %s: %v", pathLabel(entryPath), err)
+		}
+		assertNoUnknownFields[clockify.TimeEntry](t, "timeEntries.create", entry)
+		entryID := requireStringField(t, "timeEntries.create", entry, "id")
+		t.Cleanup(func() {
+			cleanupDeleteRaw(context.Background(), t, httpClient, cfg, mustWorkspacePath("time-entries", entryID))
+		})
+		logFindingsRow(t, http.MethodPost, "api.clockify.me", "/workspaces/{workspaceId}/time-entries", status, "fixtures/live-shape/time-entries-create.json")
+
+		entryItemPath := mustWorkspacePath("time-entries", entryID)
+		entryBody["description"] = prefix + " shape entry updated"
+		status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodPut, entryItemPath, entryBody, &entry)
+		if err != nil {
+			t.Fatalf("PUT %s: %v", pathLabel(entryItemPath), err)
+		}
+		assertNoUnknownFields[clockify.TimeEntry](t, "timeEntries.update", entry)
+		logFindingsRow(t, http.MethodPut, "api.clockify.me", "/workspaces/{workspaceId}/time-entries/{timeEntryId}", status, "fixtures/live-shape/time-entries-update.json")
+		status, err = liveJSONRaw(ctx, httpClient, cfg, http.MethodGet, entryItemPath, nil, &entry)
+		if err != nil {
+			t.Fatalf("GET %s: %v", pathLabel(entryItemPath), err)
+		}
+		assertNoUnknownFields[clockify.TimeEntry](t, "timeEntries.get", entry)
+		logFindingsRow(t, http.MethodGet, "api.clockify.me", "/workspaces/{workspaceId}/time-entries/{timeEntryId}", status, "fixtures/live-shape/time-entries-get.json")
+	})
+
+	t.Run("reports", func(t *testing.T) {
+		start, end := previousFullWeekRange(time.Now().UTC())
+		for _, report := range []struct {
+			name      string
+			path      string
+			body      map[string]any
+			wantAnyOf []string
+		}{
+			{
+				name: "summary",
+				path: "/workspaces/" + wsID + "/reports/summary",
+				body: map[string]any{
+					"dateRangeStart": start,
+					"dateRangeEnd":   end,
+					"exportType":     "JSON",
+					"summaryFilter":  map[string]any{"groups": []string{"PROJECT"}},
+				},
+				wantAnyOf: []string{"totals", "groupOne"},
+			},
+			{
+				name: "detailed",
+				path: "/workspaces/" + wsID + "/reports/detailed",
+				body: map[string]any{
+					"dateRangeStart": start,
+					"dateRangeEnd":   end,
+					"exportType":     "JSON",
+					"detailedFilter": map[string]any{},
+				},
+				wantAnyOf: []string{"timeentries", "totals"},
+			},
+			{
+				name: "weekly",
+				path: "/workspaces/" + wsID + "/reports/weekly",
+				body: map[string]any{
+					"dateRangeStart": start,
+					"dateRangeEnd":   end,
+					"exportType":     "JSON",
+					"weeklyFilter":   map[string]any{"group": "PROJECT", "subgroup": "TIME"},
+				},
+				wantAnyOf: []string{"totals", "groupOne", "weekTotals"},
+			},
+			{
+				name: "attendance",
+				path: "/workspaces/" + wsID + "/reports/attendance",
+				body: map[string]any{
+					"dateRangeStart":    start,
+					"dateRangeEnd":      end,
+					"exportType":        "JSON",
+					"attendanceFilter":  map[string]any{},
+					"sortOrder":         "ASCENDING",
+					"includeNonWorking": false,
+				},
+				wantAnyOf: []string{"entities"},
+			},
+		} {
+			t.Run(report.name, func(t *testing.T) {
+				var body map[string]json.RawMessage
+				status, err := liveReportsJSONRaw(ctx, httpClient, cfg, http.MethodPost, report.path, report.body, &body)
+				if err != nil {
+					t.Fatalf("POST reports %s: %v", report.name, err)
+				}
+				assertHasAnyKey(t, "reports."+report.name, body, report.wantAnyOf...)
+				logFindingsRow(t, http.MethodPost, "reports.api.clockify.me", strings.Replace(report.path, wsID, "{workspaceId}", 1), status, "fixtures/live-shape/reports-"+report.name+".json")
+			})
+		}
+	})
+}
+
+func requireLiveWriteShapeGate(t *testing.T, cfg config.OneUserConfig) {
+	t.Helper()
+	if os.Getenv("CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS") != "1" {
+		t.Skip("set CLOCKIFY_LIVE_HAPPY_PATH_CAMPAIGNS=1 to run mutating write-shape oracle")
+	}
+	if got := strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_WORKSPACE_CONFIRM")); got != strings.TrimSpace(cfg.WorkspaceID) {
+		t.Fatalf("CLOCKIFY_LIVE_WORKSPACE_CONFIRM must match CLOCKIFY_WORKSPACE_ID for mutating write-shape oracle")
+	}
+	if strings.TrimSpace(os.Getenv("CLOCKIFY_LIVE_PREFIX")) == "" {
+		t.Fatal("CLOCKIFY_LIVE_PREFIX is required for mutating write-shape oracle")
+	}
+}
+
+func liveReportsJSONRaw(ctx context.Context, client *http.Client, cfg config.OneUserConfig, method, path string, body, out any) (int, error) {
+	return liveJSONAtBase(ctx, client, cfg, "https://reports.api.clockify.me/v1", method, path, body, out)
+}
+
+func liveJSONRaw(ctx context.Context, client *http.Client, cfg config.OneUserConfig, method, path string, body, out any) (int, error) {
+	return liveJSONAtBase(ctx, client, cfg, strings.TrimRight(cfg.BaseURL, "/"), method, path, body, out)
+}
+
+func liveJSONAtBase(ctx context.Context, client *http.Client, cfg config.OneUserConfig, baseURL, method, path string, body, out any) (int, error) {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	var reader io.Reader
+	if body != nil {
+		payload, err := json.Marshal(body)
+		if err != nil {
+			return 0, err
+		}
+		reader = bytes.NewReader(payload)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(baseURL, "/")+path, reader)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("X-Api-Key", cfg.APIKey)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "clockify-mcp-live-schema-diff")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+		return resp.StatusCode, fmt.Errorf("%s: %s", resp.Status, redactLiveText(cfg, strings.TrimSpace(string(respBody))))
+	}
+	if out == nil {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64*1024))
+		return resp.StatusCode, nil
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 10*1024*1024)).Decode(out); err != nil && err != io.EOF {
+		return resp.StatusCode, err
+	}
+	return resp.StatusCode, nil
+}
+
+func cleanupClientRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, wsID, clientID, fallbackName string) {
+	t.Helper()
+	path, err := paths.Workspace(wsID, "clients", clientID)
+	if err != nil {
+		t.Errorf("cleanup client path: %v", err)
+		return
+	}
+	name := currentNameRaw(ctx, client, cfg, path, fallbackName)
+	var archived map[string]json.RawMessage
+	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodPut, path, map[string]any{"name": name, "archived": true}, &archived); err != nil {
+		t.Errorf("archive client cleanup %s: %v", clientID, err)
+	}
+	cleanupDeleteRaw(ctx, t, client, cfg, path)
+}
+
+func cleanupProjectRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, wsID, projectID, fallbackName string) {
+	t.Helper()
+	path, err := paths.Workspace(wsID, "projects", projectID)
+	if err != nil {
+		t.Errorf("cleanup project path: %v", err)
+		return
+	}
+	name := currentNameRaw(ctx, client, cfg, path, fallbackName)
+	var archived map[string]json.RawMessage
+	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodPut, path, map[string]any{"name": name, "archived": true}, &archived); err != nil {
+		t.Errorf("archive project cleanup %s: %v", projectID, err)
+	}
+	cleanupDeleteRaw(ctx, t, client, cfg, path)
+}
+
+func cleanupTaskRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, wsID, projectID, taskID, fallbackName string) {
+	t.Helper()
+	path, err := paths.Workspace(wsID, "projects", projectID, "tasks", taskID)
+	if err != nil {
+		t.Errorf("cleanup task path: %v", err)
+		return
+	}
+	name := currentNameRaw(ctx, client, cfg, path, fallbackName)
+	var done map[string]json.RawMessage
+	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodPut, path, map[string]any{"name": name, "billable": true, "status": "DONE"}, &done); err != nil {
+		t.Errorf("mark task done cleanup %s: %v", taskID, err)
+	}
+	cleanupDeleteRaw(ctx, t, client, cfg, path)
+}
+
+func cleanupDeleteRaw(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, path string) {
+	t.Helper()
+	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodDelete, path, nil, nil); err != nil {
+		t.Errorf("delete cleanup %s: %v", livePathLabel(cfg, path), err)
+	}
+}
+
+func currentNameRaw(ctx context.Context, client *http.Client, cfg config.OneUserConfig, path, fallback string) string {
+	var current map[string]json.RawMessage
+	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodGet, path, nil, &current); err == nil {
+		if name := stringField(current, "name"); name != "" {
+			return name
+		}
+	}
+	return fallback
+}
+
+func hasRequiredTimeEntryCustomFields(ctx context.Context, t *testing.T, client *http.Client, cfg config.OneUserConfig, wsID string) bool {
+	t.Helper()
+	path, err := paths.Workspace(wsID, "custom-fields")
+	if err != nil {
+		t.Fatalf("custom fields path: %v", err)
+	}
+	var fields []map[string]any
+	if _, err := liveJSONRaw(ctx, client, cfg, http.MethodGet, path, nil, &fields); err != nil {
+		t.Fatalf("GET %s: %v", livePathLabel(cfg, path), err)
+	}
+	for _, field := range fields {
+		required, _ := field["required"].(bool)
+		if !required {
+			continue
+		}
+		for _, key := range []string{"entityType", "entity_type", "targetEntityType", "target_entity_type", "resourceType", "resource_type", "documentCode", "document_code"} {
+			if liveScopeIncludesTimeEntry(field[key]) {
+				return true
+			}
+		}
+		for _, key := range []string{"entityTypes", "entity_types", "targetEntityTypes", "target_entity_types", "appliesTo", "applies_to"} {
+			if liveScopeIncludesTimeEntry(field[key]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func logFindingsRow(t *testing.T, method, host, path string, status int, fixture string) {
+	t.Helper()
+	t.Logf("| %s | %s | %s | %d | %s |", method, host, path, status, fixture)
+}
+
+func requireStringField(t *testing.T, label string, item map[string]json.RawMessage, field string) string {
+	t.Helper()
+	value := stringField(item, field)
+	if value == "" {
+		t.Fatalf("%s missing non-empty %s; fields=%v", label, field, sortedKeys(item))
+	}
+	return value
+}
+
+func assertHasAnyKey(t *testing.T, label string, item map[string]json.RawMessage, keys ...string) {
+	t.Helper()
+	for _, key := range keys {
+		if _, ok := item[key]; ok {
+			return
+		}
+	}
+	t.Fatalf("%s missing expected keys %v; got %v", label, keys, sortedKeys(item))
+}
+
 // assertItemsHaveID asserts that every object in a decoded collection carries a
 // non-empty id field, at the same strictness as the read-side schema checks. An
 // empty collection is skipped (the sacrificial workspace may legitimately hold
@@ -313,7 +748,7 @@ func livePostRaw(ctx context.Context, client *http.Client, cfg config.OneUserCon
 		return err
 	}
 	u := strings.TrimRight(cfg.BaseURL, "/") + path
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, strings.NewReader(string(payload)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
@@ -329,9 +764,17 @@ func livePostRaw(ctx context.Context, client *http.Client, cfg config.OneUserCon
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-		return fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(respBody)))
+		return fmt.Errorf("%s: %s", resp.Status, redactLiveText(cfg, strings.TrimSpace(string(respBody))))
 	}
 	return json.NewDecoder(io.LimitReader(resp.Body, 10*1024*1024)).Decode(out)
+}
+
+func previousFullWeekRange(now time.Time) (string, string) {
+	dayOffset := (int(now.Weekday()) + 6) % 7
+	thisMonday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -dayOffset)
+	start := thisMonday.AddDate(0, 0, -7)
+	end := thisMonday.Add(-time.Millisecond)
+	return start.Format("2006-01-02T15:04:05.000"), end.Format("2006-01-02T15:04:05.000")
 }
 
 func setupLiveSchemaConfig(t *testing.T) config.OneUserConfig {
@@ -381,9 +824,27 @@ func liveGetRaw(ctx context.Context, client *http.Client, cfg config.OneUserConf
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-		return fmt.Errorf("%s: %s", resp.Status, strings.TrimSpace(string(body)))
+		return fmt.Errorf("%s: %s", resp.Status, redactLiveText(cfg, strings.TrimSpace(string(body))))
 	}
 	return json.NewDecoder(io.LimitReader(resp.Body, 10*1024*1024)).Decode(out)
+}
+
+func livePathLabel(cfg config.OneUserConfig, path string) string {
+	return redactLiveText(cfg, path)
+}
+
+func redactLiveText(cfg config.OneUserConfig, text string) string {
+	pairs := make([]string, 0, 4)
+	if cfg.APIKey != "" {
+		pairs = append(pairs, cfg.APIKey, "<api-key>")
+	}
+	if cfg.WorkspaceID != "" {
+		pairs = append(pairs, cfg.WorkspaceID, "{workspaceId}")
+	}
+	if len(pairs) == 0 {
+		return text
+	}
+	return strings.NewReplacer(pairs...).Replace(text)
 }
 
 func firstPageQuery() map[string]string {

@@ -1294,17 +1294,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/clients | 201 | fixtures/live-shape/clients-create.json
+        |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CLIENTDOC.md
       - clockify-api-probe-lab/CLIENTSDOC.md
+      - clockify-api-probe-lab/findings/clients.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: clients
@@ -1339,17 +1344,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/clients/{clientId} |
+        200 | fixtures/live-shape/clients-get.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CLIENTDOC.md
       - clockify-api-probe-lab/CLIENTSDOC.md
+      - clockify-api-probe-lab/findings/clients.md
       - clockify-api-probe-lab/openapi-fragments/clients-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: clients
@@ -1389,17 +1399,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/clients/{clientId} |
+        200 | fixtures/live-shape/clients-update.json |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CLIENTDOC.md
       - clockify-api-probe-lab/CLIENTSDOC.md
+      - clockify-api-probe-lab/findings/clients.md
       - clockify-api-probe-lab/openapi-fragments/clients-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: clients
@@ -5225,11 +5240,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/projects | 201 | fixtures/live-shape/projects-create.json
+        |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -5246,6 +5265,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/projects.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -5482,11 +5502,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}
+        | 200 | fixtures/live-shape/projects-get.json |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -5503,6 +5527,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/projects.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -5611,11 +5636,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}
+        | 200 | fixtures/live-shape/projects-update.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -5632,6 +5661,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/projects.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -6672,12 +6702,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks
+        | 201 | fixtures/live-shape/tasks-create.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -6694,6 +6728,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TASKDOC.md
+      - clockify-api-probe-lab/findings/tasks.md
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
@@ -6730,12 +6765,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}
+        | 200 | fixtures/live-shape/tasks-get.json |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -6752,6 +6791,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TASKDOC.md
+      - clockify-api-probe-lab/findings/tasks.md
       - clockify-api-probe-lab/openapi-fragments/tasks-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
@@ -6807,12 +6847,16 @@ paths:
           "$ref": "#/components/responses/TaskResponse"
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}
+        | 200 | fixtures/live-shape/tasks-update.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -6828,6 +6872,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/tasks.md
       - clockify-api-probe-lab/openapi-fragments/tasks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/TASKOPENAPI.YAML
@@ -7513,13 +7558,16 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - "| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/attendance
+        | 200 | fixtures/live-shape/reports-attendance.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7535,6 +7583,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/rates-and-reports.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
       x-fern-sdk-group-name: reports
@@ -7654,13 +7703,16 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - "| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/detailed
+        | 200 | fixtures/live-shape/reports-detailed.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7676,6 +7728,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/rates-and-reports.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
       x-fern-sdk-group-name: reports
@@ -7841,13 +7894,16 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - "| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/summary
+        | 200 | fixtures/live-shape/reports-summary.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7863,6 +7919,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/rates-and-reports.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
       x-fern-sdk-group-name: reports
@@ -7963,13 +8020,16 @@ paths:
           description: Not found.
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
+      - "| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/weekly
+        | 200 | fixtures/live-shape/reports-weekly.json |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -7985,6 +8045,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/rates-and-reports.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml
       x-fern-sdk-group-name: reports
@@ -9305,17 +9366,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/tags | 201 | fixtures/live-shape/tags-create.json
+        |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TAGDOC.md
+      - clockify-api-probe-lab/findings/tags.md
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -9351,17 +9417,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/tags/{tagId} | 200 |
+        fixtures/live-shape/tags-get.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TAGDOC.md
+      - clockify-api-probe-lab/findings/tags.md
       - clockify-api-probe-lab/openapi-fragments/tags-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -9407,17 +9478,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/tags/{tagId} | 200 |
+        fixtures/live-shape/tags-update.json |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TAGDOC.md
+      - clockify-api-probe-lab/findings/tags.md
       - clockify-api-probe-lab/openapi-fragments/tags-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -9495,15 +9571,20 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/time-entries | 201 |
+        fixtures/live-shape/time-entries-create.json |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
+      - clockify-api-probe-lab/findings/time-entries.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
       x-fern-sdk-method-name: create
@@ -9686,16 +9767,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId}
+        | 200 | fixtures/live-shape/time-entries-get.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
+      - clockify-api-probe-lab/findings/time-entries.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
@@ -9735,16 +9821,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId}
+        | 200 | fixtures/live-shape/time-entries-update.json |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
+      - clockify-api-probe-lab/findings/time-entries.md
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
@@ -15040,6 +15131,11 @@ components:
         workspaceId:
           type: string
       type: object
+      required:
+      - id
+      - name
+      - workspaceId
+      - archived
     ClientCreate:
       properties:
         address:
@@ -16744,6 +16840,8 @@ components:
         file:
           format: binary
           type: string
+          description: Live Clockify accepts create-expense multipart requests without
+            a file.
         notes:
           default: "##default"
           description: Represents notes for an expense.
@@ -16751,7 +16849,9 @@ components:
           type: string
         projectId:
           default: "##default"
-          description: Represents a project identifier across the system.
+          description: |-
+            Represents a project identifier across the system.
+            Live Clockify accepts create-expense multipart requests without a projectId.
           type: string
         taskId:
           default: "##default"
@@ -16766,8 +16866,6 @@ components:
       - amount
       - categoryId
       - date
-      - file
-      - projectId
       - userId
       type: object
     ExpenseDailyTotalsDtoV1:
@@ -19321,6 +19419,15 @@ components:
           description: Represents workspace identifier across the system.
           type: string
       type: object
+      required:
+      - id
+      - name
+      - workspaceId
+      - billable
+      - color
+      - archived
+      - public
+      - template
     ProjectAssignmentsTotal:
       additionalProperties: false
       description: Represents scheduled assignment totals for a project.
@@ -20112,6 +20219,11 @@ components:
         workspaceId:
           type: string
       type: object
+      required:
+      - id
+      - name
+      - workspaceId
+      - archived
     TagCreate:
       properties:
         name:
@@ -20217,6 +20329,12 @@ components:
           type: array
           uniqueItems: true
       type: object
+      required:
+      - id
+      - name
+      - projectId
+      - status
+      - billable
     TaskCreateRequest:
       example:
         assigneeId: "##default"
@@ -20534,6 +20652,15 @@ components:
         workspaceId:
           type: string
       type: object
+      required:
+      - id
+      - description
+      - userId
+      - billable
+      - workspaceId
+      - timeInterval
+      - type
+      - isLocked
     TimeEntryCreate:
       properties:
         billable:
@@ -22015,6 +22142,11 @@ components:
             additionalProperties: true
           type: array
       type: object
+      required:
+      - id
+      - email
+      - name
+      - status
     UserFilterRequest:
       description: Request body for filtering workspace users.
       properties:
@@ -23500,8 +23632,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 7afaa391781abc38fd821400ca100dc952618bb3ba5f72d0d1844772564860dd
-    files: 86
+    sha256: 901354b5d606ca96545e6267f3a237fad54293f68e03415e6156b75e4df4d205
+    files: 91
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies

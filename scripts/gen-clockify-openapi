@@ -48,6 +48,14 @@ SOURCE_PRIORITIES = {
   "aiii-openapi" => 15,
   "doc-md" => 10
 }.freeze
+CORE_ENTITY_REQUIRED_FIELDS = {
+  "Tag" => %w[id name workspaceId archived],
+  "Client" => %w[id name workspaceId archived],
+  "Project" => %w[id name workspaceId billable color archived public template],
+  "Task" => %w[id name projectId status billable],
+  "UserDtoV1" => %w[id email name status],
+  "TimeEntry" => %w[id description userId billable workspaceId timeInterval type isLocked]
+}.freeze
 SENSITIVE_EXAMPLE_KEY_RE = /\A(?:api[_-]?key|auth[_-]?token|token|secret)\z/i
 EMAIL_EXAMPLE_RE = /\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b/i
 
@@ -412,6 +420,10 @@ def extract_status(raw)
   token&.to_i
 end
 
+def pending_live_finding_row?(text)
+  text.to_s.match?(/\bTODO-live\b/i)
+end
+
 def status_bucket(status, text)
   lowered = text.to_s.downcase
   return "live-success" if status && status >= 200 && status < 300
@@ -556,6 +568,8 @@ def discover_findings(options)
   files.sort.each do |file|
     label = source_label(file, options)
     File.readlines(file, chomp: true).each do |line|
+      next if pending_live_finding_row?(line)
+
       cells = line.split("|").map(&:strip)
       next unless cells.size >= 5
 
@@ -1786,6 +1800,28 @@ def validate_document(doc, repo_root = nil)
 
   refs.uniq.each { |ref| errors << "unresolved ref #{ref}" if ref.start_with?("#/") && !json_pointer_exists?(doc, ref) }
 
+  CORE_ENTITY_REQUIRED_FIELDS.each do |schema_name, fields|
+    schema = components.dig("schemas", schema_name)
+    if !schema.is_a?(Hash)
+      errors << "schema #{schema_name} missing"
+      next
+    end
+    props = schema["properties"]
+    required = schema["required"]
+    if !props.is_a?(Hash)
+      errors << "schema #{schema_name} missing properties"
+      next
+    end
+    if !required.is_a?(Array) || required.empty?
+      errors << "schema #{schema_name} must declare a non-empty required[]"
+      next
+    end
+    fields.each do |field|
+      errors << "schema #{schema_name} missing property #{field}" unless props.key?(field)
+      errors << "schema #{schema_name} required[] missing #{field}" unless required.include?(field)
+    end
+  end
+
   paths.each do |path, item|
     item.each do |method, op|
       next unless METHODS.include?(method)
@@ -1989,6 +2025,14 @@ def apply_live_overrides!(doc)
     schema["required"] = Array(schema["required"]).push("organizationId").uniq
   end
 
+  CORE_ENTITY_REQUIRED_FIELDS.each do |schema_name, fields|
+    next unless (schema = doc.dig("components", "schemas", schema_name)).is_a?(Hash)
+    next unless (props = schema["properties"]).is_a?(Hash)
+
+    present = fields.select { |field| props.key?(field) }
+    schema["required"] = (Array(schema["required"]) + present).uniq
+  end
+
   if (op = operation_for(doc, "/workspaces/{workspaceId}/holidays/in-period", "get"))
     Array(op["parameters"]).each do |param|
       next unless param.is_a?(Hash) && param["in"] == "query" && param["name"] == "assigned-to"
@@ -2011,6 +2055,11 @@ def apply_live_overrides!(doc)
   end
   if (props = schema_properties(doc, "ExpenseCreateRequest"))
     append_text!(props["amount"], "description", "Live expense responses expose this value as quantity.") if props["amount"].is_a?(Hash)
+    append_text!(props["file"], "description", "Live Clockify accepts create-expense multipart requests without a file.") if props["file"].is_a?(Hash)
+    append_text!(props["projectId"], "description", "Live Clockify accepts create-expense multipart requests without a projectId.") if props["projectId"].is_a?(Hash)
+    if (schema = doc.dig("components", "schemas", "ExpenseCreateRequest"))
+      schema["required"] = Array(schema["required"]) - %w[file projectId]
+    end
   end
 
   [

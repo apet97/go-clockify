@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/apet97/go-clockify/internal/mcp"
+	"gopkg.in/yaml.v3"
 )
 
 const historicalDocBanner = "Historical artifact. Not current one-user MCP product documentation."
@@ -201,6 +202,69 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 		if !contract.hasOperation(op) {
 			t.Fatalf("OpenAPI missing %s %s", strings.ToUpper(op.method), op.path)
 		}
+	}
+}
+
+func TestGeneratedOpenAPICoreEntitySchemasRequireStableIdentityFields(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	requiredFields := map[string][]string{
+		"Tag":       {"id", "name", "workspaceId", "archived"},
+		"Client":    {"id", "name", "workspaceId", "archived"},
+		"Project":   {"id", "name", "workspaceId", "billable", "color", "archived", "public", "template"},
+		"Task":      {"id", "name", "projectId", "status", "billable"},
+		"UserDtoV1": {"id", "email", "name", "status"},
+		"TimeEntry": {"id", "description", "userId", "billable", "workspaceId", "timeInterval", "type", "isLocked"},
+	}
+
+	for schemaName, fields := range requiredFields {
+		schema, ok := schemas[schemaName].(map[string]interface{})
+		if !ok {
+			t.Fatalf("OpenAPI schema %s missing or malformed", schemaName)
+		}
+		required, ok := schema["required"].([]interface{})
+		if !ok || len(required) == 0 {
+			t.Fatalf("OpenAPI schema %s must declare required identity fields; required=%#v", schemaName, schema["required"])
+		}
+		requiredSet := requiredStringSet(t, schemaName, required)
+		for _, field := range fields {
+			if !requiredSet[field] {
+				t.Fatalf("OpenAPI schema %s missing required field %q; required=%v", schemaName, field, required)
+			}
+		}
+	}
+}
+
+func TestGeneratedOpenAPIExpenseCreateRequestMatchesLiveMultipartOptionalFields(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema, ok := schemas["ExpenseCreateRequest"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema ExpenseCreateRequest missing or malformed")
+	}
+	required, ok := schema["required"].([]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema ExpenseCreateRequest must declare required fields; required=%#v", schema["required"])
+	}
+	requiredSet := requiredStringSet(t, "ExpenseCreateRequest", required)
+
+	for _, field := range []string{"amount", "categoryId", "date", "userId"} {
+		if !requiredSet[field] {
+			t.Fatalf("OpenAPI schema ExpenseCreateRequest missing required field %q; required=%v", field, required)
+		}
+	}
+	for _, field := range []string{"file", "projectId"} {
+		if requiredSet[field] {
+			t.Fatalf("OpenAPI schema ExpenseCreateRequest marks live-optional field %q as required; required=%v", field, required)
+		}
+	}
+}
+
+func TestGeneratedOpenAPIIgnoresPendingLiveFindingRows(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	if err != nil {
+		t.Fatalf("read generated OpenAPI: %v", err)
+	}
+	if strings.Contains(string(raw), "TODO-live") {
+		t.Fatalf("generated OpenAPI must not include pending live-finding TODO rows")
 	}
 }
 
@@ -423,6 +487,40 @@ func readOpenAPIContract(t *testing.T, path string) openAPIContract {
 		t.Fatalf("scan OpenAPI contract: %v", err)
 	}
 	return contract
+}
+
+func readOpenAPISchemas(t *testing.T, path string) map[string]interface{} {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read OpenAPI schemas: %v", err)
+	}
+	var doc map[string]interface{}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parse OpenAPI schemas: %v", err)
+	}
+	components, ok := doc["components"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI components missing or malformed")
+	}
+	schemas, ok := components["schemas"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schemas missing or malformed")
+	}
+	return schemas
+}
+
+func requiredStringSet(t *testing.T, schemaName string, required []interface{}) map[string]bool {
+	t.Helper()
+	requiredSet := map[string]bool{}
+	for _, field := range required {
+		name, ok := field.(string)
+		if !ok {
+			t.Fatalf("OpenAPI schema %s has non-string required field %#v", schemaName, field)
+		}
+		requiredSet[name] = true
+	}
+	return requiredSet
 }
 
 func (c openAPIContract) operationCount() int {

@@ -54,6 +54,16 @@ as setup instructions.
 
 ## Current State
 
+- **SDK ceiling live-shape promotion (2026-06-19).** The OpenAPI generator
+  now promotes the live-verified SDK ceiling shapes for the core write/read
+  entities: tags, clients, projects, tasks, users, and time entries. The
+  canonical generator table is `CORE_ENTITY_REQUIRED_FIELDS` in
+  `scripts/gen-clockify-openapi`; the live oracle is
+  `TestLiveRawClockifyWriteCRUDShapeOracle` in `tests/e2e_live_schema_test.go`.
+  The generated OpenAPI snapshot now records 37 `live-success` operations,
+  removes `TODO-live` rows from the emitted manifest/status surface, and keeps
+  expense create optionality aligned with live behavior (`file` and
+  `projectId` stay optional).
 - `main` is at or beyond the adversarial-review hardening stack after
   `54d62d0`: fail-fast registry construction, workflow business-write
   dry-runs/risk metadata, clearer error semantics docs, generated default
@@ -339,6 +349,14 @@ generated from the registry. After any descriptor, schema, or order change, run
 Ruby and Linux CI Ruby: load repo-owned YAML as UTF-8, permit YAML aliases and
 Date/Time scalar classes, and keep quarantined invalid-source reasons stable
 instead of depending on Psych's exact parser wording.
+
+For SDK-facing schema ceilings, update the generator source of truth before
+the snapshot: `CORE_ENTITY_REQUIRED_FIELDS` stamps live-required response
+fields for core entities, and `apply_live_overrides!` carries the corresponding
+request/response optionality fixes. Do not hand-edit
+`docs/openapi/clockify-openapi.yaml`; run `make gen-openapi` and the drift
+gates. Placeholder rows marked `TODO-live` are planning notes only and must not
+leak into the emitted OpenAPI manifest.
 
 ## Coverage Ledger Rules
 

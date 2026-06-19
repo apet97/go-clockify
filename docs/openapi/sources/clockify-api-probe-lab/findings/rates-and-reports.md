@@ -38,6 +38,20 @@ read every monetary surface back:
 Conclusion: **divide every monetary field by 100 to get currency
 units**. No mixed scales.
 
+## Live-status promotion scaffold
+
+Rows below with concrete status codes were captured by
+`TestLiveRawClockifyWriteCRUDShapeOracle` against the sacrificial workspace on
+2026-06-19. The detailed report body key is `timeentries` (lowercase `e`),
+matching the live payload.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/summary | 200 | fixtures/live-shape/reports-summary.json |
+| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/detailed | 200 | fixtures/live-shape/reports-detailed.json |
+| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/weekly | 200 | fixtures/live-shape/reports-weekly.json |
+| POST | reports.api.clockify.me | /workspaces/{workspaceId}/reports/attendance | 200 | fixtures/live-shape/reports-attendance.json |
+
 ## Per-entry money in detailed report (JSON_V1)
 
 `timeentries[i]` carries the following monetary fields — go-clockify
