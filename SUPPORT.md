@@ -93,7 +93,7 @@ configuration without printing secrets.
 
 ## Version support
 
-The latest tagged `v1` release is the supported release line. Older
+The latest tagged `0.4.x` release is the supported release line. Older
 minor releases are superseded when a newer minor is cut; upgrade before
 requesting fixes unless the issue is a high-severity security problem
 or a correctness regression in the stable wire format.
