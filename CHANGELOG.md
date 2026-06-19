@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   snapshot. The live oracle now records the raw Clockify CRUD response shapes,
   `TODO-live` planning rows stay out of the emitted OpenAPI status surface, and
   expense create keeps live-verified optional fields optional.
+- Bumped the pinned Go patch toolchain from 1.25.10 to 1.25.11 so the CI
+  vulncheck gate runs against the standard-library fixes for GO-2026-5037 and
+  GO-2026-5039.
 
 ## [0.4.2] - 2026-05-30
 
