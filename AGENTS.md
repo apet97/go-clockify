@@ -54,6 +54,14 @@ as setup instructions.
 
 ## Current State
 
+- **Live DELETE-op promotions (2026-06-20).** The live cleanup harness in
+  `tests/e2e_live_schema_test.go` (`cleanupDeleteRaw`) historically discarded
+  the teardown DELETE status, so the five core DELETE ops could be exercised
+  but never promoted. It now captures the DELETE status and, given findings
+  metadata, emits a promotable findings row. With those rows recorded,
+  clients, projects, tasks, tags, and time-entries DELETE flipped from
+  `probe-documented` to `x-clockify-live-status: live-success`, taking the
+  snapshot from 41 to 46 `live-success` operations.
 - **SDK ceiling live-shape promotion (2026-06-19).** The OpenAPI generator
   now promotes the live-verified SDK ceiling shapes for the core write/read
   entities: tags, clients, projects, tasks, users, and time entries. The

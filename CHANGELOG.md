@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The live cleanup helper `cleanupDeleteRaw` in
+  `tests/e2e_live_schema_test.go` discarded the teardown DELETE status
+  entirely, which is why the five core DELETE ops could be exercised by the
+  live CRUD suite yet never promoted past `probe-documented` — the harness
+  never captured the real 2xx. It now captures the DELETE status and, when
+  optional `findingsDelete` metadata is supplied, emits a copy-pasteable
+  findings row for the captured status (still treating a delete error as a
+  test error so a failed teardown never leaks objects or fabricates a row).
+
+### Changed
+
+- Promoted the five core DELETE operations — clients, projects, tasks, tags,
+  and time entries (`DELETE` on `/clients/{id}`, `/projects/{id}`,
+  `/projects/{id}/tasks/{id}`, `/tags/{id}`, and `/time-entries/{id}`) — from
+  `probe-documented` to `x-clockify-live-status: live-success` in the
+  canonical OpenAPI generator and snapshot, after the live cleanup harness
+  captured their real 2xx (200 for clients/projects/tasks/tags, 204 for time
+  entries). The probe-lab findings now record the live status for those
+  deletes, and the generated spec's `live-success` count rises from 41 to 46.
+
 ## [0.4.4] - 2026-06-19
 
 ### Fixed
