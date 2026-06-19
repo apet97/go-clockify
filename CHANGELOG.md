@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-06-19
+
 ### Fixed
 
 - The raw read-side schema oracle in `tests/e2e_live_schema_test.go` decoded
