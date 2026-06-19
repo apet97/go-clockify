@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Promoted the live-verified SDK ceiling shapes for tags, clients, projects,
+  tasks, users, and time entries into the canonical OpenAPI generator and
+  snapshot. The live oracle now records the raw Clockify CRUD response shapes,
+  `TODO-live` planning rows stay out of the emitted OpenAPI status surface, and
+  expense create keeps live-verified optional fields optional.
+
 ## [0.4.2] - 2026-05-30
 
 ### Fixed
