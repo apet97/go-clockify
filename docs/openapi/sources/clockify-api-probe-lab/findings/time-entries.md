@@ -19,3 +19,14 @@ remove the test skip.
 | GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 200 | fixtures/live-shape/time-entries-get.json |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 200 | fixtures/live-shape/time-entries-update.json |
 | DELETE | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 204 | fixtures/live-shape/time-entries-delete.txt |
+
+## Live read-side promotions (2026-06-20)
+
+Captured HTTP 200 live this session against the sandbox; clean canonical
+path so the generator's `normalize_path` matches the merged operation key
+and `status_bucket` flips the op to `live-success`. Fixtures are
+documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/status/in-progress | 200 | fixtures/live-shape/time-entries-in-progress.json |

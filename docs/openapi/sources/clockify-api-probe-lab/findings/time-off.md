@@ -130,3 +130,18 @@ Read-only probe — no entities were created. `cleanup-registry/time-off.tsv` wa
 3. **Per-policy request list.** There is no `GET /time-off/policies/{policyId}/requests` list endpoint — it's 405. If go-clockify has a `listTimeOffRequestsByPolicy` function that hits this path, it needs the same GET→POST fix, but pointing at the workspace-level `POST /time-off/requests` with a policy filter — **however** TO.md does not show a `policyId` filter field in the POST body. This may mean per-policy filtering is not directly supported via the list endpoint; the caller would need to filter client-side on the `policyId` field of returned requests.
 
 4. **create request body shape.** TO.md shows the create body as `{note, timeOffPeriod: {halfDayPeriod, isHalfDay, period: {days, end, start}, timeOffHalfDayPeriod}}` at `POST /time-off/policies/{policyId}/requests`. The mutating probe was not run (safety rule: avoid firing email to non-test recipients). If go-clockify's `createTimeOffRequest` also 404s or errors, probe it in a follow-up with a far-future date that won't trigger approvals.
+
+## Live read-side promotions (2026-06-20)
+
+Captured HTTP 200 live this session against the sandbox; clean canonical
+paths (no query string) so the generator's `normalize_path` matches the
+merged operation key and `status_bucket` flips each op to `live-success`.
+The granular balance routes are the supported balance surface (the bare
+`/balance` path 404s, code 3000 — see PHANTOM_PATHS). Fixtures are
+documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId} | 200 | fixtures/live-shape/time-off-policy-get.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/policy/{policyId} | 200 | fixtures/live-shape/time-off-balance-policy.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/user/{userId} | 200 | fixtures/live-shape/time-off-balance-user.json |

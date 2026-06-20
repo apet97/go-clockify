@@ -273,3 +273,16 @@ full ISO 8601 `date`.
    `mcp-live-*` and `mcp-probe-*` prefixed categories from prior campaign runs that are
    not in the cleanup registry. These are known orphans from previous sessions and
    require manual UI archival. They do not affect this probe's findings.
+
+## Live read-side promotions (2026-06-20)
+
+Captured HTTP 200 live this session against the sandbox by the
+read-side schema oracle; clean canonical paths (no query string) so the
+generator's `normalize_path` matches the merged operation key and
+`status_bucket` flips each op to `live-success`. Fixtures are
+documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/expenses | 200 | fixtures/live-shape/expenses-list.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/expenses/{expenseId} | 200 | fixtures/live-shape/expenses-get.json |

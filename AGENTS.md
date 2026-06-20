@@ -54,6 +54,18 @@ as setup instructions.
 
 ## Current State
 
+- **Read-tier live-success wave + list pagination (2026-06-20).** A live read
+  probe of the sacrificial sandbox promoted 21 GET ops from `probe-documented`
+  to `x-clockify-live-status: live-success` (user/workspaces/user-groups/users/
+  member-profile/expenses + by-id/invoices + settings/payments, time-off policy
+  & balances, scheduling assignments, approval-requests, project custom-fields,
+  in-progress entries), taking the snapshot from 46 to 67/184. The `expenses`
+  and `invoices` list ops were live-verified to honor `page`/`page-size` and
+  added to `PAGINATED_LIST_OPS` (probe evidence under
+  `addons-me/fern/spec/evidence/probes/`); `webhooks` was left out because the
+  live wire ignores those params. The three `live-contract-local` `go test`
+  lines gained `-v` so harness findings rows are auditable.
+
 - **Live DELETE-op promotions (2026-06-20).** The live cleanup harness in
   `tests/e2e_live_schema_test.go` (`cleanupDeleteRaw`) historically discarded
   the teardown DELETE status, so the five core DELETE ops could be exercised

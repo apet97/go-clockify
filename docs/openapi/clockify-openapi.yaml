@@ -225,12 +225,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /user | 200 | fixtures/live-shape/current-user.json
+        |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -250,6 +254,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/users.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
   "/workspaces":
@@ -328,12 +333,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces | 200 | fixtures/live-shape/workspaces-list.json
+        |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -350,6 +359,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/workspaces.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
@@ -496,12 +506,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId} | 200 | fixtures/live-shape/workspace-info.json
+        |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -518,6 +532,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/workspaces.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
@@ -764,18 +779,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/approval-requests | 200
+        | fixtures/live-shape/approval-requests-list.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/APPROVALDOC.md
+      - clockify-api-probe-lab/findings/approval-requests.md
       - clockify-api-probe-lab/openapi-fragments/approvals-a.yaml
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
@@ -2261,6 +2281,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -2271,12 +2310,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/expenses | 200 | fixtures/live-shape/expenses-list.json
+        |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
@@ -2287,6 +2330,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/EXPENSESDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
       x-fern-sdk-group-name: expenses
@@ -2617,13 +2661,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/expenses/{expenseId}
+        | 200 | fixtures/live-shape/expenses-get.json |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
@@ -2634,6 +2682,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/EXPENSESDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
@@ -3428,19 +3477,42 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceListResponse"
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/invoices | 200 | fixtures/live-shape/invoices-list.json
+        |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -3449,6 +3521,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/invoices.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - clockify-api-probe-lab/openapi.yaml
@@ -3608,11 +3681,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/invoices/settings | 200
+        | fixtures/live-shape/invoices-settings.json |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
@@ -3622,6 +3699,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/invoices.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
       x-fern-sdk-group-name: invoiceSettings
@@ -4193,13 +4271,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/payments
+        | 200 | fixtures/live-shape/invoices-payments.json |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
@@ -4209,6 +4291,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/invoices.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/invoices-a.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
@@ -4424,11 +4507,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/member-profile/{userId}
+        | 200 | fixtures/live-shape/member-profile.json |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -4446,6 +4533,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/member-profile.md
       - realOPENAPI/USEROPENAPI.YAML
       x-fern-sdk-group-name: memberProfiles
       x-fern-sdk-method-name: get
@@ -5114,6 +5202,8 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /api/v1/workspaces/{ws}/projects | 200 | fixtures/project-memberships/projects-page1.json
         |"
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/projects | 200 | fixtures/live-shape/projects-list.json
+        |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -5131,6 +5221,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
       - clockify-api-probe-lab/findings/project-memberships.md
+      - clockify-api-probe-lab/findings/projects.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -5958,18 +6049,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields
+        | 200 | fixtures/live-shape/project-custom-fields.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CUSTOMFIELDSDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
       x-fern-sdk-group-name: customFields
@@ -8235,18 +8331,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/all
+        | 200 | fixtures/live-shape/scheduling-assignments-all.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
@@ -8371,17 +8472,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}
+        | 200 | fixtures/live-shape/scheduling-project-totals.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
@@ -8910,17 +9016,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals
+        | 200 | fixtures/live-shape/scheduling-user-totals.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
@@ -9748,16 +9859,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/status/in-progress
+        | 200 | fixtures/live-shape/time-entries-in-progress.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
+      - clockify-api-probe-lab/findings/time-entries.md
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
       x-fern-sdk-method-name: listInProgress
@@ -10000,18 +10116,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/policy/{policyId}
+        | 200 | fixtures/live-shape/time-off-balance-policy.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/BALANCEDOC.md
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/balance-a.yaml
       - realOPENAPI/BALANCEOPEANI.yaml
@@ -10154,16 +10275,21 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/user/{userId}
+        | 200 | fixtures/live-shape/time-off-balance-user.json |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/openapi-fragments/balance-a.yaml
       - realOPENAPI/BALANCEOPEANI.yaml
       x-fern-sdk-group-name: balances
@@ -10522,11 +10648,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}
+        | 200 | fixtures/live-shape/time-off-policy-get.json |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -10543,6 +10673,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/POLICIESDOC.md
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/POLICIESOPENAPI.YAML
       x-fern-sdk-group-name: timeOffPolicies
@@ -11332,14 +11463,18 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/user-groups | 200 | fixtures/live-shape/user-groups-list.json
+        |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -11356,6 +11491,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/GROUPSDOC.md
+      - clockify-api-probe-lab/findings/user-groups.md
       - clockify-api-probe-lab/openapi-fragments/user-groups-a.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -12356,13 +12492,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/users | 200 | fixtures/live-shape/workspace-users.json
+        |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -12380,6 +12520,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/users.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
       x-fern-sdk-group-name: users
@@ -13058,12 +13199,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
       x-clockify-last-page-header: true
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/managers
+        | 200 | fixtures/live-shape/user-managers.json |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -13081,6 +13226,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/users.md
       - realOPENAPI/USEROPENAPI.YAML
   "/workspaces/{workspaceId}/users/{userId}/roles":
     post:
@@ -23674,8 +23820,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 98d82bacd76ac516860d4833103a46bfd80171e2a4307932ead4556fc9905479
-    files: 91
+    sha256: 6ec15b39334c95c55a99ac61e81c721868ad070c5c57192a7a0a856f25015671
+    files: 96
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies

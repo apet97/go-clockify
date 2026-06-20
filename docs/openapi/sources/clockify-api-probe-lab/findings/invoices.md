@@ -179,3 +179,16 @@ array matches the `items` array from the single-GET fixture (`single-get.json` s
 4. **Pagination for listInvoiceItems:** The single-GET route (`GET /invoices/{id}`)
    embeds items inline. Confirm there is no `page` parameter on the single-get route
    that could truncate items for invoices with large item counts.
+
+## Live read-side promotions (2026-06-20)
+
+Captured HTTP 200 live this session against the sandbox; clean canonical
+paths (no query string) so the generator's `normalize_path` matches the
+merged operation key and `status_bucket` flips each op to `live-success`.
+Fixtures are documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/invoices | 200 | fixtures/live-shape/invoices-list.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/invoices/settings | 200 | fixtures/live-shape/invoices-settings.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/payments | 200 | fixtures/live-shape/invoices-payments.json |

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Live read-probe wave promotes 21 GET operations from `probe-documented` to
+  `live-success`, raising the generated-spec count from 46 to 67/184. Covers
+  user, workspaces, user-groups, users, member-profile, expenses (+ by-id),
+  invoices (+ settings/payments), time-off policy & balances, scheduling
+  assignments, approval-requests, project custom-fields, and in-progress time
+  entries; new per-domain findings files back the rows.
+- `expenses` and `invoices` list operations join `PAGINATED_LIST_OPS`, so the
+  generated request types carry `page`/`page-size`. Both were live-verified to
+  honor pagination (probe evidence under `addons-me/fern/spec/evidence/probes/`).
+  `webhooks` was deliberately excluded — the live wire ignores those params.
+
+### Fixed
+
+- The three `live-contract-local` `go test` invocations now pass `-v`, so the
+  harness `logFindingsRow` markdown rows print and promotion evidence is
+  auditable.
+- `TestOneUserLivePaidFeatureWorkflowRecovery` now sends the required `currency`
+  to `clockify_invoice_client_work` (the tool began requiring it; the test had
+  been failing with RPC `-32602`).
+
 ## [0.4.5] - 2026-06-20
 
 ### Fixed

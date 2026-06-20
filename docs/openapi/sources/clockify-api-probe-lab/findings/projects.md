@@ -9,7 +9,7 @@ ignored by the generator until a future live run captures that operation.
 
 | Method | Host | Path | Status | Fixture |
 |---|---|---|---|---|
-| GET | api.clockify.me | /workspaces/{workspaceId}/projects | TODO-live-2xx | fixtures/live-shape/projects-list.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/projects | 200 | fixtures/live-shape/projects-list.json |
 | POST | api.clockify.me | /workspaces/{workspaceId}/projects | 201 | fixtures/live-shape/projects-create.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId} | 200 | fixtures/live-shape/projects-get.json |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId} | 200 | fixtures/live-shape/projects-update.json |

@@ -104,3 +104,16 @@ Attempted to create a TXT field but workspace was at the 50-field cap — `400 c
 3. **`entityType` filter on GET.** The `entity-type` query param accepts multiple values (`TIMEENTRY`, `USER`). If go-clockify's list function always queries all types, this may return more fields than expected on workspaces that mix `USER` and `TIMEENTRY` custom fields.
 
 4. **50-field workspace cap.** The probe workspace has reached the 50-field cap. Any future test that tries to create a custom field in this workspace will fail until one is deleted first. The `/cleanup-domain custom-fields` command will not help (no fields were created by this probe). The maintainer should free space manually or use a fresh workspace for create-path integration tests.
+
+## Live read-side promotions (2026-06-20)
+
+Captured HTTP 200 live this session against the sandbox; clean canonical
+path (no query string) so the generator's `normalize_path` matches the
+merged operation key and `status_bucket` flips the op to `live-success`.
+The existing 200 row above is the workspace-level `/custom-fields` list (a
+different operation); this is the per-project custom-fields list. Fixtures
+are documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields | 200 | fixtures/live-shape/project-custom-fields.json |

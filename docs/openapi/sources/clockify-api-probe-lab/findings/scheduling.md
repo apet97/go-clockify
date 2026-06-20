@@ -109,3 +109,19 @@ Read-only probe — no entities created. `cleanup-registry/scheduling.tsv` not w
 3. **Scheduling feature plan gating.** The workspace returned live data, so the SCHEDULING feature is enabled. If go-clockify's tests run against a workspace where scheduling is not enabled, they may get 403 rather than the 404 the campaign saw. The pinned error should be re-checked against a scheduling-enabled workspace before declaring the test flipped.
 
 4. **`capacityPerDay` unit.** The field is documented as seconds (25200 = 7 hr/day) but the live value is 3600 (1 hr/day). This may be a workspace configuration artifact, not a unit bug. Confirm before exposing this field as hours in any go-clockify tool output.
+
+## Live read-side promotions (2026-06-20)
+
+Captured HTTP 200 live this session against the sandbox. The older rows
+above carry `?start=...&end=...` query strings, which `normalize_path`
+keeps verbatim, so they never matched the clean merged operation key and
+left these ops at `probe-documented`. These clean-path rows (no query
+string, canonical `{workspaceId}`/`{userId}`/`{projectId}`) match the
+operation key and flip each op to `live-success`. Fixtures are
+documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/all | 200 | fixtures/live-shape/scheduling-assignments-all.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId} | 200 | fixtures/live-shape/scheduling-project-totals.json |
+| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals | 200 | fixtures/live-shape/scheduling-user-totals.json |
