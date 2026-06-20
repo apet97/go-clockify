@@ -145,13 +145,13 @@ live-contract-local:
 		echo "  Read docs/live-tests.md before running this target." >&2; \
 		exit 1; \
 	fi
-	go test -tags=livee2e -count=1 -timeout 5m \
+	go test -v -tags=livee2e -count=1 -timeout 5m \
 		-run '^(TestLiveOneUserWorkflowMCP|TestLiveRawClockifyReadSideSchemaDiff)$$' \
 		./tests/...
-	go test -count=1 -timeout 10m ./internal/tools -run '^TestOneUserLive'
+	go test -v -count=1 -timeout 10m ./internal/tools -run '^TestOneUserLive'
 	@if [ "$${CLOCKIFY_LIVE_OPTIONAL_DOMAINS:-}" = "1" ]; then \
 		echo "== optional livee2e domain campaign =="; \
-		go test -tags=livee2e -count=1 -timeout 10m \
+		go test -v -tags=livee2e -count=1 -timeout 10m \
 			-run '^TestLive' \
 			./tests/...; \
 	else \

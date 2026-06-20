@@ -212,7 +212,7 @@ func TestOneUserLivePaidFeatureWorkflowRecovery(t *testing.T) {
 		callLiveToolOKOrRecovery(t, server, "clockify_demo_cleanup", map[string]any{"run_id": runID, "prefix": prefix, "start": "2000-01-01 00:00", "end": "2100-01-01T00:00:00Z"})
 	}()
 
-	callLiveToolOKOrRecovery(t, server, "clockify_invoice_client_work", map[string]any{"client_id": seed.IDs["clientId"], "number": "MCP-LIVE-" + runID})
+	callLiveToolOKOrRecovery(t, server, "clockify_invoice_client_work", map[string]any{"client_id": seed.IDs["clientId"], "number": "MCP-LIVE-" + runID, "currency": "USD"})
 	callLiveToolOKOrRecovery(t, server, "clockify_record_expense", map[string]any{"amount": float64(10), "category": prefix, "project_id": seed.IDs["projectId"], "date": "2026-01-02T00:00:00Z"})
 	callLiveToolOKOrRecovery(t, server, "clockify_request_time_off", map[string]any{"policy": prefix, "start": "2026-01-05", "end": "2026-01-06", "note": "live coverage probe"})
 	callLiveToolOKOrRecovery(t, server, "clockify_schedule_work", map[string]any{"user_id": userID, "project_id": seed.IDs["projectId"], "start": "2026-01-05T09:00:00Z", "end": "2026-01-09T17:00:00Z", "hours_per_day": float64(1)})
