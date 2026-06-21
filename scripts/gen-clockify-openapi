@@ -921,11 +921,14 @@ end
 # wrapper picks up the slack until Fern adds bare-array support
 # (tracked in addons-me/fern/spec/evidence/discrepancies.md →
 # fern.x-fern-pagination.bare-array-unsupported).
-def ensure_pagination!(op, method, path)
+def ensure_pagination!(op, method, path, params_components = {})
   return unless PAGINATED_LIST_OPS.include?([method.to_s, path.to_s])
 
   params = (op["parameters"] ||= [])
-  param_names = params.map { |p| p.is_a?(Hash) ? p["name"].to_s : "" }
+  # Resolve $ref param names too, so a surviving $ref page / page-size param
+  # (now kept by ensure_path_parameters!) suppresses the inline append instead
+  # of yielding a duplicate page parameter.
+  param_names = params.map { |p| resolve_param_field(p, params_components, "name").to_s }
   params << deep_copy(PAGE_PARAM_DEFAULT) unless param_names.include?("page")
   params << deep_copy(PAGE_SIZE_PARAM_DEFAULT) unless param_names.include?("page-size")
 end
@@ -1300,9 +1303,33 @@ def stamp_sdk_method_name!(op, method, path)
   op["x-fern-sdk-method-name"] = entry[:name]
 end
 
-def ensure_path_parameters!(op, path)
+# Resolve a parameter's field ("in", "name", ...) whether the parameter is
+# inline or a $ref into #/components/parameters. params_components is the merged
+# @components["parameters"] map (keyed by ref tail). Returns nil when it cannot
+# be resolved so callers can fall back to their inline handling.
+def resolve_param_field(param, params_components, field)
+  return param[field] if param.is_a?(Hash) && param.key?(field)
+
+  ref = param.is_a?(Hash) ? param["$ref"].to_s : ""
+  return nil unless ref.start_with?("#/components/parameters/")
+
+  tail = ref.split("/").last
+  comp = params_components.is_a?(Hash) ? params_components[tail] : nil
+  comp.is_a?(Hash) ? comp[field] : nil
+end
+
+def ensure_path_parameters!(op, path, params_components = {})
   wanted = path.scan(/\{([^}]+)\}/).flatten
   existing = Array(op["parameters"]).select do |param|
+    # Keep a $ref to a NON-path parameter (query/header/cookie: start/end, page,
+    # page-size, sort-order, ...). The old predicate resolved a $ref to its
+    # ref-tail name, which never matches a {path} placeholder, so every $ref
+    # query param was silently pruned (then GC'd by prune_components). Inline
+    # params and $ref PATH params keep the original name test below.
+    if param.is_a?(Hash) && param["$ref"].is_a?(String)
+      resolved_in = resolve_param_field(param, params_components, "in")
+      next true if resolved_in && resolved_in != "path"
+    end
     name = parameter_name(param)
     name.nil? || wanted.include?(name)
   end
@@ -1477,10 +1504,10 @@ class Merger
       notes.concat(other_host_findings.map { |finding| "Wrong-host finding not applied to live status: #{finding["note"]}" }) if other_host_findings.any?
       notes.concat(tools.flat_map { |tool| Array(tool_meta.dig(tool, "notes")) }) if tools.any?
       op["x-clockify-notes"] = notes.uniq.sort unless notes.empty?
-      ensure_path_parameters!(op, path)
+      ensure_path_parameters!(op, path, @components["parameters"])
       normalize_op_tags!(op)
       stamp_path_param_patterns!(op)
-      ensure_pagination!(op, method, path)
+      ensure_pagination!(op, method, path, @components["parameters"])
       stamp_last_page_header!(op, method, path)
       stamp_sdk_method_name!(op, method, path)
       op["security"] = [{"ApiKeyAuth" => []}, {"AddonTokenAuth" => []}]
@@ -1854,6 +1881,22 @@ def validate_document(doc, repo_root = nil)
       expected_params.each do |param|
         errors << "#{method.upcase} #{path} missing path parameter #{param}" unless actual_params.include?(param)
       end
+      # Guard the invariant restored by the $ref-query-param fix: no operation may
+      # declare the same (name, in) parameter twice (e.g. a manual live override
+      # plus a now-surviving $ref of the same query param).
+      resolved_param_keys = Array(op["parameters"]).map do |param|
+        next nil unless param.is_a?(Hash)
+
+        ref = param["$ref"]
+        comp = ref&.start_with?("#/components/parameters/") ? (components.dig("parameters", ref.split("/").last) || {}) : param
+        name = comp["name"]
+        name.nil? ? nil : [name, comp["in"]]
+      end.compact
+      param_counts = Hash.new(0)
+      resolved_param_keys.each { |key| param_counts[key] += 1 }
+      param_counts.each do |(dup_name, dup_in), count|
+        errors << "#{method.upcase} #{path} duplicate parameter #{dup_name} (#{dup_in})" if count > 1
+      end
       if path.include?("/reports/") || path.include?("shared-reports")
         servers = Array(op["servers"]).map { |server| server["url"] }
         errors << "#{method.upcase} #{path} missing reports server" unless servers.include?(REPORTS_SERVER)
@@ -1947,13 +1990,21 @@ def append_operation_note!(op, note)
   op["x-clockify-notes"] = notes
 end
 
-def ensure_query_parameter!(op, name, schema:, required: false, description: nil)
+def ensure_query_parameter!(op, name, schema:, required: false, description: nil, params_components: {})
   op["parameters"] ||= []
-  existing = op["parameters"].find { |param| param.is_a?(Hash) && param["in"] == "query" && param["name"] == name }
+  existing = op["parameters"].find do |param|
+    next false unless param.is_a?(Hash)
+
+    resolve_param_field(param, params_components, "in") == "query" &&
+      resolve_param_field(param, params_components, "name") == name
+  end
   if existing
-    existing["required"] = required
-    existing["schema"] = schema
-    existing["description"] = description if description
+    # The param may have survived as a $ref now that ensure_path_parameters!
+    # keeps $ref query params; replace it in place with the live-authoritative
+    # inline shape so the required flag / schema win without a duplicate.
+    replacement = {"in" => "query", "name" => name, "required" => required, "schema" => schema}
+    replacement["description"] = description if description
+    op["parameters"][op["parameters"].index(existing)] = replacement
     return
   end
 
@@ -2032,7 +2083,8 @@ def apply_live_overrides!(doc)
       "userLocale",
       required: true,
       schema: {"type" => "string", "default" => "en-US"},
-      description: "Required by live Clockify invoice export; the MCP defaults it to en-US."
+      description: "Required by live Clockify invoice export; the MCP defaults it to en-US.",
+      params_components: doc.dig("components", "parameters") || {}
     )
   end
 
@@ -2041,14 +2093,18 @@ def apply_live_overrides!(doc)
     # totals GET: without them it 400s (code 3001, "Required request
     # parameter 'start' ... not present"). The upstream source declares
     # them as $ref query params, but ensure_path_parameters! prunes any
-    # non-path $ref param, so re-add them inline here (probed 2026-06-21).
+    # non-path $ref param. ensure_path_parameters! now KEEPS those (resolve-aware),
+    # so the $ref start/end survive; ensure_query_parameter! is resolve-aware too and
+    # rewrites the survivor in place to required:true rather than appending a duplicate
+    # (probed 2026-06-21).
     %w[start end].each do |bound|
       ensure_query_parameter!(
         op,
         bound,
         required: true,
         schema: {"type" => "string", "format" => "date-time"},
-        description: "Required by live Clockify; the single-project schedule-totals GET 400s without an ISO-8601 #{bound}."
+        description: "Required by live Clockify; the single-project schedule-totals GET 400s without an ISO-8601 #{bound}.",
+        params_components: doc.dig("components", "parameters") || {}
       )
     end
   end

@@ -643,25 +643,9 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/ApprovalRequestSortColumn"
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
+      - "$ref": "#/components/parameters/sortOrderQuery"
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
       responses:
         '200':
           content:
@@ -1232,30 +1216,13 @@ paths:
           - ASCENDING
           - DESCENDING
           type: string
+      - "$ref": "#/components/parameters/PageQuery"
+      - "$ref": "#/components/parameters/PageSizeHyphen"
       - in: path
         name: workspaceId
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           content:
@@ -1644,6 +1611,9 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
+      - "$ref": "#/components/parameters/CustomFieldNameQuery"
+      - "$ref": "#/components/parameters/CustomFieldStatusQuery"
+      - "$ref": "#/components/parameters/CustomFieldEntityTypeQuery"
       - description: 1-based page index. Default 1.
         in: query
         name: page
@@ -2291,30 +2261,14 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
+      - "$ref": "#/components/parameters/UserIdQuery"
       - in: path
         name: workspaceId
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           content:
@@ -2411,30 +2365,17 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/CategorySortColumnQuery"
+      - "$ref": "#/components/parameters/SortOrderQuery"
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
+      - "$ref": "#/components/parameters/CategoryArchivedQuery"
+      - "$ref": "#/components/parameters/CategoryNameQuery"
       - in: path
         name: workspaceId
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           content:
@@ -3517,30 +3458,16 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
+      - "$ref": "#/components/parameters/InvoiceStatusesQuery"
+      - "$ref": "#/components/parameters/InvoiceSortColumnQuery"
+      - "$ref": "#/components/parameters/InvoicesSortOrderQuery"
       - in: path
         name: workspaceId
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceListResponse"
@@ -4041,6 +3968,14 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - in: query
+        name: userLocale
+        required: true
+        schema:
+          type: string
+          default: en-US
+        description: Required by live Clockify invoice export; the MCP defaults it
+          to en-US.
       - in: path
         name: workspaceId
         required: true
@@ -4052,14 +3987,6 @@ paths:
         schema:
           pattern: "^[0-9a-fA-F]{24}$"
           type: string
-      - in: query
-        name: userLocale
-        required: true
-        schema:
-          type: string
-          default: en-US
-        description: Required by live Clockify invoice export; the MCP defaults it
-          to en-US.
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceExportResponse"
@@ -4281,6 +4208,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
       - in: path
         name: workspaceId
         required: true
@@ -4292,25 +4221,6 @@ paths:
         schema:
           pattern: "^[0-9a-fA-F]{24}$"
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           "$ref": "#/components/responses/InvoicePaymentsResponse"
@@ -4718,6 +4628,8 @@ paths:
         name: archived
         schema:
           type: boolean
+      - "$ref": "#/components/parameters/PageQuery"
+      - "$ref": "#/components/parameters/PageSizeHyphen"
       - in: path
         name: workspaceId
         required: true
@@ -6036,6 +5948,8 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
+      - "$ref": "#/components/parameters/CustomFieldStatusQuery"
+      - "$ref": "#/components/parameters/CustomFieldEntityTypeQuery"
       - in: path
         name: projectId
         required: true
@@ -6750,6 +6664,10 @@ paths:
         schema:
           default: false
           type: boolean
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
+      - "$ref": "#/components/parameters/SortColumnTask"
+      - "$ref": "#/components/parameters/SortOrder"
       - in: path
         name: workspaceId
         required: true
@@ -6760,25 +6678,6 @@ paths:
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           "$ref": "#/components/responses/TaskArrayResponse"
@@ -6827,6 +6726,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/ContainsAssignee"
       - in: path
         name: workspaceId
         required: true
@@ -6968,6 +6868,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/ContainsAssignee"
+      - "$ref": "#/components/parameters/MembershipStatus"
       - in: path
         name: workspaceId
         required: true
@@ -8311,6 +8213,8 @@ paths:
         schema:
           default: ''
           type: string
+      - "$ref": "#/components/parameters/startQuery"
+      - "$ref": "#/components/parameters/endQuery"
       - description: Represents the column as the sorting criteria.
         example: USER
         in: query
@@ -8325,25 +8229,8 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/SortOrder"
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
       responses:
         '200':
           content:
@@ -8812,6 +8699,7 @@ paths:
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
       - "$ref": "#/components/parameters/assignmentId"
+      - "$ref": "#/components/parameters/seriesUpdateOptionQuery"
       responses:
         '200':
           content:
@@ -9052,6 +8940,10 @@ paths:
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
       - "$ref": "#/components/parameters/userId"
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
+      - "$ref": "#/components/parameters/startQuery"
+      - "$ref": "#/components/parameters/endQuery"
       responses:
         '200':
           content:
@@ -9261,6 +9153,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/PageQuery"
+      - "$ref": "#/components/parameters/PageSizeCamel"
       - in: path
         name: workspaceId
         required: true
@@ -9490,30 +9384,13 @@ paths:
           - ASCENDING
           - DESCENDING
           type: string
+      - "$ref": "#/components/parameters/PageQuery"
+      - "$ref": "#/components/parameters/PageSizeHyphen"
       - in: path
         name: workspaceId
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           content:
@@ -11491,30 +11368,18 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/ProjectIdQuery"
+      - "$ref": "#/components/parameters/UserGroupNameQuery"
+      - "$ref": "#/components/parameters/UserGroupSortColumnQuery"
+      - "$ref": "#/components/parameters/UserGroupsSortOrderQuery"
+      - "$ref": "#/components/parameters/pageQuery"
+      - "$ref": "#/components/parameters/pageSizeQuery"
+      - "$ref": "#/components/parameters/IncludeTeamManagersQuery"
       - in: path
         name: workspaceId
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           content:
@@ -12096,6 +11961,8 @@ paths:
         schema:
           format: date-time
           type: string
+      - "$ref": "#/components/parameters/PageQuery"
+      - "$ref": "#/components/parameters/PageSizeHyphen"
       - in: path
         name: workspaceId
         required: true
@@ -12106,25 +11973,6 @@ paths:
         required: true
         schema:
           type: string
-      - description: 1-based page index. Default 1.
-        in: query
-        name: page
-        required: false
-        schema:
-          default: 1
-          format: int32
-          minimum: 1
-          type: integer
-      - description: Page size (number of items per page). Default 50; maximum 200.
-        in: query
-        name: page-size
-        required: false
-        schema:
-          default: 50
-          format: int32
-          maximum: 200
-          minimum: 1
-          type: integer
       responses:
         '200':
           content:
@@ -13948,6 +13796,239 @@ components:
       in: header
       name: X-Addon-Token
   parameters:
+    CategoryArchivedQuery:
+      description: Filters results based on whether the category is archived.
+      example: true
+      in: query
+      name: archived
+      required: false
+      schema:
+        default: false
+        type: boolean
+    CategoryNameQuery:
+      description: Filters expense categories by a string matched against their name.
+      example: procurement
+      in: query
+      name: name
+      required: false
+      schema:
+        default: "##default"
+        type: string
+    CategorySortColumnQuery:
+      description: Column name to be used as sorting criteria.
+      example: NAME
+      in: query
+      name: sort-column
+      required: false
+      schema:
+        enum:
+        - NAME
+        type: string
+    ContainsAssignee:
+      description: Flag to set whether task will have assignee or none.
+      example: true
+      in: query
+      name: contains-assignee
+      required: false
+      schema:
+        default: true
+        type: boolean
+    CustomFieldEntityTypeQuery:
+      description: Filters custom fields by custom field entity type. Use repeated
+        query parameters for more than one value, for example entity-type=TIMEENTRY&entity-type=USER.
+      example:
+      - TIMEENTRY
+      - USER
+      explode: true
+      in: query
+      name: entity-type
+      required: false
+      schema:
+        items:
+          "$ref": "#/components/schemas/CustomFieldEntityType"
+        type: array
+      style: form
+    CustomFieldNameQuery:
+      description: Filters custom fields by a string contained in the custom field
+        name.
+      example: location
+      in: query
+      name: name
+      required: false
+      schema:
+        type: string
+    CustomFieldStatusQuery:
+      description: Filters custom fields by custom field status.
+      example: VISIBLE
+      in: query
+      name: status
+      required: false
+      schema:
+        "$ref": "#/components/schemas/CustomFieldStatus"
+    IncludeTeamManagersQuery:
+      description: If provided, you'll get a list of team managers assigned to this
+        user group.
+      example: true
+      in: query
+      name: includeTeamManagers
+      required: false
+      schema:
+        default: false
+        type: boolean
+    InvoiceSortColumnQuery:
+      description: 'Valid column name as sorting criteria. Default: ID.'
+      example: CLIENT
+      in: query
+      name: sort-column
+      required: false
+      schema:
+        "$ref": "#/components/schemas/InvoiceSortColumn"
+    InvoiceStatusesQuery:
+      description: Filter invoices by one or more invoice statuses.
+      example:
+      - UNSENT
+      - PAID
+      explode: true
+      in: query
+      name: statuses
+      required: false
+      schema:
+        items:
+          "$ref": "#/components/schemas/InvoiceStatus"
+        type: array
+      style: form
+    InvoicesSortOrderQuery:
+      description: 'Sort order. Default: ASCENDING.'
+      example: ASCENDING
+      in: query
+      name: sort-order
+      required: false
+      schema:
+        "$ref": "#/components/schemas/InvoicesSortOrder"
+    MembershipStatus:
+      description: Represents a membership status.
+      example: ACTIVE
+      in: query
+      name: membership-status
+      required: false
+      schema:
+        enum:
+        - PENDING
+        - ACTIVE
+        - DECLINED
+        - INACTIVE
+        - ALL
+        type: string
+    PageQuery:
+      in: query
+      name: page
+      schema:
+        default: 1
+        minimum: 1
+        type: integer
+    PageSizeCamel:
+      in: query
+      name: pageSize
+      schema:
+        default: 50
+        minimum: 1
+        type: integer
+    PageSizeHyphen:
+      description: |
+        Hyphenated `page-size` is the documented spelling for v1 listing
+        endpoints. Note: shared-reports uses `pageSize` (camelCase); the
+        hyphenated form is silently ignored there.
+      in: query
+      name: page-size
+      schema:
+        default: 50
+        minimum: 1
+        type: integer
+    ProjectIdQuery:
+      description: If provided, you'll get a filtered list of groups that matches
+        the string provided in their project id.
+      example: 5a0ab5acb07987125438b60f
+      in: query
+      name: project-id
+      required: false
+      schema:
+        type: string
+    SortColumnTask:
+      description: Represents the column as criteria for sorting tasks.
+      example: ID
+      in: query
+      name: sort-column
+      required: false
+      schema:
+        enum:
+        - ID
+        - NAME
+        type: string
+    SortOrder:
+      description: Sorting mode.
+      example: ASCENDING
+      in: query
+      name: sort-order
+      required: false
+      schema:
+        enum:
+        - ASCENDING
+        - DESCENDING
+        type: string
+    SortOrderQuery:
+      description: Sorting order.
+      example: ASCENDING
+      in: query
+      name: sort-order
+      required: false
+      schema:
+        enum:
+        - ASCENDING
+        - DESCENDING
+        type: string
+    UserGroupNameQuery:
+      description: If provided, you'll get a filtered list of groups that matches
+        the string provided in their name.
+      example: development_team
+      in: query
+      name: name
+      required: false
+      schema:
+        type: string
+        x-clockify-default: "##default"
+    UserGroupSortColumnQuery:
+      description: Column to be used as the sorting criteria.
+      example: NAME
+      in: query
+      name: sort-column
+      required: false
+      schema:
+        "$ref": "#/components/schemas/UserGroupSortColumn"
+    UserGroupsSortOrderQuery:
+      description: Sorting mode.
+      example: ASCENDING
+      in: query
+      name: sort-order
+      required: false
+      schema:
+        "$ref": "#/components/schemas/UserGroupsSortOrder"
+    UserIdQuery:
+      description: Filters expenses by the user ID linked to the expense.
+      example: 5a0ab5acb07987125438b60f
+      in: query
+      name: user-id
+      required: false
+      schema:
+        type: string
+    UserLocaleQuery:
+      description: Represents a locale.
+      example: en
+      in: query
+      name: userLocale
+      required: true
+      schema:
+        type: string
+        x-sourceDefault: "##default"
     approvalRequestId:
       description: Represents an approval request identifier across the system.
       example: 940ab5acb07987125438b65y
@@ -13964,6 +14045,36 @@ components:
       required: true
       schema:
         type: string
+    endQuery:
+      description: Represents an end date in the yyyy-MM-ddThh:mm:ssZ format.
+      example: '2021-01-01T00:00:00Z'
+      in: query
+      name: end
+      required: true
+      schema:
+        format: date-time
+        type: string
+    pageQuery:
+      description: Page number.
+      example: 1
+      in: query
+      name: page
+      required: false
+      schema:
+        default: 1
+        format: int32
+        type: integer
+    pageSizeQuery:
+      description: Page size.
+      example: 50
+      in: query
+      name: page-size
+      required: false
+      schema:
+        default: 50
+        format: int32
+        minimum: 1
+        type: integer
     projectId:
       description: Represents a project identifier across the system.
       example: 56b687e29ae1f428e7ebe504
@@ -13971,6 +14082,31 @@ components:
       name: projectId
       required: true
       schema:
+        type: string
+    seriesUpdateOptionQuery:
+      description: Represents a series option.
+      example: ALL
+      in: query
+      name: seriesUpdateOption
+      required: false
+      schema:
+        "$ref": "#/components/schemas/SeriesUpdateOption"
+    sortOrderQuery:
+      description: Represents the sorting order.
+      example: ASCENDING
+      in: query
+      name: sort-order
+      required: false
+      schema:
+        "$ref": "#/components/schemas/SortOrder"
+    startQuery:
+      description: Represents a start date in the yyyy-MM-ddThh:mm:ssZ format.
+      example: '2020-01-01T00:00:00Z'
+      in: query
+      name: start
+      required: true
+      schema:
+        format: date-time
         type: string
     userId:
       description: Represents a user identifier across the system.
@@ -22600,6 +22736,18 @@ components:
       required:
       - name
       type: object
+    UserGroupSortColumn:
+      description: Column to be used as the sorting criteria.
+      enum:
+      - ID
+      - NAME
+      type: string
+    UserGroupsSortOrder:
+      description: Sorting mode.
+      enum:
+      - ASCENDING
+      - DESCENDING
+      type: string
     UserIdWithRatesRequest:
       additionalProperties: false
       description: Represents a user id with cost and hourly rates.
