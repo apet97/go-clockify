@@ -2591,15 +2591,18 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Expense create/update uses multipart form-data in live Clockify.
+      - "| PATCH | api.clockify.me | /workspaces/{ws}/expenses/categories/{categoryId}/status
+        | 200 | live (archive then remove, cleaned=1) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
@@ -2610,6 +2613,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/EXPENSESDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
@@ -2747,13 +2751,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{ws}/expenses/{expenseId} | 200
+        | live (created+deleted, cleaned=1) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
@@ -2764,6 +2772,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/EXPENSESDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
@@ -6476,10 +6485,14 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /api/v1/workspaces/{ws}/projects/{projectId}/memberships
+        | 200 | live (add back, restored to original) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -6496,6 +6509,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/project-memberships.md
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
       x-fern-sdk-method-name: setMembers
@@ -6603,11 +6617,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /api/v1/workspaces/{ws}/projects/{projectId}/memberships
+        | 200 | live (replace, restored to original) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -6624,6 +6642,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/project-memberships.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -10961,11 +10980,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /api/v1/workspaces/{ws}/time-off/policies/{policyId}/requests
+        | 200 | live probe 2026-06-22 (PENDING, Leftovers:0) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -10982,6 +11005,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEOFFDOC.md
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
       x-fern-sdk-group-name: timeOff
@@ -11084,11 +11108,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /api/v1/workspaces/{ws}/time-off/policies/{policyId}/requests/{requestId}
+        | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -11105,6 +11133,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEOFFDOC.md
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
       x-fern-sdk-group-name: timeOff
@@ -24071,7 +24100,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 859e1c8d88241a1d1a3026f7fe442febcc99dca7275f3fdd87b48dfd9435a4d4
+    sha256: 4d0dd832e1cf1324e8250d659bc7994e6341945c2613976bb2f708721c75196b
     files: 96
   sourcePrecedence:
   - live/probe findings metadata

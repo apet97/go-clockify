@@ -7,6 +7,8 @@
 | GET | api.clockify.me | /api/v1/workspaces/{ws}/time-off/requests | 405 | fixtures/time-off/requests-get-broken.json |
 | POST | api.clockify.me | /api/v1/workspaces/{ws}/time-off/requests | 200 | fixtures/time-off/requests-post-search.json |
 | GET | api.clockify.me | /api/v1/workspaces/{ws}/time-off/policies/{policyId}/requests | 405 | fixtures/time-off/requests-per-policy.json |
+| POST | api.clockify.me | /api/v1/workspaces/{ws}/time-off/policies/{policyId}/requests | 200 | live probe 2026-06-22 (PENDING, Leftovers:0) |
+| DELETE | api.clockify.me | /api/v1/workspaces/{ws}/time-off/policies/{policyId}/requests/{requestId} | 200 | live probe 2026-06-22 (Leftovers:0) |
 
 ## Request headers (no secrets)
 - X-Api-Key: [REDACTED]

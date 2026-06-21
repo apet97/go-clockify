@@ -8,6 +8,8 @@
 | PATCH | api.clockify.me | /api/v1/workspaces/{ws}/projects/{id}/memberships (self only) | 200 | fixtures/project-memberships/patch-response-full-project.json |
 | POST | api.clockify.me | /api/v1/workspaces/{ws}/projects/{id}/memberships (add other) | 200 | fixtures/project-memberships/post-add-member.json |
 | PATCH | api.clockify.me | /api/v1/workspaces/{ws}/projects/{id}/memberships (replace test) | 200 | fixtures/project-memberships/patch-replace-semantics.json |
+| PATCH | api.clockify.me | /api/v1/workspaces/{ws}/projects/{projectId}/memberships | 200 | live (replace, restored to original) |
+| POST | api.clockify.me | /api/v1/workspaces/{ws}/projects/{projectId}/memberships | 200 | live (add back, restored to original) |
 
 ## Request headers (no secrets)
 - X-Api-Key: [REDACTED]

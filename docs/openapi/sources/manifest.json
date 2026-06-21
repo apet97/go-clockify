@@ -134,8 +134,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/expenses.md",
-      "bytes": 12432,
-      "sha256": "d6659434f0300a2d2a5854ffd6d2669c99579b8c45681e00aa03992908f8a854"
+      "bytes": 12676,
+      "sha256": "a53c151798a451b2175b15fc3e5ca96bf4f0edffd1d5a891759d86740023cd67"
     },
     {
       "path": "clockify-api-probe-lab/findings/holidays.md",
@@ -154,8 +154,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/project-memberships.md",
-      "bytes": 6541,
-      "sha256": "82b742bc6b67d4d8d191e410ef5796f719708dcb132464125960c87a360ae30e"
+      "bytes": 6805,
+      "sha256": "69b16df7a4cad915cf4dd0fd5d76c4464431c6eab7e9f61d6a90023af6c1eea8"
     },
     {
       "path": "clockify-api-probe-lab/findings/projects.md",
@@ -194,8 +194,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/time-off.md",
-      "bytes": 7424,
-      "sha256": "17c1e72464927c55124e38bff414bdd3372064a92ec13d1345921eee66879ee2"
+      "bytes": 7717,
+      "sha256": "c7d4b4c8e8f693a93ac1b67a11a1a0c044e3556bf7edd6b5471bbef2a9b6ac88"
     },
     {
       "path": "clockify-api-probe-lab/findings/user-groups.md",

@@ -10,6 +10,8 @@
 | PUT | api.clockify.me | /workspaces/{ws}/expenses/categories/{id} | 200 | fixtures/expenses/category-update.json |
 | POST | api.clockify.me | /workspaces/{ws}/expenses (multipart, no userId) | 400 | fixtures/expenses/expense-create-multipart.json (first attempt) |
 | POST | api.clockify.me | /workspaces/{ws}/expenses (multipart, with userId) | 201 | fixtures/expenses/expense-create-multipart.json (final) |
+| DELETE | api.clockify.me | /workspaces/{ws}/expenses/{expenseId} | 200 | live (created+deleted, cleaned=1) |
+| PATCH | api.clockify.me | /workspaces/{ws}/expenses/categories/{categoryId}/status | 200 | live (archive then remove, cleaned=1) |
 
 Note: `PROBE_LAST_STATUS` is `unknown` in all probe-script-generated `.status.txt` files
 due to the bash subshell scoping bug documented in the invoices finding. Status for the
