@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `probe-documented` -> `live-success`: the captured 201 row's path cell carried
   a `(multipart, with userId)` qualifier that `normalize_path` could not strip,
   so a clean-path findings row now binds it.
+- User-group and webhook write CRUD promoted `probe-documented` -> `live-success`
+  from fresh live probes with clean teardown (Leftovers:0): `addNewGroup` (201),
+  `updateGroup` (200), `deleteGroup` (200), `createWebhook` (201),
+  `updateWebhook` (200), `deleteWebhook` (200). Resolves the webhooks finding's
+  open question #2 — the create body uses the singular `webhookEvent` (not
+  `events`). Generated-spec `live-success` count 68 -> 74/184.
 
 ### Fixed
 

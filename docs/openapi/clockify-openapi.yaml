@@ -11582,13 +11582,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/user-groups | 201 |
+        live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -11605,6 +11609,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/GROUPSDOC.md
+      - clockify-api-probe-lab/findings/user-groups.md
       - clockify-api-probe-lab/openapi-fragments/user-groups-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -11704,13 +11709,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/user-groups/{groupId}
+        | 200 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -11727,6 +11736,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/GROUPSDOC.md
+      - clockify-api-probe-lab/findings/user-groups.md
       - clockify-api-probe-lab/openapi-fragments/user-groups-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -11772,13 +11782,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/user-groups/{groupId}
+        | 200 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -11795,6 +11809,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/GROUPSDOC.md
+      - clockify-api-probe-lab/findings/user-groups.md
       - clockify-api-probe-lab/openapi-fragments/user-groups-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -13492,17 +13507,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/webhooks | 201 | live-probe
+        2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WEBHOOKDOC.md
+      - clockify-api-probe-lab/findings/webhooks.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
@@ -13592,17 +13612,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId}
+        | 200 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WEBHOOKDOC.md
+      - clockify-api-probe-lab/findings/webhooks.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
@@ -13633,17 +13658,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId}
+        | 200 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WEBHOOKDOC.md
+      - clockify-api-probe-lab/findings/webhooks.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
@@ -23861,7 +23891,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 803c63c07fb6e443c3132844862d0e74d25d2dcd7b18640923dc54b508fcfabd
+    sha256: c937743f86950342338194cbdda76a606bd41d8cc459b0dd9372b2c1ad70c330
     files: 96
   sourcePrecedence:
   - live/probe findings metadata

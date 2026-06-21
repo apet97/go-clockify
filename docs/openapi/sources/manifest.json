@@ -199,8 +199,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/user-groups.md",
-      "bytes": 922,
-      "sha256": "1365badf1b0ce7281be5c26c06cc5738d807b2944ce6d625b042e778a291bc65"
+      "bytes": 1878,
+      "sha256": "051a03087cdfe6a7b21f525c5087b39ae5e0ddf18098e1f56ffa26503078dfbe"
     },
     {
       "path": "clockify-api-probe-lab/findings/users.md",
@@ -209,8 +209,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/webhooks.md",
-      "bytes": 6101,
-      "sha256": "dd2e4ffaad8a439ed0b84089a5f743711073ef0514271bf00934027397d3f1c7"
+      "bytes": 7228,
+      "sha256": "ad431e43505bed5ae62addaef558f251acc5753bbf23109df5858548a1494e51"
     },
     {
       "path": "clockify-api-probe-lab/findings/workspaces.md",

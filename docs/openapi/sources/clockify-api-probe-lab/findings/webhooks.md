@@ -92,3 +92,21 @@ Read-only probe — no entities were created. `cleanup-registry/webhooks.tsv` wa
 3. **`PROBE_LAST_STATUS` subshell propagation bug.** All four status files showed `unknown` on the first run because `probe_curl` sets `PROBE_LAST_STATUS` in a subshell (`$(...)` or pipe) and the value never reaches the parent. Status codes were retrieved manually and written to the `.status.txt` files. This is a library bug worth fixing — using a temp file to communicate the status code out of the subshell would fix it. Does not affect probe correctness.
 
 4. **`triggerSourceType` / `triggerSource` semantics.** The live data shows `triggerSourceType: "WORKSPACE_ID"` with `triggerSource: [<ws-id>]` for all 10 webhooks. It is unclear whether other `triggerSourceType` values (`PROJECT_ID`, `TAG_ID`, `TASK_ID`, `ASSIGNMENT_ID`, `EXPENSE_ID`) are functionally supported or only documented. Not blocking the known bug fixes.
+
+## Live write-side promotion (2026-06-21)
+
+Captured live this session against the sandbox: a clean create -> update ->
+delete cycle on a `sdk-live-probe-wh`-prefixed webhook (POST 201, PUT 200,
+DELETE 200), deleted at teardown — **Leftovers:0** (the workspace `webhooks`
+list shows zero `sdk-live-probe-wh` residue afterward). This also resolves
+open question #2: the create body uses the **singular** `webhookEvent` (not
+`events`) — `POST` with `{name, triggerSource:[], triggerSourceType:"WORKSPACE_ID",
+url, webhookEvent:"NEW_PROJECT"}` returned 201 (an empty `triggerSource` is
+accepted for a workspace-scoped event). Clean canonical paths so each op flips
+to `live-success`. Fixtures are documentary.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | api.clockify.me | /workspaces/{workspaceId}/webhooks | 201 | live-probe 2026-06-21 (documentary) |
+| PUT | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId} | 200 | live-probe 2026-06-21 (documentary) |
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId} | 200 | live-probe 2026-06-21 (documentary) |
