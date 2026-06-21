@@ -39,6 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `updateWebhook` (200), `deleteWebhook` (200). Resolves the webhooks finding's
   open question #2 — the create body uses the singular `webhookEvent` (not
   `events`). Generated-spec `live-success` count 68 -> 74/184.
+- Custom-field write CRUD + `updateHoliday` promoted `probe-documented` ->
+  `live-success` from fresh live probes with clean teardown (Leftovers:0):
+  `createWorkspaceCustomField` (201), `updateWorkspaceCustomField` (200),
+  `deleteWorkspaceCustomField` (204), `updateHoliday` (200). (`createHoliday` +
+  `deleteHoliday` were already live-success.) Notes the holidays finding that
+  `everyoneIncludingNew:true` also satisfies the create assignee requirement.
+  `live-success` count 74 -> 78/184.
 
 ### Fixed
 

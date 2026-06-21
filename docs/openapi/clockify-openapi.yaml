@@ -1766,18 +1766,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/custom-fields | 201
+        | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CUSTOMFIELDSDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
       x-fern-sdk-group-name: customFields
@@ -1839,18 +1844,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/custom-fields/{customFieldId}
+        | 200 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CUSTOMFIELDSDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
       x-fern-sdk-group-name: customFields
@@ -1882,18 +1892,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/custom-fields/{customFieldId}
+        | 204 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CUSTOMFIELDSDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
       x-fern-sdk-group-name: customFields
@@ -3268,13 +3283,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/holidays/{holidayId}
+        | 200 | live-probe 2026-06-21 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -3291,6 +3310,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/HOLIDAYSDOC.md
+      - clockify-api-probe-lab/findings/holidays.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/holidays-b.yaml
       - clockify-api-probe-lab/openapi.yaml
@@ -23891,7 +23911,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: c937743f86950342338194cbdda76a606bd41d8cc459b0dd9372b2c1ad70c330
+    sha256: 37a017bd6cdb061e470febf00d6f29477c1afa4301735a4769f8bc294f09eab1
     files: 96
   sourcePrecedence:
   - live/probe findings metadata

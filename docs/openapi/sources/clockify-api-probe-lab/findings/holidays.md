@@ -77,4 +77,18 @@ Live create + immediate delete probed (2026-05-02). Created `mcp-probe-177775319
 
 3. **`GET /holidays/in-period` in go-clockify.** The probe found this endpoint exists and works (200, same shape as the flat list). If go-clockify exposes a `listHolidaysInPeriod` function that currently hits `GET /holidays` without the `/in-period` suffix or without the required `assigned-to`/`start`/`end` params, it will receive either a wrong set of holidays or a 400. Confirm whether go-clockify has this function and check it routes to the correct path with the required query params.
 
-4. **Resolved: user/group assignment required.** `POST /holidays` with only `name` + `datePeriod` returns `400 code:501 "At least one user or user group must be assigned"`. The go-clockify `createHoliday` body must include either `users.ids` or `userGroups.ids` — omitting both is a validation error, not a server default.
+4. **Resolved: user/group assignment required.** `POST /holidays` with only `name` + `datePeriod` returns `400 code:501 "At least one user or user group must be assigned"`. The go-clockify `createHoliday` body must include either `users.ids` or `userGroups.ids` — omitting both is a validation error, not a server default. (2026-06-21: `everyoneIncludingNew:true` ALSO satisfies the assignment requirement — a create with `{name, datePeriod, everyoneIncludingNew:true}` returns 200, no explicit ids needed.)
+
+## Live write-side promotion (2026-06-21)
+
+`createHoliday` (POST) and `deleteHoliday` (DELETE) are already `live-success`.
+This session also captured the **update** live: a clean create -> update ->
+delete cycle on a `sdk-live-probe-hol`-prefixed holiday (POST 200 with
+`everyoneIncludingNew:true`, PUT 200, DELETE 200), deleted at teardown —
+**Leftovers:0**. The update PUT requires the full replace body
+`{name, datePeriod, occursAnnually}`. Clean canonical path so `updateHoliday`
+flips to `live-success`. Fixtures are documentary.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| PUT | api.clockify.me | /workspaces/{workspaceId}/holidays/{holidayId} | 200 | live-probe 2026-06-21 (documentary) |

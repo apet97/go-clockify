@@ -117,3 +117,19 @@ are documentary + gitignored.
 | Method | Host | Path | Status | Fixture |
 |---|---|---|---|---|
 | GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields | 200 | fixtures/live-shape/project-custom-fields.json |
+
+## Live write-side promotion (2026-06-21)
+
+Captured live this session against the sandbox: a clean create -> update ->
+delete cycle on a `sdk-live-probe-cf`-prefixed workspace custom field
+(POST 201, PUT 200, DELETE 204), deleted at teardown — **Leftovers:0** (the
+workspace `custom-fields` list shows zero `sdk-live-probe-cf` residue
+afterward). Create body `{name, type:"TXT", entityType:"TIMEENTRY"}`; update
+body `{name, type}`. Clean canonical paths so each op flips to `live-success`.
+Fixtures are documentary.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | api.clockify.me | /workspaces/{workspaceId}/custom-fields | 201 | live-probe 2026-06-21 (documentary) |
+| PUT | api.clockify.me | /workspaces/{workspaceId}/custom-fields/{customFieldId} | 200 | live-probe 2026-06-21 (documentary) |
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/custom-fields/{customFieldId} | 204 | live-probe 2026-06-21 (documentary) |

@@ -129,8 +129,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/custom-fields.md",
-      "bytes": 6318,
-      "sha256": "6d6fafa70d190c9c814d3dda343830bfebe9fe64e6403fdcc94fe744fc404f9c"
+      "bytes": 7277,
+      "sha256": "de7c8572ca3d641173ab6cfeb4560f7363c5431040dba3edeb3a552819493286"
     },
     {
       "path": "clockify-api-probe-lab/findings/expenses.md",
@@ -139,8 +139,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/holidays.md",
-      "bytes": 5001,
-      "sha256": "489d558292d498aeef4c035162e795ba265e530dd93aec6b4c25eed8ce2bf407"
+      "bytes": 5912,
+      "sha256": "7387251ab4764f49e5a103a2b86154991829ddb90712cb24be782c32b2fd9345"
     },
     {
       "path": "clockify-api-probe-lab/findings/invoices.md",
