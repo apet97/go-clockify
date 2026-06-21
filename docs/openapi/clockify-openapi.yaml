@@ -9335,18 +9335,22 @@ paths:
           description: Created
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
       - Shared-report GET-by-id is bare /shared-reports/{id}; workspace-prefixed paths
         are used for list/create/update/delete.
+      - "| POST | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports
+        | 200 | live-probe 2026-06-21 |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/shared-reports.md
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: sharedReports
       x-fern-sdk-method-name: create
@@ -9391,18 +9395,22 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
       - Shared-report GET-by-id is bare /shared-reports/{id}; workspace-prefixed paths
         are used for list/create/update/delete.
+      - "| PUT | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports/{sharedReportId}
+        | 200 | live-probe 2026-06-21 |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/shared-reports.md
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: sharedReports
       x-fern-sdk-method-name: update
@@ -9432,18 +9440,22 @@ paths:
           description: Deleted
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-openapi
       x-clockify-host: https://reports.api.clockify.me/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Reports and shared-reports use the reports API host, not the main API host.
       - Shared-report GET-by-id is bare /shared-reports/{id}; workspace-prefixed paths
         are used for list/create/update/delete.
+      - "| DELETE | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports/{sharedReportId}
+        | 204 | live-probe 2026-06-21 |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/shared-reports.md
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: sharedReports
       x-fern-sdk-method-name: delete
@@ -23911,7 +23923,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 37a017bd6cdb061e470febf00d6f29477c1afa4301735a4769f8bc294f09eab1
+    sha256: 859e1c8d88241a1d1a3026f7fe442febcc99dca7275f3fdd87b48dfd9435a4d4
     files: 96
   sourcePrecedence:
   - live/probe findings metadata

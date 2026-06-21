@@ -224,3 +224,18 @@ Each item lists the exact source location, the smallest correct change, and the 
 - **Update body validation gap.** The probe only exercised `{name}` partial update. What happens if a caller PUTs `{type: "DETAILED"}` against a `SUMMARY` report — does the server cross-validate `filter.summaryFilter` vs `filter.detailedFilter`? Untested. Not blocking, but should be documented as "callers are responsible for sending a coherent filter for the new type."
 - **Type-specific filter requirements.** For non-`SUMMARY` types (e.g. `EXPENSE_DETAILED`, `INVOICE_TIME`, `KIOSK_PIN_LIST`), what `filter` sub-object is required? The probe only created a `SUMMARY` report. Lab follow-up could probe one of the non-time types if go-clockify ever wants to expose them.
 - **`PUT` body size.** Live probe sent only `{name}`. The existing read-side fixture's `filters.filter` blob is several KB (full workspace settings embedded). If a client tries to PUT the full read-blob back, will the server accept it or reject extra fields like `workspace.workspaceSettings`? Untested.
+
+## Write CRUD promotion (re-probed 2026-06-21)
+
+Re-probe of the B.4/C.3/C.6 create->update->delete ladder with a fresh sandbox
+key, written as canonical phase-id-free rows so the generator's table parser
+binds them (the original `Write/export probes` table prefixes each row with a
+phase-id cell that shifts Method out of `cells[1]`). Net cleanup: 0 leftover
+entries — the `sdk-live-probe-sr` report was PUT (merge) then DELETEd (204), and
+a follow-up list showed zero `sdk-live-probe` residue.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports | 200 | live-probe 2026-06-21 |
+| PUT | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports/{sharedReportId} | 200 | live-probe 2026-06-21 |
+| DELETE | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports/{sharedReportId} | 204 | live-probe 2026-06-21 |

@@ -174,8 +174,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/shared-reports.md",
-      "bytes": 19777,
-      "sha256": "159eebf29fb2ce883a723df9a654e55603a42e47b514b8eabed219241f419dc9"
+      "bytes": 20710,
+      "sha256": "531bf2426031ae5449776068859352cf6cba1f3659cd420b38eb35d2fa7ba733"
     },
     {
       "path": "clockify-api-probe-lab/findings/tags.md",
