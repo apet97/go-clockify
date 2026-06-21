@@ -258,6 +258,26 @@ func TestGeneratedOpenAPIExpenseCreateRequestMatchesLiveMultipartOptionalFields(
 	}
 }
 
+func TestGeneratedOpenAPIChangeTimeOffRequestStatusNoteOptional(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema, ok := schemas["ChangeTimeOffRequestStatusRequest"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema ChangeTimeOffRequestStatusRequest missing or malformed")
+	}
+	required, ok := schema["required"].([]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema ChangeTimeOffRequestStatusRequest must declare required fields; required=%#v", schema["required"])
+	}
+	requiredSet := requiredStringSet(t, "ChangeTimeOffRequestStatusRequest", required)
+
+	if !requiredSet["status"] {
+		t.Fatalf("OpenAPI schema ChangeTimeOffRequestStatusRequest must keep status required; required=%v", required)
+	}
+	if requiredSet["note"] {
+		t.Fatalf("OpenAPI schema ChangeTimeOffRequestStatusRequest marks live-optional field \"note\" as required; the live status PATCH accepts a {status}-only body (probed 2026-06-20); required=%v", required)
+	}
+}
+
 func TestGeneratedOpenAPIIgnoresPendingLiveFindingRows(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 	if err != nil {

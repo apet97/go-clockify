@@ -134,8 +134,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/expenses.md",
-      "bytes": 11603,
-      "sha256": "036e14838b1e929ac74f840d07b505b4cfa7e9b5b60c67f43f4f03ce869d97a7"
+      "bytes": 12432,
+      "sha256": "d6659434f0300a2d2a5854ffd6d2669c99579b8c45681e00aa03992908f8a854"
     },
     {
       "path": "clockify-api-probe-lab/findings/holidays.md",

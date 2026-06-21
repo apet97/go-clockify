@@ -286,3 +286,19 @@ documentary + gitignored.
 |---|---|---|---|---|
 | GET | api.clockify.me | /workspaces/{workspaceId}/expenses | 200 | fixtures/live-shape/expenses-list.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/expenses/{expenseId} | 200 | fixtures/live-shape/expenses-get.json |
+
+## Live write-side promotion (2026-06-21)
+
+The historical probe table above records the multipart create returning
+HTTP 201 (the "with userId" attempt), but its Path cell carries a
+` (multipart, with userId)` qualifier that `normalize_path` cannot strip,
+so that row never bound the canonical `createExpense` operation key and
+the op stayed `probe-documented`. The clean-path row below binds the
+already-captured 201 to `live-success`. The create (multipart, with
+userId, no file) + `DELETE /workspaces/{ws}/expenses/{id}` cleanup is
+documented above (entry `69f63c63307374b4631f1681`, `cleaned=1`); the
+fixture is documentary + gitignored.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | api.clockify.me | /workspaces/{workspaceId}/expenses | 201 | fixtures/expenses/expense-create-multipart.json |

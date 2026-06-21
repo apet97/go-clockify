@@ -19,8 +19,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generated request types carry `page`/`page-size`. Both were live-verified to
   honor pagination (probe evidence under `addons-me/fern/spec/evidence/probes/`).
   `webhooks` was deliberately excluded — the live wire ignores those params.
+- The single-project schedule-totals GET
+  (`/scheduling/assignments/projects/totals/{projectId}`) now carries required
+  `start`/`end` query params via `apply_live_overrides!` — the live route 400s
+  (code 3001) without them, and the source `$ref` query params were being pruned
+  by `ensure_path_parameters!`.
+- `expenses/categories` joins `PAGINATED_LIST_OPS` and `LAST_PAGE_HEADER_OPS`
+  (live-verified page/page-size + Last-Page header); `expenses` and `invoices`
+  join `LAST_PAGE_HEADER_OPS` (already paginated, live-emit the header). A new
+  `validate_document` check asserts `LAST_PAGE_HEADER_OPS` is a subset of
+  `PAGINATED_LIST_OPS`.
+- `createExpense` (`POST /workspaces/{workspaceId}/expenses`) promoted
+  `probe-documented` -> `live-success`: the captured 201 row's path cell carried
+  a `(multipart, with userId)` qualifier that `normalize_path` could not strip,
+  so a clean-path findings row now binds it.
 
 ### Fixed
+
+- `ChangeTimeOffRequestStatusRequest` no longer marks `note` required — the live
+  status PATCH accepts a `{status}`-only body (probed 2026-06-20); `status` stays
+  required. Mirror `doc_parity` test added.
 
 - The three `live-contract-local` `go test` invocations now pass `-v`, so the
   harness `logFindingsRow` markdown rows print and promotion evidence is

@@ -2315,6 +2315,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -2357,15 +2358,18 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Expense create/update uses multipart form-data in live Clockify.
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/expenses | 201 | fixtures/expenses/expense-create-multipart.json
+        |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
@@ -2376,6 +2380,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/EXPENSESDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
@@ -2396,6 +2401,25 @@ paths:
         required: true
         schema:
           type: string
+      - description: 1-based page index. Default 1.
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: Page size (number of items per page). Default 50; maximum 200.
+        in: query
+        name: page-size
+        required: false
+        schema:
+          default: 50
+          format: int32
+          maximum: 200
+          minimum: 1
+          type: integer
       responses:
         '200':
           content:
@@ -2411,6 +2435,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -3508,6 +3533,7 @@ paths:
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-last-page-header: true
       x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
@@ -8442,6 +8468,22 @@ paths:
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
       - "$ref": "#/components/parameters/projectId"
+      - in: query
+        name: start
+        required: true
+        schema:
+          type: string
+          format: date-time
+        description: Required by live Clockify; the single-project schedule-totals
+          GET 400s without an ISO-8601 start.
+      - in: query
+        name: end
+        required: true
+        schema:
+          type: string
+          format: date-time
+        description: Required by live Clockify; the single-project schedule-totals
+          GET 400s without an ISO-8601 end.
       responses:
         '200':
           content:
@@ -15293,7 +15335,6 @@ components:
           type: string
           x-clockify-default: "##default"
       required:
-      - note
       - status
       type: object
     Client:
@@ -23820,7 +23861,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 6ec15b39334c95c55a99ac61e81c721868ad070c5c57192a7a0a856f25015671
+    sha256: 803c63c07fb6e443c3132844862d0e74d25d2dcd7b18640923dc54b508fcfabd
     files: 96
   sourcePrecedence:
   - live/probe findings metadata
