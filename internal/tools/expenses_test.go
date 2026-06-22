@@ -249,6 +249,9 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 							t.Fatalf("update_expense changeFields=%v missing %s", cf, field)
 						}
 					}
+					if got := r.FormValue("date"); got != "2026-04-12T00:00:00Z" {
+						t.Fatalf("update_expense date = %q, want normalized RFC3339 (a bare YYYY-MM-DD must be promoted, like create)", got)
+					}
 				}
 				respondJSON(t, w, map[string]any{"id": "exp1", "amount": 250})
 			case r.Method == http.MethodGet && r.URL.Path == "/workspaces/ws1":
@@ -262,7 +265,7 @@ func TestTier2_Expenses_FullSweep(t *testing.T) {
 			"expense_id":    "exp1",
 			"change_fields": []any{"AMOUNT", "DATE", "CATEGORY", "PROJECT", "NOTES", "BILLABLE"},
 			"amount":        250.0,
-			"date":          "2026-04-12T00:00:00Z",
+			"date":          "2026-04-12",
 			"category_id":   "cat1",
 			"project_id":    "p2",
 			"notes":         "Dinner",

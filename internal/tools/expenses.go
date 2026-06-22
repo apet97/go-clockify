@@ -516,14 +516,17 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ToolR
 	if err := validateUpdateExpenseChangedValues(changeFields, args); err != nil {
 		return ToolResult{}, err
 	}
+	normalizedDate := ""
 	if date := stringArg(args, "date"); date != "" {
 		loc, err := s.locationFromArgs(args)
 		if err != nil {
 			return ToolResult{}, err
 		}
-		if _, err := parseFlexibleDateTime(date, loc); err != nil {
+		parsed, err := parseFlexibleDateTime(date, loc)
+		if err != nil {
 			return ToolResult{}, fmt.Errorf("could not parse date %q for date — use YYYY-MM-DD or RFC3339", date)
 		}
+		normalizedDate = parsed.UTC().Format(time.RFC3339)
 	}
 	wsID, err := s.ResolveWorkspaceID(ctx)
 	if err != nil {
@@ -559,8 +562,8 @@ func (s *Service) updateExpense(ctx context.Context, args map[string]any) (ToolR
 			form.Set("amount", strconv.FormatFloat(v, 'f', -1, 64))
 		}
 	}
-	if v := stringArg(args, "date"); v != "" {
-		form.Set("date", v)
+	if normalizedDate != "" {
+		form.Set("date", normalizedDate)
 	} else if v, _ := existing["date"].(string); v != "" {
 		form.Set("date", v)
 	}
