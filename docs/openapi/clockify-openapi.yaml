@@ -604,16 +604,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/addons/{addonId}/webhooks
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - read
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WEBHOOKDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
       x-fern-sdk-group-name: webhooks
@@ -1569,12 +1574,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/cost-rate | 200 | live-probe
+        2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -1593,6 +1602,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
@@ -1985,9 +1995,13 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/entities/created | 200
+        | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -2003,6 +2017,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       x-fern-sdk-group-name: entityChangesExperimental
       x-fern-sdk-method-name: listCreated
   "/workspaces/{workspaceId}/entities/deleted":
@@ -2108,9 +2123,13 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/entities/deleted | 200
+        | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -2126,6 +2145,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       x-fern-sdk-group-name: entityChangesExperimental
       x-fern-sdk-method-name: listDeleted
   "/workspaces/{workspaceId}/entities/updated":
@@ -2231,9 +2251,13 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/entities/updated | 200
+        | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -2249,6 +2273,7 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       x-fern-sdk-group-name: entityChangesExperimental
       x-fern-sdk-method-name: listUpdated
   "/workspaces/{workspaceId}/expenses":
@@ -3437,12 +3462,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/hourly-rate | 200 | live-probe
+        2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -3461,6 +3490,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
@@ -3752,11 +3782,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/invoices/settings | 200
+        | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
@@ -3766,6 +3800,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
       x-fern-sdk-group-name: invoiceSettings
@@ -4454,13 +4489,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/status
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
@@ -4470,6 +4509,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/invoices-b.yaml
       - clockify-api-probe-lab/openapi.yaml
@@ -4647,11 +4687,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /workspaces/{workspaceId}/member-profile/{userId}
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -4669,6 +4713,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - realOPENAPI/USEROPENAPI.YAML
       x-fern-sdk-group-name: memberProfiles
       x-fern-sdk-method-name: update
@@ -7449,11 +7494,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/cost-rate
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -7472,6 +7521,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -7577,11 +7627,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/users/{userId}/hourly-rate
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -7600,6 +7654,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
@@ -10227,17 +10282,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/policy/{policyId}
+        | 204 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/BALANCEDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - clockify-api-probe-lab/openapi-fragments/balance-b.yaml
       - realOPENAPI/BALANCEOPEANI.yaml
@@ -11995,13 +12055,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/user-groups/{groupId}/users/{userId}
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -12018,6 +12082,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/GROUPSDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi-fragments/user-groups-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - clockify-api-probe-lab/openapi_usergroups_tags.yaml
@@ -12986,11 +13051,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/cost-rate
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -13009,6 +13078,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
   "/workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value":
@@ -13161,11 +13231,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/hourly-rate
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       x-clockify-risk:
@@ -13184,6 +13258,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
   "/workspaces/{workspaceId}/users/{userId}/managers":
@@ -13358,12 +13433,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/roles
+        | 201 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -13381,6 +13460,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
       x-fern-sdk-group-name: users
@@ -13420,12 +13500,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/roles
+        | 204 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -13443,6 +13527,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
       x-fern-sdk-group-name: users
@@ -13865,15 +13950,20 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId}/logs
+        | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WEBHOOKDOC.md
+      - clockify-api-probe-lab/findings/live-promotion-2026-06-23.md
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
       x-fern-sdk-group-name: webhooks
       x-fern-sdk-method-name: searchLogs
@@ -24209,8 +24299,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 79928bb8ddf861c673d411e37ab176e9fd63369feabdde2c2581b03d21afd270
-    files: 96
+    sha256: '052954ac7c4a87dce6ebb758be1b685cccfad05cb5dd282bec0e65fd66e9bd93'
+    files: 97
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies

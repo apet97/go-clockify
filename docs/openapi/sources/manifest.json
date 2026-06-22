@@ -148,6 +148,11 @@
       "sha256": "df49390696c6efa73f2cf6da8c14aaa368481e55c160b1e4e43d660b440fd94b"
     },
     {
+      "path": "clockify-api-probe-lab/findings/live-promotion-2026-06-23.md",
+      "bytes": 2906,
+      "sha256": "c68f8910c2927ce0185c0e45dce8f9d7ed7b06d4748e66a06c44385d1d0728bc"
+    },
+    {
       "path": "clockify-api-probe-lab/findings/member-profile.md",
       "bytes": 667,
       "sha256": "064d16f5ca7d7082f9515fd5f5fe2fad97b6c2fdcec5e48c172ecb1a94ef25e1"
