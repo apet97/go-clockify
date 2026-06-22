@@ -17,3 +17,5 @@ until a future live run captures that operation.
 | GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId} | 200 | fixtures/live-shape/tasks-get.json |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId} | 200 | fixtures/live-shape/tasks-update.json |
 | DELETE | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId} | 200 | fixtures/live-shape/tasks-delete.txt |
+| PUT | api.clockify.me | /api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate | 200 | live probe 2026-06-22 (Leftovers:0) |
+| PUT | api.clockify.me | /api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate | 200 | live probe 2026-06-22 (Leftovers:0) |

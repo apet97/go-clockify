@@ -19,6 +19,11 @@ remove the test skip.
 | GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 200 | fixtures/live-shape/time-entries-get.json |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 200 | fixtures/live-shape/time-entries-update.json |
 | DELETE | api.clockify.me | /workspaces/{workspaceId}/time-entries/{timeEntryId} | 204 | fixtures/live-shape/time-entries-delete.txt |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/user/{userId}/time-entries | 201 | live probe 2026-06-22 (Leftovers:0) |
+| PUT | api.clockify.me | /api/v1/workspaces/{workspaceId}/user/{userId}/time-entries | 200 | live probe 2026-06-22 (Leftovers:0) |
+| PATCH | api.clockify.me | /api/v1/workspaces/{workspaceId}/user/{userId}/time-entries | 200 | live probe 2026-06-22 (Leftovers:0) |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate | 201 | live probe 2026-06-22 (Leftovers:0) |
+| PATCH | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-entries/invoiced | 200 | live probe 2026-06-22 (Leftovers:0) |
 
 ## Live read-side promotions (2026-06-20)
 

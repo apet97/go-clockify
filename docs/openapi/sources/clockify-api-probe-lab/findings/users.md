@@ -14,3 +14,4 @@ Fixtures are documentary + gitignored.
 | GET | api.clockify.me | /user | 200 | fixtures/live-shape/current-user.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/users | 200 | fixtures/live-shape/workspace-users.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/managers | 200 | fixtures/live-shape/user-managers.json |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/users/info | 200 | live probe 2026-06-22 (Leftovers:0) |

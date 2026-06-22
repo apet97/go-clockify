@@ -14,3 +14,5 @@ ignored by the generator until a future live run captures that operation.
 | GET | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId} | 200 | fixtures/live-shape/projects-get.json |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId} | 200 | fixtures/live-shape/projects-update.json |
 | DELETE | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId} | 200 | fixtures/live-shape/projects-delete.txt |
+| PATCH | api.clockify.me | /api/v1/workspaces/{workspaceId}/projects/{projectId}/template | 200 | live probe 2026-06-22 (Leftovers:0) |
+| PATCH | api.clockify.me | /api/v1/workspaces/{workspaceId}/projects/{projectId}/estimate | 200 | live probe 2026-06-22 (Leftovers:0) |

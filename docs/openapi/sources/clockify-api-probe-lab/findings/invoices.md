@@ -9,6 +9,14 @@
 | GET | api.clockify.me | /workspaces/{ws}/invoices/{id} | 200 | fixtures/invoices/single-get.json |
 | GET | api.clockify.me | /workspaces/{ws}/invoices/{id}/items | 405 | fixtures/invoices/items-of-1.json |
 | GET | api.clockify.me | /workspaces/{ws}/invoices?status=PAID | 200 | fixtures/invoices/report-paid.json |
+| GET | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/{invoiceId}/export | 200 | live probe 2026-06-22 (Leftovers:0) |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/info | 200 | live probe 2026-06-22 (Leftovers:0) |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices | 201 | live probe 2026-06-22 (Leftovers:0) |
+| PUT | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/{invoiceId} | 200 | live probe 2026-06-22 (Leftovers:0) |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/{invoiceId}/duplicate | 201 | live probe 2026-06-22 (Leftovers:0) |
+| DELETE | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/{invoiceId} | 200 | live probe 2026-06-22 (Leftovers:0) |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/{invoiceId}/items | 200 | live probe 2026-06-22 (Leftovers:0) |
+| DELETE | api.clockify.me | /api/v1/workspaces/{workspaceId}/invoices/{invoiceId}/items/{order} | 200 | live probe 2026-06-22 (Leftovers:0) |
 
 Note: `PROBE_LAST_STATUS` was not captured in `.status.txt` files due to a bash subshell
 scoping bug in `probe_save_fixture` (status is set inside `$(...)` and does not propagate).

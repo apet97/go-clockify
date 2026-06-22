@@ -13,6 +13,7 @@
 | GET | api.clockify.me | /api/v1/workspaces/{ws}/scheduling/assignments/all?start=...&end=... | **200** | fixtures/scheduling/assignments-all.json |
 | GET | api.clockify.me | /api/v1/workspaces/{ws}/scheduling/assignments/users/{userId}/totals?start=...&end=... | **200** | fixtures/scheduling/user-totals.json |
 | POST | api.clockify.me | /api/v1/workspaces/{ws}/scheduling/assignments/projects/totals | **200** | fixtures/scheduling/projects-totals.json |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals | 200 | live probe 2026-06-22 (Leftovers:0) |
 
 **Root cause: the path is wrong, not the host.** The host is the standard `api.clockify.me/api/v1`. go-clockify hits `/scheduling/assignments` (no suffix), which 404s. The live path is `/scheduling/assignments/all` and requires `start` and `end` as mandatory query parameters.
 
