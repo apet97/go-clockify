@@ -14049,15 +14049,6 @@ components:
       required: false
       schema:
         type: string
-    UserLocaleQuery:
-      description: Represents a locale.
-      example: en
-      in: query
-      name: userLocale
-      required: true
-      schema:
-        type: string
-        x-sourceDefault: "##default"
     approvalRequestId:
       description: Represents an approval request identifier across the system.
       example: 940ab5acb07987125438b65y

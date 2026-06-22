@@ -2018,6 +2018,33 @@ def ensure_query_parameter!(op, name, schema:, required: false, description: nil
   op["parameters"] << param
 end
 
+# After apply_live_overrides! rewrites a surviving $ref query param inline (the
+# resolve-aware ensure_query_parameter!), the parameter component it referenced can
+# be left orphaned — prune_components already ran inside merger.document. Drop any
+# components/parameters entry no longer reachable by a $ref so the emitted spec
+# carries no dead parameter component. Normalization-only; not merge/dedup logic.
+def prune_orphan_parameters!(doc)
+  params = doc.dig("components", "parameters")
+  return unless params.is_a?(Hash) && !params.empty?
+
+  refs = []
+  collect = lambda do |value|
+    case value
+    when Hash
+      refs << value["$ref"] if value["$ref"].is_a?(String)
+      value.each_value { |child| collect.call(child) }
+    when Array
+      value.each { |child| collect.call(child) }
+    end
+  end
+  collect.call(doc["paths"])
+  collect.call(doc["components"])
+  referenced = Set.new(refs)
+  params.keys.each do |name|
+    params.delete(name) unless referenced.include?("#/components/parameters/#{name}")
+  end
+end
+
 def apply_live_overrides!(doc)
   if (props = schema_properties(doc, "SummaryReportResponse"))
     props.delete("chart")
@@ -2237,6 +2264,7 @@ merger.apply_metadata(findings, mcp_mapping, tool_risks, tool_meta)
 
 doc = merger.document
 apply_live_overrides!(doc)
+prune_orphan_parameters!(doc)
 redact_sensitive_examples!(doc)
 errors = validate_document(doc, options[:repo_root])
 abort(errors.join("\n")) unless errors.empty?
