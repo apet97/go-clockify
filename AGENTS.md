@@ -54,6 +54,19 @@ as setup instructions.
 
 ## Current State
 
+- **Schema-fidelity fixes + manifest completeness (2026-06-23).** A live-wire audit
+  found a thin `clockify-api-probe-lab/openapi.yaml` schema winning the generator's
+  first-writer schema-name race and dropping fields the live API returns. Restored
+  `Client.ccEmails`/`currencyId`; corrected the `SharedReport` response shape
+  (`isPublic` not `public`, `link` not `url`, plus `reportAuthor`/`visibleToUsers`/
+  `visibleToUserGroups`/`fixedDate`/`workspaceId`/`userId`; dropped phantom
+  `url`/`createdAt`/`updatedAt`/`workspace`); fixed the `SharedReportCreate` request
+  field to `isPublic` (the API silently ignores `public` — live-proved); added
+  `Webhook.deliveryEnabled`/`planEnabled`. Op count unchanged (169). Also pinned the
+  previously-unpinned `clockify-api-probe-lab/openapi-fragments/audit-log.yaml` source
+  and added a reverse-completeness check to `validate_source_manifest!`: any consumed
+  openapi fragment that is not pinned now aborts generation.
+
 - **Read-tier live-success wave + list pagination (2026-06-20).** A live read
   probe of the sacrificial sandbox promoted 21 GET ops from `probe-documented`
   to `x-clockify-live-status: live-success` (user/workspaces/user-groups/users/

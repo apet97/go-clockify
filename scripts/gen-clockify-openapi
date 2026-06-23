@@ -167,6 +167,19 @@ def validate_source_manifest!(root)
     errors << "source manifest size mismatch #{rel}" if entry["bytes"].to_i != size
     errors << "source manifest sha256 mismatch #{rel}" if entry["sha256"].to_s != sha
   end
+
+  # Completeness (reverse) check: every consumed openapi fragment on disk must be
+  # pinned in the manifest. The forward loop above only verifies LISTED files; it
+  # never asserts that every consumed input is listed, so a new/edited fragment
+  # could otherwise slip in unhashed (e.g. audit-log.yaml did). These globs mirror
+  # the generator's own probe-fragment globs below.
+  pinned = Array(manifest["files"]).map { |entry| entry["path"].to_s }
+  ["clockify-api-probe-lab/openapi-fragments", "clockify-api-probe-lab/openapi-fragments-v3"].each do |dir|
+    Dir[File.join(root, dir, "*.yaml")].sort.each do |abs|
+      rel = abs.sub(%r{\A#{Regexp.escape(root)}/?}, "")
+      errors << "source consumed but not pinned in manifest: #{rel}" unless pinned.include?(rel)
+    end
+  end
   abort(errors.join("\n")) unless errors.empty?
 
   {

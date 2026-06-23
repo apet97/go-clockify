@@ -15194,8 +15194,16 @@ components:
           type: string
         archived:
           type: boolean
+        ccEmails:
+          items:
+            type: string
+          nullable: true
+          type: array
         currencyCode:
           "$ref": "#/components/schemas/Currency"
+        currencyId:
+          nullable: true
+          type: string
         email:
           format: email
           nullable: true
@@ -19916,33 +19924,43 @@ components:
       type: string
     SharedReport:
       properties:
-        createdAt:
-          format: date-time
-          type: string
         filter:
           "$ref": "#/components/schemas/SharedReportFilter"
+        fixedDate:
+          nullable: true
+          type: boolean
         id:
+          type: string
+        isPublic:
+          type: boolean
+        link:
+          nullable: true
           type: string
         name:
           type: string
-        public:
-          type: boolean
+        reportAuthor:
+          nullable: true
+          type: string
         type:
           "$ref": "#/components/schemas/SharedReportCreate/properties/type"
-        updatedAt:
-          format: date-time
+        userId:
+          nullable: true
           type: string
-        url:
+        visibleToUserGroups:
+          items:
+            additionalProperties: true
+            type: object
+          nullable: true
+          type: array
+        visibleToUsers:
+          items:
+            additionalProperties: true
+            type: object
+          nullable: true
+          type: array
+        workspaceId:
+          nullable: true
           type: string
-        workspace:
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            workspaceSettings:
-              "$ref": "#/components/schemas/WorkspaceSettings"
-          type: object
       type: object
     SharedReportCreate:
       description: |
@@ -19952,10 +19970,10 @@ components:
       properties:
         filter:
           "$ref": "#/components/schemas/SharedReportFilter"
+        isPublic:
+          type: boolean
         name:
           type: string
-        public:
-          type: boolean
         type:
           enum:
           - SUMMARY
@@ -22577,6 +22595,9 @@ components:
         authToken:
           description: HMAC secret. Treat as a credential; never log.
           type: string
+        deliveryEnabled:
+          nullable: true
+          type: boolean
         enabled:
           type: boolean
         id:
@@ -22584,6 +22605,9 @@ components:
         name:
           nullable: true
           type: string
+        planEnabled:
+          nullable: true
+          type: boolean
         triggerSource:
           items:
             type: string
@@ -23376,15 +23400,6 @@ components:
             "$ref": "#/components/schemas/ExpenseWeeklyTotalsDtoV1"
           type: array
       type: object
-    WorkspaceSettings:
-      additionalProperties: true
-      description: |
-        Workspace settings is a large, mostly-flat dictionary (~80 keys)
-        controlling features (timeRoundingInReports, lockTimeEntries,
-        timeFormat, decimalFormat, projectFavorites, etc.). The exact
-        keys are tied to the workspace's plan tier and are stable but
-        not enumerated here; treat as `additionalProperties: true`.
-      type: object
     WorkspaceSettingsDtoV1:
       additionalProperties: true
       description: Workspace settings. Time Duration Format can be set by durationFormat;
@@ -23703,8 +23718,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: dadb65fa9e481d85b2c30a1e5f9468ab28b3b00e712444a75d08354e770ed903
-    files: 99
+    sha256: 8cdee71d7087959e0601bea61b175fca4f7a8cc58c8a2d6104ece96af7b34bbd
+    files: 100
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies
