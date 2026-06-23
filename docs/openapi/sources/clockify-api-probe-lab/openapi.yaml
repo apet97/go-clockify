@@ -872,6 +872,8 @@ components:
         name:          { type: string, nullable: true }
         authToken:     { type: string, description: "HMAC secret. Treat as a credential; never log." }
         enabled:       { type: boolean }
+        deliveryEnabled: { type: boolean, nullable: true }
+        planEnabled:     { type: boolean, nullable: true }
         addonId:       { type: string, nullable: true }
 
     WebhookCreate:
@@ -1129,25 +1131,35 @@ components:
              INVOICE_DETAILED, TIMEOFF_DETAILED, TIMEOFF_HOLIDAY,
              TIMEOFF_BALANCE, EXPENSE_SUMMARY]
         filter:     { $ref: "#/components/schemas/SharedReportFilter" }
-        public:     { type: boolean }
+        # Live-verified 2026-06-23: the create/update body field is `isPublic`.
+        # Sending `public` is silently ignored by the API (report stays private).
+        isPublic:   { type: boolean }
 
     SharedReport:
+      # Live-verified response shape (GET list + POST create, sandbox 2026-06-23):
+      # the wire uses `isPublic` (NOT public) and `link` (NOT url). The list adds
+      # reportAuthor/link; create adds workspaceId/userId/filter. There is no
+      # url/createdAt/updatedAt/workspace top-level field on the wire.
       type: object
       properties:
-        id:        { type: string }
-        name:      { type: string }
-        type:      { $ref: "#/components/schemas/SharedReportCreate/properties/type" }
-        filter:    { $ref: "#/components/schemas/SharedReportFilter" }
-        workspace:
-          type: object
-          properties:
-            id:   { type: string }
-            name: { type: string }
-            workspaceSettings: { $ref: "#/components/schemas/WorkspaceSettings" }
-        public:    { type: boolean }
-        url:       { type: string }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        id:          { type: string }
+        name:        { type: string }
+        type:        { $ref: "#/components/schemas/SharedReportCreate/properties/type" }
+        isPublic:    { type: boolean }
+        link:        { type: string, nullable: true }
+        reportAuthor: { type: string, nullable: true }
+        fixedDate:   { type: boolean, nullable: true }
+        visibleToUsers:
+          type: array
+          nullable: true
+          items: { type: object, additionalProperties: true }
+        visibleToUserGroups:
+          type: array
+          nullable: true
+          items: { type: object, additionalProperties: true }
+        workspaceId: { type: string, nullable: true }
+        userId:      { type: string, nullable: true }
+        filter:      { $ref: "#/components/schemas/SharedReportFilter" }
 
     SharedReportListEnvelope:
       type: object

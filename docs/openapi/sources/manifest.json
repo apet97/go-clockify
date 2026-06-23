@@ -404,8 +404,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi.yaml",
-      "bytes": 128555,
-      "sha256": "305119b09ea2b2116911a5165d85d1fefe488ebd8d9fd06cfbf8b2cdbd60894f"
+      "bytes": 129340,
+      "sha256": "f61392a950868d48b6b9e1c28fa0e191a1cd57dcc32c563dc0377b2c0fa3339d"
     },
     {
       "path": "clockify-api-probe-lab/openapi_scheduling.yaml",
