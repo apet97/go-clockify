@@ -15194,8 +15194,16 @@ components:
           type: string
         archived:
           type: boolean
+        ccEmails:
+          items:
+            type: string
+          nullable: true
+          type: array
         currencyCode:
           "$ref": "#/components/schemas/Currency"
+        currencyId:
+          nullable: true
+          type: string
         email:
           format: email
           nullable: true
@@ -23703,8 +23711,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: dadb65fa9e481d85b2c30a1e5f9468ab28b3b00e712444a75d08354e770ed903
-    files: 99
+    sha256: 3a64ee16965cb9bb7dcd2aff70ae551e1afdfbbf61da495302ba793a7882fff2
+    files: 100
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies

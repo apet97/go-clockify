@@ -243,6 +243,11 @@
       "sha256": "ddb8fd2add6b097113a7b67a1b9d4731651a7fa289a8bd5b071e6df25ab75f41"
     },
     {
+      "path": "clockify-api-probe-lab/openapi-fragments/audit-log.yaml",
+      "bytes": 5981,
+      "sha256": "9c1f14648119f5794f72bfc1a439e0624b4f79e140f8804980572378772bc7c5"
+    },
+    {
       "path": "clockify-api-probe-lab/openapi-fragments/balance-a.yaml",
       "bytes": 4589,
       "sha256": "8e5a9fc33f1ad6dba5140c5b82bbcb43db81bbf45fa38df919e8b513b69891fd"
@@ -399,8 +404,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi.yaml",
-      "bytes": 128402,
-      "sha256": "c7ff341269870f9cd3a4e3dffc44420fe1d8ee22d68d0b1b282ce124c2e28c52"
+      "bytes": 128555,
+      "sha256": "305119b09ea2b2116911a5165d85d1fefe488ebd8d9fd06cfbf8b2cdbd60894f"
     },
     {
       "path": "clockify-api-probe-lab/openapi_scheduling.yaml",
