@@ -1,0 +1,208 @@
+openapi: 3.0.1
+info:
+  title: clockify surface-add 2026-06-23
+  version: '1.0'
+paths:
+  "/v1/workspaces/{workspaceId}/limited-users":
+    post:
+      operationId: addLimitedUsersWithInfo
+      parameters:
+      - in: path
+        name: workspaceId
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/AddLimitedUsersRequest"
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+          description: OK
+      tags:
+      - Workspace
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+  "/v1/workspaces/{workspaceId}/webhooks/{webhookId}/statuses":
+    get:
+      operationId: getWebhookEventStatusesWithLatestLog
+      parameters:
+      - description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          type: string
+          description: Represents a workspace identifier across the system.
+          example: 64a687e29ae1f428e7ebe303
+      - description: Represents a webhook identifier across the system.
+        example: 6973710805e44c5a46763239
+        in: path
+        name: webhookId
+        required: true
+        schema:
+          type: string
+          description: Represents a webhook identifier across the system.
+          example: 6973710805e44c5a46763239
+      - description: Page number.
+        example: 1
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          description: Page number.
+          format: int32
+          example: 1
+          default: 0
+      - description: Page size.
+        example: 50
+        in: query
+        name: size
+        required: false
+        schema:
+          minimum: 1
+          type: integer
+          description: Page size.
+          format: int32
+          example: 50
+          default: 50
+      - description: Represents a filter for webhook event status.
+        example: FAILED
+        in: query
+        name: statuses
+        required: false
+        schema:
+          type: string
+          enum:
+          - SUCCEEDED
+          - RETRYING
+          - FAILED
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/WebhookEventStatusWithLatestLogDtoV1"
+          description: OK
+      summary: Get webhook event statuses for a webhook
+      tags:
+      - Webhooks
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+components:
+  schemas:
+    AddLimitedUsersRequest:
+      required:
+      - users
+      type: object
+      properties:
+        users:
+          maxItems: 250
+          minItems: 1
+          type: array
+          items:
+            "$ref": "#/components/schemas/LimitedUserRequest"
+    LimitedUserRequest:
+      required:
+      - name
+      type: object
+      properties:
+        costRate:
+          minimum: 0
+          type: integer
+          format: int32
+        hourlyRate:
+          minimum: 0
+          type: integer
+          format: int32
+        name:
+          minLength: 1
+          type: string
+        userCustomFields:
+          type: array
+          items:
+            "$ref": "#/components/schemas/UpsertUserCustomFieldRequest"
+        userGroups:
+          uniqueItems: true
+          type: array
+          items:
+            minLength: 1
+            type: string
+        weekStart:
+          type: string
+          enum:
+          - MONDAY
+          - TUESDAY
+          - WEDNESDAY
+          - THURSDAY
+          - FRIDAY
+          - SATURDAY
+          - SUNDAY
+        workCapacity:
+          type: string
+        workingDays:
+          type: array
+          items:
+            type: string
+            enum:
+            - MONDAY
+            - TUESDAY
+            - WEDNESDAY
+            - THURSDAY
+            - FRIDAY
+            - SATURDAY
+            - SUNDAY
+    WebhookEventStatusWithLatestLogDtoV1:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Represents log identifier across the system.
+          example: 69807d47b209426e67302a42
+        requestBody:
+          type: string
+          description: Represents request body.
+          example: '{"id":"65df50f5d2dd8f23a685374e","name":"Webhook"}'
+        respondedAt:
+          type: string
+          description: Represents date and time of response.
+          example: 2025-02-02 12:02:28.125000000 +00:00
+        responseBody:
+          type: string
+          description: Represents response body.
+          example: '{"id":"h73210f5d2dd8f23685374e","response":"Webhook response"}'
+        retryCount:
+          type: integer
+          description: Represents how many times we tried to deliver the webhook event.
+          format: int32
+          example: 2
+        status:
+          type: string
+          description: Represents delivery status of the webhook event.
+          example: FAILED
+        statusCode:
+          type: integer
+          description: Represents response status code.
+          format: int32
+          example: 400
+        webhookId:
+          type: string
+          description: Represents log identifier across the system.
+          example: 6973710805e44c5a46763239
+        webhookLogId:
+          type: string
+          description: Represents log identifier across the system.
+          example: 69807e04b209426e67302a57

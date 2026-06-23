@@ -58,15 +58,11 @@ var documentedWriteRoutes = map[string]bool{
 	"PUT /workspaces/{workspaceId}/invoices/settings":                            true,
 	"PUT /workspaces/{workspaceId}/invoices/{invoiceId}":                         true,
 
+	// limited-users
+	"POST /workspaces/{workspaceId}/limited-users": true,
+
 	// member-profile
 	"PATCH /workspaces/{workspaceId}/member-profile/{userId}": true,
-	"PUT /workspaces/{workspaceId}/member-profile/{userId}":   true,
-
-	// policies
-	"DELETE /workspaces/{workspaceId}/policies/{policyId}":        true,
-	"PATCH /workspaces/{workspaceId}/policies/{policyId}/archive": true,
-	"POST /workspaces/{workspaceId}/policies":                     true,
-	"PUT /workspaces/{workspaceId}/policies/{policyId}":           true,
 
 	// projects
 	"DELETE /workspaces/{workspaceId}/projects/{projectId}":                               true,
@@ -82,8 +78,6 @@ var documentedWriteRoutes = map[string]bool{
 	"POST /workspaces/{workspaceId}/projects/{projectId}/tasks":                           true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}":                                  true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/archive":                          true,
-	"PUT /workspaces/{workspaceId}/projects/{projectId}/cost-rate":                        true,
-	"PUT /workspaces/{workspaceId}/projects/{projectId}/hourly-rate":                      true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}":                   true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate":         true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate":       true,
@@ -99,18 +93,13 @@ var documentedWriteRoutes = map[string]bool{
 
 	// scheduling
 	"DELETE /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}": true,
-	"DELETE /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}":           true,
 	"PATCH /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}":  true,
-	"POST /workspaces/{workspaceId}/scheduling/assignments":                            true,
 	"POST /workspaces/{workspaceId}/scheduling/assignments/projects/totals":            true,
 	"POST /workspaces/{workspaceId}/scheduling/assignments/recurring":                  true,
 	"POST /workspaces/{workspaceId}/scheduling/assignments/user-filter/totals":         true,
-	"POST /workspaces/{workspaceId}/scheduling/assignments/users/totals":               true,
 	"POST /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy":        true,
 	"PUT /workspaces/{workspaceId}/scheduling/assignments/publish":                     true,
-	"PUT /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}":    true,
 	"PUT /workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}":       true,
-	"PUT /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}":              true,
 
 	// shared-reports
 	"DELETE /workspaces/{workspaceId}/shared-reports/{sharedReportId}": true,
@@ -174,9 +163,6 @@ var documentedWriteRoutes = map[string]bool{
 	"POST /workspaces/{workspaceId}/webhooks":                               true,
 	"POST /workspaces/{workspaceId}/webhooks/{webhookId}/logs":              true,
 	"PUT /workspaces/{workspaceId}/webhooks/{webhookId}":                    true,
-
-	// workspaces
-	"PUT /workspaces/{workspaceId}": true,
 }
 
 var documentedButRawUnsupportedRoutes = map[string]string{

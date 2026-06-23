@@ -148,6 +148,11 @@
       "sha256": "df49390696c6efa73f2cf6da8c14aaa368481e55c160b1e4e43d660b440fd94b"
     },
     {
+      "path": "clockify-api-probe-lab/findings/live-promotion-2026-06-23-stragglers.md",
+      "bytes": 5006,
+      "sha256": "1fc5918cdc3f12cc48bafa4021c33404919c48ed22ca9026c04cf9d2eb5c6c8d"
+    },
+    {
       "path": "clockify-api-probe-lab/findings/live-promotion-2026-06-23.md",
       "bytes": 2906,
       "sha256": "c68f8910c2927ce0185c0e45dce8f9d7ed7b06d4748e66a06c44385d1d0728bc"
@@ -316,6 +321,11 @@
       "path": "clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml",
       "bytes": 5797,
       "sha256": "6d054a8abba5397600ef1b0a94d0fc4ebb50263edf9000c4f5ec94ba32ff1924"
+    },
+    {
+      "path": "clockify-api-probe-lab/openapi-fragments/surface-add-2026-06-23.yaml",
+      "bytes": 5706,
+      "sha256": "da61b51bc916980e6192919f54fb2a6a2716d40951cf852a033f4e2f92ad1319"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/tags-a.yaml",

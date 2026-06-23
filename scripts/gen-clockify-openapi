@@ -525,7 +525,49 @@ PHANTOM_PATHS = [
   # PATCH on /user/{userId}/time-entries with {end} (timeEntries.updateForUser);
   # the /stop route is dead generated surface (F1 2B cleanup). Ledger:
   # clockify-ts-sdk spec/evidence/discrepancies.md.
-  ["patch", "/workspaces/{workspaceId}/user/{userId}/time-entries/stop"]
+  ["patch", "/workspaces/{workspaceId}/user/{userId}/time-entries/stop"],
+  # ---- 2026-06-23 live API surface audit (clockify-ts-sdk
+  # spec/evidence/discrepancies.md > surface.audit.2026-06-23) ----
+  # 17 synthetic / wrong-path operations that appear in the merged set but
+  # do NOT exist on the live API. Maintainer-confirmed (2026-06-23) these are
+  # wrong paths, not plan-gating; re-confirmed against the fresh official pull
+  # (168 ops, 7 deprecated) which carries none of them. Each was probed live
+  # (sandbox 65b382b606de527a7ee2b60e): 404 "No static resource" / code 3000
+  # or 405 "method not supported". The correct-path variant (where one exists)
+  # stays in the surface and is noted inline.
+  #
+  # (a) Synthetic 405 ops with no source op-body (operationId synthesized in
+  #     merge from method+path) — no live route:
+  ["get", "/workspaces/{workspaceId}/user-groups/{groupId}"],
+  ["get", "/workspaces/{workspaceId}/user-groups/{groupId}/users"],
+  ["put", "/workspaces/{workspaceId}"],
+  # member-profile: the live write op is the PATCH updateMemberProfile (kept,
+  # live-success). Only the synthetic PUT is quarantined.
+  ["put", "/workspaces/{workspaceId}/member-profile/{userId}"],
+  # (b) Bare /policies x6 — pure duplicates of the correct /time-off/policies
+  #     family (getTimeOffPolicies/createTimeOffPolicy/getTimeOffPolicy/
+  #     updateTimeOffPolicy/changeTimeOffPolicyStatus/deleteTimeOffPolicy, all
+  #     kept). The bare /archive invents a sub-path; archive == the status PATCH.
+  ["get",    "/workspaces/{workspaceId}/policies"],
+  ["post",   "/workspaces/{workspaceId}/policies"],
+  ["get",    "/workspaces/{workspaceId}/policies/{policyId}"],
+  ["put",    "/workspaces/{workspaceId}/policies/{policyId}"],
+  ["delete", "/workspaces/{workspaceId}/policies/{policyId}"],
+  ["patch",  "/workspaces/{workspaceId}/policies/{policyId}/archive"],
+  # (c) Synthetic scheduling/assignments writes (5) — the 5 totals READS on
+  #     /scheduling/assignments/all|projects/totals|user-filter/totals|
+  #     users/{userId}/totals stay (live-success) and the valid recurring
+  #     PATCH/DELETE stay; only these 5 absent-from-official methods go:
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments"],
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}"],
+  ["post",   "/workspaces/{workspaceId}/scheduling/assignments/users/totals"],
+  ["put",    "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"],
+  ["delete", "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"],
+  # (d) Project-LEVEL rate PUTs (2) — only the project-USER rate paths
+  #     (.../projects/{projectId}/users/{userId}/{hourly,cost}-rate) exist and
+  #     are live-success; the project-level (no userId) variants 404.
+  ["put", "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate"],
+  ["put", "/workspaces/{workspaceId}/projects/{projectId}/cost-rate"]
 ].freeze
 
 def phantom_path?(method, path)

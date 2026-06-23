@@ -160,10 +160,10 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	// Clockify error code 3000. See the sibling clockify-ts-sdk repo
 	// (spec/evidence/discrepancies.md > timeoff.legacy-policies-requests.
 	// phantom-path-quarantined) for the full audit.
-	if got, want := len(contract.paths), 120; got < want {
+	if got, want := len(contract.paths), 114; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
-	if got, want := contract.operationCount(), 184; got < want {
+	if got, want := contract.operationCount(), 169; got < want {
 		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
 	}
 
@@ -190,12 +190,18 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 		// PHANTOM_PATHS. The live per-user balance read is the
 		// singular `/time-off/balance/user/{userId}` -- still asserted
 		// above.
-		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments"},
+		// The bare `POST /scheduling/assignments` and
+		// `PUT /scheduling/assignments/{assignmentId}` were removed from this
+		// list by the 2026-06-23 live API surface audit (sibling
+		// clockify-ts-sdk spec/evidence/discrepancies.md >
+		// surface.audit.2026-06-23): both are synthetic merge artifacts absent
+		// from the official spec and 404 live, now in PHANTOM_PATHS. The real
+		// scheduling writes asserted below (publish, recurring create,
+		// {assignmentId}/copy) stay.
 		{method: "get", path: "/workspaces/{workspaceId}/scheduling/assignments/all"},
 		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/projects/totals"},
 		{method: "put", path: "/workspaces/{workspaceId}/scheduling/assignments/publish"},
 		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/recurring"},
-		{method: "put", path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}"},
 		{method: "post", path: "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy"},
 	}
 	for _, op := range requiredOperations {
