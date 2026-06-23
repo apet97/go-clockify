@@ -27,7 +27,7 @@ paths:
                 additionalProperties: true
           description: OK
       tags:
-      - Workspace
+      - Workspaces
       security:
       - ApiKeyAuth: []
       - AddonKeyAuth: []

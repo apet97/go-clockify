@@ -45,7 +45,6 @@ tags:
 - name: User Groups
 - name: Users
 - name: Webhooks
-- name: Workspace
 - name: Workspaces
 paths:
   "/file/image":
@@ -4494,7 +4493,7 @@ paths:
   "/workspaces/{workspaceId}/limited-users":
     post:
       tags:
-      - Workspace
+      - Workspaces
       operationId: addLimitedUsersWithInfo
       security:
       - ApiKeyAuth: []
@@ -23704,7 +23703,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 89b536747c45144cf31d3be1082f2b7f1e8d9bdc0fbcd71047ab4aa737404023
+    sha256: dadb65fa9e481d85b2c30a1e5f9468ab28b3b00e712444a75d08354e770ed903
     files: 99
   sourcePrecedence:
   - live/probe findings metadata

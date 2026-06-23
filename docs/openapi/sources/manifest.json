@@ -324,8 +324,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/surface-add-2026-06-23.yaml",
-      "bytes": 5706,
-      "sha256": "da61b51bc916980e6192919f54fb2a6a2716d40951cf852a033f4e2f92ad1319"
+      "bytes": 5707,
+      "sha256": "868bebe6c8021d0666ce9dad172b82fa752a34f7de3bc3a15fea1187aa25fcdd"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/tags-a.yaml",
