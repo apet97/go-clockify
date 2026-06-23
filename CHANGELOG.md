@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored response fields the live API returns that a thin
+  `clockify-api-probe-lab/openapi.yaml` schema had shadowed (the generator resolves
+  schema-name collisions first-writer-wins): `Client.ccEmails`/`currencyId`; the
+  `SharedReport` response shape (`isPublic` not `public`, `link` not `url`, plus
+  `reportAuthor`/`visibleToUsers`/`visibleToUserGroups`/`fixedDate`/`workspaceId`/
+  `userId`; dropped the phantom `url`/`createdAt`/`updatedAt`/`workspace`); the
+  `SharedReportCreate` request field `isPublic` (sending `public` is silently ignored by
+  the API — live-verified); and `Webhook.deliveryEnabled`/`planEnabled`. Op count
+  unchanged (169).
+- Pinned `clockify-api-probe-lab/openapi-fragments/audit-log.yaml` in the source manifest
+  (consumed by the generator but previously unpinned) and added a reverse-completeness
+  check to `validate_source_manifest!`: any consumed openapi fragment that is not pinned
+  now aborts generation.
+
 ### Added
 
 - Live read-probe wave promotes 21 GET operations from `probe-documented` to
