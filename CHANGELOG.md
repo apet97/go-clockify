@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-26
+
 ### Fixed
 
 - Restored response fields the live API returns that a thin
@@ -3704,7 +3706,11 @@ Initial stable release.
 - **Signed releases** — cosign keyless signatures, SPDX SBOMs, and SLSA build provenance on every binary and container image.
 - **Reference Kubernetes manifests** — Deployment (non-root distroless, read-only root FS), NetworkPolicy (default-deny), PodDisruptionBudget, ServiceMonitor, and PrometheusRule with multi-window burn-rate alerts for a 99.9% SLO. Helm chart and Kustomize overlays included.
 
-[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/apet97/go-clockify/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/apet97/go-clockify/compare/v0.4.5...v0.5.0
+[0.4.5]: https://github.com/apet97/go-clockify/compare/v0.4.4...v0.4.5
+[0.4.4]: https://github.com/apet97/go-clockify/compare/v0.4.3...v0.4.4
+[0.4.3]: https://github.com/apet97/go-clockify/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/apet97/go-clockify/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/apet97/go-clockify/compare/v0.4.0...v0.4.1
 [1.3.0]: https://github.com/apet97/go-clockify/compare/v1.2.5...v1.3.0
