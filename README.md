@@ -10,6 +10,12 @@ more — as tools an AI client can call.
 No account to create and no service to deploy: the binary runs as a subprocess
 of your MCP client.
 
+> **Not affiliated with Clockify.** This is an independent, community-built
+> project — not affiliated with, endorsed by, sponsored by, or approved by
+> CAKE.com or Clockify. "Clockify" is a trademark of CAKE.com, used here only
+> nominatively to identify the public API this server integrates against. See
+> [NOTICE.md](./NOTICE.md).
+
 ## Current docs
 
 This README is the setup entry point. The complete tracked doc set lives

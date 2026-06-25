@@ -5,7 +5,10 @@ Read this first. This is the tracked, binding agent contract for the repo.
 
 ## Product Contract
 
-`go-clockify` is a local one-user Clockify MCP server in Go.
+`go-clockify` is a local one-user Clockify MCP server in Go. It is an
+independent project — **not affiliated with, endorsed by, or sponsored by
+CAKE.com or Clockify** ("Clockify" is a CAKE.com trademark, used nominatively;
+see [NOTICE.md](./NOTICE.md)).
 
 - One local trusted user.
 - One `CLOCKIFY_API_KEY`.
@@ -54,6 +57,10 @@ as setup instructions.
 
 ## Current State
 
+Generated surface (2026-06-23): **169 operations**, **135 `live-success`**, 27
+`probe-documented`, 7 `documented`. The full per-wave promotion history and per-op
+wire facts live in `CHANGELOG.md` and the `findings/*.md` evidence files.
+
 - **Schema-fidelity fixes + manifest completeness (2026-06-23).** A live-wire audit
   found a thin `clockify-api-probe-lab/openapi.yaml` schema winning the generator's
   first-writer schema-name race and dropping fields the live API returns. Restored
@@ -67,238 +74,21 @@ as setup instructions.
   and added a reverse-completeness check to `validate_source_manifest!`: any consumed
   openapi fragment that is not pinned now aborts generation.
 
-- **Read-tier live-success wave + list pagination (2026-06-20).** A live read
-  probe of the sacrificial sandbox promoted 21 GET ops from `probe-documented`
-  to `x-clockify-live-status: live-success` (user/workspaces/user-groups/users/
-  member-profile/expenses + by-id/invoices + settings/payments, time-off policy
-  & balances, scheduling assignments, approval-requests, project custom-fields,
-  in-progress entries), taking the snapshot from 46 to 67/184. The `expenses`
-  and `invoices` list ops were live-verified to honor `page`/`page-size` and
-  added to `PAGINATED_LIST_OPS` (probe evidence under
-  `addons-me/fern/spec/evidence/probes/`); `webhooks` was left out because the
-  live wire ignores those params. The three `live-contract-local` `go test`
-  lines gained `-v` so harness findings rows are auditable.
+- **Live-success trajectory (2026-06).** Sandbox probe waves climbed the generated
+  `live-success` count 41 → 135: SDK-ceiling write/read shapes
+  (`CORE_ENTITY_REQUIRED_FIELDS`, oracle `TestLiveRawClockifyWriteCRUDShapeOracle`,
+  v0.4.3), core create/DELETE promotions, the read-tier GET wave + list pagination
+  (`PAGINATED_LIST_OPS`/`LAST_PAGE_HEADER_OPS`), API-key/CRUD write waves, and the
+  2026-06-23 official-source surface refresh that moved the op set 184 → 169 (17
+  live-404/405 phantom paths quarantined, 2 official ops added). Per-wave detail and
+  per-op wire facts: `CHANGELOG.md` + `findings/*.md`.
 
-- **Live DELETE-op promotions (2026-06-20).** The live cleanup harness in
-  `tests/e2e_live_schema_test.go` (`cleanupDeleteRaw`) historically discarded
-  the teardown DELETE status, so the five core DELETE ops could be exercised
-  but never promoted. It now captures the DELETE status and, given findings
-  metadata, emits a promotable findings row. With those rows recorded,
-  clients, projects, tasks, tags, and time-entries DELETE flipped from
-  `probe-documented` to `x-clockify-live-status: live-success`, taking the
-  snapshot from 41 to 46 `live-success` operations.
-- **SDK ceiling live-shape promotion (2026-06-19).** The OpenAPI generator
-  now promotes the live-verified SDK ceiling shapes for the core write/read
-  entities: tags, clients, projects, tasks, users, and time entries. The
-  canonical generator table is `CORE_ENTITY_REQUIRED_FIELDS` in
-  `scripts/gen-clockify-openapi`; the live oracle is
-  `TestLiveRawClockifyWriteCRUDShapeOracle` in `tests/e2e_live_schema_test.go`.
-  The generated OpenAPI snapshot now records 41 `live-success` operations,
-  removes `TODO-live` rows from the emitted manifest/status surface, and keeps
-  expense create optionality aligned with live behavior (`file` and
-  `projectId` stay optional).
-- **Live CRUD test fixes + four create promotions (2026-06-19).** Two live-test
-  fixes let the core create probes pass and flip from `probe-documented` to
-  `live-success`, taking the snapshot from 37 to 41 (the four create ops:
-  clients, tasks, tags, and per-user time entries). First, the schema oracle in
-  `tests/e2e_live_schema_test.go` (`TestLiveRawClockifyWriteSideSchemaDiff`) now
-  matches the real list envelopes each handler already decodes: `expenses` is a
-  doubly-nested object `{expenses:{count,expenses:[...]}}` (not a bare array),
-  `webhooks` is `{workspaceWebhookCount,webhooks:[...]}`, approval-request items
-  nest the id under `approvalRequest`, `scheduling/assignments/all` requires
-  `start`/`end` query params, and `time-off/policies` returns a bare array.
-  Second, the live harness gained `callOKWithConfirm` in
-  `tests/live_harness_test.go`, which runs the server's `dry_run` ->
-  `confirm_token` -> execute handshake required by high-risk write/billing tools;
-  the expense CRUD suite (`tests/e2e_live_t2_expenses_test.go`) now uses it for
-  create/update/delete instead of plain `callOK`.
-- `main` is at or beyond the adversarial-review hardening stack after
-  `54d62d0`: fail-fast registry construction, workflow business-write
-  dry-runs/risk metadata, clearer error semantics docs, generated default
-  toolset and coverage dashboard artifacts, and a modest `tools.Service` state
-  split.
-- **Audit T1.1 + T1.2 landed** (2026-05-26). `FullAccessRegistry()` and
-  `nativeHighValueDescriptors()` panic-wrapping convenience constructors were
-  removed; callers now use `FullAccessRegistryChecked()` /
-  `nativeHighValueDescriptorsChecked()` and propagate errors. Startup registry
-  bugs now surface as clean `clockify-mcp doctor` errors instead of a binary
-  crash. The `openapi-drift` CI job pins Ruby via `ruby/setup-ruby@v1` +
-  `.ruby-version` (3.3); previously it relied silently on the `ubuntu-latest`
-  runner image's pre-installed Ruby. Full audit at
-  `docs/audits/2026-05-26-claude-audit.md`.
-- **Audit T2.1 landed** (2026-05-26, commit `e43f0cb`). `ResultEnvelope`
-  is gone; `ToolResult` is the single success type across every handler
-  (51 files renamed). Wire compatibility preserved via `,omitzero` on
-  `Changed ChangeSet` (Go 1.24+ tag — narrow envelopes still emit the
-  historical four-key shape). The bridge in
-  `oneuser_result_helpers.go:standardizeDomainResult` distinguishes
-  narrow-vs-rich results by the value-level signal `Entity != ""`
-  (set by `result()`, never by `ok()`) instead of the old type switch.
-  Per-handler IDs / Changed population was already done by the
-  `standardizeDomainResult` lifting pass; nothing further is needed
-  beyond the type unification itself. Regression tests in
-  `internal/tools/result_envelope_alias_test.go`.
-- **Audit T2.2 phase 1 + phase 2 landed** (2026-05-26). Phase 1
-  (commit `2a4fa43`) added `auto_paginate: true` + `max_rows` (default
-  5000, hard cap 50000) to the five first-slice handlers
-  (`clockify_clients_list`, `_projects_list`, `_tasks_list`,
-  `_tags_list`, `_entries_list`) via the generic
-  `runListWithAutoPaginate[T]` helper in
-  `internal/tools/helpers_pagination.go`. Phase 2 wires the remaining
-  13 native list handlers — `clockify_{invoices,invoices_payments,
-  projects_templates,expenses,expenses_categories,custom_fields,
-  time_off_requests,time_off_policies,scheduling_assignments,approvals,
-  webhooks,groups,users}_list` — via the new
-  `autoPaginated(handler)` wrapper which loops at the `ToolResult`
-  level (merging Data slices via reflection) so each per-handler body
-  stays focused on the single-page case. Six list tools remain
-  intentionally unwrapped because their upstream has no
-  pagination to walk (`holidays_list`, `holidays_list_for_user_period`,
-  `webhooks_events`, `projects_memberships_list`,
-  `invoices_items_list`, `entity_changes_list`). See
-  `docs/architecture.md §5a` for the full wired-handler list, the
-  out-of-scope list, and the pattern.
-- **Audit T2.3 landed** (2026-05-26, commit `4ee1d2a`).
-  `docs/architecture.md` (~300 lines) documents the five tool layers,
-  the `buildFullAccessRegistry()` call graph, the toolset filter, the
-  `ToolResult` envelope (post-T2.1), the auto_paginate helper
-  (post-T2.2 phase 1), the end-to-end "add a new tool" recipe, the
-  seven drift gates, and the glossary.
-- **Audit T3.1 landed** (2026-05-26).
-  `paginated_ops_live_evidence_errors` in `scripts/gen-clockify-openapi`
-  now runs inside `validate_document` and asserts every entry in
-  `PAGINATED_LIST_OPS` (a) appears in the emitted spec and (b) carries
-  `x-clockify-live-status ∈ {live-success, probe-documented}`. The
-  `documented` bucket is rejected so a contributor cannot land a
-  paginated annotation without a passing live probe or a recorded
-  probe fixture. Failures bubble through the existing `abort` so the
-  failure surfaces at `make gen-openapi` time, before drift fixtures
-  regenerate.
-- **Audit T3.2 phase 1 landed** (2026-05-26). `revive` is enabled in
-  `.golangci.yml` with the three audit-specified rules (`exported`,
-  `var-naming`, `unused-parameter`) under `enable-all-rules: false`.
-  Production `unused-parameter` (5) and `var-naming` (1) violations
-  are fixed.
-- **Audit T3.2 phase 2 COMPLETE** (2026-05-30, commit `72f0ee5`). The
-  final three packages — `internal/mcp` (25 exported symbols),
-  `internal/clockify` (45), and `internal/tools` (128); 198 total —
-  were documented and their per-package `^exported:` opt-outs removed
-  from `.golangci.yml`. Every `internal/` package now enforces revive
-  `exported`; no godoc opt-outs remain.
-- **Adversarial audit (2026-05-29) cleanup landed.** Stale doc/script
-  claims fixed (architecture.md drift-gate CI column; `make cover-check`
-  and `scripts/check-coverage.sh` references dropped; fuzz-corpus.md
-  rewritten for the six actual targets; CONTRIBUTING.md dropped the
-  retired `ResultEnvelope` mention; `.gitignore` lost dead docker /
-  hygiene-script comments). Four dead docs deleted (`clients.md`,
-  `internal-test-posture.md`, `superpowers/plans/...`, the 9.6k-line
-  `goals/api-reconciliation/TRUTH.openapi.yaml`). Three `unparam` dead
-  return values removed (`handlePromptsList`, `notifierFromContext`,
-  `findEntryOverlaps`). Contributor-local `/Users/15x/...` and
-  `addons-me/fern/...` paths in AGENTS.md and tests genericised. All
-  deterministic gates green after each commit.
-- **Polish campaign (2026-05-29) landed.** 17-commit follow-up driven
-  by a parallel six-slice read-only audit (docs, deadcode, versions,
-  security, tests, godoc). Items shipped: SECURITY.md supported-versions
-  bumped to 0.3.x; four `unparam` test-helper dead-arg removals
-  (`testMoneyEntry`, `oneUserCoverageEmail`, `callToolViaRun`,
-  `walkFreeTextViolations`); two error-only signatures replacing dead
-  `(ToolResult, error)` returns on the `sendInvoice` and
-  `updateInvoiceItem` "unsupported" stubs; dead variadic
-  `warnings ...` dropped from `validationOK`; `auditTailText` now
-  wraps the raw `os.ReadFile` error with the generic
-  `errAuditTailUnavailable` sentinel and logs the underlying err via
-  slog (covers SECURITY.md panic-message contract — see new
-  TestAuditTailText_WrapsIOErrorAsGeneric pin); the async
-  resource/prompt dispatch goroutine now defers `RecoverDispatch`
-  exactly like the sibling tools/call goroutine, closing a real
-  SECURITY.md panic-containment gap (
-  `TestPanicInResourceDispatchDoesNotCrashLoop` pins the contract);
-  `internal/resolve` workspace paths route through a new local
-  `workspacePath` helper that mirrors `paths.Workspace` (can't import
-  it directly — circular) and a sibling static gate
-  (`TestPathSafety_ResolveUsesWorkspaceHelper`) fails closed on raw
-  concat regression. Renamed `resolve.Resolve{Project,Client,Tag,User,
-  Task}ID → resolve.{Project,Client,Tag,User,Task}ID` (5 production
-  call sites in `internal/tools/resolve_cache.go` plus tests/benches);
-  the `path_safety_test.go` regex was widened to recognise the new
-  names; `.golangci.yml` no longer needs a stutter allowance for the
-  package. Modernization sweep applied to gopls suggestions in
-  touched files (`strings.SplitSeq`, `slices.Contains`, `maps.Copy`,
-  `range` over int, built-in `min`).
-- The cleanup, polish, and godoc-phase-2 commits all push direct to
-  `main` (head `093d60b` for that campaign). The push triggered the
-  protected-branch bypass notice ("Bypassed rule violations for
-  refs/heads/main: 16 of 16 required status checks are expected") and
-  every required check went green post-push (CI + CodeQL + Semgrep +
-  Dependency Review). `main` then advanced through the test-flake fix,
-  CHANGELOG roll-up, and CI tar-listing fix to the current head
-  `c7b19da` (tag `v0.4.0`).
-- **Documentation-refresh campaign (2026-05-30) landing.** A read-only
-  audit confirmed several doc-only drifts; this campaign fixes them
-  without touching tool behavior, schemas, or generated artifacts:
-  SECURITY.md "Supported Versions" bumped from `0.3.x` to `0.4.x` to
-  match CHANGELOG `[0.4.0]` and tag `v0.4.0`; the `.golangci.yml`
-  godoc-track comment corrected (it claimed "remaining six packages"
-  while listing three — now names the eleven clean Go packages,
-  including `resolve`/`safety`/`testclockify`, notes the data-only
-  `internal/benchdata` is out of scope, and noted three packages
-  (`mcp`/`clockify`/`tools`) still carried an opt-out — all since
-  removed by the T3.2 phase-2 completion below); a cross-link added at
-  the top of the "Known Clockify API Gotchas" section pointing readers
-  to the sibling `../fern/spec/evidence/discrepancies.md` ledger for
-  the shared live-probed OpenAPI-vs-live divergences. The git-ignored
-  `CLAUDE.md` "Sibling TypeScript packages" section was refreshed
-  locally (not committed) to the real `../fern` surface:
-  `clockify-sdk-ts-115@0.9.0`, `@clockify115/cli@0.1.0` (28 commands),
-  and `@clockify115/mcp-server@0.3.0` (105 tools = 17 workflow + 88
-  domain) — the narrower sibling to this 156-tool Go MCP. The two
-  git-ignored `.claude/commands/` files (`postgres-e2e.md`,
-  `session-rehydration.md`) describe platform-era multi-tenant /
-  streamable-HTTP work that contradicts the stdio-only single-user
-  invariant and point at docs pruned from `main`; they were annotated
-  locally as deprecated/historical (not committed). The 156-tool /
-  16-advertised contract and all generated artifacts are unchanged.
-- **godoc phase-2, modernization, money cleanup, and the v0.4.1 release
-  (2026-05-30).** Five commits landed direct to `main` on top of
-  `c7b19da` (v0.4.0), every required check green post-push: `00b3b9d`
-  (doc refresh, above), `72f0ee5` (godoc phase-2 completion, above),
-  `7cc165d` a module-wide behavior-preserving gopls modernization sweep
-  (`maps.Copy`, `slices.Contains`, `min`/`max`, range-over-int,
-  `atomic.Int32`, `reflect.TypeFor`, `t.Context`, `SplitSeq`/`FieldsSeq`;
-  42 files), `cf35703` dropping the no-op `,omitempty` on
-  `EntryRateView`'s non-pointer `MoneyView` fields (`billable_earnings`
-  and `cost` are now correctly `required` in the regenerated output
-  schemas; runtime wire output unchanged), and `93ac19c` recording the
-  2026-05-30 `make perfect-live` run. The work was tagged `v0.4.1`.
-- **Nightly-live CI fix + v0.4.2 (2026-05-30).** The recurring nightly-live
-  failure (the `drift:env-config` signal behind #134 and #105) was root-caused
-  to a secret-name mismatch: `nightly-live.yml` read
-  `secrets.CLOCKIFY_API_KEY` / `CLOCKIFY_WORKSPACE_ID`, which do not exist —
-  the repo secrets are `CLOCKIFY_LIVE_API_KEY` / `CLOCKIFY_LIVE_WORKSPACE_ID` —
-  so the scheduled job ran with empty creds and failed at the env gate every
-  night. The workflow now reads the correct secrets, whose values were rotated
-  to a valid sacrificial-workspace key; a manual `workflow_dispatch` run
-  confirmed green. Tagged `v0.4.2` (CI/docs-only; released binaries are
-  byte-identical to v0.4.1).
-- Branch protection requires the 16 current one-user checks in
-  `docs/branch-protection-required-checks.md`, including `Module tidy drift`.
-- `make perfect-local` was green on 2026-05-30 for the v0.4.1 release commit,
-  and base `make perfect-live` passed the same day on a rotated
-  sacrificial-workspace key. The latest live run is recorded in
-  `docs/live-tests.md`; the optional-domain/high-risk/happy-path gates were not
-  enabled for that run, and prefix cleanup reported `Leftovers: 0`.
-- The locally cached Claude binary (when used) lives at
-  `$HOME/.local/bin/clockify-mcp`. Each contributor may pin a different path
-  in their MCP client configuration.
-- The rolling nightly-live drift (#134, #105) was **root-caused and fixed** on
-  2026-05-30 (v0.4.2): the failure was a secret-name mismatch in
-  `nightly-live.yml` (it read non-existent `secrets.CLOCKIFY_API_KEY` /
-  `CLOCKIFY_WORKSPACE_ID` instead of the repo's `CLOCKIFY_LIVE_*` secrets), so
-  CI ran with empty credentials and stalled at the env gate. The workflow now
-  reads the correct secrets, whose values were rotated to a valid sacrificial
-  key, and a manual run is green. Treat broader optional live campaigns or new
-  Clockify API drift as new work.
+- **Earlier milestones (2026-05).** Adversarial-review hardening (`54d62d0`+):
+  fail-fast registry (`FullAccessRegistryChecked`), workflow business-write
+  dry-run/risk metadata, result-envelope + error semantics, `revive` lint, and the
+  generated default-toolset + coverage-dashboard artifacts; releases `v0.4.0`–`v0.4.2`
+  shipped the doc refresh, godoc/modernization/money cleanup, and the nightly-live CI
+  secret-name fix. See git history for per-commit detail.
 
 ## Safety Rules
 
