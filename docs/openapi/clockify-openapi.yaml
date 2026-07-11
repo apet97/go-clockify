@@ -14825,6 +14825,46 @@ components:
           description: Whether to filter entries without a task.
           type: boolean
       type: object
+    AuditLogAction:
+      enum:
+      - CREATE_TIME_PERSONAL_TIMER
+      - CREATE_TIME_PERSONAL_MANUAL
+      - CREATE_TIME_IMPORT
+      - CREATE_TIME_KIOSK
+      - CREATE_TIME_FOR_OTHER
+      - RESTORE_TIME
+      - RESTORE_TIME_FOR_OTHER
+      - UPDATE_TIME_PERSONAL
+      - UPDATE_TIME_FOR_OTHER
+      - DELETE_TIME_PERSONAL
+      - DELETE_TIME_FOR_OTHER
+      - CREATE_PROJECT
+      - CREATE_PROJECT_IMPORT
+      - CREATE_PROJECT_QUICKBOOKS
+      - UPDATE_PROJECT
+      - DELETE_PROJECT
+      - CREATE_TASK
+      - CREATE_TASK_IMPORT
+      - UPDATE_TASK
+      - DELETE_TASK
+      - CREATE_CLIENT
+      - CREATE_CLIENT_IMPORT
+      - CREATE_CLIENT_QUICKBOOKS
+      - UPDATE_CLIENT
+      - DELETE_CLIENT
+      - CREATE_TAG
+      - CREATE_TAG_IMPORT
+      - UPDATE_TAG
+      - DELETE_TAG
+      - CREATE_EXPENSE
+      - CREATE_EXPENSE_FOR_OTHER
+      - RESTORE_EXPENSE
+      - RESTORE_EXPENSE_FOR_OTHER
+      - UPDATE_EXPENSE
+      - UPDATE_EXPENSE_FOR_OTHER
+      - DELETE_EXPENSE
+      - DELETE_EXPENSE_FOR_OTHER
+      type: string
     AuditLogEntry:
       additionalProperties: true
       description: Minimal audit log entry shape observed from the audit-log service.
@@ -14859,7 +14899,7 @@ components:
           - CREATE_PROJECT
           - UPDATE_PROJECT
           items:
-            type: string
+            "$ref": "#/components/schemas/AuditLogAction"
           minItems: 1
           type: array
           uniqueItems: true
@@ -23718,7 +23758,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 8cdee71d7087959e0601bea61b175fca4f7a8cc58c8a2d6104ece96af7b34bbd
+    sha256: bbfb0c3c0fe74c4c084013152d9c3027c71ea4ea59d0437cd9ca7ff5571861f0
     files: 100
   sourcePrecedence:
   - live/probe findings metadata

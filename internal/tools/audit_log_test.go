@@ -5,12 +5,27 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/apet97/go-clockify/internal/clockify"
+	"gopkg.in/yaml.v3"
 )
+
+func TestAuditLogActionEnumMatchesCanonicalSource(t *testing.T) {
+	path := filepath.Join("..", "..", "docs", "openapi", "sources", "clockify-api-probe-lab", "openapi-fragments", "audit-log.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil { t.Fatal(err) }
+	var doc struct { Components struct { Schemas map[string]struct { Enum []string `yaml:"enum"` } `yaml:"schemas"` } `yaml:"components"` }
+	if err := yaml.Unmarshal(raw, &doc); err != nil { t.Fatal(err) }
+	if got := doc.Components.Schemas["AuditLogAction"].Enum; !reflect.DeepEqual(got, auditLogActionEnum) {
+		t.Fatalf("AuditLogAction enum drift:\nsource=%v\ntool=%v", got, auditLogActionEnum)
+	}
+}
 
 func TestAuditLogsSearchSchemaIsTyped(t *testing.T) {
 	schema := auditLogsSearchSchema()

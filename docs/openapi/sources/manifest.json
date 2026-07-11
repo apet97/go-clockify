@@ -244,8 +244,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/audit-log.yaml",
-      "bytes": 5981,
-      "sha256": "9c1f14648119f5794f72bfc1a439e0624b4f79e140f8804980572378772bc7c5"
+      "bytes": 7118,
+      "sha256": "a35ffe94a104edf9869bffe03e1fac645d91fdb8051382f00abd91d37980f0cb"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/balance-a.yaml",
