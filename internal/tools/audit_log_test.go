@@ -19,9 +19,19 @@ import (
 func TestAuditLogActionEnumMatchesCanonicalSource(t *testing.T) {
 	path := filepath.Join("..", "..", "docs", "openapi", "sources", "clockify-api-probe-lab", "openapi-fragments", "audit-log.yaml")
 	raw, err := os.ReadFile(path)
-	if err != nil { t.Fatal(err) }
-	var doc struct { Components struct { Schemas map[string]struct { Enum []string `yaml:"enum"` } `yaml:"schemas"` } `yaml:"components"` }
-	if err := yaml.Unmarshal(raw, &doc); err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Enum []string `yaml:"enum"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
 	if got := doc.Components.Schemas["AuditLogAction"].Enum; !reflect.DeepEqual(got, auditLogActionEnum) {
 		t.Fatalf("AuditLogAction enum drift:\nsource=%v\ntool=%v", got, auditLogActionEnum)
 	}
