@@ -240,6 +240,140 @@ func TestGeneratedOpenAPICoreEntitySchemasRequireStableIdentityFields(t *testing
 	}
 }
 
+func TestGeneratedOpenAPIClientUpdateComposesArchivedField(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema := openAPIObjectSchema(t, schemas, "ClientUpdate")
+	allOf, ok := schema["allOf"].([]interface{})
+	if !ok || len(allOf) != 2 {
+		t.Fatalf("OpenAPI schema ClientUpdate must compose ClientCreate with update-only fields; allOf=%#v", schema["allOf"])
+	}
+
+	hasClientCreate := false
+	hasArchived := false
+	for _, partRaw := range allOf {
+		part, ok := partRaw.(map[string]interface{})
+		if !ok {
+			t.Fatalf("OpenAPI schema ClientUpdate has malformed allOf part %#v", partRaw)
+		}
+		if part["$ref"] == "#/components/schemas/ClientCreate" {
+			hasClientCreate = true
+		}
+		properties, ok := part["properties"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		archived, ok := properties["archived"].(map[string]interface{})
+		if ok && archived["type"] == "boolean" {
+			if archived["default"] != false {
+				t.Fatalf("OpenAPI schema ClientUpdate property archived default=%#v want false", archived["default"])
+			}
+			if archived["description"] != "Indicates if client will be archived or not." {
+				t.Fatalf("OpenAPI schema ClientUpdate property archived description=%#v", archived["description"])
+			}
+			hasArchived = true
+			if required, ok := part["required"].([]interface{}); ok && requiredStringSet(t, "ClientUpdate", required)["archived"] {
+				t.Fatalf("OpenAPI schema ClientUpdate must leave archived optional; required=%#v", required)
+			}
+		}
+	}
+	if !hasClientCreate || !hasArchived {
+		t.Fatalf("OpenAPI schema ClientUpdate must preserve ClientCreate and expose boolean archived; allOf=%#v", allOf)
+	}
+}
+
+func TestGeneratedOpenAPITaskCreateBillableIsOptional(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema := openAPIObjectSchema(t, schemas, "TaskCreateRequest")
+	assertOpenAPIPropertyType(t, "TaskCreateRequest", schema, "billable", "boolean")
+	requiredSet := openAPIRequiredSet(t, "TaskCreateRequest", schema)
+	if requiredSet["billable"] {
+		t.Fatalf("OpenAPI schema TaskCreateRequest must leave billable optional; required=%#v", schema["required"])
+	}
+	assertOpenAPIExampleValue(t, "TaskCreateRequest", schema, "billable", false)
+}
+
+func TestGeneratedOpenAPICustomFieldCreateRequiredFlagIsOptional(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema := openAPIObjectSchema(t, schemas, "CreateCustomFieldRequest")
+	assertOpenAPIPropertyType(t, "CreateCustomFieldRequest", schema, "required", "boolean")
+	requiredSet := openAPIRequiredSet(t, "CreateCustomFieldRequest", schema)
+	if requiredSet["required"] {
+		t.Fatalf("OpenAPI schema CreateCustomFieldRequest must leave the required flag optional; required=%#v", schema["required"])
+	}
+	assertOpenAPIExampleValue(t, "CreateCustomFieldRequest", schema, "required", false)
+}
+
+func TestGeneratedOpenAPITimeOffPolicyCreateApproveIsOptional(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	createSchema := openAPIObjectSchema(t, schemas, "CreateTimeOffPolicyRequest")
+	assertOpenAPIPropertyType(t, "CreateTimeOffPolicyRequest", createSchema, "approve", "")
+	requiredSet := openAPIRequiredSet(t, "CreateTimeOffPolicyRequest", createSchema)
+	if !requiredSet["name"] {
+		t.Fatalf("OpenAPI schema CreateTimeOffPolicyRequest must keep name required; required=%#v", createSchema["required"])
+	}
+	// This optionality correction has no committed GOCLMCP live fixture. Keep
+	// this assertion evidence-neutral rather than presenting it as live proof.
+	if requiredSet["approve"] {
+		t.Fatalf("OpenAPI schema CreateTimeOffPolicyRequest must leave approve optional; required=%#v", createSchema["required"])
+	}
+}
+
+func TestGeneratedOpenAPITimeOffPolicyResponseCarriesReplacementFields(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	policySchema := openAPIObjectSchema(t, schemas, "Policy")
+	for field, fieldType := range map[string]string{
+		"color":         "string",
+		"hasExpiration": "boolean",
+		"icon":          "string",
+	} {
+		assertOpenAPIPropertyType(t, "Policy", policySchema, field, fieldType)
+	}
+	icon := openAPIProperty(t, "Policy", policySchema, "icon")
+	wantIconEnum := []string{
+		"UMBRELLA",
+		"SNOWFLAKE",
+		"FAMILY",
+		"PLANE",
+		"STETHOSCOPE",
+		"HEALTH_METRICS",
+		"CHILDCARE",
+		"LUGGAGE",
+		"MONETIZATION",
+		"CALENDAR",
+	}
+	gotIconEnum, ok := icon["enum"].([]interface{})
+	if !ok || len(gotIconEnum) != len(wantIconEnum) {
+		t.Fatalf("OpenAPI schema Policy property icon enum=%#v want exact %v", icon["enum"], wantIconEnum)
+	}
+	for i, want := range wantIconEnum {
+		if gotIconEnum[i] != want {
+			t.Fatalf("OpenAPI schema Policy property icon enum[%d]=%#v want %q; enum=%#v", i, gotIconEnum[i], want, gotIconEnum)
+		}
+	}
+}
+
+func TestGeneratedOpenAPIInvoiceUpdateReplacementFieldsAreOptional(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema := openAPIObjectSchema(t, schemas, "UpdateInvoiceRequest")
+	requiredSet := openAPIRequiredSet(t, "UpdateInvoiceRequest", schema)
+	wantRequired := []string{"currency", "discountPercent", "dueDate", "issuedDate", "number", "tax2Percent", "taxPercent"}
+	if len(requiredSet) != len(wantRequired) {
+		t.Fatalf("OpenAPI schema UpdateInvoiceRequest required=%#v want exact replacement set %v", schema["required"], wantRequired)
+	}
+	for _, field := range wantRequired {
+		if !requiredSet[field] {
+			t.Fatalf("OpenAPI schema UpdateInvoiceRequest missing existing required field %q; required=%#v", field, schema["required"])
+		}
+	}
+	for _, field := range []string{"billFrom", "clientAddress"} {
+		assertOpenAPIPropertyType(t, "UpdateInvoiceRequest", schema, field, "string")
+		if requiredSet[field] {
+			t.Fatalf("OpenAPI schema UpdateInvoiceRequest must leave %s optional; required=%#v", field, schema["required"])
+		}
+		assertOpenAPIExampleString(t, "UpdateInvoiceRequest", schema, field)
+	}
+}
+
 func TestGeneratedOpenAPIExpenseCreateRequestMatchesLiveMultipartOptionalFields(t *testing.T) {
 	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 	schema, ok := schemas["ExpenseCreateRequest"].(map[string]interface{})
@@ -534,6 +668,69 @@ func readOpenAPISchemas(t *testing.T, path string) map[string]interface{} {
 		t.Fatalf("OpenAPI schemas missing or malformed")
 	}
 	return schemas
+}
+
+func openAPIObjectSchema(t *testing.T, schemas map[string]interface{}, schemaName string) map[string]interface{} {
+	t.Helper()
+	schema, ok := schemas[schemaName].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema %s missing or malformed", schemaName)
+	}
+	return schema
+}
+
+func openAPIRequiredSet(t *testing.T, schemaName string, schema map[string]interface{}) map[string]bool {
+	t.Helper()
+	required, ok := schema["required"].([]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema %s must declare required fields; required=%#v", schemaName, schema["required"])
+	}
+	return requiredStringSet(t, schemaName, required)
+}
+
+func assertOpenAPIPropertyType(t *testing.T, schemaName string, schema map[string]interface{}, propertyName, wantType string) {
+	t.Helper()
+	property := openAPIProperty(t, schemaName, schema, propertyName)
+	if wantType != "" && property["type"] != wantType {
+		t.Fatalf("OpenAPI schema %s property %q type=%#v want %q", schemaName, propertyName, property["type"], wantType)
+	}
+}
+
+func openAPIProperty(t *testing.T, schemaName string, schema map[string]interface{}, propertyName string) map[string]interface{} {
+	t.Helper()
+	properties, ok := schema["properties"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema %s properties missing or malformed", schemaName)
+	}
+	property, ok := properties[propertyName].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema %s missing property %q", schemaName, propertyName)
+	}
+	return property
+}
+
+func assertOpenAPIExampleValue(t *testing.T, schemaName string, schema map[string]interface{}, propertyName string, want interface{}) {
+	t.Helper()
+	example, ok := schema["example"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema %s example missing or malformed", schemaName)
+	}
+	got, ok := example[propertyName]
+	if !ok || got != want {
+		t.Fatalf("OpenAPI schema %s example property %q=%#v want %#v", schemaName, propertyName, got, want)
+	}
+}
+
+func assertOpenAPIExampleString(t *testing.T, schemaName string, schema map[string]interface{}, propertyName string) {
+	t.Helper()
+	example, ok := schema["example"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("OpenAPI schema %s example missing or malformed", schemaName)
+	}
+	got, ok := example[propertyName].(string)
+	if !ok || got == "" {
+		t.Fatalf("OpenAPI schema %s example property %q=%#v want non-empty string", schemaName, propertyName, example[propertyName])
+	}
 }
 
 func requiredStringSet(t *testing.T, schemaName string, required []interface{}) map[string]bool {
