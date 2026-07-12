@@ -516,6 +516,10 @@ components:
         placeholder:
           type: string
           description: Represents custom field placeholder value.
+        required:
+          type: boolean
+          default: false
+          description: Flag to set whether custom field is mandatory or not.
         status:
           $ref: '#/components/schemas/CustomFieldStatus'
         type:
@@ -534,6 +538,7 @@ components:
         name: location
         onlyAdminCanEdit: false
         placeholder: Location
+        required: false
         status: VISIBLE
         type: DROPDOWN_MULTIPLE
         workspaceDefaultValue:

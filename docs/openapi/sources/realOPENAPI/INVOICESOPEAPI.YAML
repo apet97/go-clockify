@@ -1687,6 +1687,14 @@ components:
       - tax2Percent
       - taxPercent
       properties:
+        billFrom:
+          type: string
+          description: Represents to whom the invoice should be billed from.
+          default: '##default'
+        clientAddress:
+          type: string
+          description: Represents client address.
+          default: '##default'
         clientId:
           type: string
           description: Represents client identifier across the system.
@@ -1745,6 +1753,8 @@ components:
             items:
               $ref: '#/components/schemas/VisibleZeroFieldsInvoice'
       example:
+        billFrom: Business X
+        clientAddress: Ground Floor, ABC Bldg., Palo Alto, California, USA 94020
         clientId: 98h687e29ae1f428e7ebe707
         companyId: 04g687e29ae1f428e7ebe123
         currency: USD

@@ -438,6 +438,10 @@ components:
             type: string
           description: Represents list of assignee ids for the task.
           uniqueItems: true
+        billable:
+          type: boolean
+          description: Indicates whether a task is billable or not.
+          default: false
         budgetEstimate:
           type: integer
           format: int64
@@ -467,6 +471,7 @@ components:
         assigneeIds:
         - 45b687e29ae1f428e7ebe123
         - 67s687e29ae1f428e7ebe678
+        billable: false
         budgetEstimate: 10000
         estimate: PT1H30M
         id: 57a687e29ae1f428e7ebe107

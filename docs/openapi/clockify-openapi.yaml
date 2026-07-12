@@ -15280,7 +15280,14 @@ components:
       - name
       type: object
     ClientUpdate:
-      "$ref": "#/components/schemas/ClientCreate"
+      allOf:
+      - "$ref": "#/components/schemas/ClientCreate"
+      - properties:
+          archived:
+            default: false
+            description: Indicates if client will be archived or not.
+            type: boolean
+        type: object
     CompareFilter:
       additionalProperties: false
       description: Comparison filter used by attendance filters.
@@ -15650,6 +15657,7 @@ components:
         name: location
         onlyAdminCanEdit: false
         placeholder: Location
+        required: false
         status: VISIBLE
         type: DROPDOWN_MULTIPLE
         workspaceDefaultValue:
@@ -15676,6 +15684,10 @@ components:
         placeholder:
           description: Represents custom field placeholder value.
           type: string
+        required:
+          default: false
+          description: Flag to set whether custom field is mandatory or not.
+          type: boolean
         status:
           "$ref": "#/components/schemas/CustomFieldStatus"
         type:
@@ -15935,7 +15947,6 @@ components:
         users:
           "$ref": "#/components/schemas/PoliciesUserIdsSchema"
       required:
-      - approve
       - name
       type: object
     CreateTimeOffRequest:
@@ -19425,10 +19436,32 @@ components:
           "$ref": "#/components/schemas/AutomaticAccrualDto"
         automaticTimeEntryCreation:
           "$ref": "#/components/schemas/PoliciesAutomaticTimeEntryCreationDto"
+        color:
+          description: Policy color as a hex RGB value.
+          pattern: "^#(?:[0-9a-fA-F]{6}){1}$"
+          type: string
         everyoneIncludingNew:
           default: false
           description: Indicates whether the policy is applied to future new users.
           type: boolean
+        hasExpiration:
+          default: false
+          description: Indicates whether the policy balance should have expiration.
+          type: boolean
+        icon:
+          description: Policy icon.
+          enum:
+          - UMBRELLA
+          - SNOWFLAKE
+          - FAMILY
+          - PLANE
+          - STETHOSCOPE
+          - HEALTH_METRICS
+          - CHILDCARE
+          - LUGGAGE
+          - MONETIZATION
+          - CALENDAR
+          type: string
         id:
           description: Represents policy identifier across the system.
           type: string
@@ -20491,6 +20524,7 @@ components:
         assigneeIds:
         - 45b687e29ae1f428e7ebe123
         - 67s687e29ae1f428e7ebe678
+        billable: false
         budgetEstimate: 10000
         estimate: PT1H30M
         id: 57a687e29ae1f428e7ebe107
@@ -20511,6 +20545,10 @@ components:
             type: string
           type: array
           uniqueItems: true
+        billable:
+          default: false
+          description: Indicates whether a task is billable or not.
+          type: boolean
         budgetEstimate:
           description: Represents a task budget estimate as long.
           format: int64
@@ -21696,6 +21734,8 @@ components:
       type: object
     UpdateInvoiceRequest:
       example:
+        billFrom: Business X
+        clientAddress: Ground Floor, ABC Bldg., Palo Alto, California, USA 94020
         clientId: 98h687e29ae1f428e7ebe707
         companyId: 04g687e29ae1f428e7ebe123
         currency: USD
@@ -21713,6 +21753,14 @@ components:
         - TAX_2
         - DISCOUNT
       properties:
+        billFrom:
+          default: "##default"
+          description: Represents to whom the invoice should be billed from.
+          type: string
+        clientAddress:
+          default: "##default"
+          description: Represents client address.
+          type: string
         clientId:
           default: "##default"
           description: Represents client identifier across the system.
@@ -23758,7 +23806,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: bbfb0c3c0fe74c4c084013152d9c3027c71ea4ea59d0437cd9ca7ff5571861f0
+    sha256: a76e4a296fc0e2af27b801139f2e38817cfe503a1e155fcb9d24019edacf1907
     files: 100
   sourcePrecedence:
   - live/probe findings metadata

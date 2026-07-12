@@ -553,13 +553,35 @@ components:
           $ref: '#/components/schemas/AutomaticAccrualDto'
         automaticTimeEntryCreation:
           $ref: '#/components/schemas/AutomaticTimeEntryCreationDto'
+        color:
+          type: string
+          pattern: ^#(?:[0-9a-fA-F]{6}){1}$
+          description: Policy color as a hex RGB value.
         everyoneIncludingNew:
           type: boolean
           default: false
           description: Indicates whether the policy is applied to future new users.
+        hasExpiration:
+          type: boolean
+          default: false
+          description: Indicates whether the policy balance should have expiration.
         id:
           type: string
           description: Represents policy identifier across the system.
+        icon:
+          type: string
+          enum:
+          - UMBRELLA
+          - SNOWFLAKE
+          - FAMILY
+          - PLANE
+          - STETHOSCOPE
+          - HEALTH_METRICS
+          - CHILDCARE
+          - LUGGAGE
+          - MONETIZATION
+          - CALENDAR
+          description: Policy icon.
         name:
           type: string
           description: Represents the name of the policy.
@@ -781,7 +803,6 @@ components:
       type: object
       description: Request body for creating a time off policy.
       required:
-      - approve
       - name
       properties:
         allowHalfDay:

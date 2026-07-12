@@ -365,7 +365,15 @@ components:
         note:    { type: string }
         currencyCode: { $ref: "#/components/schemas/Currency" }
 
-    ClientUpdate: { $ref: "#/components/schemas/ClientCreate" }
+    ClientUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ClientCreate"
+        - type: object
+          properties:
+            archived:
+              type: boolean
+              default: false
+              description: Indicates if client will be archived or not.
 
     # ---------- project ----------
     EstimateDto:
