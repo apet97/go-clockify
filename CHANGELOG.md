@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Bumped the pinned Go toolchain to 1.25.12 to include the standard-library fix
+  for GO-2026-5856, pinned `ruby/setup-ruby` to an immutable commit, and added
+  seven-day Dependabot cooldowns across every configured ecosystem.
+
 ## [0.5.0] - 2026-06-26
 
 ### Fixed

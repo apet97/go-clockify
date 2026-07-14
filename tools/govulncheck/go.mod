@@ -1,6 +1,6 @@
 module github.com/apet97/go-clockify/tools/govulncheck
 
-go 1.25.11
+go 1.25.12
 
 require golang.org/x/vuln v1.3.0
 
