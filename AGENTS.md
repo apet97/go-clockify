@@ -215,7 +215,8 @@ These gotchas cover the Go MCP runtime layer. For the authoritative,
 live-probed evidence behind shared OpenAPI-vs-live-API divergences —
 phantom paths, pagination/last-page-header audits, webhook signature
 scheme, and cross-SDK schema collisions — see the sibling TS SDK repo's
-ledger at `../fern/spec/evidence/discrepancies.md`. That file records
+ledger at `../clockify-ts-sdk/spec/evidence/discrepancies.md` (adjust if your local
+clone directory differs). That file records
 the probe fixtures, status (resolved/open/documented), and root cause
 for each item; the `scripts/gen-clockify-openapi` `PHANTOM_PATHS`,
 `PAGINATED_LIST_OPS`, and `LAST_PAGE_HEADER_OPS` constants are the
