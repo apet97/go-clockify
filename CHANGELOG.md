@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected the curated expense-update multipart schema so `file` is optional
+  while the create request keeps its existing required-field contract; added
+  exact no-file and binary-file multipart encoder regressions.
+
 ### Security
 
 - Bumped the pinned Go toolchain to 1.25.12 to include the standard-library fix

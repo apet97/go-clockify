@@ -504,7 +504,6 @@ components:
       - categoryId
       - changeFields
       - date
-      - file
       - userId
       properties:
         amount:

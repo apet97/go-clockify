@@ -376,25 +376,41 @@ func TestGeneratedOpenAPIInvoiceUpdateReplacementFieldsAreOptional(t *testing.T)
 
 func TestGeneratedOpenAPIExpenseCreateRequestMatchesLiveMultipartOptionalFields(t *testing.T) {
 	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
-	schema, ok := schemas["ExpenseCreateRequest"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("OpenAPI schema ExpenseCreateRequest missing or malformed")
-	}
-	required, ok := schema["required"].([]interface{})
-	if !ok {
-		t.Fatalf("OpenAPI schema ExpenseCreateRequest must declare required fields; required=%#v", schema["required"])
-	}
-	requiredSet := requiredStringSet(t, "ExpenseCreateRequest", required)
+	schema := openAPIObjectSchema(t, schemas, "ExpenseCreateRequest")
+	requiredSet := openAPIRequiredSet(t, "ExpenseCreateRequest", schema)
 
-	for _, field := range []string{"amount", "categoryId", "date", "userId"} {
+	wantRequired := []string{"amount", "categoryId", "date", "userId"}
+	if len(requiredSet) != len(wantRequired) {
+		t.Fatalf("OpenAPI schema ExpenseCreateRequest required=%#v want exact create set %v", schema["required"], wantRequired)
+	}
+	for _, field := range wantRequired {
 		if !requiredSet[field] {
-			t.Fatalf("OpenAPI schema ExpenseCreateRequest missing required field %q; required=%v", field, required)
+			t.Fatalf("OpenAPI schema ExpenseCreateRequest missing required field %q; required=%#v", field, schema["required"])
 		}
 	}
 	for _, field := range []string{"file", "projectId"} {
 		if requiredSet[field] {
-			t.Fatalf("OpenAPI schema ExpenseCreateRequest marks live-optional field %q as required; required=%v", field, required)
+			t.Fatalf("OpenAPI schema ExpenseCreateRequest marks live-optional field %q as required; required=%#v", field, schema["required"])
 		}
+	}
+}
+
+func TestGeneratedOpenAPIExpenseUpdateRequestMakesOnlyFileOptional(t *testing.T) {
+	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
+	schema := openAPIObjectSchema(t, schemas, "ExpenseUpdateRequest")
+	requiredSet := openAPIRequiredSet(t, "ExpenseUpdateRequest", schema)
+	wantRequired := []string{"amount", "categoryId", "changeFields", "date", "userId"}
+
+	if len(requiredSet) != len(wantRequired) {
+		t.Fatalf("OpenAPI schema ExpenseUpdateRequest required=%#v want exact update set %v", schema["required"], wantRequired)
+	}
+	for _, field := range wantRequired {
+		if !requiredSet[field] {
+			t.Fatalf("OpenAPI schema ExpenseUpdateRequest missing required field %q; required=%#v", field, schema["required"])
+		}
+	}
+	if requiredSet["file"] {
+		t.Fatalf("OpenAPI schema ExpenseUpdateRequest marks live-optional field \"file\" as required; required=%#v", schema["required"])
 	}
 }
 

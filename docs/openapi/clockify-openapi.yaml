@@ -17589,7 +17589,6 @@ components:
       - categoryId
       - changeFields
       - date
-      - file
       - userId
       type: object
     ExpenseWeeklyTotalsDtoV1:
@@ -23806,7 +23805,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: a76e4a296fc0e2af27b801139f2e38817cfe503a1e155fcb9d24019edacf1907
+    sha256: 7657ef34e8e88b2b0db28a516f782f3de287eb0619f977cb4b1343d30f095479
     files: 100
   sourcePrecedence:
   - live/probe findings metadata

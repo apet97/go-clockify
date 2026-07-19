@@ -1,6 +1,7 @@
 package clockify
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -359,6 +360,97 @@ func TestEncodeMultipartWithFiles(t *testing.T) {
 	for _, want := range []string{`name="kind"`, "avatar", `name="file"; filename="avatar.png"`, "Content-Type: image/png", "png"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("multipart body missing %q: %s", want, body)
+		}
+	}
+}
+
+func TestEncodeExpenseUpdateMultipartWithoutFile(t *testing.T) {
+	form := url.Values{
+		"amount":       {"12.50"},
+		"categoryId":   {"cat-1"},
+		"changeFields": {"AMOUNT", "NOTES"},
+		"date":         {"2026-07-19T00:00:00Z"},
+		"notes":        {"Taxi"},
+		"userId":       {"user-1"},
+	}
+	payload, contentType, err := encodeMultipartWithFiles(form, nil)
+	if err != nil {
+		t.Fatalf("encode expense update multipart without file: %v", err)
+	}
+
+	request := httptest.NewRequest(http.MethodPut, "/expenses/expense-1", bytes.NewReader(payload))
+	request.Header.Set("Content-Type", contentType)
+	if err := request.ParseMultipartForm(int64(len(payload))); err != nil {
+		t.Fatalf("parse expense update multipart without file: %v", err)
+	}
+	assertExactMultipartValues(t, request.MultipartForm.Value, form)
+	if len(request.MultipartForm.File) != 0 {
+		t.Fatalf("expense update without file emitted file parts: %#v", request.MultipartForm.File)
+	}
+}
+
+func TestEncodeExpenseUpdateMultipartWithFile(t *testing.T) {
+	form := url.Values{
+		"amount":       {"12.50"},
+		"categoryId":   {"cat-1"},
+		"changeFields": {"AMOUNT", "FILE"},
+		"date":         {"2026-07-19T00:00:00Z"},
+		"userId":       {"user-1"},
+	}
+	payload, contentType, err := encodeMultipartWithFiles(form, []MultipartFile{{
+		FieldName:   "file",
+		Filename:    "receipt.png",
+		ContentType: "image/png",
+		Data:        []byte("png-receipt"),
+	}})
+	if err != nil {
+		t.Fatalf("encode expense update multipart with file: %v", err)
+	}
+
+	request := httptest.NewRequest(http.MethodPut, "/expenses/expense-1", bytes.NewReader(payload))
+	request.Header.Set("Content-Type", contentType)
+	if err := request.ParseMultipartForm(int64(len(payload))); err != nil {
+		t.Fatalf("parse expense update multipart with file: %v", err)
+	}
+	assertExactMultipartValues(t, request.MultipartForm.Value, form)
+	if len(request.MultipartForm.File) != 1 || len(request.MultipartForm.File["file"]) != 1 {
+		t.Fatalf("expense update file parts = %#v, want exactly one field named file", request.MultipartForm.File)
+	}
+	fileHeader := request.MultipartForm.File["file"][0]
+	if fileHeader.Filename != "receipt.png" || fileHeader.Header.Get("Content-Type") != "image/png" {
+		t.Fatalf("expense update file metadata = filename %q content-type %q", fileHeader.Filename, fileHeader.Header.Get("Content-Type"))
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		t.Fatalf("open expense update file part: %v", err)
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatalf("read expense update file part: %v", err)
+	}
+	if string(data) != "png-receipt" {
+		t.Fatalf("expense update file bytes = %q, want png-receipt", data)
+	}
+}
+
+func assertExactMultipartValues(t *testing.T, got map[string][]string, want url.Values) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("multipart scalar field count = %d, want %d; got=%#v", len(got), len(want), got)
+	}
+	for key, wantValues := range want {
+		gotValues, ok := got[key]
+		if !ok {
+			t.Fatalf("multipart scalar fields missing %q; got=%#v", key, got)
+		}
+		if len(gotValues) != len(wantValues) {
+			t.Fatalf("multipart scalar field %q values=%#v want=%#v", key, gotValues, wantValues)
+		}
+		for index, wantValue := range wantValues {
+			if gotValues[index] != wantValue {
+				t.Fatalf("multipart scalar field %q value[%d]=%q want=%q", key, index, gotValues[index], wantValue)
+			}
 		}
 	}
 }
