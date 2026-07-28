@@ -580,7 +580,32 @@ PHANTOM_PATHS = [
   #     (.../projects/{projectId}/users/{userId}/{hourly,cost}-rate) exist and
   #     are live-success; the project-level (no userId) variants 404.
   ["put", "/workspaces/{workspaceId}/projects/{projectId}/hourly-rate"],
-  ["put", "/workspaces/{workspaceId}/projects/{projectId}/cost-rate"]
+  ["put", "/workspaces/{workspaceId}/projects/{projectId}/cost-rate"],
+  # (f) Proven absent by the 2026-07-28 fake-id existence sweep against the
+  #     sacrificial sandbox. Each returned 404 with
+  #     {"message":"No static resource ...","code":3000}, the canonical
+  #     path-not-served signal. Evidence: clockify-ts-sdk
+  #     spec/evidence/discrepancies.md, entries
+  #     `archive-subpaths.projects-clients.phantom`,
+  #     `time-off.requests.by-id.family-phantom`,
+  #     `webhooks.generateNewToken.phantom`.
+  #
+  #     The /archive sub-paths: a prior note recorded only
+  #     POST /projects/{id}/archive as dead, which did not transfer to these
+  #     PUT forms. Probing shows the PUT shape is absent too. Archiving is done
+  #     through the update body envelope, which is unaffected.
+  ["put", "/workspaces/{workspaceId}/projects/{projectId}/archive"],
+  ["put", "/workspaces/{workspaceId}/clients/{clientId}/archive"],
+  #     The whole by-id branch under /time-off/requests/ is unserved. Note this
+  #     is NOT changeTimeOffRequestStatus, whose policy-scoped path
+  #     (/time-off/policies/{policyId}/requests/{requestId}) does exist and
+  #     returns 400 on a fake id.
+  ["get",    "/workspaces/{workspaceId}/time-off/requests/{requestId}"],
+  ["delete", "/workspaces/{workspaceId}/time-off/requests/{requestId}"],
+  ["patch",  "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"],
+  #     Token rotation has exactly one live path: PATCH .../webhooks/{id}/token
+  #     (400 on a fake id). The generateNewToken sub-path is absent.
+  ["patch", "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken"]
 ].freeze
 
 def phantom_path?(method, path)

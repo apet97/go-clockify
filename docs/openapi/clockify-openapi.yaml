@@ -1431,49 +1431,6 @@ paths:
       - clockify-api-probe-lab/openapi.yaml
       x-fern-sdk-group-name: clients
       x-fern-sdk-method-name: delete
-  "/workspaces/{workspaceId}/clients/{clientId}/archive":
-    put:
-      tags:
-      - Clients
-      summary: Archive / unarchive client
-      operationId: putWorkspacesWorkspaceIdClientsClientIdArchive
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: clientId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                archived:
-                  type: boolean
-              type: object
-        required: true
-      responses:
-        '200':
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: clients
-      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/cost-rate":
     put:
       tags:
@@ -5687,49 +5644,6 @@ paths:
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
       x-fern-sdk-method-name: delete
-  "/workspaces/{workspaceId}/projects/{projectId}/archive":
-    put:
-      tags:
-      - Projects
-      summary: Archive / unarchive project
-      operationId: putWorkspacesWorkspaceIdProjectsProjectIdArchive
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                archived:
-                  type: boolean
-              type: object
-        required: true
-      responses:
-        '200':
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: projects
-      x-fern-sdk-method-name: archive
   "/workspaces/{workspaceId}/projects/{projectId}/custom-fields":
     get:
       tags:
@@ -10813,130 +10727,6 @@ paths:
       - realOPENAPI/TIMEOFFOPENAPI.YAML
       x-fern-sdk-group-name: timeOff
       x-fern-sdk-method-name: list
-  "/workspaces/{workspaceId}/time-off/requests/{requestId}":
-    get:
-      tags:
-      - Time Off
-      summary: Get a time-off request
-      operationId: getWorkspacesWorkspaceIdTimeOffRequestsRequestId
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TimeOffRequest"
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - read
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: timeOff
-      x-fern-sdk-method-name: get
-    delete:
-      tags:
-      - Time Off
-      summary: Delete a time-off request
-      operationId: deleteWorkspacesWorkspaceIdTimeOffRequestsRequestId
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - destructive
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: timeOff
-      x-fern-sdk-method-name: delete
-  "/workspaces/{workspaceId}/time-off/requests/{requestId}/status":
-    patch:
-      tags:
-      - Time Off
-      summary: Update request status (approve/reject/withdraw)
-      operationId: patchWorkspacesWorkspaceIdTimeOffRequestsRequestIdStatus
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                note:
-                  type: string
-                statusType:
-                  enum:
-                  - APPROVED
-                  - REJECTED
-                  - WITHDRAWN
-                  type: string
-              type: object
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/TimeOffRequest"
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: timeOff
-      x-fern-sdk-method-name: updateStatus
   "/workspaces/{workspaceId}/user-groups":
     get:
       tags:
@@ -13110,44 +12900,6 @@ paths:
       - realOPENAPI/WEBHOOKSOPENAPI.YAML
       x-fern-sdk-group-name: webhooks
       x-fern-sdk-method-name: delete
-  "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken":
-    patch:
-      tags:
-      - Webhooks
-      summary: Regenerate the per-webhook HMAC token
-      operationId: patchWorkspacesWorkspaceIdWebhooksWebhookIdGenerateNewToken
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: webhookId
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/Webhook"
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: webhooks
-      x-fern-sdk-method-name: rotateToken
   "/workspaces/{workspaceId}/webhooks/{webhookId}/logs":
     get:
       tags:
@@ -21214,76 +20966,6 @@ components:
           format: date-time
           type: string
       type: object
-    TimeOffRequest:
-      properties:
-        balance:
-          format: double
-          type: number
-        balanceDiff:
-          format: double
-          type: number
-        createdAt:
-          format: date-time
-          type: string
-        id:
-          type: string
-        note:
-          nullable: true
-          type: string
-        policyId:
-          type: string
-        policyName:
-          type: string
-        requesterUserId:
-          type: string
-        requesterUserName:
-          type: string
-        status:
-          "$ref": "#/components/schemas/TimeOffRequestStatus"
-        timeOffPeriod:
-          properties:
-            halfDay:
-              type: boolean
-            halfDayHours:
-              description: |-
-                Populated when `halfDay=true`. `null` otherwise. The window is
-                anchored in UTC even when the user's profile sets a different
-                time zone — clients should render in `userTimeZone`.
-              nullable: true
-              properties:
-                end:
-                  format: date-time
-                  type: string
-                start:
-                  format: date-time
-                  type: string
-              type: object
-            halfDayPeriod:
-              enum:
-              - NOT_DEFINED
-              - FIRST_HALF
-              - SECOND_HALF
-              type: string
-            period:
-              "$ref": "#/components/schemas/DateTimeInterval"
-          type: object
-        timeUnit:
-          enum:
-          - DAYS
-          - HOURS
-          type: string
-        userEmail:
-          format: email
-          type: string
-        userId:
-          type: string
-        userName:
-          type: string
-        userTimeZone:
-          type: string
-        workspaceId:
-          type: string
-      type: object
     TimeOffRequestDto:
       description: Represents a time off request response.
       example:
@@ -22674,105 +22356,6 @@ components:
       - TAX_2
       - DISCOUNT
       type: string
-    Webhook:
-      properties:
-        addonId:
-          nullable: true
-          type: string
-        authToken:
-          description: HMAC secret. Treat as a credential; never log.
-          type: string
-        deliveryEnabled:
-          nullable: true
-          type: boolean
-        enabled:
-          type: boolean
-        id:
-          type: string
-        name:
-          nullable: true
-          type: string
-        planEnabled:
-          nullable: true
-          type: boolean
-        triggerSource:
-          items:
-            type: string
-          type: array
-        triggerSourceType:
-          enum:
-          - USER_ID
-          - PROJECT_ID
-          - TAG_ID
-          - TASK_ID
-          - CLIENT_ID
-          - USER_GROUP_ID
-          - WORKSPACE_ID
-          type: string
-        url:
-          format: uri
-          type: string
-        userId:
-          type: string
-        webhookEvent:
-          enum:
-          - NEW_PROJECT
-          - PROJECT_DELETED
-          - PROJECT_UPDATED
-          - NEW_TASK
-          - TASK_UPDATED
-          - TASK_DELETED
-          - NEW_CLIENT
-          - CLIENT_UPDATED
-          - CLIENT_DELETED
-          - NEW_TAG
-          - TAG_UPDATED
-          - TAG_DELETED
-          - NEW_TIME_ENTRY
-          - TIME_ENTRY_UPDATED
-          - TIME_ENTRY_DELETED
-          - TIMER_STARTED
-          - TIMER_STOPPED
-          - NEW_INVOICE
-          - INVOICE_UPDATED
-          - INVOICE_DELETED
-          - INVOICE_PAID
-          - INVOICE_SENT
-          - NEW_APPROVAL_REQUEST
-          - APPROVAL_REQUEST_STATUS_UPDATED
-          - NEW_TIME_OFF_REQUEST
-          - TIME_OFF_REQUEST_APPROVED
-          - TIME_OFF_REQUEST_REJECTED
-          - TIME_OFF_REQUEST_WITHDRAWN
-          - USER_DELETED_FROM_WORKSPACE
-          - USER_JOINED_WORKSPACE
-          - USER_DEACTIVATED_ON_WORKSPACE
-          - USER_ACTIVATED_ON_WORKSPACE
-          - USER_EMAIL_CHANGED
-          - USER_UPDATED
-          - NEW_EXPENSE
-          - EXPENSE_UPDATED
-          - EXPENSE_DELETED
-          - ASSIGNMENT_CREATED
-          - ASSIGNMENT_UPDATED
-          - ASSIGNMENT_DELETED
-          - ASSIGNMENT_PUBLISHED
-          - NEW_USER_GROUP
-          - USER_GROUP_UPDATED
-          - USER_GROUP_DELETED
-          - KIOSK_NEW_PIN
-          - KIOSK_PIN_RESET
-          - BALANCE_UPDATED
-          - POLICY_CREATED
-          - POLICY_UPDATED
-          - POLICY_DELETED
-          - HOLIDAY_CREATED
-          - HOLIDAY_UPDATED
-          - HOLIDAY_DELETED
-          type: string
-        workspaceId:
-          type: string
-      type: object
     WebhookCollectionDtoV1:
       properties:
         webhooks:
@@ -23879,6 +23462,9 @@ x-clockify-source-quarantine:
   reason: 'phantom path quarantined (DELETE /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (DELETE /workspaces/{workspaceId}/time-off/requests/{requestId}):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/balance): see PHANTOM_PATHS
     in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
@@ -23891,13 +23477,22 @@ x-clockify-source-quarantine:
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/scheduling/capacity):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/time-off/requests/{requestId}):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/balance): see
     PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/policies/{policyId}/archive):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/time-off/requests/{requestId}/status):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/user/{userId}/time-entries/stop):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/policies): see
@@ -23912,10 +23507,16 @@ x-clockify-source-quarantine:
   reason: 'phantom path quarantined (POST /workspaces/{workspaceId}/time-off/requests/users/{userId}):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PUT /workspaces/{workspaceId}/clients/{clientId}/archive):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PUT /workspaces/{workspaceId}/member-profile/{userId}):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PUT /workspaces/{workspaceId}/policies/{policyId}):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PUT /workspaces/{workspaceId}/projects/{projectId}/archive):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PUT /workspaces/{workspaceId}/projects/{projectId}/cost-rate):

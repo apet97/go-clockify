@@ -160,10 +160,30 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	// Clockify error code 3000. See the sibling clockify-ts-sdk repo
 	// (spec/evidence/discrepancies.md > timeoff.legacy-policies-requests.
 	// phantom-path-quarantined) for the full audit.
-	if got, want := len(contract.paths), 114; got < want {
+	// Round 3 (2026-07-28): 6 more ops across 5 paths, from a fake-id
+	// existence sweep over every unproven operation against the
+	// sacrificial sandbox. Each returned 404 with
+	// {"message":"No static resource ...","code":3000}:
+	//   PUT    /workspaces/{workspaceId}/projects/{projectId}/archive
+	//   PUT    /workspaces/{workspaceId}/clients/{clientId}/archive
+	//   GET    /workspaces/{workspaceId}/time-off/requests/{requestId}
+	//   DELETE /workspaces/{workspaceId}/time-off/requests/{requestId}
+	//   PATCH  /workspaces/{workspaceId}/time-off/requests/{requestId}/status
+	//   PATCH  /workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken
+	// The two /archive PUTs are the notable ones: a prior note recorded
+	// only POST /projects/{id}/archive as dead, which never transferred to
+	// these different-method, different-shape paths. Not affected, and
+	// deliberately still present: changeTimeOffRequestStatus (the
+	// policy-scoped PATCH) and PATCH .../webhooks/{id}/token, both of which
+	// return 400 on a fake id, i.e. live. See the sibling clockify-ts-sdk
+	// repo's spec/evidence/discrepancies.md entries
+	// `archive-subpaths.projects-clients.phantom`,
+	// `time-off.requests.by-id.family-phantom` and
+	// `webhooks.generateNewToken.phantom`.
+	if got, want := len(contract.paths), 109; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
-	if got, want := contract.operationCount(), 169; got < want {
+	if got, want := contract.operationCount(), 163; got < want {
 		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
 	}
 
@@ -180,7 +200,13 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 		{method: "get", path: "/workspaces/{workspaceId}/time-off/policies"},
 		{method: "post", path: "/workspaces/{workspaceId}/time-off/policies"},
 		{method: "post", path: "/workspaces/{workspaceId}/time-off/requests"},
-		{method: "patch", path: "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"},
+		// `PATCH /workspaces/{workspaceId}/time-off/requests/{requestId}/status`
+		// was removed from this required list by the 2026-07-28 existence
+		// sweep: it returns 404 / "No static resource" / code 3000, along
+		// with the GET and DELETE on the same by-id branch. Status changes
+		// go through the policy-scoped
+		// `PATCH .../time-off/policies/{policyId}/requests/{requestId}`,
+		// which is live (400 on a fake id) and asserted below.
 		{method: "get", path: "/workspaces/{workspaceId}/time-off/balance/user/{userId}"},
 		{method: "patch", path: "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}"},
 		// `GET /workspaces/{workspaceId}/users/{userId}/time-off/balances`
