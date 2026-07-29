@@ -14868,6 +14868,11 @@ components:
           default: "##default"
           description: Represents workspace identifier across the system.
           type: string
+        negativeBalanceUsed:
+          description: Represents the amount of the negative balance that has been
+            used.
+          format: double
+          type: number
       type: object
     BalanceListResponse:
       description: Paginated balance list response.
@@ -16911,10 +16916,56 @@ components:
           type: string
       type: object
     ExpenseHydratedDtoV1:
-      allOf:
-      - "$ref": "#/components/schemas/ExpenseDtoV1"
-      description: Hydrated expense object. The uploaded Markdown names ExpenseHydratedDtoV1
-        but does not enumerate fields beyond the standard expense sample.
+      description: Hydrated expense row returned by the workspace expenses list. Carries
+        nested category/project/task objects and fileName instead of the flat categoryId/projectId/taskId
+        that ExpenseDtoV1 exposes.
+      type: object
+      properties:
+        billable:
+          default: false
+          description: Indicates whether expense is billable or not.
+          type: boolean
+        category:
+          "$ref": "#/components/schemas/ExpenseCategoryDto"
+        date:
+          description: Represents a date in yyyy-MM-dd format.
+          example: '2020-01-01'
+          type: string
+        fileId:
+          description: Represents file identifier across the system. Null when the
+            expense has no receipt.
+          type: string
+        fileName:
+          description: Represents the uploaded receipt file name. Null when the expense
+            has no receipt.
+          type: string
+        id:
+          description: Represents expense identifier across the system.
+          type: string
+        locked:
+          description: Indicates whether the expense is locked.
+          type: boolean
+        notes:
+          description: Represents notes for an expense.
+          type: string
+        project:
+          "$ref": "#/components/schemas/ProjectInfoDto"
+        quantity:
+          description: Represents expense quantity as double data type.
+          format: double
+          type: number
+        task:
+          "$ref": "#/components/schemas/TaskInfoDto"
+        total:
+          description: Represents expense total as double data type.
+          format: double
+          type: number
+        userId:
+          description: Represents user identifier across the system.
+          type: string
+        workspaceId:
+          description: Represents workspace identifier across the system.
+          type: string
     ExpenseReportDtoV1:
       description: Represents list of expenses
       properties:

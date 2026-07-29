@@ -2248,6 +2248,65 @@ def apply_live_overrides!(doc)
   if (props = schema_properties(doc, "ExpenseDtoV1"))
     append_text!(props["quantity"], "description", "Create/update requests use amount; live expense responses expose the entered amount as quantity and the computed value as total.") if props["quantity"].is_a?(Hash)
   end
+
+  # getWorkspaceExpenses returns HYDRATED rows: nested category/project/task
+  # objects plus fileName, and NOT the flat categoryId/projectId/taskId that
+  # getExpenseById, createExpense, and updateExpense return. Those two shapes
+  # are different and cannot share one schema.
+  #
+  # The realOPENAPI fragment defines ExpenseHydratedDtoV1 as a bare
+  # `allOf: [ExpenseDtoV1]`; because real-openapi outranks aiii-openapi in
+  # SOURCE_PRIORITIES, that stub wins the name and the richer AIII definition
+  # is renamed away. The stub therefore both drops the nested objects and
+  # fileName AND declares three flat ids the list wire never returns.
+  #
+  # Live probe 2026-07-29 against the sandbox workspace, union of keys across
+  # ALL 2845 expense rows (not a single sample):
+  #   billable 2845/2845   category 2837/2845   date 2845/2845
+  #   fileId 7/2845        fileName 7/2845      id 2845/2845
+  #   locked 2845/2845     notes 2823/2845      project 2417/2845
+  #   quantity 2845/2845   task 0/2845          total 2845/2845
+  #   userId 2845/2845     workspaceId 2845/2845
+  # category matched ExpenseCategoryDto's 7 properties exactly and project
+  # matched ProjectInfoDto's 5 exactly. `task` was null on every one of the
+  # 2845 rows, so its shape is NOT live-proven; TaskInfoDto is carried over
+  # from the AIII source rather than guessed here. Nullability is observed
+  # (category/project/task/fileId/fileName/notes all go null) but is not
+  # declared, because this spec never combines `nullable` with `$ref`.
+  if (schema = doc.dig("components", "schemas", "ExpenseHydratedDtoV1"))
+    schema.delete("allOf")
+    schema["type"] = "object"
+    schema["description"] = "Hydrated expense row returned by the workspace expenses list. Carries nested category/project/task objects and fileName instead of the flat categoryId/projectId/taskId that ExpenseDtoV1 exposes."
+    schema["properties"] = {
+      "billable" => { "default" => false, "description" => "Indicates whether expense is billable or not.", "type" => "boolean" },
+      "category" => { "$ref" => "#/components/schemas/ExpenseCategoryDto" },
+      "date" => { "description" => "Represents a date in yyyy-MM-dd format.", "example" => "2020-01-01", "type" => "string" },
+      "fileId" => { "description" => "Represents file identifier across the system. Null when the expense has no receipt.", "type" => "string" },
+      "fileName" => { "description" => "Represents the uploaded receipt file name. Null when the expense has no receipt.", "type" => "string" },
+      "id" => { "description" => "Represents expense identifier across the system.", "type" => "string" },
+      "locked" => { "description" => "Indicates whether the expense is locked.", "type" => "boolean" },
+      "notes" => { "description" => "Represents notes for an expense.", "type" => "string" },
+      "project" => { "$ref" => "#/components/schemas/ProjectInfoDto" },
+      "quantity" => { "description" => "Represents expense quantity as double data type.", "format" => "double", "type" => "number" },
+      "task" => { "$ref" => "#/components/schemas/TaskInfoDto" },
+      "total" => { "description" => "Represents expense total as double data type.", "format" => "double", "type" => "number" },
+      "userId" => { "description" => "Represents user identifier across the system.", "type" => "string" },
+      "workspaceId" => { "description" => "Represents workspace identifier across the system.", "type" => "string" }
+    }
+  end
+
+  # Live probe 2026-07-29: getBalanceForUser returns negativeBalanceUsed on
+  # 50/50 balance rows. BalanceDtoV1 already carries negativeBalanceAmount and
+  # negativeBalanceLimit, so without this a caller cannot see whether a
+  # negative balance has actually been drawn down.
+  if (props = schema_properties(doc, "BalanceDtoV1"))
+    props["negativeBalanceUsed"] = {
+      "description" => "Represents the amount of the negative balance that has been used.",
+      "format" => "double",
+      "type" => "number"
+    }
+  end
+
   if (props = schema_properties(doc, "ExpenseCreateRequest"))
     append_text!(props["amount"], "description", "Live expense responses expose this value as quantity.") if props["amount"].is_a?(Hash)
     append_text!(props["file"], "description", "Live Clockify accepts create-expense multipart requests without a file.") if props["file"].is_a?(Hash)
