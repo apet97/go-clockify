@@ -14,10 +14,9 @@ var documentedWriteRoutes = map[string]bool{
 	"POST /workspaces/{workspaceId}/audit-log": true,
 
 	// clients
-	"DELETE /workspaces/{workspaceId}/clients/{clientId}":      true,
-	"POST /workspaces/{workspaceId}/clients":                   true,
-	"PUT /workspaces/{workspaceId}/clients/{clientId}":         true,
-	"PUT /workspaces/{workspaceId}/clients/{clientId}/archive": true,
+	"DELETE /workspaces/{workspaceId}/clients/{clientId}": true,
+	"POST /workspaces/{workspaceId}/clients":              true,
+	"PUT /workspaces/{workspaceId}/clients/{clientId}":    true,
 
 	// cost-rate
 	"PUT /workspaces/{workspaceId}/cost-rate": true,
@@ -77,7 +76,6 @@ var documentedWriteRoutes = map[string]bool{
 	"POST /workspaces/{workspaceId}/projects/{projectId}/memberships":                     true,
 	"POST /workspaces/{workspaceId}/projects/{projectId}/tasks":                           true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}":                                  true,
-	"PUT /workspaces/{workspaceId}/projects/{projectId}/archive":                          true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}":                   true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/cost-rate":         true,
 	"PUT /workspaces/{workspaceId}/projects/{projectId}/tasks/{taskId}/hourly-rate":       true,
@@ -121,11 +119,9 @@ var documentedWriteRoutes = map[string]bool{
 	// time-off
 	"DELETE /workspaces/{workspaceId}/time-off/policies/{policyId}":                       true,
 	"DELETE /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":  true,
-	"DELETE /workspaces/{workspaceId}/time-off/requests/{requestId}":                      true,
 	"PATCH /workspaces/{workspaceId}/time-off/balance/policy/{policyId}":                  true,
 	"PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}":                        true,
 	"PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":   true,
-	"PATCH /workspaces/{workspaceId}/time-off/requests/{requestId}/status":                true,
 	"POST /workspaces/{workspaceId}/time-off/policies":                                    true,
 	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/requests":                true,
 	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests": true,
@@ -157,12 +153,11 @@ var documentedWriteRoutes = map[string]bool{
 	"PUT /workspaces/{workspaceId}/users/{userId}/hourly-rate":                        true,
 
 	// webhooks
-	"DELETE /workspaces/{workspaceId}/webhooks/{webhookId}":                 true,
-	"PATCH /workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken": true,
-	"PATCH /workspaces/{workspaceId}/webhooks/{webhookId}/token":            true,
-	"POST /workspaces/{workspaceId}/webhooks":                               true,
-	"POST /workspaces/{workspaceId}/webhooks/{webhookId}/logs":              true,
-	"PUT /workspaces/{workspaceId}/webhooks/{webhookId}":                    true,
+	"DELETE /workspaces/{workspaceId}/webhooks/{webhookId}":      true,
+	"PATCH /workspaces/{workspaceId}/webhooks/{webhookId}/token": true,
+	"POST /workspaces/{workspaceId}/webhooks":                    true,
+	"POST /workspaces/{workspaceId}/webhooks/{webhookId}/logs":   true,
+	"PUT /workspaces/{workspaceId}/webhooks/{webhookId}":         true,
 }
 
 var documentedButRawUnsupportedRoutes = map[string]string{
