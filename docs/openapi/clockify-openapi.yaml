@@ -1842,31 +1842,23 @@ paths:
           description: Represents workspace identifier across the system.
           example: 64a687e29ae1f428e7ebe303
           type: string
-      - description: Specifies the type of document to be retrieved. Expected values
-          are CLIENTS, PROJECTS, TAGS, TASKS, SCHEDULED_ASSIGNMENT, TIME_ENTRY, TIME_ENTRY_RATE,
-          TIME_ENTRY_CUSTOM_FIELD_VALUE.This parameter can accept multiple values,
-          and at least one option must be provided. Based on the input, the application
-          will return results corresponding to the selected document types.
+      - description: 'Entity-change document type. Accepted values: APPROVAL_REQUESTS,
+          BALANCE, CLIENTS, CUSTOM_FIELDS, HOLIDAYS, INVOICES, PROJECTS, PTO_POLICY,
+          SCHEDULED_ASSIGNMENT, TAGS, TASKS, TIME_ENTRY, TIME_ENTRY_CUSTOM_FIELD_VALUE,
+          TIME_ENTRY_RATE, TIME_OFF_REQUEST, USER, USER_GROUPS.'
         example: TIME_ENTRY
         in: query
         name: type
         required: true
         schema:
-          description: Specifies the type of document to be retrieved. Expected values
-            are ${changetracker.update.documentation.description}.This parameter can
-            accept multiple values, and at least one option must be provided. Based
-            on the input, the application will return results corresponding to the
-            selected document types.
+          type: array
+          description: 'Entity-change document type. Accepted values: APPROVAL_REQUESTS,
+            BALANCE, CLIENTS, CUSTOM_FIELDS, HOLIDAYS, INVOICES, PROJECTS, PTO_POLICY,
+            SCHEDULED_ASSIGNMENT, TAGS, TASKS, TIME_ENTRY, TIME_ENTRY_CUSTOM_FIELD_VALUE,
+            TIME_ENTRY_RATE, TIME_OFF_REQUEST, USER, USER_GROUPS.'
           example: TIME_ENTRY
           items:
-            description: Specifies the type of document to be retrieved. Expected
-              values are ${changetracker.update.documentation.description}.This parameter
-              can accept multiple values, and at least one option must be provided.
-              Based on the input, the application will return results corresponding
-              to the selected document types.
-            example: TIME_ENTRY
-            type: string
-          type: array
+            "$ref": "#/components/schemas/ChangeTrackerDocumentType"
       - description: Represents the start date in yyyy-MM-ddThh:mm:ssZ format. This
           parameter is optional; if no start date is provided, the application will
           set a default start date that matches the end date to create a date range
@@ -1971,31 +1963,23 @@ paths:
           description: 'Represents workspace identifier across the system (Experimental) '
           example: 64a687e29ae1f428e7ebe303
           type: string
-      - description: Specifies the type of document to be retrieved. Expected values
-          are CLIENTS, PROJECTS, TAGS, TASKS, SCHEDULED_ASSIGNMENT, TIME_ENTRY, TIME_ENTRY_RATE,
-          TIME_ENTRY_CUSTOM_FIELD_VALUE.This parameter can accept multiple values,
-          and at least one option must be provided. Based on the input, the application
-          will return results corresponding to the selected document types.
+      - description: 'Entity-change document type. Accepted values: APPROVAL_REQUESTS,
+          BALANCE, CLIENTS, CUSTOM_FIELDS, HOLIDAYS, INVOICES, PROJECTS, PTO_POLICY,
+          SCHEDULED_ASSIGNMENT, TAGS, TASKS, TIME_ENTRY, TIME_ENTRY_CUSTOM_FIELD_VALUE,
+          TIME_ENTRY_RATE, TIME_OFF_REQUEST, USER, USER_GROUPS.'
         example: TIME_ENTRY
         in: query
         name: type
         required: true
         schema:
-          description: Specifies the type of document to be retrieved. Expected values
-            are ${changetracker.update.documentation.description}.This parameter can
-            accept multiple values, and at least one option must be provided. Based
-            on the input, the application will return results corresponding to the
-            selected document types.
+          type: array
+          description: 'Entity-change document type. Accepted values: APPROVAL_REQUESTS,
+            BALANCE, CLIENTS, CUSTOM_FIELDS, HOLIDAYS, INVOICES, PROJECTS, PTO_POLICY,
+            SCHEDULED_ASSIGNMENT, TAGS, TASKS, TIME_ENTRY, TIME_ENTRY_CUSTOM_FIELD_VALUE,
+            TIME_ENTRY_RATE, TIME_OFF_REQUEST, USER, USER_GROUPS.'
           example: TIME_ENTRY
           items:
-            description: Specifies the type of document to be retrieved. Expected
-              values are ${changetracker.update.documentation.description}.This parameter
-              can accept multiple values, and at least one option must be provided.
-              Based on the input, the application will return results corresponding
-              to the selected document types.
-            example: TIME_ENTRY
-            type: string
-          type: array
+            "$ref": "#/components/schemas/ChangeTrackerDocumentType"
       - description: Represents the start date in yyyy-MM-ddThh:mm:ssZ format. This
           parameter is optional; if no start date is provided, the application will
           set a default start date that matches the end date to create a date range
@@ -2098,31 +2082,23 @@ paths:
           description: Represents workspace identifier across the system.
           example: 64a687e29ae1f428e7ebe303
           type: string
-      - description: Specifies the type of document to be retrieved. Expected values
-          are CLIENTS, PROJECTS, TAGS, TASKS, SCHEDULED_ASSIGNMENT, TIME_ENTRY, TIME_ENTRY_RATE,
-          TIME_ENTRY_CUSTOM_FIELD_VALUE.This parameter can accept multiple values,
-          and at least one option must be provided. Based on the input, the application
-          will return results corresponding to the selected document types.
+      - description: 'Entity-change document type. Accepted values: APPROVAL_REQUESTS,
+          BALANCE, CLIENTS, CUSTOM_FIELDS, HOLIDAYS, INVOICES, PROJECTS, PTO_POLICY,
+          SCHEDULED_ASSIGNMENT, TAGS, TASKS, TIME_ENTRY, TIME_ENTRY_CUSTOM_FIELD_VALUE,
+          TIME_ENTRY_RATE, TIME_OFF_REQUEST, USER, USER_GROUPS.'
         example: TIME_ENTRY
         in: query
         name: type
         required: true
         schema:
-          description: Specifies the type of document to be retrieved. Expected values
-            are ${changetracker.update.documentation.description}.This parameter can
-            accept multiple values, and at least one option must be provided. Based
-            on the input, the application will return results corresponding to the
-            selected document types.
+          type: array
+          description: 'Entity-change document type. Accepted values: APPROVAL_REQUESTS,
+            BALANCE, CLIENTS, CUSTOM_FIELDS, HOLIDAYS, INVOICES, PROJECTS, PTO_POLICY,
+            SCHEDULED_ASSIGNMENT, TAGS, TASKS, TIME_ENTRY, TIME_ENTRY_CUSTOM_FIELD_VALUE,
+            TIME_ENTRY_RATE, TIME_OFF_REQUEST, USER, USER_GROUPS.'
           example: TIME_ENTRY
           items:
-            description: Specifies the type of document to be retrieved. Expected
-              values are ${changetracker.update.documentation.description}.This parameter
-              can accept multiple values, and at least one option must be provided.
-              Based on the input, the application will return results corresponding
-              to the selected document types.
-            example: TIME_ENTRY
-            type: string
-          type: array
+            "$ref": "#/components/schemas/ChangeTrackerDocumentType"
       - description: Represents the start date in yyyy-MM-ddThh:mm:ssZ format. This
           parameter is optional; if no start date is provided, the application will
           set a default start date that matches the end date to create a date range
@@ -3022,6 +2998,7 @@ paths:
       parameters:
       - description: |-
           Filter list of holidays assigned to user.
+          This value is a user ID; user-group IDs are not supported and may produce a misleading 403.
           Required by live Clockify for in-period holiday lookup.
         example: 60f924bafdaf031696ec6218
         in: query
@@ -8053,6 +8030,8 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}
         | 200 | fixtures/live-shape/scheduling-project-totals.json |"
+      - Project totals GET returns 200 with an empty body when the project has no
+        assignments in the requested range.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -8064,6 +8043,7 @@ paths:
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
       x-fern-sdk-group-name: scheduling
       x-fern-sdk-method-name: listOnProject
+      x-clockify-empty-body-is-valid: true
   "/workspaces/{workspaceId}/scheduling/assignments/publish":
     put:
       tags:
@@ -8514,6 +8494,8 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals
         | 200 | fixtures/live-shape/scheduling-user-totals.json |"
+      - User capacity GET returns 200 with an empty body when the user has no capacity
+        in the requested range.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -8525,6 +8507,7 @@ paths:
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
       x-fern-sdk-group-name: scheduling
       x-fern-sdk-method-name: getUserCapacity
+      x-clockify-empty-body-is-valid: true
   "/workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy":
     post:
       tags:
@@ -14446,15 +14429,15 @@ components:
           example: '2018-11-01'
           type: string
         dateRangeEnd:
-          description: Provide date in format YYYY-MM-DDTHH:MM:SS.ssssss. Interpreted
-            using the user's timezone or the provided timeZone.
-          example: '2018-11-30T23:59:59.999'
+          description: Strict RFC3339 UTC timestamp with milliseconds, for example
+            2018-11-01T00:00:00.000Z.
+          example: '2018-11-30T23:59:59.999Z'
           minLength: 1
           type: string
         dateRangeStart:
-          description: Provide date in format YYYY-MM-DDTHH:MM:SS.ssssss. Interpreted
-            using the user's timezone or the provided timeZone.
-          example: '2018-11-01T00:00:00'
+          description: Strict RFC3339 UTC timestamp with milliseconds, for example
+            2018-11-01T00:00:00.000Z.
+          example: '2018-11-01T00:00:00.000Z'
           minLength: 1
           type: string
         dateRangeType:
@@ -14656,23 +14639,7 @@ components:
           type: array
           uniqueItems: true
         authors:
-          additionalProperties: false
-          description: Author filter. Include SYSTEM to retrieve system audit logs.
-          properties:
-            authorIds:
-              example:
-              - SYSTEM
-              items:
-                type: string
-              type: array
-              uniqueItems: true
-            contains:
-              enum:
-              - CONTAINS
-              - DOES_NOT_CONTAIN
-              example: DOES_NOT_CONTAIN
-              type: string
-          type: object
+          "$ref": "#/components/schemas/AuditLogAuthorsFilter"
         end:
           description: Audit window end.
           example: '2026-05-15T23:59:59Z'
@@ -16113,7 +16080,9 @@ components:
       type: object
     DetailedFilter:
       additionalProperties: false
-      description: Detailed report filter. This filter is valid only on /reports/detailed.
+      description: |-
+        Detailed report filter. This filter is valid only on /reports/detailed.
+        Pagination belongs in this nested filter as page and pageSize; top-level request page fields are not accepted by /reports/detailed.
       properties:
         auditFilter:
           "$ref": "#/components/schemas/AuditFilter"
@@ -18852,58 +18821,6 @@ components:
           - HOURS
           type: string
       type: object
-    OpenapiAttendanceFilter:
-      description: 'VERIFIED: only `attendanceFilter` accepted on attendance endpoint.'
-      properties:
-        page:
-          default: 1
-          type: integer
-        pageSize:
-          default: 50
-          type: integer
-        users:
-          properties:
-            contains:
-              enum:
-              - CONTAINS
-              - DOES_NOT_CONTAIN
-              - CONTAINS_ONLY
-              type: string
-            ids:
-              items:
-                type: string
-              type: array
-            status:
-              enum:
-              - ALL
-              - ACTIVE
-              - INACTIVE
-              type: string
-          type: object
-      type: object
-    OpenapiDetailedFilter:
-      description: 'VERIFIED: only `detailedFilter` accepted on detailed endpoint.'
-      properties:
-        auditFilter:
-          additionalProperties: true
-          type: object
-        options:
-          additionalProperties: true
-          type: object
-        page:
-          default: 1
-          type: integer
-        pageSize:
-          default: 50
-          type: integer
-        sortColumn:
-          type: string
-        sortOrder:
-          enum:
-          - ASCENDING
-          - DESCENDING
-          type: string
-      type: object
     OpenapiInvoiceDefaultSettingsDto:
       description: Represents an invoice default settings object.
       properties:
@@ -19064,50 +18981,6 @@ components:
           type: integer
         currency:
           "$ref": "#/components/schemas/Currency"
-      type: object
-    OpenapiSummaryFilter:
-      description: |
-        VERIFIED: only `summaryFilter` is accepted on the summary
-        endpoint (NOT `detailedFilter`/`weeklyFilter`/`attendanceFilter`).
-      properties:
-        groups:
-          items:
-            enum:
-            - CLIENT
-            - PROJECT
-            - TASK
-            - DATE
-            - WEEK
-            - MONTH
-            - TIMEENTRY
-            - USER
-            - TAG
-            type: string
-          maxItems: 3
-          type: array
-        sortColumn:
-          type: string
-      required:
-      - groups
-      type: object
-    OpenapiWeeklyFilter:
-      description: |
-        VERIFIED: only `weeklyFilter` accepted on weekly endpoint.
-        Date range MUST be exactly 7 days or upstream returns
-        `{code:501, message:"Please select date range of exactly 7 days for weekly report"}`.
-      properties:
-        group:
-          enum:
-          - PROJECT
-          - USER
-          type: string
-        subgroup:
-          enum:
-          - TIME
-          type: string
-      required:
-      - group
-      - subgroup
       type: object
     PageableCollectionLogBinDocumentDto:
       properties:
@@ -19879,7 +19752,7 @@ components:
     SharedReportFilter:
       properties:
         attendanceFilter:
-          "$ref": "#/components/schemas/OpenapiAttendanceFilter"
+          "$ref": "#/components/schemas/SharedAttendanceFilter"
         dateRangeEnd:
           format: date-time
           type: string
@@ -19887,7 +19760,7 @@ components:
           format: date-time
           type: string
         detailedFilter:
-          "$ref": "#/components/schemas/OpenapiDetailedFilter"
+          "$ref": "#/components/schemas/SharedDetailedFilter"
         exportType:
           enum:
           - JSON_V1
@@ -19897,9 +19770,9 @@ components:
           - PDF
           type: string
         summaryFilter:
-          "$ref": "#/components/schemas/OpenapiSummaryFilter"
+          "$ref": "#/components/schemas/SharedSummaryFilter"
         weeklyFilter:
-          "$ref": "#/components/schemas/OpenapiWeeklyFilter"
+          "$ref": "#/components/schemas/SharedWeeklyFilter"
       required:
       - exportType
       - dateRangeStart
@@ -19973,7 +19846,9 @@ components:
       x-clockify-max-groups: 3
       x-clockify-report-filter: summary
     SummaryGroup:
-      description: Allowed summary grouping key.
+      description: |-
+        Allowed summary grouping key.
+        Live reports also accept TAG grouping.
       enum:
       - CLIENT
       - PROJECT
@@ -19983,6 +19858,7 @@ components:
       - MONTH
       - TIMEENTRY
       - TASK
+      - TAG
       type: string
     SummaryReportChartDto:
       additionalProperties: true
@@ -23023,9 +22899,12 @@ components:
           description: Indicates whether the report includes users without time.
           type: boolean
         totals:
-          description: List of totals.
+          description: |-
+            List of totals.
+            Live empty weeks may contain a literal null item.
           items:
             "$ref": "#/components/schemas/TimeEntryReportTotals"
+            nullable: true
           type: array
         totalsByDay:
           description: Daily totals.
@@ -23434,6 +23313,142 @@ components:
           type: string
         manuallyInvoiced:
           type: boolean
+      type: object
+    AuditLogAuthorsFilter:
+      type: object
+      description: Author filter. Include SYSTEM to retrieve system audit logs.
+      additionalProperties: false
+      properties:
+        authorIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          example:
+          - SYSTEM
+        contains:
+          type: string
+          enum:
+          - CONTAINS
+          - DOES_NOT_CONTAIN
+          example: DOES_NOT_CONTAIN
+    ChangeTrackerDocumentType:
+      type: string
+      description: Entity-change document type accepted by Clockify. Values are plural
+        except TIME_ENTRY and USER.
+      enum:
+      - APPROVAL_REQUESTS
+      - BALANCE
+      - CLIENTS
+      - CUSTOM_FIELDS
+      - HOLIDAYS
+      - INVOICES
+      - PROJECTS
+      - PTO_POLICY
+      - SCHEDULED_ASSIGNMENT
+      - TAGS
+      - TASKS
+      - TIME_ENTRY
+      - TIME_ENTRY_CUSTOM_FIELD_VALUE
+      - TIME_ENTRY_RATE
+      - TIME_OFF_REQUEST
+      - USER
+      - USER_GROUPS
+    SharedAttendanceFilter:
+      description: 'VERIFIED: only `attendanceFilter` accepted on attendance endpoint.'
+      properties:
+        page:
+          default: 1
+          type: integer
+        pageSize:
+          default: 50
+          type: integer
+        users:
+          properties:
+            contains:
+              enum:
+              - CONTAINS
+              - DOES_NOT_CONTAIN
+              - CONTAINS_ONLY
+              type: string
+            ids:
+              items:
+                type: string
+              type: array
+            status:
+              enum:
+              - ALL
+              - ACTIVE
+              - INACTIVE
+              type: string
+          type: object
+      type: object
+    SharedDetailedFilter:
+      description: 'VERIFIED: only `detailedFilter` accepted on detailed endpoint.'
+      properties:
+        auditFilter:
+          additionalProperties: true
+          type: object
+        options:
+          additionalProperties: true
+          type: object
+        page:
+          default: 1
+          type: integer
+        pageSize:
+          default: 50
+          type: integer
+        sortColumn:
+          type: string
+        sortOrder:
+          enum:
+          - ASCENDING
+          - DESCENDING
+          type: string
+      type: object
+    SharedSummaryFilter:
+      description: |
+        VERIFIED: only `summaryFilter` is accepted on the summary
+        endpoint (NOT `detailedFilter`/`weeklyFilter`/`attendanceFilter`).
+      properties:
+        groups:
+          items:
+            enum:
+            - CLIENT
+            - PROJECT
+            - TASK
+            - DATE
+            - WEEK
+            - MONTH
+            - TIMEENTRY
+            - USER
+            - TAG
+            type: string
+          maxItems: 3
+          type: array
+        sortColumn:
+          type: string
+      required:
+      - groups
+      type: object
+    SharedWeeklyFilter:
+      description: |
+        VERIFIED: only `weeklyFilter` accepted on weekly endpoint.
+        Date range MUST be exactly 7 days or upstream returns
+        `{code:501, message:"Please select date range of exactly 7 days for weekly report"}`.
+      properties:
+        group:
+          enum:
+          - PROJECT
+          - USER
+          type: string
+        subgroup:
+          enum:
+          - TIME
+          type: string
+      required:
+      - group
+      - subgroup
       type: object
 x-clockify-generation:
   generator: scripts/gen-clockify-openapi

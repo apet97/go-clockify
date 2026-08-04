@@ -2043,6 +2043,25 @@ end
 
 DAY_ENUM = %w[MONDAY TUESDAY WEDNESDAY THURSDAY FRIDAY SATURDAY SUNDAY].freeze
 LIVE_INVOICE_STATUS_ENUM = %w[UNSENT SENT PAID PARTIALLY_PAID VOID OVERDUE].freeze
+CHANGE_TRACKER_DOCUMENT_TYPES = %w[
+  APPROVAL_REQUESTS
+  BALANCE
+  CLIENTS
+  CUSTOM_FIELDS
+  HOLIDAYS
+  INVOICES
+  PROJECTS
+  PTO_POLICY
+  SCHEDULED_ASSIGNMENT
+  TAGS
+  TASKS
+  TIME_ENTRY
+  TIME_ENTRY_CUSTOM_FIELD_VALUE
+  TIME_ENTRY_RATE
+  TIME_OFF_REQUEST
+  USER
+  USER_GROUPS
+].freeze
 
 def schema_properties(doc, name)
   schema = doc.dig("components", "schemas", name)
@@ -2126,6 +2145,136 @@ def prune_orphan_parameters!(doc)
 end
 
 def apply_live_overrides!(doc)
+  if (schema = doc.dig("components", "schemas", "SummaryGroup")).is_a?(Hash)
+    schema["type"] = "string"
+    schema["enum"] = (Array(schema["enum"]) | ["TAG"])
+    append_text!(schema, "description", "Live reports also accept TAG grouping.")
+  end
+
+  # Empty-body 200 is the live no-data representation for these two single
+  # totals reads. Keep the response schema useful when data exists, while
+  # giving the local TypeScript emitter a precise marker to add `| undefined`
+  # to the generated promise type (the runtime already maps an empty JSON body
+  # to undefined).
+  [
+    ["/workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId}", "get", "Project totals GET returns 200 with an empty body when the project has no assignments in the requested range."],
+    ["/workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals", "get", "User capacity GET returns 200 with an empty body when the user has no capacity in the requested range."],
+  ].each do |path, method, note|
+    if (op = operation_for(doc, path, method))
+      op["x-clockify-empty-body-is-valid"] = true
+      append_operation_note!(op, note)
+    end
+  end
+
+  if (props = schema_properties(doc, "WeeklyReportResponse"))
+    if (totals = props["totals"]).is_a?(Hash) && (items = totals["items"]).is_a?(Hash)
+      items["nullable"] = true
+      append_text!(totals, "description", "Live empty weeks may contain a literal null item.")
+    end
+  end
+
+  if (schema = doc.dig("components", "schemas", "AuditLogAuthorsFilter")).is_a?(Hash)
+    schema["type"] = "object"
+  else
+    doc.dig("components", "schemas")["AuditLogAuthorsFilter"] = {
+      "type" => "object",
+      "description" => "Author filter. Include SYSTEM to retrieve system audit logs.",
+      "additionalProperties" => false,
+      "properties" => {
+        "authorIds" => {
+          "type" => "array",
+          "uniqueItems" => true,
+          "items" => {"type" => "string"},
+          "example" => ["SYSTEM"]
+        },
+        "contains" => {
+          "type" => "string",
+          "enum" => %w[CONTAINS DOES_NOT_CONTAIN],
+          "example" => "DOES_NOT_CONTAIN"
+        }
+      }
+    }
+  end
+  if (props = schema_properties(doc, "AuditLogRequest"))
+    props["authors"] = {"$ref" => "#/components/schemas/AuditLogAuthorsFilter"}
+  end
+
+  # The merged entity-change source contains a literal unresolved template and
+  # only a partial prose list. Replace all three query schemas with one shared
+  # enum so the generated SDK and its JSDoc expose the plural live values.
+  doc.dig("components", "schemas")["ChangeTrackerDocumentType"] = {
+    "type" => "string",
+    "description" => "Entity-change document type accepted by Clockify. Values are plural except TIME_ENTRY and USER.",
+    "enum" => CHANGE_TRACKER_DOCUMENT_TYPES
+  }
+
+  # The merged report sources used the generic Openapi* names for the
+  # shared-report filter shapes. They are not the same shapes as the direct
+  # report filters, so keep the semantics but give them an honest shared
+  # namespace before the TypeScript emitter prunes the stale names.
+  {
+    "OpenapiAttendanceFilter" => "SharedAttendanceFilter",
+    "OpenapiDetailedFilter" => "SharedDetailedFilter",
+    "OpenapiSummaryFilter" => "SharedSummaryFilter",
+    "OpenapiWeeklyFilter" => "SharedWeeklyFilter",
+  }.each do |old_name, new_name|
+    schemas = doc.dig("components", "schemas")
+    next unless schemas.is_a?(Hash) && schemas.key?(old_name)
+
+    schemas[new_name] = schemas.delete(old_name)
+  end
+  if (props = schema_properties(doc, "SharedReportFilter"))
+    {
+      "attendanceFilter" => "SharedAttendanceFilter",
+      "detailedFilter" => "SharedDetailedFilter",
+      "summaryFilter" => "SharedSummaryFilter",
+      "weeklyFilter" => "SharedWeeklyFilter",
+    }.each do |field, schema_name|
+      props[field] = {"$ref" => "#/components/schemas/#{schema_name}"}
+    end
+  end
+  %w[created deleted updated].each do |kind|
+    if (op = operation_for(doc, "/workspaces/{workspaceId}/entities/#{kind}", "get"))
+      param = Array(op["parameters"]).find do |candidate|
+        candidate.is_a?(Hash) && candidate["in"] == "query" && candidate["name"] == "type"
+      end
+      next unless param
+
+      description = "Entity-change document type. Accepted values: #{CHANGE_TRACKER_DOCUMENT_TYPES.join(", ")}."
+      param["description"] = description
+      param["schema"] = {
+        "type" => "array",
+        "description" => description,
+        "example" => "TIME_ENTRY",
+        "items" => {
+          "$ref" => "#/components/schemas/ChangeTrackerDocumentType"
+        }
+      }
+    end
+  end
+
+  if (schema = doc.dig("components", "schemas", "DetailedFilter")).is_a?(Hash)
+    append_text!(schema, "description", "Pagination belongs in this nested filter as page and pageSize; top-level request page fields are not accepted by /reports/detailed.")
+  end
+
+  if (props = schema_properties(doc, "AttendanceReportRequest"))
+    strict_date_description = "Strict RFC3339 UTC timestamp with milliseconds, for example 2018-11-01T00:00:00.000Z."
+    %w[dateRangeStart dateRangeEnd].each do |field|
+      next unless props[field].is_a?(Hash)
+
+      props[field]["description"] = strict_date_description
+      props[field]["example"] = field == "dateRangeStart" ? "2018-11-01T00:00:00.000Z" : "2018-11-30T23:59:59.999Z"
+    end
+  end
+
+  if (op = operation_for(doc, "/workspaces/{workspaceId}/holidays/in-period", "get"))
+    Array(op["parameters"]).each do |param|
+      next unless param.is_a?(Hash) && param["in"] == "query" && param["name"] == "assigned-to"
+
+      append_text!(param, "description", "This value is a user ID; user-group IDs are not supported and may produce a misleading 403.")
+    end
+  end
+
   if (props = schema_properties(doc, "SummaryReportResponse"))
     props.delete("chart")
     props["donutChart"] = {
