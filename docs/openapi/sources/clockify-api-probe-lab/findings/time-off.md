@@ -12,6 +12,10 @@
 | POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/policies | 201 | live probe 2026-06-22 (Leftovers:0) |
 | PATCH | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/policies/{policyId} | 200 | live probe 2026-06-22 (Leftovers:0) |
 | DELETE | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/policies/{policyId} | 200 | live probe 2026-06-22 (Leftovers:0) |
+| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment | 201 | live probe 2026-08-05 (Leftovers:0) |
+| GET | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment/user/{userId}/policy/{policyId} | 200 | live probe 2026-08-05 |
+| PUT | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId} | 204 | live probe 2026-08-05 (Leftovers:0) |
+| DELETE | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId} | 200 | live probe 2026-08-05 (Leftovers:0) |
 
 ## Request headers (no secrets)
 - X-Api-Key: [REDACTED]
@@ -173,3 +177,20 @@ one created time-off request was rejected, not left pending).
 | PUT | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId} | 200 | live-probe 2026-08-04/05, policy 696fd7f25dd6c5510bafa772 round-tripped exactly |
 | POST | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests | 200 | live-probe 2026-08-04/05, id 6a728134c11f13fa07553ee1 |
 | PATCH | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId} | 200 | live-probe 2026-08-04/05, PENDING->REJECTED on the request above |
+
+## Balance assignments (live probe 2026-08-05)
+
+A balance assignment is the per-(user, policy) balance record. Probed against
+the sacrificial workspace through a freshly created policy, so the pre-read was
+empty and the create/act/verify/cleanup cycle left no residue.
+
+- `POST /time-off/balance/assignment` answers 201 with an **empty body** and is
+  **additive**: against an existing assignment (balance 0.0 / accrued 3.0) a
+  create of `balance: 2` kept the same assignment id and moved accrued to 5.0; a
+  second identical create moved it to 7.0. Against a user with no assignment it
+  created one. The id is therefore only obtainable from a read-back.
+- `PUT …/{balanceAssignmentId}/user/{userId}/policy/{policyId}` answers 204 and
+  applies `balanceChange` as a **delta**, not a replacement value. `-4` moved
+  accrued 7.0 back to 3.0.
+- `DELETE …` answers **200** (the official spec says 204) and requires a note in
+  the request body; `{}` returns 400 `{"message":"Note field can't be empty.","code":501}`.

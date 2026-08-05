@@ -204,13 +204,13 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/time-entries.md",
-      "bytes": 3379,
-      "sha256": "b6b249229601e8fadbb8149a420a54578f0ec2f9c69e261a166d96ac689e03b9"
+      "bytes": 3508,
+      "sha256": "300a99816822cd19d8d56b3e0c61fda620c58073089e515f2c894d7367d26790"
     },
     {
       "path": "clockify-api-probe-lab/findings/time-off.md",
-      "bytes": 9809,
-      "sha256": "391cadf648385a896eac49a345f942618af92fe0bac5edc522ce7ec3cf39b7d5"
+      "bytes": 11491,
+      "sha256": "761575ec82097a39b4cc78c142e0d0571f8261515cd1055689c37f61a95e302c"
     },
     {
       "path": "clockify-api-probe-lab/findings/user-groups.md",

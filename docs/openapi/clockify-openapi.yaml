@@ -9388,10 +9388,14 @@ paths:
                 type: array
           description: OK
       x-clockify-evidence:
+      - live-success
       - probe-fragment
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/time-entries/batch |
+        200 | live probe 2026-08-05 (read-only batch lookup) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -9404,6 +9408,7 @@ paths:
           schemes:
           - ApiKeyAuth
       x-clockify-source-files:
+      - clockify-api-probe-lab/findings/time-entries.md
       - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
   "/workspaces/{workspaceId}/time-entries/invoiced":
     patch:
@@ -9698,10 +9703,14 @@ paths:
         '201':
           description: Created
       x-clockify-evidence:
+      - live-success
       - probe-fragment
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment
+        | 201 | live probe 2026-08-05 (Leftovers:0) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -9714,6 +9723,7 @@ paths:
           schemes:
           - ApiKeyAuth
       x-clockify-source-files:
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
   "/workspaces/{workspaceId}/time-off/balance/assignment/user/{userId}/policy/{policyId}":
     get:
@@ -9762,10 +9772,14 @@ paths:
                 type: array
           description: OK
       x-clockify-evidence:
+      - live-success
       - probe-fragment
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment/user/{userId}/policy/{policyId}
+        | 200 | live probe 2026-08-05 |"
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -9778,6 +9792,7 @@ paths:
           schemes:
           - ApiKeyAuth
       x-clockify-source-files:
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
   "/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}":
     put:
@@ -9835,10 +9850,14 @@ paths:
         '204':
           description: No Content
       x-clockify-evidence:
+      - live-success
       - probe-fragment
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}
+        | 204 | live probe 2026-08-05 (Leftovers:0) |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -9851,6 +9870,7 @@ paths:
           schemes:
           - ApiKeyAuth
       x-clockify-source-files:
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
     delete:
       tags:
@@ -9907,10 +9927,14 @@ paths:
         '200':
           description: OK
       x-clockify-evidence:
+      - live-success
       - probe-fragment
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /api/v1/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}
+        | 200 | live probe 2026-08-05 (Leftovers:0) |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -9923,6 +9947,7 @@ paths:
           schemes:
           - ApiKeyAuth
       x-clockify-source-files:
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
   "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}":
     get:
@@ -24162,7 +24187,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: d80fdc19dd5a4e680955b400f0438fbe884bbede866009e64da7399f97288cc3
+    sha256: f40b9e64b656aa3093ab6c7ae2554161eaa5333cd0ef39f6d1935108f018c5c1
     files: 102
   sourcePrecedence:
   - live/probe findings metadata
