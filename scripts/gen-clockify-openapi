@@ -440,13 +440,21 @@ end
 def status_bucket(status, text)
   lowered = text.to_s.downcase
   return "live-success" if status && status >= 200 && status < 300
-  # 4xx with "No static resource" upstream body means the path itself
-  # does not exist (Clockify error code 3000). That's not a workspace-
-  # state limit; treat as fully unsupported / phantom so callers can
-  # decide to quarantine the path. The /cap/ keyword used to match
-  # /scheduling/capacity by accident — narrow it to whole words.
-  return "unsupported" if status && [400, 404, 405, 409, 415, 422].include?(status) &&
-                          lowered.match?(/no static resource|"code":\s*3000/)
+  # 405 means the path EXISTS and the verb does not. Clockify returns
+  # code:3000 for this as well as for an absent path, so bucket 405
+  # separately before the absent-path test below; otherwise a live route
+  # documented under the wrong verb reads as a phantom and invites a
+  # wrong PHANTOM_PATHS entry. The distinguishing wire signal is the
+  # `allow` response header, which lists the verbs the path does serve.
+  return "method-not-allowed" if status == 405
+  # 4xx with the "No static resource" upstream message means the path
+  # itself does not exist. Match the MESSAGE, not the bare code:3000,
+  # which Clockify reuses for wrong-verb responses. Treat as fully
+  # unsupported / phantom so callers can decide to quarantine the path.
+  # The /cap/ keyword used to match /scheduling/capacity by accident —
+  # narrow it to whole words.
+  return "unsupported" if status && [400, 404, 409, 415, 422].include?(status) &&
+                          lowered.match?(/no static resource/)
   return "workspace-state-limited" if lowered.match?(/archive|active|workspace-state|in-use|\bcap-skipped\b|\bcap\s|\blimit\b/)
   return "permission-gated" if lowered.match?(/permission|plan|membership|owner|forbidden|not allowed|requires/)
   return "unsupported" if status && [400, 404, 405, 409, 415, 422].include?(status)
@@ -1822,7 +1830,9 @@ class Merger
     return "live-success" if buckets.include?("live-success")
     return "workspace-state-limited" if buckets.include?("workspace-state-limited")
     return "permission-gated" if buckets.include?("permission-gated")
-    return "unsupported" if buckets.include?("unsupported")
+    # A wrong-verb 405 is as unsupported as an absent path for callers; the
+    # separate bucket exists so evidence readers can tell the two apart.
+    return "unsupported" if buckets.include?("unsupported") || buckets.include?("method-not-allowed")
     return "unit-only" if buckets.include?("unit-only")
     return "probe-documented" if evidence.any? { |entry| entry.to_s.start_with?("probe") }
 
