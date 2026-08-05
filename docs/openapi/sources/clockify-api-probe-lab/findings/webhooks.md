@@ -110,3 +110,19 @@ to `live-success`. Fixtures are documentary.
 | POST | api.clockify.me | /workspaces/{workspaceId}/webhooks | 201 | live-probe 2026-06-21 (documentary) |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId} | 200 | live-probe 2026-06-21 (documentary) |
 | DELETE | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId} | 200 | live-probe 2026-06-21 (documentary) |
+
+## Token rotation + wrong-verb logs duplicate (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+`PATCH .../webhooks/{webhookId}/token` rotates `authToken` with an empty
+body; verified the returned token differs from the pre-rotation token.
+Created a disposable webhook, rotated its token, then deleted it —
+Leftovers: 0. Separately: `GET .../webhooks/{webhookId}/logs` is a phantom
+wrong-verb duplicate quarantined in `PHANTOM_PATHS` (the real, already
+`live-success` operation is `POST .../webhooks/{webhookId}/logs`,
+`getWebhookLogs`/`searchLogs` — GET/PUT/PATCH/DELETE all return 405 with
+`Allow: POST`). See `scripts/gen-clockify-openapi`'s `PHANTOM_PATHS` comment
+for the full method-sweep evidence.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| PATCH | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId}/token | 200 | live-probe 2026-08-04/05, disposable webhook 6a727f9fa231b34fe832f111, deleted at teardown |

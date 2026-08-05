@@ -200,3 +200,20 @@ Fixtures are documentary + gitignored.
 | GET | api.clockify.me | /workspaces/{workspaceId}/invoices | 200 | fixtures/live-shape/invoices-list.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/invoices/settings | 200 | fixtures/live-shape/invoices-settings.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/payments | 200 | fixtures/live-shape/invoices-payments.json |
+
+## Items-import + payment-delete promotion (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+`POST .../items/import` against a real UNSENT invoice with a date range and
+project filter that matched no time entries returned 200 as a true no-op
+(the invoice's `items` array was verified byte-identical before/after — the
+operation is real, just found nothing to import for that filter). For
+`deleteInvoicePayment`, added a disposable payment via
+`POST .../invoices/{invoiceId}/payments` (not itself in this promotion —
+already `live-success`) then deleted it; the invoice's `status`/`paid`/
+`balance` fields were verified to return to their exact pre-probe values
+(status UNSENT, paid null, balance 105800) after the delete. Leftovers: 0.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/items/import | 200 | live-probe 2026-08-04/05, invoice 67ffca525a6fed41be1ed912, true no-op verified |
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId} | 200 | live-probe 2026-08-04/05, invoice fully restored to pre-probe state |

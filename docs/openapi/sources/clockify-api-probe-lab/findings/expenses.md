@@ -306,3 +306,15 @@ fixture is documentary + gitignored.
 | Method | Host | Path | Status | Fixture |
 |---|---|---|---|---|
 | POST | api.clockify.me | /workspaces/{workspaceId}/expenses | 201 | fixtures/expenses/expense-create-multipart.json |
+
+## Receipt-download read-side promotion (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+`GET .../expenses/{expenseId}/files/{fileId}` read-only against a real
+pre-existing expense with an attached receipt (`fileId` is the literal
+string Clockify stores, e.g. `<24-hex>valid_image.png`, not a bare
+ObjectId) — returned the raw PNG bytes with
+`content-type: application/octet-stream`. No mutation, nothing to clean up.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| GET | api.clockify.me | /workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId} | 200 | live-probe 2026-08-04/05, expense 6a125f52b7d6cf8aba5ec286, real PNG bytes returned |

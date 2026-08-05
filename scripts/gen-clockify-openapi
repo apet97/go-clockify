@@ -605,7 +605,33 @@ PHANTOM_PATHS = [
   ["patch",  "/workspaces/{workspaceId}/time-off/requests/{requestId}/status"],
   #     Token rotation has exactly one live path: PATCH .../webhooks/{id}/token
   #     (400 on a fake id). The generateNewToken sub-path is absent.
-  ["patch", "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken"]
+  ["patch", "/workspaces/{workspaceId}/webhooks/{webhookId}/generateNewToken"],
+  # ---- 2026-08-04/05 clockify-ts-sdk Slice-1 live adjudication (sandbox
+  #      65b382b606de527a7ee2b60e; see clockify-ts-sdk
+  #      spec/evidence/discrepancies.md) ----
+  #
+  # PATCH /workspaces/{workspaceId}/time-entries/invoiced/bulk
+  # (markInvoicedBulk) — re-probed every method (GET/POST/PUT/PATCH/DELETE/
+  # OPTIONS) against a real workspace; all six returned 404
+  # {"message":"No static resource ...","code":3000}. Not a 405 with an
+  # Allow header pointing at a different verb — the path itself is unserved
+  # at every verb. The generated SDK exposed markInvoicedBulk but no CLI/MCP
+  # tool referenced it (confirmed before quarantine).
+  ["patch", "/workspaces/{workspaceId}/time-entries/invoiced/bulk"],
+  # GET /workspaces/{workspaceId}/webhooks/{webhookId}/logs — a wrong-verb
+  # duplicate. clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
+  # hand-wrote this path as `get:`, but the higher-priority
+  # realOPENAPI/WEBHOOKSOPENAPI.YAML already defines the SAME path as
+  # `post:` (operationId getWebhookLogs, kept as `searchLogs`,
+  # live-success). Because the merge keys on [method, path], the two
+  # verbs never collided as one operation to resolve by source priority —
+  # both survived as distinct operations. Live re-probe: GET/PUT/PATCH/
+  # DELETE all return 405 with `Allow: POST`; POST returns a real 200
+  # (structured log array) with a real webhook id, or a structured 400
+  # ("Webhook doesn't belong to Workspace") with a fake one. Only the
+  # POST operation is real; the GET is a phantom sibling that never had a
+  # live route.
+  ["get", "/workspaces/{workspaceId}/webhooks/{webhookId}/logs"]
 ].freeze
 
 def phantom_path?(method, path)
@@ -1182,12 +1208,24 @@ SDK_METHOD_NAMES = {
   # because Clockify's PATCH .../{id} accepts a `status` body). The
   # `*ForUser` variants are admin endpoints that act on another user's
   # entries; the un-suffixed verbs act on the caller's own.
+  #
+  # 2026-08-05: `submitWithType`/`submitForUserWithType` are newer,
+  # type-scoped (TIMESHEET/EXPENSE) siblings of `submit`/`submitForUser`,
+  # ingested from a live official-spec refresh (see clockify-ts-sdk
+  # spec/evidence/discrepancies.md). `submitWithType`'s path position
+  # collides at the HTTP routing level with the `updateStatus` PATCH
+  # above (Clockify can't route by name, only position), so its request
+  # parameter is canonicalized to `approvalRequestId` even though the
+  # value is a TIMESHEET/EXPENSE type enum, not an id -- see the comment
+  # on that parameter in openapi-fragments/surface-add-2026-08-05.yaml.
   ["get",    "/workspaces/{workspaceId}/approval-requests"]                                                  => {group: "approvals", name: "list"},
   ["post",   "/workspaces/{workspaceId}/approval-requests"]                                                  => {group: "approvals", name: "submit"},
   ["post",   "/workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval"]                    => {group: "approvals", name: "resubmit"},
   ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}"]                                   => {group: "approvals", name: "submitForUser"},
   ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval"]     => {group: "approvals", name: "resubmitForUser"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/users/{userId}/{type}"]                            => {group: "approvals", name: "submitForUserWithType"},
   ["patch",  "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}"]                              => {group: "approvals", name: "updateStatus"},
+  ["post",   "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}"]                              => {group: "approvals", name: "submitWithType"},
   # timeOff — admin view on /time-off/requests + the user-submission
   # endpoint scoped to a policy. The /time-off/requests POST is the
   # documented POST-as-list quirk (GET returns 405). The duplicate
@@ -1264,7 +1302,11 @@ SDK_METHOD_NAMES = {
   # not a dedicated /stop route. `duplicate` matches the explicit
   # /duplicate sub-route.
   ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced"]                                                 => {group: "timeEntries", name: "markInvoiced"},
-  ["patch",  "/workspaces/{workspaceId}/time-entries/invoiced/bulk"]                                            => {group: "timeEntries", name: "markInvoicedBulk"},
+  # markInvoicedBulk's naming-table row was removed 2026-08-05: the route
+  # (PATCH .../time-entries/invoiced/bulk) was quarantined in PHANTOM_PATHS
+  # above (every method 404s), and stamp_sdk_method_name! is looked up
+  # per-surviving-operation, never applied to a quarantined [method, path]
+  # key -- so the stale row was inert dead weight, not a live risk.
   ["get",    "/workspaces/{workspaceId}/time-entries/status/in-progress"]                                       => {group: "timeEntries", name: "listInProgress"},
   ["get",    "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "listForUser"},
   ["post",   "/workspaces/{workspaceId}/user/{userId}/time-entries"]                                            => {group: "timeEntries", name: "createForUser"},

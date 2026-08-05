@@ -126,3 +126,24 @@ documentary + gitignored.
 | GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/all | 200 | fixtures/live-shape/scheduling-assignments-all.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/projects/totals/{projectId} | 200 | fixtures/live-shape/scheduling-project-totals.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/users/{userId}/totals | 200 | fixtures/live-shape/scheduling-user-totals.json |
+
+## Recurring-assignment + publish write-CRUD promotion (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+Full create -> update -> changeRecurringPeriod -> copy -> publish -> delete
+round trip against the sacrificial sandbox (65b382b606de527a7ee2b60e). Created
+one recurring assignment (project `6a6b3ebb5e5bb14ab2c7506e`, a full month),
+shrank it to one week via update so `changeRecurringPeriod` (which rejects a
+span longer than one week — "Recurring assignment cannot be longer than one
+week") would accept `{repeat:true,weeks:1}`, copied it, published the covered
+date range, then deleted both the original and the copy. Net cleanup:
+0 leftover assignments (both `deleteRecurringAssignment` calls returned 200
+with the deleted resource body).
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/recurring | 201 | live-probe 2026-08-04, id 6a72804ac11f13fa07553384 |
+| PATCH | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId} | 200 | live-probe 2026-08-04, hoursPerDay 4->5, period shrunk to 1 week |
+| PUT | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId} | 200 | live-probe 2026-08-04, {repeat:true,weeks:1} accepted once the assignment's own span was <=1 week |
+| POST | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy | 200 | live-probe 2026-08-04, {userId,seriesUpdateOption:"THIS_ONE"} (enum is THIS_ONE/THIS_AND_FOLLOWING/ALL, not the guessed THIS/ALL), id 6a72809859e113bde6d4fea0 |
+| PUT | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/publish | 200 | live-probe 2026-08-04, {start,end,notifyUsers:false} over the assignments' date range, empty 200 body |
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId} | 200 | live-probe 2026-08-04, both the original and the copy deleted; 0 leftovers |

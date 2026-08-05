@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected the `POST /workspaces/{workspaceId}/shared-reports` (`saveSharedReportV1`
+  / `SharedReport.create`) response stamp from `201` to `200`. VERIFIED LIVE
+  2026-08-04 via a sandbox create-then-delete round trip (`Leftovers: 0`); the
+  probe-lab source had `201` while AIII's own definition of the same operation
+  already had the correct `200`, and probe-lab wins the source-priority merge.
+  Op count unchanged (163).
 - Corrected the curated expense-update multipart schema so `file` is optional
   while the create request keeps its existing required-field contract; added
   exact no-file and binary-file multipart encoder regressions.

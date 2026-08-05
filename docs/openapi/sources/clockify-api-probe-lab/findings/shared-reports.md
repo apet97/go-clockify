@@ -239,3 +239,20 @@ a follow-up list showed zero `sdk-live-probe` residue.
 | POST | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports | 200 | live-probe 2026-06-21 |
 | PUT | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports/{sharedReportId} | 200 | live-probe 2026-06-21 |
 | DELETE | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports/{sharedReportId} | 204 | live-probe 2026-06-21 |
+
+## OpenAPI encoding defect found and fixed (2026-08-04)
+
+`docs/openapi/sources/clockify-api-probe-lab/openapi.yaml`'s `post:` block for
+this path had stamped `responses: { '201': ... }` — contradicting this same
+findings file's own B.4 (2026-05-03) and re-probe (2026-06-21) rows above,
+both of which already recorded **200**. A third independent create-then-delete
+round trip from clockify-ts-sdk (`Leftovers: 0`) reconfirmed 200. This was a
+pure transcription defect between the evidence and the encoded spec — the
+evidence was always right, the YAML stamp was wrong. Corrected the source
+stamp to `200`; downstream in clockify-ts-sdk this had shipped as the one
+real success-code conflict against the official spec (which already had 200)
+in `docs/spec-diff-official.md`.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| POST | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports | 200 | live-probe 2026-08-04 (clockify-ts-sdk sandbox, id `6a727914d1acfc65ad40ff6a`, deleted same round trip) |

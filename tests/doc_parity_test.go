@@ -180,10 +180,23 @@ func TestGeneratedOpenAPIContractMeetsCoverageFloor(t *testing.T) {
 	// `archive-subpaths.projects-clients.phantom`,
 	// `time-off.requests.by-id.family-phantom` and
 	// `webhooks.generateNewToken.phantom`.
-	if got, want := len(contract.paths), 109; got < want {
+	// Round 4 (2026-08-04/05): 2 more ops quarantined from a clockify-ts-sdk
+	// Slice-1 live adjudication sweep over every unproven operation against
+	// the sacrificial sandbox (see the sibling repo's
+	// spec/evidence/discrepancies.md):
+	//   PATCH /workspaces/{workspaceId}/time-entries/invoiced/bulk
+	//     (markInvoicedBulk) -- every method (GET/POST/PUT/PATCH/DELETE/
+	//     OPTIONS) returned 404 "No static resource ...", code 3000. The
+	//     whole path disappears (108 paths), not just one operation.
+	//   GET   /workspaces/{workspaceId}/webhooks/{webhookId}/logs -- a
+	//     wrong-verb duplicate of the already-live-success POST at the
+	//     same path (getWebhookLogs/searchLogs); GET/PUT/PATCH/DELETE all
+	//     return 405 with Allow: POST. The path survives (POST is real);
+	//     only the operation count drops.
+	if got, want := len(contract.paths), 108; got < want {
 		t.Fatalf("OpenAPI path count shrank: got %d want at least %d", got, want)
 	}
-	if got, want := contract.operationCount(), 163; got < want {
+	if got, want := contract.operationCount(), 161; got < want {
 		t.Fatalf("OpenAPI operation count shrank: got %d want at least %d", got, want)
 	}
 

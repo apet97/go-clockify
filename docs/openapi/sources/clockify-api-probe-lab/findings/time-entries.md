@@ -35,3 +35,15 @@ documentary + gitignored.
 | Method | Host | Path | Status | Fixture |
 |---|---|---|---|---|
 | GET | api.clockify.me | /workspaces/{workspaceId}/time-entries/status/in-progress | 200 | fixtures/live-shape/time-entries-in-progress.json |
+
+## Bulk-delete-by-id promotion (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+`DELETE .../user/{userId}/time-entries?time-entry-ids=...` (repeated query
+param, one per id) against two disposable time entries created for this
+probe — both deleted in one call (200, returns the deleted entries), then
+verified gone via a follow-up GET on one of the ids (400, "Time entry
+doesn't belong to Workspace"). Self-cleaning by design; Leftovers: 0.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/user/{userId}/time-entries | 200 | live-probe 2026-08-04/05, entries 6a72825259e113bde6d50ff6 + 6a728252a231b34fe8330cf9, verified deleted |

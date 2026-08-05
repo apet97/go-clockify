@@ -119,8 +119,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/approval-requests.md",
-      "bytes": 660,
-      "sha256": "c87f09b1dd14e047a2641f28f41c7f610af98800b337d7c842fa6b149e90affa"
+      "bytes": 2136,
+      "sha256": "c8f80018599b9bfaaad3b3ab4d839aa7de2c81aecbb2fbb4cda6176cd627d2c2"
     },
     {
       "path": "clockify-api-probe-lab/findings/clients.md",
@@ -129,13 +129,18 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/custom-fields.md",
-      "bytes": 7277,
-      "sha256": "de7c8572ca3d641173ab6cfeb4560f7363c5431040dba3edeb3a552819493286"
+      "bytes": 8781,
+      "sha256": "ed7ebd66acf73c0d95c3a18243f56ad9b2299be148786cb8c1e866c9292beaac"
     },
     {
       "path": "clockify-api-probe-lab/findings/expenses.md",
-      "bytes": 12943,
-      "sha256": "57d8af9656526f43fef6d4f7c2a9893b903e57300d4676e3227d741ada9405d2"
+      "bytes": 13606,
+      "sha256": "b6dcc435ad86808e6a10724da90a494856b7aad44a72fa33013b5e89aa218cdc"
+    },
+    {
+      "path": "clockify-api-probe-lab/findings/files.md",
+      "bytes": 1092,
+      "sha256": "eb187f269122ac81ff5542e66f699164e60bd13946c68b73317ba658f0d4bb0f"
     },
     {
       "path": "clockify-api-probe-lab/findings/holidays.md",
@@ -144,8 +149,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/invoices.md",
-      "bytes": 8503,
-      "sha256": "df49390696c6efa73f2cf6da8c14aaa368481e55c160b1e4e43d660b440fd94b"
+      "bytes": 9655,
+      "sha256": "dac4c729e7e19250921948f612b481ab0b47e776842f751cf364d5f5951568dd"
     },
     {
       "path": "clockify-api-probe-lab/findings/live-promotion-2026-06-23-stragglers.md",
@@ -169,8 +174,8 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/projects.md",
-      "bytes": 1414,
-      "sha256": "6d8907c60b75d774e5923ebc66353103f2d3b398d5f0089f873680bf33dc4c97"
+      "bytes": 2128,
+      "sha256": "cce283642e769d461a0e0b51272dce2e56bdc60aaea672b9472e86a239588b35"
     },
     {
       "path": "clockify-api-probe-lab/findings/rates-and-reports.md",
@@ -179,13 +184,13 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/scheduling.md",
-      "bytes": 8445,
-      "sha256": "c1084f8e951fbe480da6321c9be26a068d7876c66997f5caf55f0da52cf80630"
+      "bytes": 10431,
+      "sha256": "a11e3143d0bc3b9979a9806080f38861d2068e1404155813cec937bec42cc346"
     },
     {
       "path": "clockify-api-probe-lab/findings/shared-reports.md",
-      "bytes": 20710,
-      "sha256": "531bf2426031ae5449776068859352cf6cba1f3659cd420b38eb35d2fa7ba733"
+      "bytes": 21750,
+      "sha256": "3efb7834a90c97d07b5e590e62fc4966154b341e165825e81166ec1872c1f79e"
     },
     {
       "path": "clockify-api-probe-lab/findings/tags.md",
@@ -199,13 +204,13 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/time-entries.md",
-      "bytes": 2679,
-      "sha256": "0751195308e98794c15169d7e7c1f4f7439541b97a84ef38e3997b5263e18819"
+      "bytes": 3379,
+      "sha256": "b6b249229601e8fadbb8149a420a54578f0ec2f9c69e261a166d96ac689e03b9"
     },
     {
       "path": "clockify-api-probe-lab/findings/time-off.md",
-      "bytes": 8114,
-      "sha256": "b34f45338da32632e2f71b8ce75c38b0e88cf01ad7060416ddb79bf97af1cbd3"
+      "bytes": 9809,
+      "sha256": "391cadf648385a896eac49a345f942618af92fe0bac5edc522ce7ec3cf39b7d5"
     },
     {
       "path": "clockify-api-probe-lab/findings/user-groups.md",
@@ -214,13 +219,13 @@
     },
     {
       "path": "clockify-api-probe-lab/findings/users.md",
-      "bytes": 966,
-      "sha256": "c38236d5e598a6990d2d895b25e4d2dae0a32856509d8e6631f3f495d96592ed"
+      "bytes": 1770,
+      "sha256": "6c02f7d056736814f43b001708ff9e31fd3f201cb64d9934dd038343e8cdd476"
     },
     {
       "path": "clockify-api-probe-lab/findings/webhooks.md",
-      "bytes": 7228,
-      "sha256": "ad431e43505bed5ae62addaef558f251acc5753bbf23109df5858548a1494e51"
+      "bytes": 8179,
+      "sha256": "606d72208bb5dc82e2e770d1ae70f1ab36b476631487c00bf5a0f27c734ac81c"
     },
     {
       "path": "clockify-api-probe-lab/findings/workspaces.md",
@@ -333,6 +338,11 @@
       "sha256": "868bebe6c8021d0666ce9dad172b82fa752a34f7de3bc3a15fea1187aa25fcdd"
     },
     {
+      "path": "clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml",
+      "bytes": 20132,
+      "sha256": "7f0dcb8322af4c1614b05932c1257b9edbb8ff5ca5fd2a0588ab5fd38a80f0a3"
+    },
+    {
       "path": "clockify-api-probe-lab/openapi-fragments/tags-a.yaml",
       "bytes": 3371,
       "sha256": "917d2f9042382d753ae99782c55458a5e1930115dfa044673e1d049d6c306701"
@@ -404,8 +414,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi.yaml",
-      "bytes": 129555,
-      "sha256": "a471a1269af443d0fc1c6436d703ead9bca95d25b20a05dad5620c9c03ec4e6e"
+      "bytes": 129987,
+      "sha256": "dca44d31cc01b042d21edb48b237112bc635a6be562a77ae44e99f9c84e560ac"
     },
     {
       "path": "clockify-api-probe-lab/openapi_scheduling.yaml",
@@ -424,8 +434,8 @@
     },
     {
       "path": "realOPENAPI/APPROVALOPENAPI.YAML",
-      "bytes": 27189,
-      "sha256": "1e627bdeb645cdb793073128622dd23eeb02c1986b509d312cff6555bbe87bfd"
+      "bytes": 27283,
+      "sha256": "9a74a5d36f5ff28f2f79fedd8ac981ab7e8adbe1977f55f05a7b785e874c2f15"
     },
     {
       "path": "realOPENAPI/ATTENDANCEANDTIMEREPORTSOPENAPI.yaml",

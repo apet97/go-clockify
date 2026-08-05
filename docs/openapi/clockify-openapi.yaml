@@ -18,6 +18,7 @@ security:
 tags:
 - name: Approvals
 - name: Audit Log Report
+- name: Balance Assignment
 - name: Balances
 - name: Clients
 - name: Custom Fields
@@ -83,12 +84,18 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /file/image | 200 | live-probe 2026-08-04/05 |"
+      - "| POST | api.clockify.me | /file/image | 200 | live-probe 2026-08-04/05,
+        https://avatar.cake.com/2026-08-05-00-23-33.e41c07c6bd5feb1be43cec378019046fbdc9400a0774019d15ae0a491d33759c.cake-avatar.png
+        |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -106,6 +113,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/files.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
   "/shared-reports/{sharedReportId}":
@@ -933,17 +941,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/approval-requests/users/{userId}
+        | 201 | live-probe 2026-08-04/05, id 6a72818f59e113bde6d50a70, withdrawn at
+        teardown |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/APPROVALDOC.md
+      - clockify-api-probe-lab/findings/approval-requests.md
       - clockify-api-probe-lab/openapi-fragments/approvals-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/APPROVALOPENAPI.YAML
@@ -1018,7 +1032,149 @@ paths:
       - realOPENAPI/APPROVALOPENAPI.YAML
       x-fern-sdk-group-name: approvals
       x-fern-sdk-method-name: resubmitForUser
+  "/workspaces/{workspaceId}/approval-requests/users/{userId}/{type}":
+    post:
+      tags:
+      - Approvals
+      summary: Submit approval request for user with type
+      operationId: createApprovalForOtherWithType
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: dd087fe2dd087fe2dd087fe2
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: dd087fe2dd087fe2dd087fe2
+          type: string
+      - description: Represents user identifier across the system.
+        example: ff9ef6ffff9ef6ffff9ef6ff
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: ff9ef6ffff9ef6ffff9ef6ff
+          type: string
+      - description: Represents approval request type.
+        example: timesheet
+        in: path
+        name: type
+        required: true
+        schema:
+          enum:
+          - TIMESHEET
+          - EXPENSE
+          - TIMESHEET_AND_EXPENSE
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateApprovalRequestNoType"
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ApprovalRequestDtoV1"
+          description: Created
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - write
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: submitForUserWithType
   "/workspaces/{workspaceId}/approval-requests/{approvalRequestId}":
+    post:
+      tags:
+      - Approvals
+      summary: Submit approval request with type
+      operationId: createApprrovalRequest_1
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: dd087fe2dd087fe2dd087fe2
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: dd087fe2dd087fe2dd087fe2
+          type: string
+      - description: |-
+          Represents approval request type. Named approvalRequestId (not
+          type) because this path position collides, at the HTTP routing
+          level, with PATCH .../approval-requests/{approvalRequestId}
+          (updateApprovalStatus) -- Clockify's own server cannot
+          distinguish the two by name, only by position. GOCLMCP's
+          canonicalize_path_params forces one canonical parameter name per
+          position across sibling methods; pre-naming it here keeps the
+          TIMESHEET/EXPENSE enum intact instead of losing it to the
+          generic path-parameter synthesis in ensure_path_parameters!.
+        example: timesheet
+        in: path
+        name: approvalRequestId
+        required: true
+        schema:
+          enum:
+          - TIMESHEET
+          - EXPENSE
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateApprovalRequestNoType"
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ApprovalRequestDtoV1"
+          description: Created
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - write
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
+      x-fern-sdk-group-name: approvals
+      x-fern-sdk-method-name: submitWithType
     patch:
       tags:
       - Approvals
@@ -2753,12 +2909,17 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-fragment
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| GET | api.clockify.me | /workspaces/{workspaceId}/expenses/{expenseId}/files/{fileId}
+        | 200 | live-probe 2026-08-04/05, expense 6a125f52b7d6cf8aba5ec286, real PNG
+        bytes returned |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Expense amount and total fields preserve upstream scaling observed in live
@@ -2768,6 +2929,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/expenses.md
       - clockify-api-probe-lab/openapi-fragments/expenses-b.yaml
       - realOPENAPI/EXPENSESOPEAPI.YAML
       x-fern-sdk-group-name: expenses
@@ -4121,11 +4283,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/items/import
+        | 200 | live-probe 2026-08-04/05, invoice 67ffca525a6fed41be1ed912, true no-op
+        verified |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
@@ -4135,6 +4302,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/invoices.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
       x-fern-sdk-group-name: invoiceItems
@@ -4344,11 +4512,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/invoices/{invoiceId}/payments/{paymentId}
+        | 200 | live-probe 2026-08-04/05, invoice fully restored to pre-probe state
+        |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
       - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
@@ -4358,6 +4531,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/INVOICEDOC.md
       - clockify-api-probe-lab/Invoiceopenapi.yaml
+      - clockify-api-probe-lab/findings/invoices.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/INVOICESOPEAPI.YAML
       x-fern-sdk-group-name: invoicePayments
@@ -5200,10 +5374,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/projects/from-template
+        | 200 | live-probe 2026-08-04/05, template 6a6b3ebb5e5bb14ab2c7506e, new project
+        6a7282b5c11f13fa07554a5b archived+deleted at teardown |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -5220,6 +5399,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/PROJECTSDOC.md
+      - clockify-api-probe-lab/findings/projects.md
       - realOPENAPI/PROJECTSOPENAPI.YAML
       x-fern-sdk-group-name: projects
       x-fern-sdk-method-name: createFromTemplate
@@ -5781,18 +5961,24 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - '| PATCH | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}
+        | 200 | live-probe 2026-08-04/05, field 676565254925651c83ddfef0 on project
+        6a6b3ebb5e5bb14ab2c7506e, {status:"VISIBLE",defaultValue} |'
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CUSTOMFIELDSDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
       x-fern-sdk-group-name: customFields
@@ -5852,20 +6038,25 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
       x-clockify-notes:
       - Archive active projects or clients before delete where Clockify requires it.
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId}
+        | 200 | live-probe 2026-08-04/05, project.customFields absent afterward (restored)
+        |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/CUSTOMFIELDSDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/CFSOPEANI.YAML
       x-fern-sdk-group-name: customFields
@@ -8073,15 +8264,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/publish
+        | 200 | live-probe 2026-08-04, {start,end,notifyUsers:false} over the assignments'
+        date range, empty 200 body |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
       x-fern-sdk-group-name: scheduling
       x-fern-sdk-method-name: publish
@@ -8150,17 +8347,22 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/recurring
+        | 201 | live-probe 2026-08-04, id 6a72804ac11f13fa07553384 |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
@@ -8228,16 +8430,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}
+        | 200 | live-probe 2026-08-04, hoursPerDay 4->5, period shrunk to 1 week |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
       x-fern-sdk-group-name: scheduling
@@ -8288,17 +8495,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/recurring/{assignmentId}
+        | 200 | live-probe 2026-08-04, both the original and the copy deleted; 0 leftovers
+        |"
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
@@ -8359,15 +8572,21 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/series/{assignmentId}
+        | 200 | live-probe 2026-08-04, {repeat:true,weeks:1} accepted once the assignment's
+        own span was <=1 week |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
   "/workspaces/{workspaceId}/scheduling/assignments/user-filter/totals":
     post:
@@ -8563,17 +8782,23 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - probe-openapi
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - '| POST | api.clockify.me | /workspaces/{workspaceId}/scheduling/assignments/{assignmentId}/copy
+        | 200 | live-probe 2026-08-04, {userId,seriesUpdateOption:"THIS_ONE"} (enum
+        is THIS_ONE/THIS_AND_FOLLOWING/ALL, not the guessed THIS/ALL), id 6a'
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/SCHEDULINGDOC.md
+      - clockify-api-probe-lab/findings/scheduling.md
       - clockify-api-probe-lab/openapi-fragments/scheduling-b.yaml
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/SCHEDULINGOPENAPI.YAML
@@ -8644,6 +8869,7 @@ paths:
         Body uses `type` (not `reportType`) and `filter` (singular,
         not `filters`). Required nested keys:
         `filter.exportType`, `filter.dateRangeStart`, `filter.dateRangeEnd`.
+        `filter.summaryFilter.groups` is required when `type: SUMMARY`.
       operationId: postWorkspacesWorkspaceIdSharedReports
       servers:
       - url: https://reports.api.clockify.me/v1
@@ -8663,12 +8889,12 @@ paths:
               "$ref": "#/components/schemas/SharedReportCreate"
         required: true
       responses:
-        '201':
+        '200':
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/SharedReport"
-          description: Created
+          description: OK
       x-clockify-evidence:
       - aiii-openapi
       - live-success
@@ -8682,6 +8908,9 @@ paths:
         are used for list/create/update/delete.
       - "| POST | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports
         | 200 | live-probe 2026-06-21 |"
+      - "| POST | reports.api.clockify.me | /v1/workspaces/{workspaceId}/shared-reports
+        | 200 | live-probe 2026-08-04 (clockify-ts-sdk sandbox, id `6a727914d1acfc65ad40ff6a`,
+        deleted same round trip) |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -9124,6 +9353,58 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
       x-fern-sdk-method-name: create
+  "/workspaces/{workspaceId}/time-entries/batch":
+    post:
+      tags:
+      - Time Entries
+      summary: Get multiple time entries on a workspace
+      operationId: getMultipleTimeEntries
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents a workspace identifier across the system.
+          example: 64a687e29ae1f428e7ebe303
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/GetTimeEntriesByIdsRequest"
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  "$ref": "#/components/schemas/TimeEntryWithRatesDtoV1"
+                type: array
+          description: OK
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - write
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
   "/workspaces/{workspaceId}/time-entries/invoiced":
     patch:
       tags:
@@ -9178,48 +9459,6 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
       x-fern-sdk-method-name: markInvoiced
-  "/workspaces/{workspaceId}/time-entries/invoiced/bulk":
-    patch:
-      tags:
-      - Time Entries
-      summary: Mark time entries as invoiced (bulk)
-      operationId: patchWorkspacesWorkspaceIdTimeEntriesInvoicedBulk
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                ids:
-                  items:
-                    type: string
-                  type: array
-                invoiced:
-                  type: boolean
-              type: object
-        required: true
-      responses:
-        '200':
-          description: OK
-      x-clockify-evidence:
-      - probe-openapi
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - write
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi.yaml
-      x-fern-sdk-group-name: timeEntries
-      x-fern-sdk-method-name: markInvoicedBulk
   "/workspaces/{workspaceId}/time-entries/status/in-progress":
     get:
       tags:
@@ -9430,6 +9669,261 @@ paths:
       - clockify-api-probe-lab/openapi_timeentry.yaml
       x-fern-sdk-group-name: timeEntries
       x-fern-sdk-method-name: delete
+  "/workspaces/{workspaceId}/time-off/balance/assignment":
+    post:
+      tags:
+      - Balance Assignment
+      summary: Creates a new balance assignment for a user in policy
+      operationId: createBalanceAssignment
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateBalanceAssignmentV1Request"
+        required: true
+      responses:
+        '201':
+          description: Created
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - write
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
+  "/workspaces/{workspaceId}/time-off/balance/assignment/user/{userId}/policy/{policyId}":
+    get:
+      tags:
+      - Balance Assignment
+      summary: Get all balance assignments of a user in policy
+      operationId: getBalanceAssignmentsForUserAndPolicy
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      - description: Represents user identifier across the system.
+        example: 60f924bafdaf031696ec6218
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: 60f924bafdaf031696ec6218
+          type: string
+      - description: Represents policy identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: policyId
+        required: true
+        schema:
+          description: Represents policy identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      responses:
+        '200':
+          content:
+            "*/*":
+              schema:
+                items:
+                  "$ref": "#/components/schemas/BalanceAssignmentV1Dto"
+                type: array
+          description: OK
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - read
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
+  "/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}":
+    put:
+      tags:
+      - Balance Assignment
+      summary: Updates a specific balance assignment
+      operationId: updateBalanceAssignment
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      - description: Represents user identifier across the system.
+        example: 60f924bafdaf031696ec6218
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: 60f924bafdaf031696ec6218
+          type: string
+      - description: Represents policy identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: policyId
+        required: true
+        schema:
+          description: Represents policy identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      - description: Represents balance assignment identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: balanceAssignmentId
+        required: true
+        schema:
+          description: Represents balance assignment identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/UpdateBalanceAssignmentV1Request"
+        required: true
+      responses:
+        '204':
+          description: No Content
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - write
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
+    delete:
+      tags:
+      - Balance Assignment
+      summary: Deletes a specific balance assignment
+      operationId: deleteBalanceAssignment
+      security:
+      - ApiKeyAuth: []
+      - AddonTokenAuth: []
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      - description: Represents user identifier across the system.
+        example: 60f924bafdaf031696ec6218
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: 60f924bafdaf031696ec6218
+          type: string
+      - description: Represents policy identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: policyId
+        required: true
+        schema:
+          description: Represents policy identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      - description: Represents balance assignment identifier across the system.
+        example: 63034cd0cb0fb876a57e01d7
+        in: path
+        name: balanceAssignmentId
+        required: true
+        schema:
+          description: Represents balance assignment identifier across the system.
+          example: 63034cd0cb0fb876a57e01d7
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/DeleteBalanceAssignmentV1Request"
+        required: true
+      responses:
+        '200':
+          description: OK
+      x-clockify-evidence:
+      - probe-fragment
+      x-clockify-host: https://api.clockify.me/api/v1
+      x-clockify-live-status: probe-documented
+      x-clockify-mcp-tools: []
+      x-clockify-risk:
+      - destructive
+      x-clockify-security-aliases:
+        AddonTokenAuth:
+          headers: []
+          schemes:
+          - AddonKeyAuth
+        ApiKeyAuth:
+          headers: []
+          schemes:
+          - ApiKeyAuth
+      x-clockify-source-files:
+      - clockify-api-probe-lab/openapi-fragments/surface-add-2026-08-05.yaml
   "/workspaces/{workspaceId}/time-off/balance/policy/{policyId}":
     get:
       tags:
@@ -10202,10 +10696,17 @@ paths:
           description: OK
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}
+        | 200 | live-probe 2026-08-04/05, policy 696fd7f25dd6c5510bafa772 round-tripped
+        exactly |"
+      - Policy update payloads should preserve non-null automaticTimeEntryCreation
+        values observed from GET before PUT.
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -10221,12 +10722,10 @@ paths:
           - ApiKeyAuth
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/time-off.md
       - realOPENAPI/POLICIESOPENAPI.YAML
       x-fern-sdk-group-name: timeOffPolicies
       x-fern-sdk-method-name: update
-      x-clockify-notes:
-      - Policy update payloads should preserve non-null automaticTimeEntryCreation
-        values observed from GET before PUT.
     patch:
       tags:
       - Time Off Policies
@@ -10498,11 +10997,15 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}
+        | 200 | live-probe 2026-08-04/05, PENDING->REJECTED on the request above |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -10519,6 +11022,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEOFFDOC.md
+      - clockify-api-probe-lab/findings/time-off.md
       - clockify-api-probe-lab/inveoice+Balance+Policies+TimeOff.yaml
       - realOPENAPI/TIMEOFFOPENAPI.YAML
     delete:
@@ -10626,10 +11130,14 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| POST | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests
+        | 200 | live-probe 2026-08-04/05, id 6a728134c11f13fa07553ee1 |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -10646,6 +11154,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEOFFDOC.md
+      - clockify-api-probe-lab/findings/time-off.md
       - realOPENAPI/TIMEOFFOPENAPI.YAML
       x-fern-sdk-group-name: timeOff
       x-fern-sdk-method-name: submitForUser
@@ -11504,9 +12013,14 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| DELETE | api.clockify.me | /workspaces/{workspaceId}/user/{userId}/time-entries
+        | 200 | live-probe 2026-08-04/05, entries 6a72825259e113bde6d50ff6 + 6a728252a231b34fe8330cf9,
+        verified deleted |"
       x-clockify-risk:
       - destructive
       x-clockify-security-aliases:
@@ -11523,6 +12037,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/TIMEENTRYDOC.md
+      - clockify-api-probe-lab/findings/time-entries.md
   "/workspaces/{workspaceId}/user/{userId}/time-entries/{timeEntryId}/duplicate":
     post:
       tags:
@@ -12044,11 +12559,16 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-fragment
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/users/{userId} | 200
+        | live-probe 2026-08-04/05, member 67a60c1ee0109319d0b9dfc5, ACTIVE then restored
+        to INACTIVE |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -12065,6 +12585,7 @@ paths:
       x-clockify-source-files:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/WORKSPACESDOC.md
+      - clockify-api-probe-lab/findings/users.md
       - clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
       - realOPENAPI/WORKSPACEOPENAPI.YAML
   "/workspaces/{workspaceId}/users/{userId}/cost-rate":
@@ -12222,12 +12743,17 @@ paths:
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
+      - live-success
       - probe-openapi
       - probe-supplement
       - real-openapi
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PUT | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value
+        | 201 | live-probe 2026-08-04/05, disposable USER field 6a727fc35518f43816fabaf4,
+        deleted at teardown |"
       x-clockify-risk:
       - write
       x-clockify-security-aliases:
@@ -12245,6 +12771,7 @@ paths:
       - AIII/openapi.yaml
       - clockify-api-probe-lab/USERDOC.md
       - clockify-api-probe-lab/USEREXPENCUSTOMFIED.yaml
+      - clockify-api-probe-lab/findings/custom-fields.md
       - clockify-api-probe-lab/openapi.yaml
       - realOPENAPI/USEROPENAPI.YAML
   "/workspaces/{workspaceId}/users/{userId}/hourly-rate":
@@ -12884,56 +13411,6 @@ paths:
       x-fern-sdk-group-name: webhooks
       x-fern-sdk-method-name: delete
   "/workspaces/{workspaceId}/webhooks/{webhookId}/logs":
-    get:
-      tags:
-      - Webhooks
-      summary: "(DOCUMENTED BUT BROKEN) Get logs for a webhook"
-      description: |
-        WEBHOOKDOC.md lists this endpoint. Live response is HTTP 405
-        "Request method 'GET' is not supported" (code 3000) on every
-        variant probed:
-          - no params
-          - page=1&size=10
-          - page=1&size=200
-          - page=999&size=10
-          - page=0&size=10
-          - page=1&size=-1
-        The endpoint either requires a different verb or has been
-        retired. go-clockify should NOT model this as a working GET
-        and any handler that calls it will fail in prod.
-      operationId: getWorkspacesWorkspaceIdWebhooksWebhookIdLogs
-      security:
-      - ApiKeyAuth: []
-      - AddonTokenAuth: []
-      parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: webhookId
-        required: true
-        schema:
-          type: string
-      responses:
-        '405':
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/WebhooksErrorEnvelope"
-          description: Method Not Allowed (observed on every variant)
-      x-clockify-evidence:
-      - probe-fragment
-      x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
-      x-clockify-mcp-tools: []
-      x-clockify-risk:
-      - read
-      x-clockify-source-files:
-      - clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
-      x-fern-sdk-group-name: webhooks
-      x-fern-sdk-method-name: listLogs
     post:
       tags:
       - Webhooks
@@ -13159,14 +13636,20 @@ paths:
             PATCH is supported).
       x-clockify-evidence:
       - aiii-openapi
+      - live-success
       - probe-fragment
       x-clockify-host: https://api.clockify.me/api/v1
-      x-clockify-live-status: probe-documented
+      x-clockify-live-status: live-success
       x-clockify-mcp-tools: []
+      x-clockify-notes:
+      - "| PATCH | api.clockify.me | /workspaces/{workspaceId}/webhooks/{webhookId}/token
+        | 200 | live-probe 2026-08-04/05, disposable webhook 6a727f9fa231b34fe832f111,
+        deleted at teardown |"
       x-clockify-risk:
       - write
       x-clockify-source-files:
       - AIII/openapi.yaml
+      - clockify-api-probe-lab/findings/webhooks.md
       - clockify-api-probe-lab/openapi-fragments/webhooks-b.yaml
       x-fern-sdk-group-name: webhooks
       x-fern-sdk-method-name: updateToken
@@ -14044,6 +14527,15 @@ components:
       - TAX1TAX2
       - NONE
       type: string
+    ApprovalDateRangeDto:
+      properties:
+        end:
+          format: date-time
+          type: string
+        start:
+          format: date-time
+          type: string
+      type: object
     ApprovalPeriod:
       description: Approval period. It must match the workspace approval period setting.
       enum:
@@ -14078,6 +14570,9 @@ components:
           "$ref": "#/components/schemas/ApprovalRequestOwnerDtoV1"
         status:
           "$ref": "#/components/schemas/ApprovalRequestStatusDtoV1"
+        type:
+          description: Represents approval request type.
+          type: string
         workspaceId:
           description: Represents workspace identifier across the system.
           type: string
@@ -14783,6 +15278,25 @@ components:
       required:
       - defaultEntities
       type: object
+    BalanceAssignmentV1Dto:
+      properties:
+        accrued:
+          format: double
+          type: number
+        balance:
+          format: double
+          type: number
+        dateRange:
+          "$ref": "#/components/schemas/ApprovalDateRangeDto"
+        id:
+          type: string
+        policyId:
+          type: string
+        userId:
+          type: string
+        workspaceId:
+          type: string
+      type: object
     BalanceDtoV1:
       description: Balance data transfer object.
       properties:
@@ -15367,6 +15881,65 @@ components:
       required:
       - seriesUpdateOption
       - userId
+      type: object
+    CreateApprovalRequestNoType:
+      properties:
+        period:
+          description: Specifies the approval period. It has to match the workspace
+            approval period setting.
+          enum:
+          - WEEKLY
+          - SEMI_MONTHLY
+          - MONTHLY
+          example: MONTHLY
+          type: string
+        periodStart:
+          description: Specifies an approval period start date in yyyy-MM-ddThh:mm:ssZ
+            format.
+          example: '2020-01-01T00:00:00.000Z'
+          minLength: 1
+          type: string
+      required:
+      - periodStart
+      type: object
+    CreateBalanceAssignmentV1Request:
+      properties:
+        balance:
+          description: Represents the amount of balance to be created
+          example: 12
+          format: double
+          maximum: 10000
+          type: number
+        dateRange:
+          "$ref": "#/components/schemas/DateRangeV1Request"
+        note:
+          description: Represents note attached to updating balance.
+          example: Bonus days added.
+          type: string
+        policyId:
+          description: Represents the identifier of the policy where the balance assignment
+            will be created
+          example: 63034cd0cb0fb876a57e93ad
+          minLength: 1
+          type: string
+        userIds:
+          description: Represents list of users' identifiers whose balance is to be
+            updated.
+          example:
+          - 5b715448b079875110792222
+          - 5b715448b079875110791111
+          items:
+            description: Represents list of users' identifiers whose balance is to
+              be updated.
+            example: '["5b715448b079875110792222","5b715448b079875110791111"]'
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: true
+      required:
+      - balance
+      - policyId
+      - userIds
       type: object
     CreateCustomFieldRequest:
       example:
@@ -16032,6 +16605,19 @@ components:
           format: date-time
           type: string
       type: object
+    DateRangeV1Request:
+      description: Represents the date range when the new balance will be usable.
+        If null, this will default to the current day until the same day next year.
+      properties:
+        end:
+          description: Provide end date in YYYY-MM-DD format.
+          example: '2021-12-25'
+          type: string
+        start:
+          description: Provide start date in YYYY-MM-DD format.
+          example: '2021-12-23'
+          type: string
+      type: object
     DateTimeInterval:
       properties:
         duration:
@@ -16077,6 +16663,16 @@ components:
           type: string
         taskId:
           type: string
+      type: object
+    DeleteBalanceAssignmentV1Request:
+      properties:
+        note:
+          description: Represents a note explaining balance deletion
+          example: All balance used.
+          minLength: 1
+          type: string
+      required:
+      - note
       type: object
     DetailedFilter:
       additionalProperties: false
@@ -17480,6 +18076,27 @@ components:
       - ONE_YEAR_RANGE_REPORTS
       - SHARED_REPORTS
       type: string
+    GetTimeEntriesByIdsRequest:
+      properties:
+        hydrated:
+          default: false
+          description: Flag to set whether to include additional information of time
+            entries or not.
+          example: false
+          type: boolean
+        timeEntryIds:
+          description: Represents time entry identifiers across the system.
+          example:
+          - 64c777ddd3fcab07cfbb210c
+          items:
+            description: Represents time entry identifiers across the system.
+            example: '["64c777ddd3fcab07cfbb210c"]'
+            type: string
+          minItems: 1
+          type: array
+      required:
+      - timeEntryIds
+      type: object
     GroupOneDto:
       additionalProperties: true
       properties:
@@ -18981,6 +19598,19 @@ components:
           type: integer
         currency:
           "$ref": "#/components/schemas/Currency"
+      type: object
+    OpenapiRateDto2:
+      description: Represents hourly rate object.
+      properties:
+        amount:
+          description: Represents an amount as integer.
+          example: 10500
+          format: int32
+          type: integer
+        currency:
+          description: Represents a currency.
+          example: USD
+          type: string
       type: object
     PageableCollectionLogBinDocumentDto:
       properties:
@@ -20799,6 +21429,75 @@ components:
     TimeEntryUpdate:
       allOf:
       - "$ref": "#/components/schemas/TimeEntryCreate"
+    TimeEntryWithRatesDtoV1:
+      properties:
+        billable:
+          default: false
+          description: Indicates whether a time entry is billable.
+          type: boolean
+        costRate:
+          "$ref": "#/components/schemas/OpenapiRateDto2"
+        customFieldValues:
+          description: Represents a list of custom field value objects.
+          items:
+            "$ref": "#/components/schemas/CustomFieldValueDtoV1"
+          type: array
+        description:
+          description: Represents time entry description.
+          example: This is a sample time entry description.
+          type: string
+        hourlyRate:
+          "$ref": "#/components/schemas/OpenapiRateDto2"
+        id:
+          description: Represents time entry identifier across the system.
+          example: 64c777ddd3fcab07cfbb210c
+          type: string
+        isLocked:
+          default: false
+          description: Represents whether time entry is locked for modification.
+          type: boolean
+        kioskId:
+          description: Represents kiosk identifier across the system.
+          example: 94c777ddd3fcab07cfbb210d
+          type: string
+        projectId:
+          description: Represents project identifier across the system.
+          example: 25b687e29ae1f428e7ebe123
+          type: string
+        tagIds:
+          description: Represents a list of tag identifiers across the system.
+          example:
+          - 321r77ddd3fcab07cfbb567y
+          - 44x777ddd3fcab07cfbb88f
+          items:
+            description: Represents a list of tag identifiers across the system.
+            example: '["321r77ddd3fcab07cfbb567y","44x777ddd3fcab07cfbb88f"]'
+            type: string
+          type: array
+        taskId:
+          description: Represents task identifier across the system.
+          example: 54m377ddd3fcab07cfbb432w
+          type: string
+        timeInterval:
+          "$ref": "#/components/schemas/TimeIntervalDtoV1"
+        type:
+          description: Represents a time entry type enum.
+          enum:
+          - REGULAR
+          - BREAK
+          - HOLIDAY
+          - TIME_OFF
+          example: BREAK
+          type: string
+        userId:
+          description: Represents user identifier across the system.
+          example: 5a0ab5acb07987125438b60f
+          type: string
+        workspaceId:
+          description: Represents workspace identifier across the system.
+          example: 64a687e29ae1f428e7ebe303
+          type: string
+      type: object
     TimeEstimateDto:
       additionalProperties: false
       description: Represents a project time estimate object.
@@ -21209,6 +21908,24 @@ components:
           "$ref": "#/components/schemas/ApprovalRequestState"
       required:
       - state
+      type: object
+    UpdateBalanceAssignmentV1Request:
+      properties:
+        balanceChange:
+          description: Represents the change in balance of the balance assignment
+          example: 12
+          format: double
+          maximum: 10000
+          minimum: -10000
+          type: number
+        dateRange:
+          "$ref": "#/components/schemas/DateRangeV1Request"
+        note:
+          description: Represents note attached to updating balance.
+          example: Bonus days added.
+          type: string
+      required:
+      - balanceChange
       type: object
     UpdateBalanceRequest:
       example:
@@ -22664,15 +23381,6 @@ components:
         message:
           type: string
       type: object
-    WebhooksErrorEnvelope:
-      properties:
-        code:
-          description: Clockify domain code, NOT HTTP status. Mostly 501 even when
-            HTTP is 400.
-          type: integer
-        message:
-          type: string
-      type: object
     WebhooksWebhook2:
       properties:
         authToken:
@@ -23454,8 +24162,8 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 7657ef34e8e88b2b0db28a516f782f3de287eb0619f977cb4b1343d30f095479
-    files: 100
+    sha256: d80fdc19dd5a4e680955b400f0438fbe884bbede866009e64da7399f97288cc3
+    files: 102
   sourcePrecedence:
   - live/probe findings metadata
   - realOPENAPI operation bodies
@@ -23518,6 +24226,9 @@ x-clockify-source-quarantine:
 - source: clockify-api-probe-lab/openapi-fragments/user-groups-a.yaml
   reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/user-groups/{groupId}/users):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi-fragments/webhooks-a.yaml
+  reason: 'phantom path quarantined (GET /workspaces/{workspaceId}/webhooks/{webhookId}/logs):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi-fragments/workspaces-b.yaml
   reason: 'phantom path quarantined (PUT /workspaces/{workspaceId}): see PHANTOM_PATHS
     in scripts/gen-clockify-openapi'
@@ -23550,6 +24261,9 @@ x-clockify-source-quarantine:
     PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/policies/{policyId}/archive):
+    see PHANTOM_PATHS in scripts/gen-clockify-openapi'
+- source: clockify-api-probe-lab/openapi.yaml
+  reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/time-entries/invoiced/bulk):
     see PHANTOM_PATHS in scripts/gen-clockify-openapi'
 - source: clockify-api-probe-lab/openapi.yaml
   reason: 'phantom path quarantined (PATCH /workspaces/{workspaceId}/time-off/requests/{requestId}/status):

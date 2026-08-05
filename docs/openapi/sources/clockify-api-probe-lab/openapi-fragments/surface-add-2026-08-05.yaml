@@ -1,0 +1,596 @@
+components:
+  schemas:
+    # ApprovalRequestDtoV1 (+ its Creator/Owner/Status sub-schemas) and
+    # DateRangeDto already exist at a higher-priority source
+    # (realOPENAPI/APPROVALOPENAPI.YAML, loaded before probe-fragments).
+    # Deliberately NOT redeclared here: this fragment's operations
+    # reference them by bare $ref, which the merger's rewrite_refs!
+    # passes through unchanged when a name isn't declared in the current
+    # file (see rewrite_ref in scripts/gen-clockify-openapi), so they
+    # resolve against the existing global schema instead of forking a
+    # near-duplicate SurfaceAdd2026...-prefixed copy. The 2026-08-05
+    # ingestion did add a real missing `type` field to the upstream
+    # ApprovalRequestDtoV1 (see that file's own history) -- that fix
+    # belongs there, not as a shadow copy here.
+    BalanceAssignmentV1Dto:
+      properties:
+        accrued:
+          format: double
+          type: number
+        balance:
+          format: double
+          type: number
+        dateRange:
+          $ref: '#/components/schemas/DateRange'
+        id:
+          type: string
+        policyId:
+          type: string
+        userId:
+          type: string
+        workspaceId:
+          type: string
+      type: object
+    CreateApprovalRequestNoType:
+      properties:
+        period:
+          description: Specifies the approval period. It has to match the workspace approval period setting.
+          enum:
+          - WEEKLY
+          - SEMI_MONTHLY
+          - MONTHLY
+          example: MONTHLY
+          type: string
+        periodStart:
+          description: Specifies an approval period start date in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2020-01-01T00:00:00.000Z'
+          minLength: 1
+          type: string
+      required:
+      - periodStart
+      type: object
+    CreateBalanceAssignmentV1Request:
+      properties:
+        balance:
+          description: Represents the amount of balance to be created
+          example: 12
+          format: double
+          maximum: 10000
+          type: number
+        dateRange:
+          $ref: '#/components/schemas/DateRangeV1Request'
+        note:
+          description: Represents note attached to updating balance.
+          example: Bonus days added.
+          type: string
+        policyId:
+          description: Represents the identifier of the policy where the balance assignment will be created
+          example: 63034cd0cb0fb876a57e93ad
+          minLength: 1
+          type: string
+        userIds:
+          description: Represents list of users' identifiers whose balance is to be updated.
+          example:
+          - 5b715448b079875110792222
+          - 5b715448b079875110791111
+          items:
+            description: Represents list of users' identifiers whose balance is to be updated.
+            example: '["5b715448b079875110792222","5b715448b079875110791111"]'
+            type: string
+          minItems: 1
+          type: array
+          uniqueItems: true
+      required:
+      - balance
+      - policyId
+      - userIds
+      type: object
+    CustomFieldValueDtoV1:
+      description: Represents a list of custom field value objects.
+      properties:
+        customFieldId:
+          description: Represents custom field identifier across the system.
+          example: 5e4117fe8c625f38930d57b7
+          type: string
+        name:
+          description: Represents custom field name.
+          example: TIN
+          type: string
+        timeEntryId:
+          description: Represents time entry identifier across the system.
+          example: 64c777ddd3fcab07cfbb210c
+          type: string
+        type:
+          description: Represents a custom field value source type.
+          example: WORKSPACE
+          type: string
+        value:
+          description: Represents custom field value.
+          example: 20231211-12345
+          type: object
+      type: object
+    DateRange:
+      properties:
+        end:
+          format: date-time
+          type: string
+        start:
+          format: date-time
+          type: string
+      type: object
+    DateRangeV1Request:
+      description: Represents the date range when the new balance will be usable. If null, this will default
+        to the current day until the same day next year.
+      properties:
+        end:
+          description: Provide end date in YYYY-MM-DD format.
+          example: '2021-12-25'
+          type: string
+        start:
+          description: Provide start date in YYYY-MM-DD format.
+          example: '2021-12-23'
+          type: string
+      type: object
+    DeleteBalanceAssignmentV1Request:
+      properties:
+        note:
+          description: Represents a note explaining balance deletion
+          example: All balance used.
+          minLength: 1
+          type: string
+      required:
+      - note
+      type: object
+    GetTimeEntriesByIdsRequest:
+      properties:
+        hydrated:
+          default: false
+          description: Flag to set whether to include additional information of time entries or not.
+          example: false
+          type: boolean
+        timeEntryIds:
+          description: Represents time entry identifiers across the system.
+          example:
+          - 64c777ddd3fcab07cfbb210c
+          items:
+            description: Represents time entry identifiers across the system.
+            example: '["64c777ddd3fcab07cfbb210c"]'
+            type: string
+          minItems: 1
+          type: array
+      required:
+      - timeEntryIds
+      type: object
+    # RateDtoV1 already exists at a higher-priority source (multiple
+    # realOPENAPI/*.YAML files); left as a bare $ref for the same
+    # pass-through reason documented above.
+    TimeEntryWithRatesDtoV1:
+      properties:
+        billable:
+          default: false
+          description: Indicates whether a time entry is billable.
+          type: boolean
+        costRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        customFieldValues:
+          description: Represents a list of custom field value objects.
+          items:
+            $ref: '#/components/schemas/CustomFieldValueDtoV1'
+          type: array
+        description:
+          description: Represents time entry description.
+          example: This is a sample time entry description.
+          type: string
+        hourlyRate:
+          $ref: '#/components/schemas/RateDtoV1'
+        id:
+          description: Represents time entry identifier across the system.
+          example: 64c777ddd3fcab07cfbb210c
+          type: string
+        isLocked:
+          default: false
+          description: Represents whether time entry is locked for modification.
+          type: boolean
+        kioskId:
+          description: Represents kiosk identifier across the system.
+          example: 94c777ddd3fcab07cfbb210d
+          type: string
+        projectId:
+          description: Represents project identifier across the system.
+          example: 25b687e29ae1f428e7ebe123
+          type: string
+        tagIds:
+          description: Represents a list of tag identifiers across the system.
+          example:
+          - 321r77ddd3fcab07cfbb567y
+          - 44x777ddd3fcab07cfbb88f
+          items:
+            description: Represents a list of tag identifiers across the system.
+            example: '["321r77ddd3fcab07cfbb567y","44x777ddd3fcab07cfbb88f"]'
+            type: string
+          type: array
+        taskId:
+          description: Represents task identifier across the system.
+          example: 54m377ddd3fcab07cfbb432w
+          type: string
+        timeInterval:
+          $ref: '#/components/schemas/TimeIntervalDtoV1'
+        type:
+          description: Represents a time entry type enum.
+          enum:
+          - REGULAR
+          - BREAK
+          - HOLIDAY
+          - TIME_OFF
+          example: BREAK
+          type: string
+        userId:
+          description: Represents user identifier across the system.
+          example: 5a0ab5acb07987125438b60f
+          type: string
+        workspaceId:
+          description: Represents workspace identifier across the system.
+          example: 64a687e29ae1f428e7ebe303
+          type: string
+      type: object
+    TimeIntervalDtoV1:
+      description: Represents a time interval object.
+      properties:
+        duration:
+          description: Represents a time duration.
+          example: '8000'
+          type: string
+        end:
+          description: Represents an end date in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2021-01-01T00:00:00Z'
+          format: date-time
+          type: string
+        start:
+          description: Represents a start date in yyyy-MM-ddThh:mm:ssZ format.
+          example: '2020-01-01T00:00:00Z'
+          format: date-time
+          type: string
+      type: object
+    UpdateBalanceAssignmentV1Request:
+      properties:
+        balanceChange:
+          description: Represents the change in balance of the balance assignment
+          example: 12
+          format: double
+          maximum: 10000
+          minimum: -10000
+          type: number
+        dateRange:
+          $ref: '#/components/schemas/DateRangeV1Request'
+        note:
+          description: Represents note attached to updating balance.
+          example: Bonus days added.
+          type: string
+      required:
+      - balanceChange
+      type: object
+info:
+  title: clockify surface-add 2026-08-05
+  version: '1.0'
+openapi: 3.0.1
+paths:
+  /v1/workspaces/{workspaceId}/approval-requests/users/{userId}/{type}:
+    post:
+      operationId: createApprovalForOtherWithType
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: dd087fe2dd087fe2dd087fe2
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: dd087fe2dd087fe2dd087fe2
+          type: string
+      - description: Represents user identifier across the system.
+        example: ff9ef6ffff9ef6ffff9ef6ff
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: ff9ef6ffff9ef6ffff9ef6ff
+          type: string
+      - description: Represents approval request type.
+        example: timesheet
+        in: path
+        name: type
+        required: true
+        schema:
+          enum:
+          - TIMESHEET
+          - EXPENSE
+          - TIMESHEET_AND_EXPENSE
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApprovalRequestNoType'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+          description: Created
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Submit approval request for user with type
+      tags:
+      - Approval
+  /v1/workspaces/{workspaceId}/approval-requests/{type}:
+    post:
+      operationId: createApprrovalRequest_1
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: dd087fe2dd087fe2dd087fe2
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: dd087fe2dd087fe2dd087fe2
+          type: string
+      - description: |-
+          Represents approval request type. Named approvalRequestId (not
+          type) because this path position collides, at the HTTP routing
+          level, with PATCH .../approval-requests/{approvalRequestId}
+          (updateApprovalStatus) -- Clockify's own server cannot
+          distinguish the two by name, only by position. GOCLMCP's
+          canonicalize_path_params forces one canonical parameter name per
+          position across sibling methods; pre-naming it here keeps the
+          TIMESHEET/EXPENSE enum intact instead of losing it to the
+          generic path-parameter synthesis in ensure_path_parameters!.
+        example: timesheet
+        in: path
+        name: approvalRequestId
+        required: true
+        schema:
+          enum:
+          - TIMESHEET
+          - EXPENSE
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApprovalRequestNoType'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestDtoV1'
+          description: Created
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Submit approval request with type
+      tags:
+      - Approval
+  /v1/workspaces/{workspaceId}/time-entries/batch:
+    post:
+      operationId: getMultipleTimeEntries
+      parameters:
+      - description: Represents a workspace identifier across the system.
+        example: 64a687e29ae1f428e7ebe303
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents a workspace identifier across the system.
+          example: 64a687e29ae1f428e7ebe303
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetTimeEntriesByIdsRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TimeEntryWithRatesDtoV1'
+                type: array
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Get multiple time entries on a workspace
+      tags:
+      - Time entry
+  /v1/workspaces/{workspaceId}/time-off/balance/assignment:
+    post:
+      operationId: createBalanceAssignment
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBalanceAssignmentV1Request'
+        required: true
+      responses:
+        '201':
+          description: Created
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Creates a new balance assignment for a user in policy
+      tags:
+      - Balance Assignment
+  /v1/workspaces/{workspaceId}/time-off/balance/assignment/user/{userId}/policy/{policyId}:
+    get:
+      operationId: getBalanceAssignmentsForUserAndPolicy
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      - description: Represents user identifier across the system.
+        example: 60f924bafdaf031696ec6218
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: 60f924bafdaf031696ec6218
+          type: string
+      - description: Represents policy identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: policyId
+        required: true
+        schema:
+          description: Represents policy identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      responses:
+        '200':
+          content:
+            '*/*':
+              schema:
+                items:
+                  $ref: '#/components/schemas/BalanceAssignmentV1Dto'
+                type: array
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Get all balance assignments of a user in policy
+      tags:
+      - Balance Assignment
+  /v1/workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}:
+    delete:
+      operationId: deleteBalanceAssignment
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      - description: Represents user identifier across the system.
+        example: 60f924bafdaf031696ec6218
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: 60f924bafdaf031696ec6218
+          type: string
+      - description: Represents policy identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: policyId
+        required: true
+        schema:
+          description: Represents policy identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      - description: Represents balance assignment identifier across the system.
+        example: 63034cd0cb0fb876a57e01d7
+        in: path
+        name: balanceAssignmentId
+        required: true
+        schema:
+          description: Represents balance assignment identifier across the system.
+          example: 63034cd0cb0fb876a57e01d7
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteBalanceAssignmentV1Request'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Deletes a specific balance assignment
+      tags:
+      - Balance Assignment
+    put:
+      operationId: updateBalanceAssignment
+      parameters:
+      - description: Represents workspace identifier across the system.
+        example: 60f91b3ffdaf031696ec61a8
+        in: path
+        name: workspaceId
+        required: true
+        schema:
+          description: Represents workspace identifier across the system.
+          example: 60f91b3ffdaf031696ec61a8
+          type: string
+      - description: Represents user identifier across the system.
+        example: 60f924bafdaf031696ec6218
+        in: path
+        name: userId
+        required: true
+        schema:
+          description: Represents user identifier across the system.
+          example: 60f924bafdaf031696ec6218
+          type: string
+      - description: Represents policy identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: policyId
+        required: true
+        schema:
+          description: Represents policy identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      - description: Represents balance assignment identifier across the system.
+        example: 63034cd0cb0fb876a57e93ad
+        in: path
+        name: balanceAssignmentId
+        required: true
+        schema:
+          description: Represents balance assignment identifier across the system.
+          example: 63034cd0cb0fb876a57e93ad
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBalanceAssignmentV1Request'
+        required: true
+      responses:
+        '204':
+          description: No Content
+      security:
+      - ApiKeyAuth: []
+      - AddonKeyAuth: []
+      summary: Updates a specific balance assignment
+      tags:
+      - Balance Assignment

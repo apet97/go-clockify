@@ -150,3 +150,26 @@ documentary + gitignored.
 | GET | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId} | 200 | fixtures/live-shape/time-off-policy-get.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/policy/{policyId} | 200 | fixtures/live-shape/time-off-balance-policy.json |
 | GET | api.clockify.me | /workspaces/{workspaceId}/time-off/balance/user/{userId} | 200 | fixtures/live-shape/time-off-balance-user.json |
+
+## Write-side promotion (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+`updateTimeOffPolicy` is a full-REPLACE PUT, not a merge — sending only the
+required fields silently wipes `userIds`/`userGroupIds`/`negativeBalance` on
+a real policy. Round-tripped the exact prior state back afterward (verified
+byte-for-byte against the pre-PUT GET). `users`/`userGroups` in the request
+body are `ContainsFilter`-shaped (`{contains,ids,status}`), not plain arrays
+(a plain array 400s: `Cannot deserialize value of type ContainsFilter from
+Array value`). `createTimeOffRequestForUser`'s body needs `days` on the
+nested period alongside `start`/`end` (a 400 without it: "Value for number
+of days is not allowed"). `changeTimeOffRequestStatus`'s earlier probe-only
+403 ("Access Denied") on a bogus policy+request pair was a request-not-found
+artifact, not a real permission gate — against a REAL pending request it
+returns 200 and the status genuinely transitions (PENDING -> REJECTED
+verified in the response body). Leftovers: 0 (policy restored exactly; the
+one created time-off request was rejected, not left pending).
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| PUT | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId} | 200 | live-probe 2026-08-04/05, policy 696fd7f25dd6c5510bafa772 round-tripped exactly |
+| POST | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests | 200 | live-probe 2026-08-04/05, id 6a728134c11f13fa07553ee1 |
+| PATCH | api.clockify.me | /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId} | 200 | live-probe 2026-08-04/05, PENDING->REJECTED on the request above |

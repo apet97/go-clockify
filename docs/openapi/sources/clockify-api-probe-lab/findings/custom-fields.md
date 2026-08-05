@@ -133,3 +133,22 @@ Fixtures are documentary.
 | POST | api.clockify.me | /workspaces/{workspaceId}/custom-fields | 201 | live-probe 2026-06-21 (documentary) |
 | PUT | api.clockify.me | /workspaces/{workspaceId}/custom-fields/{customFieldId} | 200 | live-probe 2026-06-21 (documentary) |
 | DELETE | api.clockify.me | /workspaces/{workspaceId}/custom-fields/{customFieldId} | 204 | live-probe 2026-06-21 (documentary) |
+
+## Project/user-scoped custom-field promotion (2026-08-04/05, clockify-ts-sdk Slice 1)
+
+`POST /custom-fields` only accepts `entityType` in `{TIMEENTRY, USER}` — there
+is no PROJECT `entityType`; project-scoped custom fields are an existing
+TIMEENTRY field's per-project `status`/`defaultValue` assignment via the
+project-scoped PATCH/DELETE below. The `status` enum is
+`{INACTIVE, VISIBLE, INVISIBLE}` (not the guessed ACTIVE/INACTIVE). Full
+round trip: created a disposable USER custom field, set its value for a real
+user, then deleted the field (also verified the value cleared); assigned an
+existing TIMEENTRY field to a real project via PATCH, then removed the
+assignment via DELETE and verified the project's `customFields` key was
+absent again, matching its pre-probe state. Leftovers: 0.
+
+| Method | Host | Path | Status | Fixture |
+|---|---|---|---|---|
+| PATCH | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId} | 200 | live-probe 2026-08-04/05, field 676565254925651c83ddfef0 on project 6a6b3ebb5e5bb14ab2c7506e, {status:"VISIBLE",defaultValue} |
+| DELETE | api.clockify.me | /workspaces/{workspaceId}/projects/{projectId}/custom-fields/{customFieldId} | 200 | live-probe 2026-08-04/05, project.customFields absent afterward (restored) |
+| PUT | api.clockify.me | /workspaces/{workspaceId}/users/{userId}/custom-field/{customFieldId}/value | 201 | live-probe 2026-08-04/05, disposable USER field 6a727fc35518f43816fabaf4, deleted at teardown |

@@ -3088,14 +3088,20 @@ paths:
         Body uses `type` (not `reportType`) and `filter` (singular,
         not `filters`). Required nested keys:
         `filter.exportType`, `filter.dateRangeStart`, `filter.dateRangeEnd`.
+        `filter.summaryFilter.groups` is required when `type: SUMMARY`.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/SharedReportCreate" }
       responses:
-        '201':
-          description: Created
+        # VERIFIED LIVE 2026-08-04 (sandbox create-then-delete round trip,
+        # Leftovers: 0): the create endpoint returns 200, not 201. The
+        # AIII source already had this right (saveSharedReportV1 -> 200);
+        # this probe-lab stamp was the wrong one, and probe-lab wins the
+        # source-priority merge over AIII for any operation it defines.
+        '200':
+          description: OK
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SharedReport" }
