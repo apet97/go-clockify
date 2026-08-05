@@ -9,6 +9,8 @@ var documentedWriteRoutes = map[string]bool{
 	"POST /workspaces/{workspaceId}/approval-requests/resubmit-entries-for-approval":                true,
 	"POST /workspaces/{workspaceId}/approval-requests/users/{userId}":                               true,
 	"POST /workspaces/{workspaceId}/approval-requests/users/{userId}/resubmit-entries-for-approval": true,
+	"POST /workspaces/{workspaceId}/approval-requests/users/{userId}/{type}":                        true,
+	"POST /workspaces/{workspaceId}/approval-requests/{approvalRequestId}":                          true,
 
 	// audit-log
 	"POST /workspaces/{workspaceId}/audit-log": true,
@@ -112,21 +114,24 @@ var documentedWriteRoutes = map[string]bool{
 	// time-entries
 	"DELETE /workspaces/{workspaceId}/time-entries/{timeEntryId}": true,
 	"PATCH /workspaces/{workspaceId}/time-entries/invoiced":       true,
-	"PATCH /workspaces/{workspaceId}/time-entries/invoiced/bulk":  true,
 	"POST /workspaces/{workspaceId}/time-entries":                 true,
+	"POST /workspaces/{workspaceId}/time-entries/batch":           true,
 	"PUT /workspaces/{workspaceId}/time-entries/{timeEntryId}":    true,
 
 	// time-off
-	"DELETE /workspaces/{workspaceId}/time-off/policies/{policyId}":                       true,
-	"DELETE /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":  true,
-	"PATCH /workspaces/{workspaceId}/time-off/balance/policy/{policyId}":                  true,
-	"PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}":                        true,
-	"PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":   true,
-	"POST /workspaces/{workspaceId}/time-off/policies":                                    true,
-	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/requests":                true,
-	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests": true,
-	"POST /workspaces/{workspaceId}/time-off/requests":                                    true,
-	"PUT /workspaces/{workspaceId}/time-off/policies/{policyId}":                          true,
+	"DELETE /workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}": true,
+	"DELETE /workspaces/{workspaceId}/time-off/policies/{policyId}":                                                      true,
+	"DELETE /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":                                 true,
+	"PATCH /workspaces/{workspaceId}/time-off/balance/policy/{policyId}":                                                 true,
+	"PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}":                                                       true,
+	"PATCH /workspaces/{workspaceId}/time-off/policies/{policyId}/requests/{requestId}":                                  true,
+	"POST /workspaces/{workspaceId}/time-off/balance/assignment":                                                         true,
+	"POST /workspaces/{workspaceId}/time-off/policies":                                                                   true,
+	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/requests":                                               true,
+	"POST /workspaces/{workspaceId}/time-off/policies/{policyId}/users/{userId}/requests":                                true,
+	"POST /workspaces/{workspaceId}/time-off/requests":                                                                   true,
+	"PUT /workspaces/{workspaceId}/time-off/balance/assignment/{balanceAssignmentId}/user/{userId}/policy/{policyId}":    true,
+	"PUT /workspaces/{workspaceId}/time-off/policies/{policyId}":                                                         true,
 
 	// user
 	"DELETE /workspaces/{workspaceId}/user/{userId}/time-entries":                       true,
