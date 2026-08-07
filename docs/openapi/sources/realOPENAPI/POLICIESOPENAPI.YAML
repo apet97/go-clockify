@@ -561,15 +561,6 @@ components:
           type: boolean
           default: false
           description: Indicates whether the policy is applied to future new users.
-        hasExpiration:
-          type: boolean
-          default: false
-          description: |
-            Indicates whether the policy balance should have expiration.
-            Accepted on write, but not echoed back: no sandbox policy response
-            has ever carried this key (0 of 50 rows on 2026-08-06, re-checked on
-            2026-08-07). Treat it as request-only until a workspace is observed
-            emitting it.
         id:
           type: string
           description: Represents policy identifier across the system.

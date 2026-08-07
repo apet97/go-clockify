@@ -11382,6 +11382,10 @@ paths:
       parameters:
       - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       - "$ref": "#/components/parameters/OpenapiUserId"
+      - in: query
+        name: from-entry
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -11436,6 +11440,10 @@ paths:
         required: true
         schema:
           type: string
+      - in: query
+        name: hydrated
+        schema:
+          type: boolean
       requestBody:
         content:
           application/json:
@@ -19569,15 +19577,6 @@ components:
           default: false
           description: Indicates whether the policy is applied to future new users.
           type: boolean
-        hasExpiration:
-          default: false
-          description: |
-            Indicates whether the policy balance should have expiration.
-            Accepted on write, but not echoed back: no sandbox policy response
-            has ever carried this key (0 of 50 rows on 2026-08-06, re-checked on
-            2026-08-07). Treat it as request-only until a workspace is observed
-            emitting it.
-          type: boolean
         icon:
           description: Policy icon.
           enum:
@@ -24081,7 +24080,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: fcecd1a18b35b1b0981905b4061c8a3339933f8ea4191f215dc8b2f1c46b46d4
+    sha256: 2c68460130cfeb18a34fc4ea2284d515358ea0fdc63399186d7e7c6d5e41bffc
     files: 102
   sourcePrecedence:
   - live/probe findings metadata

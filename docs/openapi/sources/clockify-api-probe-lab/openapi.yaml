@@ -1963,6 +1963,10 @@ paths:
     post:
       tags: [TimeEntry]
       summary: Create time entry for a user
+      parameters:
+        # VERIFIED LIVE 2026-08-07: accepted (201). Seeds the new entry from an
+        # existing one; an unknown id answers 404 with an empty body.
+        - { name: from-entry, in: query, schema: { type: string } }
       requestBody:
         required: true
         content:

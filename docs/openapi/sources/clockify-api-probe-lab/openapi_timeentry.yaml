@@ -343,6 +343,15 @@ paths:
                 $ref: '#/components/schemas/TimeEntry'
     put:
       summary: Bulk edit time entries
+      parameters:
+        # VERIFIED LIVE 2026-08-07: honoured. With hydrated=true the rows gain
+        # `project`, `task`, `tags`, `user`, `kiosk` and `hourlyRate` alongside
+        # the *Id fields. The 200 keeps the base shape, matching how the list
+        # GET on this path already models the same parameter.
+        - name: hydrated
+          in: query
+          schema:
+            type: boolean
       requestBody:
         required: true
         content:

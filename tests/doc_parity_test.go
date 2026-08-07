@@ -363,11 +363,16 @@ func TestGeneratedOpenAPITimeOffPolicyResponseCarriesReplacementFields(t *testin
 	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 	policySchema := openAPIObjectSchema(t, schemas, "Policy")
 	for field, fieldType := range map[string]string{
-		"color":         "string",
-		"hasExpiration": "boolean",
-		"icon":          "string",
+		"color": "string",
+		"icon":  "string",
 	} {
 		assertOpenAPIPropertyType(t, "Policy", policySchema, field, fieldType)
+	}
+	// `hasExpiration` is accepted on write but never echoed back (0 of 50
+	// sandbox rows on 2026-08-06, re-checked 2026-08-07, and no official
+	// response example carries it either), so it is a request-only field.
+	if _, declared := policySchema["properties"].(map[string]interface{})["hasExpiration"]; declared {
+		t.Fatalf("Policy response must not declare hasExpiration; it is request-only")
 	}
 	icon := openAPIProperty(t, "Policy", policySchema, "icon")
 	wantIconEnum := []string{
