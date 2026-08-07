@@ -1175,6 +1175,68 @@ components:
         count:   { type: integer }
         reports: { type: array, items: { $ref: "#/components/schemas/SharedReport" } }
 
+    SharedReportData:
+      # VERIFIED LIVE 2026-08-07 (create -> bare GET -> delete round trip):
+      # the bare GET returns the RENDERED report, not the shared-report
+      # list item. The saved configuration comes back under `filters`;
+      # `SharedReport` (the list/create shape) shares no top-level key with it.
+      type: object
+      description: |
+        Rendered payload of a shared report. `groupOne` and `donutChart` rows
+        follow the saved report's grouping, so their properties vary; the keys
+        listed here are the ones observed for a SUMMARY report grouped by
+        project.
+      properties:
+        totals:
+          type: array
+          items: { $ref: "#/components/schemas/SharedReportTotals" }
+        donutChart:
+          type: array
+          items: { type: object, additionalProperties: true }
+        groupTotals:
+          type: object
+          properties:
+            groupOneTotalCount: { type: integer }
+        groupOne:
+          type: array
+          items: { $ref: "#/components/schemas/SharedReportGroupRow" }
+        filters:
+          type: object
+          additionalProperties: true
+          description: |
+            The saved shared-report configuration echoed back. Carries every
+            `SharedReport` field plus the viewer presentation context
+            (`workspace`, `subscriptionPlan`, `isAdminOrOwner`, `timezone`,
+            `dateFormat`, `timeFormat`, `weekStart`, `originalLang`, `notes`).
+
+    SharedReportTotals:
+      type: object
+      additionalProperties: true
+      properties:
+        _id:                    { type: string }
+        totalTime:              { type: integer, description: "Seconds." }
+        totalBillableTime:      { type: integer, description: "Seconds." }
+        entriesCount:           { type: integer }
+        numOfCurrencies:        { type: integer }
+        totalAmount:            { type: number }
+        amounts:                { type: array, items: { type: object, additionalProperties: true } }
+        totalAmountByCurrency:  { type: array, items: { type: object, additionalProperties: true } }
+
+    SharedReportGroupRow:
+      type: object
+      additionalProperties: true
+      properties:
+        _id:                   { type: string }
+        name:                  { type: string }
+        nameLowerCase:         { type: string }
+        color:                 { type: string, nullable: true }
+        clientName:            { type: string, nullable: true }
+        currency:              { type: string }
+        workspaceCurrencyCode: { type: string }
+        duration:              { type: integer, description: "Seconds." }
+        amount:                { type: number }
+        amounts:               { type: array, items: { type: object, additionalProperties: true } }
+
     SharedReportExportEnvelope:
       type: object
       description: |
@@ -1398,6 +1460,12 @@ paths:
     put:
       tags: [Client]
       summary: Update client
+      description: |
+        VERIFIED LIVE 2026-08-07: `archive-projects` and `mark-tasks-as-done`
+        are honoured end-to-end when the body archives the client.
+      parameters:
+        - { name: archive-projects, in: query, schema: { type: boolean, default: false } }
+        - { name: mark-tasks-as-done, in: query, schema: { type: boolean, default: false } }
       requestBody:
         required: true
         content:
@@ -1412,7 +1480,16 @@ paths:
     delete:
       tags: [Client]
       summary: Delete client
-      responses: { '200': { description: OK } }
+      description: |
+        VERIFIED LIVE 2026-08-07: returns the deleted client as the response
+        body, not an empty 200. The client must be archived first — deleting an
+        active client returns 400 "Cannot delete an active client".
+      responses:
+        '200':
+          description: OK — the deleted client.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
 
   /workspaces/{workspaceId}/clients/{clientId}/archive:
     parameters:
@@ -1777,8 +1854,13 @@ paths:
       summary: List tags
       parameters:
         - { name: name, in: query, schema: { type: string } }
+        - { name: strict-name-search, in: query, schema: { type: boolean, default: false } }
+        - { name: excluded-ids, in: query, schema: { type: string } }
         - { name: archived, in: query, schema: { type: boolean } }
-        - { name: sort-column, in: query, schema: { type: string, enum: [NAME] } }
+        # VERIFIED LIVE 2026-08-07: `sort-column=BOGUS` returns 400 naming the
+        # accepted set as `ID, NAME`. The earlier `[NAME]`-only enum here made
+        # spec-faithful clients reject a value the server honours.
+        - { name: sort-column, in: query, schema: { type: string, enum: [ID, NAME] } }
         - { name: sort-order, in: query, schema: { type: string, enum: [ASCENDING, DESCENDING] } }
         - { $ref: "#/components/parameters/PageQuery" }
         - { $ref: "#/components/parameters/PageSizeHyphen" }
@@ -1837,7 +1919,15 @@ paths:
     delete:
       tags: [Tag]
       summary: Delete tag
-      responses: { '200': { description: OK } }
+      description: |
+        VERIFIED LIVE 2026-08-07: returns the deleted tag as the response body,
+        not an empty 200.
+      responses:
+        '200':
+          description: OK — the deleted tag.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tag" }
 
   # ===========================================================================
   # TIME ENTRY
@@ -3075,6 +3165,15 @@ paths:
       parameters:
         - { $ref: "#/components/parameters/PageQuery" }
         - { $ref: "#/components/parameters/PageSizeCamel" }
+        # VERIFIED LIVE 2026-08-07: an unknown value returns 500, so the enum
+        # is the whole contract — clients must not pass free text.
+        - name: sharedReportsFilter
+          in: query
+          description: Filters shared reports by origin.
+          schema:
+            type: string
+            default: ALL
+            enum: [ALL, ALL_ADMIN, CREATED_BY_ME, SHARED_WITH_ME]
       responses:
         '200':
           description: OK
@@ -3115,16 +3214,37 @@ paths:
       description: |
         Bare path (no workspace segment). Pass `?exportType=PDF|CSV|XLSX|JSON_V1`
         to receive a binary export with `Content-Disposition` filename. Without
-        `exportType`, returns the shared-report JSON envelope.
+        `exportType`, returns the rendered report (`SharedReportData`) — the
+        saved configuration comes back nested under `filters`.
+
+        VERIFIED LIVE 2026-08-07: the query parameters use camelCase
+        (`dateRangeStart`, `pageSize`), unlike the hyphenated main-API style.
       parameters:
         - name: exportType
           in: query
           schema: { type: string, enum: [JSON_V1, JSON, CSV, XLSX, PDF] }
+        - name: dateRangeStart
+          in: query
+          description: Overrides the saved range start. `YYYY-MM-DDTHH:MM:SS`.
+          schema: { type: string }
+        - name: dateRangeEnd
+          in: query
+          description: Overrides the saved range end. `YYYY-MM-DDTHH:MM:SS`.
+          schema: { type: string }
+        - name: sortColumn
+          in: query
+          description: Validated against the report type; an unknown column returns 400.
+          schema: { type: string }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [ASCENDING, DESCENDING] }
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PageSizeCamel" }
       responses:
         '200':
-          description: OK — JSON envelope when `exportType` omitted; binary export otherwise.
+          description: OK — rendered report when `exportType` omitted; binary export otherwise.
           content:
-            application/json: { schema: { $ref: "#/components/schemas/SharedReport" } }
+            application/json: { schema: { $ref: "#/components/schemas/SharedReportData" } }
             application/pdf:  { schema: { type: string, format: binary } }
             text/csv:         { schema: { type: string } }
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:

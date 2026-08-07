@@ -252,8 +252,9 @@ components:
           $ref: '#/components/schemas/HalfDayPeriod'
     CreateTimeOffRequest:
       type: object
+      # VERIFIED LIVE 2026-08-07: omitting `note` returns 200. Only
+      # `timeOffPeriod` is enforced.
       required:
-      - note
       - timeOffPeriod
       properties:
         note:

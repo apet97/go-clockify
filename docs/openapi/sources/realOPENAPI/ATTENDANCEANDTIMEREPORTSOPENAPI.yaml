@@ -316,10 +316,15 @@ paths:
       tags:
       - Reports
       summary: Generate a weekly report
-      description: Generates a weekly report. On free subscription plans, weekly report
-        data is limited to a maximum interval length of one month (31 days). The request
-        accepts weeklyFilter as the only report-specific filter. weeklyFilter.group
-        is USER or PROJECT; weeklyFilter.subgroup is always TIME.
+      description: 'Generates a weekly report. The date range must span exactly 7
+        calendar days — both the inclusive form (2026-08-01T00:00:00Z to
+        2026-08-07T23:59:59Z) and the exclusive form (…to 2026-08-08T00:00:00Z)
+        are accepted; 6, 8, 14 and 31 day ranges all return 400 code 501 "Please
+        select date range of exactly 7 days for weekly report". The one-month
+        (31 day) free-plan ceiling documented for the other report families does
+        NOT apply here — verified live 2026-08-07. The request accepts
+        weeklyFilter as the only report-specific filter. weeklyFilter.group is
+        USER or PROJECT; weeklyFilter.subgroup is always TIME.'
       operationId: generateWeeklyReport
       security:
       - ApiKeyAuth: []

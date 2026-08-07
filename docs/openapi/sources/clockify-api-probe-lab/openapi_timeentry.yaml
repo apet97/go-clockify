@@ -50,6 +50,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CustomFieldValueDto'
+        # VERIFIED LIVE 2026-08-07: present (null for non-kiosk entries) on
+        # every create/stop response.
+        kioskId:
+          type: string
+          nullable: true
 
     TimeIntervalDto:
       type: object

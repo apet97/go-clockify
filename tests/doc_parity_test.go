@@ -342,18 +342,20 @@ func TestGeneratedOpenAPICustomFieldCreateRequiredFlagIsOptional(t *testing.T) {
 	assertOpenAPIExampleValue(t, "CreateCustomFieldRequest", schema, "required", false)
 }
 
-func TestGeneratedOpenAPITimeOffPolicyCreateApproveIsOptional(t *testing.T) {
+// Live-proven 2026-08-07: creating a policy without `approve` returns 400
+// "must not be null" under every assignee variant (flat userIds, users
+// envelope, everyoneIncludingNew), and the same body plus `approve` returns
+// 201. The earlier optionality correction had no live fixture behind it and
+// this test pinned it, so a spec-faithful client was guaranteed a 400.
+func TestGeneratedOpenAPITimeOffPolicyCreateRequiresApprove(t *testing.T) {
 	schemas := readOpenAPISchemas(t, filepath.Join("..", "docs", "openapi", "clockify-openapi.yaml"))
 	createSchema := openAPIObjectSchema(t, schemas, "CreateTimeOffPolicyRequest")
 	assertOpenAPIPropertyType(t, "CreateTimeOffPolicyRequest", createSchema, "approve", "")
 	requiredSet := openAPIRequiredSet(t, "CreateTimeOffPolicyRequest", createSchema)
-	if !requiredSet["name"] {
-		t.Fatalf("OpenAPI schema CreateTimeOffPolicyRequest must keep name required; required=%#v", createSchema["required"])
-	}
-	// This optionality correction has no committed GOCLMCP live fixture. Keep
-	// this assertion evidence-neutral rather than presenting it as live proof.
-	if requiredSet["approve"] {
-		t.Fatalf("OpenAPI schema CreateTimeOffPolicyRequest must leave approve optional; required=%#v", createSchema["required"])
+	for _, field := range []string{"approve", "name"} {
+		if !requiredSet[field] {
+			t.Fatalf("OpenAPI schema CreateTimeOffPolicyRequest must require %s; required=%#v", field, createSchema["required"])
+		}
 	}
 }
 

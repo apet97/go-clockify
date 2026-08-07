@@ -822,7 +822,15 @@ end
 def raw_unit_notes(path)
   notes = []
   notes << "Money/rate fields use raw upstream integer units; no currency scaling is applied." if path.match?(%r{/(invoices|hourly-rate|cost-rate|expenses)})
-  notes << "Invoice item unitPrice/amount fields are preserved in raw upstream minor units." if path.include?("/invoices/")
+  # VERIFIED LIVE 2026-08-07. Invoice item unitPrice is minor units scaled by a
+  # further 100 (hundredths of a cent), so amount = unitPrice * quantity / 100 —
+  # the older "preserved in raw upstream minor units" wording lost that factor.
+  notes << "Invoice item unitPrice is minor units x100 (hundredths of a cent); amount = unitPrice * quantity / 100." if path.include?("/invoices/")
+  # VERIFIED LIVE 2026-08-07. Percent fields are asymmetric: GET returns
+  # tax/tax2/discount as percent x100 JSON floats (25% reads as 2500.0), while
+  # PUT expects taxPercent/tax2Percent/discountPercent as plain percents.
+  # Echoing the GET names back on a PUT silently zeroes them (200, no error).
+  notes << "Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent as plain percents." if path.include?("/invoices")
   notes << "Expense amount and total fields preserve upstream scaling observed in live probes." if path.include?("/expenses")
   notes
 end
@@ -1448,23 +1456,29 @@ def resolve_param_field(param, params_components, field)
   comp.is_a?(Hash) ? comp[field] : nil
 end
 
+# Wire name a parameter binds to. For a $ref this is the component's own
+# `name`, NOT the ref tail: a component keyed `Order` can declare parameter
+# `order`, and matching on the tail dropped it as if it were unrelated to the
+# `{order}` placeholder — after which ensure_path_parameters! backfilled a
+# bare `type: string`, silently discarding the component's `integer/int32,
+# minimum: 1` typing. Falls back to the tail when the component is absent.
+def path_binding_name(param, params_components)
+  resolve_param_field(param, params_components, "name") || parameter_name(param)
+end
+
 def ensure_path_parameters!(op, path, params_components = {})
   wanted = path.scan(/\{([^}]+)\}/).flatten
   existing = Array(op["parameters"]).select do |param|
-    # Keep a $ref to a NON-path parameter (query/header/cookie: start/end, page,
-    # page-size, sort-order, ...). The old predicate resolved a $ref to its
-    # ref-tail name, which never matches a {path} placeholder, so every $ref
-    # query param was silently pruned (then GC'd by prune_components). Inline
-    # params and $ref PATH params keep the original name test below.
-    if param.is_a?(Hash) && param["$ref"].is_a?(String)
-      resolved_in = resolve_param_field(param, params_components, "in")
-      next true if resolved_in && resolved_in != "path"
-    end
-    name = parameter_name(param)
+    # Non-path parameters (query/header/cookie: start/end, page, page-size,
+    # sort-order, ...) are never placeholder-bound, so they always survive.
+    resolved_in = param.is_a?(Hash) ? resolve_param_field(param, params_components, "in") : nil
+    next true if resolved_in && resolved_in != "path"
+
+    name = path_binding_name(param, params_components)
     name.nil? || wanted.include?(name)
   end
   seen = existing.each_with_object(Set.new) do |param, set|
-    name = parameter_name(param)
+    name = path_binding_name(param, params_components)
     next unless name
 
     set << name
@@ -2482,7 +2496,7 @@ def apply_live_overrides!(doc)
       "billable" => { "default" => false, "description" => "Indicates whether expense is billable or not.", "type" => "boolean" },
       "category" => { "$ref" => "#/components/schemas/ExpenseCategoryDto" },
       "date" => { "description" => "Represents a date in yyyy-MM-dd format.", "example" => "2020-01-01", "type" => "string" },
-      "fileId" => { "description" => "Represents file identifier across the system. Null when the expense has no receipt.", "type" => "string" },
+      "fileId" => { "description" => "Represents file identifier across the system. Usually an empty string when the expense has no receipt (2816 of 2845 sandbox rows); 22 rows carried null instead, so consumers must treat both as \"no receipt\".", "type" => "string" },
       "fileName" => { "description" => "Represents the uploaded receipt file name. Null when the expense has no receipt.", "type" => "string" },
       "id" => { "description" => "Represents expense identifier across the system.", "type" => "string" },
       "locked" => { "description" => "Indicates whether the expense is locked.", "type" => "boolean" },

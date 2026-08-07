@@ -124,7 +124,11 @@ paths:
       description: |
         Bare path (no workspace segment). Pass `?exportType=PDF|CSV|XLSX|JSON_V1`
         to receive a binary export with `Content-Disposition` filename. Without
-        `exportType`, returns the shared-report JSON envelope.
+        `exportType`, returns the rendered report (`SharedReportData`) — the
+        saved configuration comes back nested under `filters`.
+
+        VERIFIED LIVE 2026-08-07: the query parameters use camelCase
+        (`dateRangeStart`, `pageSize`), unlike the hyphenated main-API style.
       operationId: getSharedReportsSharedReportId
       servers:
       - url: https://reports.api.clockify.me/v1
@@ -132,6 +136,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/SharedReportId"
       - in: query
         name: exportType
         schema:
@@ -142,17 +147,37 @@ paths:
           - XLSX
           - PDF
           type: string
-      - in: path
-        name: sharedReportId
-        required: true
+      - description: Overrides the saved range start. `YYYY-MM-DDTHH:MM:SS`.
+        in: query
+        name: dateRangeStart
         schema:
           type: string
+      - description: Overrides the saved range end. `YYYY-MM-DDTHH:MM:SS`.
+        in: query
+        name: dateRangeEnd
+        schema:
+          type: string
+      - description: Validated against the report type; an unknown column returns
+          400.
+        in: query
+        name: sortColumn
+        schema:
+          type: string
+      - in: query
+        name: sortOrder
+        schema:
+          enum:
+          - ASCENDING
+          - DESCENDING
+          type: string
+      - "$ref": "#/components/parameters/PageQuery"
+      - "$ref": "#/components/parameters/PageSizeCamel"
       responses:
         '200':
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/SharedReport"
+                "$ref": "#/components/schemas/SharedReportData"
             application/pdf:
               schema:
                 format: binary
@@ -164,7 +189,7 @@ paths:
             text/csv:
               schema:
                 type: string
-          description: OK — JSON envelope when `exportType` omitted; binary export
+          description: OK — rendered report when `exportType` omitted; binary export
             otherwise.
       x-clockify-evidence:
       - aiii-openapi
@@ -555,16 +580,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: addonId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/AddonId"
       responses:
         '200':
           "$ref": "#/components/responses/WebhookCollectionResponse"
@@ -615,6 +632,20 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/ApprovalRequestSortColumn"
+      - description: Filters results to the listed approval-request types.
+        example: TIMESHEET
+        in: query
+        name: types
+        required: false
+        schema:
+          default:
+          - TIMESHEET
+          - TIMESHEET_AND_EXPENSE
+          - EXPENSE
+          items:
+            "$ref": "#/components/schemas/ApprovalRequestType"
+          type: array
+          uniqueItems: true
       - "$ref": "#/components/parameters/sortOrderQuery"
       - "$ref": "#/components/parameters/pageQuery"
       - "$ref": "#/components/parameters/pageSizeQuery"
@@ -1262,11 +1293,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/AuditLogworkspaceId"
       requestBody:
         content:
           application/json:
@@ -1315,6 +1342,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       - in: query
         name: name
         schema:
@@ -1348,11 +1376,6 @@ paths:
           type: string
       - "$ref": "#/components/parameters/PageQuery"
       - "$ref": "#/components/parameters/PageSizeHyphen"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -1395,11 +1418,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -1446,16 +1465,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: clientId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/ClientId"
       responses:
         '200':
           content:
@@ -1490,21 +1501,26 @@ paths:
       tags:
       - Clients
       summary: Update client
+      description: |
+        VERIFIED LIVE 2026-08-07: `archive-projects` and `mark-tasks-as-done`
+        are honoured end-to-end when the body archives the client.
       operationId: putWorkspacesWorkspaceIdClientsClientId
       security:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/ClientId"
+      - in: query
+        name: archive-projects
         schema:
-          type: string
-      - in: path
-        name: clientId
-        required: true
+          default: false
+          type: boolean
+      - in: query
+        name: mark-tasks-as-done
         schema:
-          type: string
+          default: false
+          type: boolean
       requestBody:
         content:
           application/json:
@@ -1545,24 +1561,24 @@ paths:
       tags:
       - Clients
       summary: Delete client
+      description: |
+        VERIFIED LIVE 2026-08-07: returns the deleted client as the response
+        body, not an empty 200. The client must be archived first — deleting an
+        active client returns 400 "Cannot delete an active client".
       operationId: deleteWorkspacesWorkspaceIdClientsClientId
       security:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: clientId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/ClientId"
       responses:
         '200':
-          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Client"
+          description: OK — the deleted client.
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
@@ -1862,11 +1878,7 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - in: path
-        name: customFieldId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/CustomFieldIdPath"
       requestBody:
         content:
           application/json:
@@ -1939,11 +1951,7 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - in: path
-        name: customFieldId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/CustomFieldIdPath"
       responses:
         '204':
           description: No Content
@@ -2344,14 +2352,10 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
       - "$ref": "#/components/parameters/pageQuery"
       - "$ref": "#/components/parameters/pageSizeQuery"
       - "$ref": "#/components/parameters/UserIdQuery"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -2397,11 +2401,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
       requestBody:
         "$ref": "#/components/requestBodies/CreateExpenseMultipart"
       responses:
@@ -2448,17 +2448,13 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
       - "$ref": "#/components/parameters/CategorySortColumnQuery"
       - "$ref": "#/components/parameters/SortOrderQuery"
       - "$ref": "#/components/parameters/pageQuery"
       - "$ref": "#/components/parameters/pageSizeQuery"
       - "$ref": "#/components/parameters/CategoryArchivedQuery"
       - "$ref": "#/components/parameters/CategoryNameQuery"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -2504,11 +2500,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
       requestBody:
         "$ref": "#/components/requestBodies/ExpenseCategoryJson"
       responses:
@@ -2555,16 +2547,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: categoryId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/CategoryIdPath"
       requestBody:
         "$ref": "#/components/requestBodies/ExpenseCategoryJson"
       responses:
@@ -2608,16 +2592,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: categoryId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/CategoryIdPath"
       responses:
         '204':
           "$ref": "#/components/responses/NoContent"
@@ -2661,16 +2637,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: categoryId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/CategoryIdPath"
       requestBody:
         "$ref": "#/components/requestBodies/ExpenseCategoryStatusJson"
       responses:
@@ -2717,17 +2685,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: expenseId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/ExpenseIdPath"
       responses:
         '200':
           "$ref": "#/components/responses/ExpenseResponse"
@@ -2770,17 +2729,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: expenseId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/ExpenseIdPath"
       requestBody:
         "$ref": "#/components/requestBodies/UpdateExpenseMultipart"
       responses:
@@ -2826,17 +2776,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: expenseId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/ExpenseIdPath"
       responses:
         '200':
           "$ref": "#/components/responses/OkNoBody"
@@ -2883,22 +2824,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: expenseId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
-      - in: path
-        name: fileId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceIdPath"
+      - "$ref": "#/components/parameters/ExpenseIdPath"
+      - "$ref": "#/components/parameters/FileIdPath"
       responses:
         '200':
           content:
@@ -2945,17 +2873,13 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/HolidaysWorkspaceId"
       - description: If provided, returns a filtered list of holidays assigned to
           the user.
         example: 60f924bafdaf031696ec6218
         in: query
         name: assigned-to
         required: false
-        schema:
-          type: string
-      - in: path
-        name: workspaceId
-        required: true
         schema:
           type: string
       - description: 1-based page index. Default 1.
@@ -3051,11 +2975,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/HolidaysWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -3158,6 +3078,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/HolidaysWorkspaceId"
       - description: |-
           Filter list of holidays assigned to user.
           This value is a user ID; user-group IDs are not supported and may produce a misleading 403.
@@ -3185,11 +3106,6 @@ paths:
         required: true
         schema:
           format: date-time
-          type: string
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
           type: string
       responses:
         '200':
@@ -3264,16 +3180,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: holidayId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/HolidaysWorkspaceId"
+      - "$ref": "#/components/parameters/HolidayId"
       requestBody:
         content:
           application/json:
@@ -3375,16 +3283,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: holidayId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/HolidaysWorkspaceId"
+      - "$ref": "#/components/parameters/HolidayId"
       responses:
         '200':
           content:
@@ -3571,16 +3471,12 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       - "$ref": "#/components/parameters/pageQuery"
       - "$ref": "#/components/parameters/pageSizeQuery"
       - "$ref": "#/components/parameters/InvoiceStatusesQuery"
       - "$ref": "#/components/parameters/InvoiceSortColumnQuery"
       - "$ref": "#/components/parameters/InvoicesSortOrderQuery"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceListResponse"
@@ -3601,6 +3497,8 @@ paths:
         |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -3623,11 +3521,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -3660,6 +3554,8 @@ paths:
         | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -3683,11 +3579,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -3741,7 +3633,10 @@ paths:
         | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -3766,11 +3661,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceSettingsResponse"
@@ -3788,7 +3679,10 @@ paths:
         | fixtures/live-shape/invoices-settings.json |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -3809,11 +3703,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -3858,7 +3748,10 @@ paths:
         | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -3880,17 +3773,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceResponse"
@@ -3910,7 +3794,10 @@ paths:
         |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -3933,17 +3820,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       requestBody:
         content:
           application/json:
@@ -3985,7 +3863,10 @@ paths:
         | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -4007,17 +3888,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       responses:
         '200':
           "$ref": "#/components/responses/OkNoBody"
@@ -4037,7 +3909,10 @@ paths:
         | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
@@ -4061,17 +3936,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       responses:
         '201':
           "$ref": "#/components/responses/InvoiceDuplicatedResponse"
@@ -4089,7 +3955,10 @@ paths:
         | 201 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -4111,6 +3980,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       - in: query
         name: userLocale
         required: true
@@ -4119,17 +3990,6 @@ paths:
           default: en-US
         description: Required by live Clockify invoice export; the MCP defaults it
           to en-US.
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceExportResponse"
@@ -4149,7 +4009,10 @@ paths:
         | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -4174,17 +4037,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       requestBody:
         content:
           application/json:
@@ -4216,7 +4070,10 @@ paths:
         | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -4240,17 +4097,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       requestBody:
         content:
           application/json:
@@ -4295,7 +4143,10 @@ paths:
         verified |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -4317,22 +4168,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
-      - in: path
-        name: order
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
+      - "$ref": "#/components/parameters/Order"
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceResponse"
@@ -4350,7 +4188,10 @@ paths:
         | 200 | live probe 2026-06-22 (Leftovers:0) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
@@ -4372,19 +4213,10 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       - "$ref": "#/components/parameters/pageQuery"
       - "$ref": "#/components/parameters/pageSizeQuery"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
       responses:
         '200':
           "$ref": "#/components/responses/InvoicePaymentsResponse"
@@ -4404,7 +4236,10 @@ paths:
         | 200 | fixtures/live-shape/invoices-payments.json |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - read
       x-clockify-source-files:
@@ -4426,17 +4261,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       requestBody:
         content:
           application/json:
@@ -4466,7 +4292,10 @@ paths:
         | 201 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -4490,22 +4319,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
-      - in: path
-        name: paymentId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
+      - "$ref": "#/components/parameters/PaymentId"
       responses:
         '200':
           "$ref": "#/components/responses/InvoiceResponse"
@@ -4524,7 +4340,10 @@ paths:
         |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - destructive
       x-clockify-source-files:
@@ -4546,17 +4365,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: invoiceId
-        required: true
-        schema:
-          pattern: "^[0-9a-fA-F]{24}$"
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/InvoiceId"
       requestBody:
         content:
           application/json:
@@ -4584,7 +4394,10 @@ paths:
         | 200 | live-probe 2026-06-23 (documentary) |"
       x-clockify-raw-unit-notes:
       - Money/rate fields use raw upstream integer units; no currency scaling is applied.
-      - Invoice item unitPrice/amount fields are preserved in raw upstream minor units.
+      - Invoice item unitPrice is minor units x100 (hundredths of a cent); amount
+        = unitPrice * quantity / 100.
+      - Invoice tax/tax2/discount read back as percent x100 floats; PUT takes taxPercent/tax2Percent/discountPercent
+        as plain percents.
       x-clockify-risk:
       - write
       x-clockify-source-files:
@@ -5814,13 +5627,9 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
+      - "$ref": "#/components/parameters/ProjectIdPath"
       - "$ref": "#/components/parameters/CustomFieldStatusQuery"
       - "$ref": "#/components/parameters/CustomFieldEntityTypeQuery"
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
       - description: 1-based page index. Default 1.
         in: query
         name: page
@@ -5909,16 +5718,8 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: customFieldId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/ProjectIdPath"
+      - "$ref": "#/components/parameters/CustomFieldIdPath"
       requestBody:
         content:
           application/json:
@@ -5995,16 +5796,8 @@ paths:
       - AddonTokenAuth: []
       parameters:
       - "$ref": "#/components/parameters/workspaceId"
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: customFieldId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/ProjectIdPath"
+      - "$ref": "#/components/parameters/CustomFieldIdPath"
       responses:
         '200':
           content:
@@ -6477,6 +6270,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
       - description: If provided, you'll get a filtered list of tasks that matches
           the provided string in their name.
         example: Bugfixing
@@ -6507,16 +6302,6 @@ paths:
       - "$ref": "#/components/parameters/pageSizeQuery"
       - "$ref": "#/components/parameters/SortColumnTask"
       - "$ref": "#/components/parameters/SortOrder"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           "$ref": "#/components/responses/TaskArrayResponse"
@@ -6565,17 +6350,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
       - "$ref": "#/components/parameters/ContainsAssignee"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
@@ -6643,21 +6420,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: taskId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
+      - "$ref": "#/components/parameters/TaskId"
       responses:
         '200':
           "$ref": "#/components/responses/TaskResponse"
@@ -6707,23 +6472,11 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
+      - "$ref": "#/components/parameters/TaskId"
       - "$ref": "#/components/parameters/ContainsAssignee"
       - "$ref": "#/components/parameters/MembershipStatus"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: taskId
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
@@ -6788,21 +6541,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: taskId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
+      - "$ref": "#/components/parameters/TaskId"
       responses:
         '200':
           "$ref": "#/components/responses/TaskResponse"
@@ -6853,16 +6594,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
       - in: path
         name: taskId
         required: true
@@ -6927,16 +6660,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: projectId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TasksWorkspaceId"
+      - "$ref": "#/components/parameters/ProjectId"
       - in: path
         name: taskId
         required: true
@@ -7394,11 +7119,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceId"
       requestBody:
         content:
           application/json:
@@ -7534,11 +7255,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceId"
       requestBody:
         content:
           application/json:
@@ -7744,11 +7461,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceId"
       requestBody:
         content:
           application/json:
@@ -7863,9 +7576,13 @@ paths:
       tags:
       - Reports
       summary: Generate a weekly report
-      description: Generates a weekly report. On free subscription plans, weekly report
-        data is limited to a maximum interval length of one month (31 days). The request
-        accepts weeklyFilter as the only report-specific filter. weeklyFilter.group
+      description: Generates a weekly report. The date range must span exactly 7 calendar
+        days — both the inclusive form (2026-08-01T00:00:00Z to 2026-08-07T23:59:59Z)
+        and the exclusive form (…to 2026-08-08T00:00:00Z) are accepted; 6, 8, 14 and
+        31 day ranges all return 400 code 501 "Please select date range of exactly
+        7 days for weekly report". The one-month (31 day) free-plan ceiling documented
+        for the other report families does NOT apply here — verified live 2026-08-07.
+        The request accepts weeklyFilter as the only report-specific filter. weeklyFilter.group
         is USER or PROJECT; weeklyFilter.subgroup is always TIME.
       operationId: generateWeeklyReport
       servers:
@@ -7874,11 +7591,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/WorkspaceId"
       requestBody:
         content:
           application/json:
@@ -8820,12 +8533,19 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       - "$ref": "#/components/parameters/PageQuery"
       - "$ref": "#/components/parameters/PageSizeCamel"
-      - in: path
-        name: workspaceId
-        required: true
+      - description: Filters shared reports by origin.
+        in: query
+        name: sharedReportsFilter
         schema:
+          default: ALL
+          enum:
+          - ALL
+          - ALL_ADMIN
+          - CREATED_BY_ME
+          - SHARED_WITH_ME
           type: string
       responses:
         '200':
@@ -8877,11 +8597,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -8935,16 +8651,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: sharedReportId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/SharedReportId"
       requestBody:
         content:
           application/json:
@@ -8990,16 +8698,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: sharedReportId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/SharedReportId"
       responses:
         '204':
           description: Deleted
@@ -9034,8 +8734,18 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       - in: query
         name: name
+        schema:
+          type: string
+      - in: query
+        name: strict-name-search
+        schema:
+          default: false
+          type: boolean
+      - in: query
+        name: excluded-ids
         schema:
           type: string
       - in: query
@@ -9046,6 +8756,7 @@ paths:
         name: sort-column
         schema:
           enum:
+          - ID
           - NAME
           type: string
       - in: query
@@ -9057,11 +8768,6 @@ paths:
           type: string
       - "$ref": "#/components/parameters/PageQuery"
       - "$ref": "#/components/parameters/PageSizeHyphen"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -9105,11 +8811,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -9157,16 +8859,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: tagId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/TagId"
       responses:
         '200':
           content:
@@ -9207,16 +8901,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: tagId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/TagId"
       requestBody:
         content:
           application/json:
@@ -9263,24 +8949,23 @@ paths:
       tags:
       - Tags
       summary: Delete tag
+      description: |
+        VERIFIED LIVE 2026-08-07: returns the deleted tag as the response body,
+        not an empty 200.
       operationId: deleteWorkspacesWorkspaceIdTagsTagId
       security:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: tagId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/TagId"
       responses:
         '200':
-          description: OK
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Tag"
+          description: OK — the deleted tag.
       x-clockify-evidence:
       - aiii-openapi
       - doc-md
@@ -9529,6 +9214,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/TimeEntryId"
       - in: query
         name: hydrated
         schema:
@@ -9537,16 +9224,6 @@ paths:
         name: consider-duration-format
         schema:
           type: boolean
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: timeEntryId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -9585,16 +9262,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: timeEntryId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/TimeEntryId"
       requestBody:
         content:
           application/json:
@@ -9639,16 +9308,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: timeEntryId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/TimeEntryId"
       responses:
         '204':
           description: Deleted
@@ -9960,6 +9621,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/BalanceWorkspaceId"
+      - "$ref": "#/components/parameters/PolicyId"
       - description: Page number.
         example: 1
         in: query
@@ -9995,16 +9658,6 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/BalanceSortOrder"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -10065,16 +9718,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/BalanceWorkspaceId"
+      - "$ref": "#/components/parameters/PolicyId"
       requestBody:
         content:
           application/json:
@@ -10127,6 +9772,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/BalanceWorkspaceId"
+      - "$ref": "#/components/parameters/UserId"
       - description: Page number.
         example: 1
         in: query
@@ -10160,16 +9807,6 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/BalanceSortOrder"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -10925,16 +10562,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TimeOffWorkspaceIdPath"
+      - "$ref": "#/components/parameters/PolicyIdPath"
       requestBody:
         content:
           application/json:
@@ -10991,21 +10620,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TimeOffWorkspaceIdPath"
+      - "$ref": "#/components/parameters/PolicyIdPath"
+      - "$ref": "#/components/parameters/RequestIdPath"
       requestBody:
         content:
           application/json:
@@ -11059,21 +10676,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: requestId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TimeOffWorkspaceIdPath"
+      - "$ref": "#/components/parameters/PolicyIdPath"
+      - "$ref": "#/components/parameters/RequestIdPath"
       responses:
         '200':
           content:
@@ -11124,21 +10729,9 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: policyId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TimeOffWorkspaceIdPath"
+      - "$ref": "#/components/parameters/PolicyIdPath"
+      - "$ref": "#/components/parameters/UserIdPath"
       requestBody:
         content:
           application/json:
@@ -11193,11 +10786,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/TimeOffWorkspaceIdPath"
       requestBody:
         content:
           application/json:
@@ -11254,6 +10843,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/UserGroupsWorkspaceIdPath"
       - "$ref": "#/components/parameters/ProjectIdQuery"
       - "$ref": "#/components/parameters/UserGroupNameQuery"
       - "$ref": "#/components/parameters/UserGroupSortColumnQuery"
@@ -11261,11 +10851,6 @@ paths:
       - "$ref": "#/components/parameters/pageQuery"
       - "$ref": "#/components/parameters/pageSizeQuery"
       - "$ref": "#/components/parameters/IncludeTeamManagersQuery"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -11332,11 +10917,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/UserGroupsWorkspaceIdPath"
       requestBody:
         content:
           application/json:
@@ -11409,11 +10990,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/UserGroupsWorkspaceIdPath"
       - in: path
         name: groupId
         required: true
@@ -11490,11 +11067,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/UserGroupsWorkspaceIdPath"
       - in: path
         name: groupId
         required: true
@@ -11564,11 +11137,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/UserGroupsWorkspaceIdPath"
       - in: path
         name: groupId
         required: true
@@ -11646,18 +11215,10 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/UserGroupsWorkspaceIdPath"
+      - "$ref": "#/components/parameters/UserGroupsUserIdPath"
       - in: path
         name: groupId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
         required: true
         schema:
           type: string
@@ -11725,6 +11286,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/OpenapiUserId"
       - in: query
         name: description
         schema:
@@ -11776,16 +11339,6 @@ paths:
           type: string
       - "$ref": "#/components/parameters/PageQuery"
       - "$ref": "#/components/parameters/PageSizeHyphen"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           content:
@@ -11827,16 +11380,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: userId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/OpenapiWorkspaceId"
+      - "$ref": "#/components/parameters/OpenapiUserId"
       requestBody:
         content:
           application/json:
@@ -13186,6 +12731,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       - description: Represents a webhook type.
         example: USER_CREATED
         in: query
@@ -13193,11 +12739,6 @@ paths:
         required: false
         schema:
           "$ref": "#/components/schemas/WebhookType"
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
       responses:
         '200':
           "$ref": "#/components/responses/WebhookCollectionResponse"
@@ -13238,11 +12779,7 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
       requestBody:
         content:
           application/json:
@@ -13294,16 +12831,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: webhookId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/WebhookId"
       responses:
         '200':
           "$ref": "#/components/responses/WebhookResponse"
@@ -13338,16 +12867,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: webhookId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/WebhookId"
       requestBody:
         content:
           application/json:
@@ -13398,16 +12919,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: webhookId
-        required: true
-        schema:
-          type: string
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/WebhookId"
       responses:
         '200':
           description: OK
@@ -13445,6 +12958,8 @@ paths:
       - ApiKeyAuth: []
       - AddonTokenAuth: []
       parameters:
+      - "$ref": "#/components/parameters/InvoicesWorkspaceId"
+      - "$ref": "#/components/parameters/WebhookId"
       - description: Page number.
         example: 1
         in: query
@@ -13464,16 +12979,6 @@ paths:
           format: int32
           minimum: 1
           type: integer
-      - in: path
-        name: workspaceId
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: webhookId
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           application/json:
@@ -13689,6 +13194,31 @@ components:
       in: header
       name: X-Addon-Token
   parameters:
+    AddonId:
+      description: Represents an addon identifier across the system.
+      example: 64c777ddd3fcab07cfbb210c
+      in: path
+      name: addonId
+      required: true
+      schema:
+        type: string
+        x-sourceDefault: "##default"
+    AuditLogworkspaceId:
+      description: Clockify workspace identifier.
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        type: string
+    BalanceWorkspaceId:
+      description: Represents a workspace identifier across the system.
+      example: 60f91b3ffdaf031696ec61a8
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        default: "##default"
+        type: string
     CategoryArchivedQuery:
       description: Filters results based on whether the category is archived.
       example: true
@@ -13698,6 +13228,15 @@ components:
       schema:
         default: false
         type: boolean
+    CategoryIdPath:
+      description: Represents a category identifier across the system.
+      example: 89a687e29ae1f428e7ebe567
+      in: path
+      name: categoryId
+      required: true
+      schema:
+        default: "##default"
+        type: string
     CategoryNameQuery:
       description: Filters expense categories by a string matched against their name.
       example: procurement
@@ -13716,6 +13255,12 @@ components:
       schema:
         enum:
         - NAME
+        type: string
+    ClientId:
+      in: path
+      name: clientId
+      required: true
+      schema:
         type: string
     ContainsAssignee:
       description: Flag to set whether task will have assignee or none.
@@ -13741,6 +13286,14 @@ components:
           "$ref": "#/components/schemas/CustomFieldEntityType"
         type: array
       style: form
+    CustomFieldIdPath:
+      description: Represents a custom field identifier across the system.
+      example: 26a687e29ae1f428e7ebe101
+      in: path
+      name: customFieldId
+      required: true
+      schema:
+        type: string
     CustomFieldNameQuery:
       description: Filters custom fields by a string contained in the custom field
         name.
@@ -13758,6 +13311,40 @@ components:
       required: false
       schema:
         "$ref": "#/components/schemas/CustomFieldStatus"
+    ExpenseIdPath:
+      description: Represents an expense identifier across the system.
+      example: 64c777ddd3fcab07cfbb210c
+      in: path
+      name: expenseId
+      required: true
+      schema:
+        default: "##default"
+        type: string
+    FileIdPath:
+      description: Represents a file identifier across the system.
+      example: 745687e29ae1f428e7ebe890
+      in: path
+      name: fileId
+      required: true
+      schema:
+        default: "##default"
+        type: string
+    HolidayId:
+      description: Represents a holiday identifier across the system.
+      example: 60f927920658241e3cf35e02
+      in: path
+      name: holidayId
+      required: true
+      schema:
+        type: string
+    HolidaysWorkspaceId:
+      description: Represents a workspace identifier across the system.
+      example: 60f91b3ffdaf031696ec61a8
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        type: string
     IncludeTeamManagersQuery:
       description: If provided, you'll get a list of team managers assigned to this
         user group.
@@ -13768,6 +13355,15 @@ components:
       schema:
         default: false
         type: boolean
+    InvoiceId:
+      description: Represents an invoice identifier across the system.
+      example: 78a687e29ae1f428e7ebe303
+      in: path
+      name: invoiceId
+      required: true
+      schema:
+        type: string
+        x-sourceDefault: "##default"
     InvoiceSortColumnQuery:
       description: 'Valid column name as sorting criteria. Default: ID.'
       example: CLIENT
@@ -13798,6 +13394,15 @@ components:
       required: false
       schema:
         "$ref": "#/components/schemas/InvoicesSortOrder"
+    InvoicesWorkspaceId:
+      description: Represents a workspace identifier across the system.
+      example: 64a687e29ae1f428e7ebe303
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        type: string
+        x-sourceDefault: "##default"
     MembershipStatus:
       description: Represents a membership status.
       example: ACTIVE
@@ -13812,6 +13417,29 @@ components:
         - INACTIVE
         - ALL
         type: string
+    OpenapiUserId:
+      in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+    OpenapiWorkspaceId:
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        example: "<REDACTED_ID>"
+        type: string
+    Order:
+      description: Represents an invoice item order.
+      example: 3
+      in: path
+      name: order
+      required: true
+      schema:
+        format: int32
+        minimum: 1
+        type: integer
     PageQuery:
       in: query
       name: page
@@ -13837,6 +13465,50 @@ components:
         default: 50
         minimum: 1
         type: integer
+    PaymentId:
+      description: Represents a payment identifier across the system.
+      example: 56p687e29ae1f428e7ebe456
+      in: path
+      name: paymentId
+      required: true
+      schema:
+        type: string
+        x-sourceDefault: "##default"
+    PolicyId:
+      description: Represents a policy identifier across the system.
+      example: 63034cd0cb0fb876a57e93ad
+      in: path
+      name: policyId
+      required: true
+      schema:
+        default: "##default"
+        type: string
+    PolicyIdPath:
+      description: Represents a policy identifier across the system.
+      example: 63034cd0cb0fb876a57e93ad
+      in: path
+      name: policyId
+      required: true
+      schema:
+        type: string
+        x-clockify-default: "##default"
+    ProjectId:
+      description: Represents a project identifier across the system.
+      example: 25b687e29ae1f428e7ebe123
+      in: path
+      name: projectId
+      required: true
+      schema:
+        example: 25b687e29ae1f428e7ebe123
+        type: string
+    ProjectIdPath:
+      description: Represents a project identifier across the system.
+      example: 5b641568b07987035750505e
+      in: path
+      name: projectId
+      required: true
+      schema:
+        type: string
     ProjectIdQuery:
       description: If provided, you'll get a filtered list of groups that matches
         the string provided in their project id.
@@ -13844,6 +13516,21 @@ components:
       in: query
       name: project-id
       required: false
+      schema:
+        type: string
+    RequestIdPath:
+      description: Represents a time off request identifier across the system.
+      example: 6308850156b7d75ea8fd3fbd
+      in: path
+      name: requestId
+      required: true
+      schema:
+        type: string
+        x-clockify-default: "##default"
+    SharedReportId:
+      in: path
+      name: sharedReportId
+      required: true
       schema:
         type: string
     SortColumnTask:
@@ -13879,6 +13566,45 @@ components:
         - ASCENDING
         - DESCENDING
         type: string
+    TagId:
+      in: path
+      name: tagId
+      required: true
+      schema:
+        type: string
+    TaskId:
+      description: Represents a task identifier across the system.
+      example: 57a687e29ae1f428e7ebe107
+      in: path
+      name: taskId
+      required: true
+      schema:
+        example: 57a687e29ae1f428e7ebe107
+        type: string
+    TasksWorkspaceId:
+      description: Represents a workspace identifier across the system.
+      example: 64a687e29ae1f428e7ebe303
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        example: 64a687e29ae1f428e7ebe303
+        type: string
+    TimeEntryId:
+      in: path
+      name: timeEntryId
+      required: true
+      schema:
+        type: string
+    TimeOffWorkspaceIdPath:
+      description: Represents a workspace identifier across the system.
+      example: 60f91b3ffdaf031696ec61a8
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        type: string
+        x-clockify-default: "##default"
     UserGroupNameQuery:
       description: If provided, you'll get a filtered list of groups that matches
         the string provided in their name.
@@ -13905,6 +13631,42 @@ components:
       required: false
       schema:
         "$ref": "#/components/schemas/UserGroupsSortOrder"
+    UserGroupsUserIdPath:
+      description: Represents a user identifier across the system.
+      example: 5a0ab5acb07987125438b60f
+      in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+        x-clockify-default: "##default"
+    UserGroupsWorkspaceIdPath:
+      description: Represents a workspace identifier across the system.
+      example: 64a687e29ae1f428e7ebe303
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        type: string
+        x-clockify-default: "##default"
+    UserId:
+      description: Represents a user identifier across the system.
+      example: 60f924bafdaf031696ec6218
+      in: path
+      name: userId
+      required: true
+      schema:
+        default: "##default"
+        type: string
+    UserIdPath:
+      description: Represents a user identifier across the system.
+      example: 60f924bafdaf031696ec6218
+      in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+        x-clockify-default: "##default"
     UserIdQuery:
       description: Filters expenses by the user ID linked to the expense.
       example: 5a0ab5acb07987125438b60f
@@ -13912,6 +13674,32 @@ components:
       name: user-id
       required: false
       schema:
+        type: string
+    WebhookId:
+      description: Represents a webhook identifier across the system.
+      example: 5b715448b0798751107918ab
+      in: path
+      name: webhookId
+      required: true
+      schema:
+        type: string
+        x-sourceDefault: "##default"
+    WorkspaceId:
+      description: Represents a workspace identifier across the system.
+      example: 60f91b3ffdaf031696ecxxxx
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        type: string
+    WorkspaceIdPath:
+      description: Represents a workspace identifier across the system.
+      example: 64a687e29ae1f428e7ebe303
+      in: path
+      name: workspaceId
+      required: true
+      schema:
+        default: "##default"
         type: string
     approvalRequestId:
       description: Represents an approval request identifier across the system.
@@ -14693,6 +14481,12 @@ components:
           description: Represents user name.
           type: string
       type: object
+    ApprovalRequestType:
+      enum:
+      - TIMESHEET
+      - EXPENSE
+      - TIMESHEET_AND_EXPENSE
+      type: string
     AssignRemoveUsersRequest:
       additionalProperties: false
       properties:
@@ -16269,6 +16063,7 @@ components:
         users:
           "$ref": "#/components/schemas/PoliciesUserIdsSchema"
       required:
+      - approve
       - name
       type: object
     CreateTimeOffRequest:
@@ -16290,7 +16085,6 @@ components:
         timeOffPeriod:
           "$ref": "#/components/schemas/TimeOffRequestPeriodV1Request"
       required:
-      - note
       - timeOffPeriod
       type: object
     CreateWorkspaceRequest:
@@ -17522,8 +17316,9 @@ components:
           example: '2020-01-01'
           type: string
         fileId:
-          description: Represents file identifier across the system. Null when the
-            expense has no receipt.
+          description: Represents file identifier across the system. Usually an empty
+            string when the expense has no receipt (2816 of 2845 sandbox rows); 22
+            rows carried null instead, so consumers must treat both as "no receipt".
           type: string
         fileName:
           description: Represents the uploaded receipt file name. Null when the expense
@@ -19776,7 +19571,12 @@ components:
           type: boolean
         hasExpiration:
           default: false
-          description: Indicates whether the policy balance should have expiration.
+          description: |
+            Indicates whether the policy balance should have expiration.
+            Accepted on write, but not echoed back: no sandbox policy response
+            has ever carried this key (0 of 50 rows on 2026-08-06, re-checked on
+            2026-08-07). Treat it as request-only until a workspace is observed
+            emitting it.
           type: boolean
         icon:
           description: Policy icon.
@@ -19855,7 +19655,6 @@ components:
           enum:
           - ACTIVE
           - ARCHIVED
-          - ALL
           type: string
       required:
       - status
@@ -20404,6 +20203,40 @@ components:
       - type
       - filter
       type: object
+    SharedReportData:
+      description: |
+        Rendered payload of a shared report. `groupOne` and `donutChart` rows
+        follow the saved report's grouping, so their properties vary; the keys
+        listed here are the ones observed for a SUMMARY report grouped by
+        project.
+      properties:
+        donutChart:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        filters:
+          additionalProperties: true
+          description: |
+            The saved shared-report configuration echoed back. Carries every
+            `SharedReport` field plus the viewer presentation context
+            (`workspace`, `subscriptionPlan`, `isAdminOrOwner`, `timezone`,
+            `dateFormat`, `timeFormat`, `weekStart`, `originalLang`, `notes`).
+          type: object
+        groupOne:
+          items:
+            "$ref": "#/components/schemas/SharedReportGroupRow"
+          type: array
+        groupTotals:
+          properties:
+            groupOneTotalCount:
+              type: integer
+          type: object
+        totals:
+          items:
+            "$ref": "#/components/schemas/SharedReportTotals"
+          type: array
+      type: object
     SharedReportFilter:
       properties:
         attendanceFilter:
@@ -20433,6 +20266,36 @@ components:
       - dateRangeStart
       - dateRangeEnd
       type: object
+    SharedReportGroupRow:
+      additionalProperties: true
+      properties:
+        _id:
+          type: string
+        amount:
+          type: number
+        amounts:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        clientName:
+          nullable: true
+          type: string
+        color:
+          nullable: true
+          type: string
+        currency:
+          type: string
+        duration:
+          description: Seconds.
+          type: integer
+        name:
+          type: string
+        nameLowerCase:
+          type: string
+        workspaceCurrencyCode:
+          type: string
+      type: object
     SharedReportListEnvelope:
       properties:
         count:
@@ -20441,6 +20304,34 @@ components:
           items:
             "$ref": "#/components/schemas/SharedReport"
           type: array
+      type: object
+    SharedReportTotals:
+      additionalProperties: true
+      properties:
+        _id:
+          type: string
+        amounts:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        entriesCount:
+          type: integer
+        numOfCurrencies:
+          type: integer
+        totalAmount:
+          type: number
+        totalAmountByCurrency:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        totalBillableTime:
+          description: Seconds.
+          type: integer
+        totalTime:
+          description: Seconds.
+          type: integer
       type: object
     SortOrder:
       enum:
@@ -21083,6 +20974,9 @@ components:
           type: string
         isLocked:
           type: boolean
+        kioskId:
+          nullable: true
+          type: string
         projectId:
           nullable: true
           type: string
@@ -24187,7 +24081,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: f40b9e64b656aa3093ab6c7ae2554161eaa5333cd0ef39f6d1935108f018c5c1
+    sha256: fcecd1a18b35b1b0981905b4061c8a3339933f8ea4191f215dc8b2f1c46b46d4
     files: 102
   sourcePrecedence:
   - live/probe findings metadata

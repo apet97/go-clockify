@@ -39,7 +39,10 @@ paths:
               type: object
               required: [status]
               properties:
-                status: { type: string, enum: [ACTIVE, ARCHIVED, ALL] }
+                # `ALL` deserializes (the 3002 parse error lists it) but the
+                # handler rejects it with 400 "Invalid status" — verified live
+                # 2026-08-07. Only ACTIVE and ARCHIVED are real policy states.
+                status: { type: string, enum: [ACTIVE, ARCHIVED] }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PolicyDto' } } } }
         '400': { content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }

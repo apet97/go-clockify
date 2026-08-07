@@ -37,6 +37,17 @@ paths:
         schema:
           $ref: '#/components/schemas/ApprovalRequestSortColumn'
         example: START
+      - name: types
+        in: query
+        description: Filters results to the listed approval-request types.
+        required: false
+        schema:
+          type: array
+          uniqueItems: true
+          default: [TIMESHEET, TIMESHEET_AND_EXPENSE, EXPENSE]
+          items:
+            $ref: '#/components/schemas/ApprovalRequestType'
+        example: TIMESHEET
       - $ref: '#/components/parameters/sortOrderQuery'
       - $ref: '#/components/parameters/pageQuery'
       - $ref: '#/components/parameters/pageSizeQuery'
@@ -463,6 +474,15 @@ components:
       - USER_ID
       - START
       - UPDATED_AT
+    ApprovalRequestType:
+      # VERIFIED LIVE 2026-08-07: `types=TIMESHEET` returns 200; anything
+      # outside this set (TIME_OFF, WEEKLY, REGULAR, ...) returns 400 code 3000
+      # from the Spring converter, so the enum is the whole contract.
+      type: string
+      enum:
+      - TIMESHEET
+      - EXPENSE
+      - TIMESHEET_AND_EXPENSE
     SortOrder:
       type: string
       enum:
