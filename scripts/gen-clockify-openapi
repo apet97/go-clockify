@@ -2274,6 +2274,59 @@ def apply_live_overrides!(doc)
     "enum" => CHANGE_TRACKER_DOCUMENT_TYPES
   }
 
+  # All three entity-change reads answer with a BARE ARRAY of entity documents.
+  # The source declares `type: string` with `additionalProperties` for created
+  # and updated -- a shape that describes nothing, and which the TypeScript
+  # emitter faithfully turned into `Promise<string>` -- and an object wrapper
+  # (PageableCollectionLogBinDocumentDto) for deleted.
+  #
+  # Live-probed 2026-08-08: created returned a populated array whose items
+  # carry `auditMetadata` and `documentCode` alongside the entity's own fields;
+  # updated and deleted returned `[]`. An empty array still refutes the object
+  # wrapper. The item shape is proven on created only, so the schema stays open
+  # (`additionalProperties: true`) rather than enumerating per-type fields.
+  #
+  # Note `documentCode`. Clockify's own sample response in the AIII source calls
+  # the same field `documentType`; the wire says `documentCode`.
+  doc.dig("components", "schemas")["EntityChangeDocument"] = {
+    "type" => "object",
+    "description" => "One entity-change record. Carries audit timestamps and the document type " \
+      "alongside the changed entity's own fields, which vary by `type`.",
+    "additionalProperties" => true,
+    "properties" => {
+      "auditMetadata" => {
+        "type" => "object",
+        "description" => "Creation and last-update instants for the record.",
+        "properties" => {
+          "createdAt" => {"type" => "string", "format" => "date-time", "nullable" => true},
+          "updatedAt" => {"type" => "string", "format" => "date-time", "nullable" => true}
+        }
+      },
+      "documentCode" => {
+        "$ref" => "#/components/schemas/ChangeTrackerDocumentType"
+      },
+      "id" => {"type" => "string"}
+    }
+  }
+
+  [
+    "/workspaces/{workspaceId}/entities/created",
+    "/workspaces/{workspaceId}/entities/updated",
+    "/workspaces/{workspaceId}/entities/deleted"
+  ].each do |path|
+    op = operation_for(doc, path, "get")
+    next unless op
+
+    schema = op.dig("responses", "200", "content", "application/json")
+    next unless schema.is_a?(Hash)
+
+    schema["schema"] = {
+      "type" => "array",
+      "items" => {"$ref" => "#/components/schemas/EntityChangeDocument"}
+    }
+    append_operation_note!(op, "Returns a bare JSON array; live-probed 2026-08-08.")
+  end
+
   # The merged report sources used the generic Openapi* names for the
   # shared-report filter shapes. They are not the same shapes as the direct
   # report filters, so keep the semantics but give them an honest shared

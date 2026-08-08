@@ -2072,8 +2072,9 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: string
+                type: array
+                items:
+                  "$ref": "#/components/schemas/EntityChangeDocument"
           description: OK
       x-clockify-evidence:
       - aiii-openapi
@@ -2084,6 +2085,7 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /workspaces/{workspaceId}/entities/created | 200
         | live-probe 2026-06-23 (documentary) |"
+      - Returns a bare JSON array; live-probed 2026-08-08.
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -2193,7 +2195,9 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/PageableCollectionLogBinDocumentDto"
+                type: array
+                items:
+                  "$ref": "#/components/schemas/EntityChangeDocument"
           description: OK
       x-clockify-evidence:
       - aiii-openapi
@@ -2204,6 +2208,7 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /workspaces/{workspaceId}/entities/deleted | 200
         | live-probe 2026-06-23 (documentary) |"
+      - Returns a bare JSON array; live-probed 2026-08-08.
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -2312,8 +2317,9 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties: {}
-                type: string
+                type: array
+                items:
+                  "$ref": "#/components/schemas/EntityChangeDocument"
           description: OK
       x-clockify-evidence:
       - aiii-openapi
@@ -2324,6 +2330,7 @@ paths:
       x-clockify-notes:
       - "| GET | api.clockify.me | /workspaces/{workspaceId}/entities/updated | 200
         | live-probe 2026-06-23 (documentary) |"
+      - Returns a bare JSON array; live-probed 2026-08-08.
       x-clockify-risk:
       - read
       x-clockify-security-aliases:
@@ -23980,6 +23987,28 @@ components:
       - TIME_OFF_REQUEST
       - USER
       - USER_GROUPS
+    EntityChangeDocument:
+      type: object
+      description: One entity-change record. Carries audit timestamps and the document
+        type alongside the changed entity's own fields, which vary by `type`.
+      additionalProperties: true
+      properties:
+        auditMetadata:
+          type: object
+          description: Creation and last-update instants for the record.
+          properties:
+            createdAt:
+              type: string
+              format: date-time
+              nullable: true
+            updatedAt:
+              type: string
+              format: date-time
+              nullable: true
+        documentCode:
+          "$ref": "#/components/schemas/ChangeTrackerDocumentType"
+        id:
+          type: string
     SharedAttendanceFilter:
       description: 'VERIFIED: only `attendanceFilter` accepted on attendance endpoint.'
       properties:
