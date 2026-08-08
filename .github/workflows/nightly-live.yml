@@ -49,10 +49,20 @@ jobs:
       - name: Decide overall outcome
         id: decide
         run: |
-          if [ "${{ steps.run1.outcome }}" = "success" ] || [ "${{ steps.run2.outcome }}" = "success" ]; then
+          if [ "${{ steps.run1.outcome }}" = "success" ]; then
             echo "result=pass" >> "$GITHUB_OUTPUT"
+            echo "retried=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.run2.outcome }}" = "success" ]; then
+            # Retrying once is the right design against a shared third-party
+            # API, but a silent retry hides a suite decaying from "always
+            # passes" to "passes half the time" — both report green. Say so, so
+            # the trend is visible in the run list without failing the gate.
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+            echo "retried=true" >> "$GITHUB_OUTPUT"
+            echo "::warning title=perfect-live needed a retry::Attempt 1 failed and attempt 2 passed. A single flake is expected; a run of these is a regression the pass status will not show."
           else
             echo "result=fail" >> "$GITHUB_OUTPUT"
+            echo "retried=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Cleanup live data (always)
