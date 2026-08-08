@@ -22,7 +22,14 @@ info:
         code that unmarshals PUT into the same struct as POST
         must tolerate missing currencyCode.
       * `ccEmails` is returned as `null` (not `[]`) when unset,
-        despite the docs typing it as `Array of strings`.
+        despite the docs typing it as `Array of strings`. It is
+        write-accepted on PUT only, at most three addresses; a
+        fourth returns `{"message":"Number of additional emails
+        must be less than 3","code":501}` — the wording is off by
+        one. A PUT that omits it clears the stored list.
+      * `currencyCode` is ignored on BOTH verbs. Only `currencyId`
+        sets a client's currency, and only on PUT. Unlike the other
+        fields, the currency is sticky when omitted from a PUT.
       * There is NO dedicated archive endpoint. Archiving is done
         by PUT-ing the full body with `archived: true`. The
         query parameters `archive-projects` and
@@ -149,6 +156,10 @@ components:
       schema: { type: string }
 
   schemas:
+    # Re-probed 2026-08-08: a create accepts only these four fields. It returns
+    # 201 for `currencyId` and `ccEmails` too, but ignores both — the currency
+    # falls back to the workspace default and ccEmails comes back null. They
+    # belong on ClientUpdateRequest only.
     ClientCreateRequest:
       type: object
       required: [name]
@@ -157,11 +168,6 @@ components:
         address: { type: string, maxLength: 3000 }
         email: { type: string, format: email }
         note: { type: string, maxLength: 3000 }
-        currencyId: { type: string }
-        ccEmails:
-          type: array
-          maxItems: 3
-          items: { type: string, format: email }
 
     ClientUpdateRequest:
       type: object

@@ -355,6 +355,12 @@ components:
           nullable: true
           items: { type: string }
 
+    # Live-probed 2026-08-08. The create and update bodies are NOT the same
+    # shape: POST accepts only these four fields and silently ignores every
+    # other one, while PUT additionally honours archived, currencyId and
+    # ccEmails. `currencyCode` was declared here until 4.0.0 and is ignored on
+    # both verbs — only `currencyId` sets a client's currency. It stays on the
+    # RESPONSE schemas, which do return it.
     ClientCreate:
       type: object
       required: [name]
@@ -363,8 +369,9 @@ components:
         email:   { type: string, format: email }
         address: { type: string }
         note:    { type: string }
-        currencyCode: { $ref: "#/components/schemas/Currency" }
 
+    # A client update is a replacing PUT: every field omitted from the body is
+    # cleared, except the currency, which is sticky under omission.
     ClientUpdate:
       allOf:
         - $ref: "#/components/schemas/ClientCreate"
@@ -374,6 +381,22 @@ components:
               type: boolean
               default: false
               description: Indicates if client will be archived or not.
+            currencyId:
+              type: string
+              description: >-
+                Id of one of the workspace's currencies. Honoured on PUT only;
+                a create ignores it and falls back to the workspace default.
+                Sticky when omitted from an update.
+            ccEmails:
+              type: array
+              maxItems: 3
+              items: { type: string, format: email }
+              description: >-
+                Additional invoice recipients. Honoured on PUT only; a create
+                ignores it. At most three addresses — a fourth returns 400
+                `{"message":"Number of additional emails must be less than 3","code":501}`,
+                whose wording is off by one. Omitting the field on an update
+                clears the stored list.
 
     # ---------- project ----------
     EstimateDto:

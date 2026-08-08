@@ -269,8 +269,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/clients-b.yaml",
-      "bytes": 8169,
-      "sha256": "8fae6c444a58bd8f0d0721ac50b55f87fad159d6dae5dd589baccd0e3c5d300d"
+      "bytes": 8758,
+      "sha256": "bea784db050a2fe40b7f9ecc00c66bac0d40a3fce51419a43d12eeb591e30366"
     },
     {
       "path": "clockify-api-probe-lab/openapi-fragments/expenses-a.yaml",
@@ -414,8 +414,8 @@
     },
     {
       "path": "clockify-api-probe-lab/openapi.yaml",
-      "bytes": 135796,
-      "sha256": "61ba51e9a57e0c63d49c98495dc541c65f41d2448b994e07572607b21cab129a"
+      "bytes": 137118,
+      "sha256": "a8d0c69a70d25c01f26cc8fec714dda32f83d28351d240a484e9d8f83c25cbd5"
     },
     {
       "path": "clockify-api-probe-lab/openapi_scheduling.yaml",

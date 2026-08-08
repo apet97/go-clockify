@@ -15339,8 +15339,6 @@ components:
       properties:
         address:
           type: string
-        currencyCode:
-          "$ref": "#/components/schemas/Currency"
         email:
           format: email
           type: string
@@ -15359,6 +15357,21 @@ components:
             default: false
             description: Indicates if client will be archived or not.
             type: boolean
+          ccEmails:
+            description: Additional invoice recipients. Honoured on PUT only; a create
+              ignores it. At most three addresses — a fourth returns 400 `{"message":"Number
+              of additional emails must be less than 3","code":501}`, whose wording
+              is off by one. Omitting the field on an update clears the stored list.
+            items:
+              format: email
+              type: string
+            maxItems: 3
+            type: array
+          currencyId:
+            description: Id of one of the workspace's currencies. Honoured on PUT
+              only; a create ignores it and falls back to the workspace default. Sticky
+              when omitted from an update.
+            type: string
         type: object
     CompareFilter:
       additionalProperties: false
@@ -24109,7 +24122,7 @@ x-clockify-generation:
   generator: scripts/gen-clockify-openapi
   sourceManifest:
     path: manifest.json
-    sha256: 2c68460130cfeb18a34fc4ea2284d515358ea0fdc63399186d7e7c6d5e41bffc
+    sha256: 24e8d654db5f751e746e5f904e85d52db60c33c859a23dab61a2f7c63ed051b6
     files: 102
   sourcePrecedence:
   - live/probe findings metadata
